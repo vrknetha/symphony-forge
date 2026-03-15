@@ -4,70 +4,57 @@ Production system for building client software using OpenAI Symphony + harness e
 
 ## What This Is
 
-Symphony Forge is a complete kit for going from client idea to shipped software using:
-- **Discovery** — A structured intake process that drives toward a precise spec
-- **Harness** — A battle-tested monorepo template (NestJS + React) that agents can work in without stepping on each other
-- **Symphony** — OpenAI's multi-agent coding system, configured to run parallel worktrees on Linear issues
+Symphony Forge turns client ideas into shipped software using AI agents as the primary developers. It provides:
+
+- **Discovery** — A structured intake process that drives toward a precise, buildable spec
+- **Harness** — Architecture conventions and scaffold prompts that agents follow to generate fresh projects (no frozen templates)
+- **Symphony** — OpenAI's multi-agent system, configured to run parallel worktrees on Linear issues
 
 ## Structure
 
 ```
 symphony-forge/
-├── skill/SKILL.md        # OpenClaw discovery skill — invoke this for new projects
-├── harness/nestjs-react/ # The monorepo template + scaffold tooling
-├── projects/             # Per-client project workspaces (gitignored)
-└── docs/                 # Philosophy, setup guides, process docs
+├── skill/SKILL.md                    # Discovery engine — invoke for new projects
+├── harness/nestjs-react/
+│   ├── SCAFFOLD_PROMPT.md            # The prompt — agent reads this, generates fresh project
+│   └── conventions/                  # Architecture, API, testing, linter rules
+├── docs/                             # Philosophy, validation loop, setup guides
+└── projects/                         # Per-client project workspaces (gitignored)
 ```
 
-## Quick Start
+## How It Works
 
-### Starting a New Client Project
+### 1. Discovery
 
-In OpenClaw, say:
-> "New project: [client name] — [brief description]"
+Say: "New project: [client name] — [brief description]"
 
-The discovery skill will guide you through intake.
+The discovery skill drives structured intake across multiple sessions, challenging assumptions and pushing toward a precise spec.
 
-### Scaffolding a Harness
+### 2. Scaffold
 
-Once discovery is complete and `PROJECT_SPEC.md` is written:
+When the spec is ready, give an agent the `SCAFFOLD_PROMPT.md` with the project name filled in. The agent generates a fresh monorepo using latest dependency versions. No frozen template — always current.
 
-```bash
-./harness/nestjs-react/scaffold.sh my-project-name /path/to/output
-```
+### 3. Validate
 
-This stamps out a production-ready monorepo from the template with your project's name and config baked in.
+Build a vertical slice (the riskiest flow, end-to-end) before committing to full development. See [docs/validation-loop.md](docs/validation-loop.md).
 
-### Running Symphony
+### 4. Ship
 
-After scaffolding, the `WORKFLOW.md` at the repo root configures Symphony. Connect it to your Linear workspace and start the agent:
+Connect Symphony to Linear. Issues go in, PRs come out. Each agent gets an isolated worktree with its own DB, ports, and environment.
 
-```bash
-# From the scaffolded project root
-symphony run
-```
+## Why No Template?
 
-## The Philosophy
+Templates rot. One major version bump and you're maintaining the template instead of building products. The scaffold prompt generates everything fresh — latest NestJS, latest React, latest Prisma. The conventions stay stable; the code stays current.
 
-Traditional dev shops treat agents as autocomplete. We treat them as parallel junior developers. Each agent gets:
-- Its own git worktree (isolated from other agents)
-- Its own database (unique port, docker compose overlay)
-- Its own app server (no port conflicts)
-- A fully booted environment ready in < 2 minutes
-
-The harness is what makes this possible. Without it, agents collide. With it, you can run 10 in parallel on the same repo.
-
-Read [docs/harness-philosophy.md](docs/harness-philosophy.md) for the full argument.
-
-## Stack
+## Stack (NestJS + React Harness)
 
 **Backend:** NestJS · Prisma · PostgreSQL · Redis · AWS Cognito  
 **Frontend:** React · Vite · TanStack Router · TanStack Query · Zustand · shadcn/ui  
-**Tooling:** pnpm workspaces · Turborepo · orval · vitest · GitHub Actions
+**Tooling:** pnpm workspaces · Turborepo · orval · Vitest · GitHub Actions
 
 ## Docs
 
-- [Getting Started](docs/getting-started.md)
-- [Harness Philosophy](docs/harness-philosophy.md)
-- [Validation Loop](docs/validation-loop.md)
-- [Symphony Setup](docs/symphony-setup.md)
+- [Harness Philosophy](docs/harness-philosophy.md) — Why the harness exists
+- [Validation Loop](docs/validation-loop.md) — How to confirm a slice is done
+- [Symphony Setup](docs/symphony-setup.md) — Connecting to Linear + running agents
+- [Getting Started](docs/getting-started.md) — First project walkthrough
