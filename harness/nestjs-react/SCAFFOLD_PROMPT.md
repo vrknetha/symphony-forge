@@ -261,6 +261,20 @@ Read `conventions/worktree-lifecycle.md` for full details. The scaffold must sup
 - Teardown script that removes containers + volumes + worktree
 - Orphan detection on every new worktree creation
 
+## Frontend Patterns
+
+Read and apply `conventions/frontend-patterns.md`. Critical requirements:
+
+- **Composition over props.** `<Card><Card.Header>` not `<Card headerTitle="...">`. Max 5 props per component.
+- **Max 100 lines per component.** One component per file.
+- **Custom hooks for all logic.** Components are templates, hooks are brains. Co-locate hooks with components.
+- **No useEffect for data fetching.** TanStack Query only. useEffect allowed for subscriptions, DOM measurement, third-party sync.
+- **State hierarchy:** Server → TanStack Query, Global → Zustand, Local → useState, Form → react-hook-form + zod, URL → TanStack Router. Never mix.
+- **Tailwind only.** No inline styles, no CSS modules, no styled-components. Semantic tokens (`text-primary`) not literals (`text-blue-500`). Design tokens in tailwind.config.ts.
+- **Three states for every async component:** skeleton (not spinner), error (actionable), empty (designed with CTA).
+- **Accessibility enforced via eslint-plugin-jsx-a11y.** All images have alt, all inputs have labels, no onClick on divs.
+- **orval-generated API client** from OpenAPI spec. No manual fetch wrappers. Structured query key factories.
+
 ## Final Checks Before Declaring Done
 
 1. `pnpm install` completes without errors
