@@ -326,6 +326,19 @@ Read and apply `conventions/api-patterns.md`. Critical requirements:
 - **Pagination:** cursor-based preferred, offset acceptable. Default 20, max 100.
 - **OpenAPI/Swagger:** auto-generated from NestJS decorators, CI-validated, orval generates typed client.
 
+## Workers & Background Jobs
+
+Read and apply `conventions/workers.md`. Critical requirements:
+
+- **BullMQ + Redis.** One queue per domain (billing.queue, notification.queue — never a shared god queue).
+- **Idempotent always.** Every job has an idempotency key. Processor checks before doing work.
+- **Payloads are IDs, not objects.** Max 50KB. Processor fetches fresh data.
+- **Producer is thin** — enqueue only. Business logic lives in the processor.
+- **Retry:** exponential backoff, max 3 attempts default. Permanent failures (not-found, validation) skip retry via `UnrecoverableError`.
+- **Scheduling:** BullMQ repeatable jobs only. No node-cron, no setInterval.
+- **Max 5 minutes per job.** Longer work → chunk into child jobs with progress tracking.
+- **Observability:** every job logs started/completed/failed with duration + correlation ID. Bull Board in dev only.
+
 ## Final Checks Before Declaring Done
 
 1. `pnpm install` completes without errors
