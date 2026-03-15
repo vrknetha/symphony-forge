@@ -339,6 +339,20 @@ Read and apply `conventions/workers.md`. Critical requirements:
 - **Max 5 minutes per job.** Longer work → chunk into child jobs with progress tracking.
 - **Observability:** every job logs started/completed/failed with duration + correlation ID. Bull Board in dev only.
 
+## CI Pipeline
+
+Read and apply `conventions/ci-pipeline.md`. Critical requirements:
+
+- **Everything blocks merge.** No advisory checks. Lint, typecheck, structural, unit, security, integration, build, e2e, API spec diff, coverage gate — all required.
+- **Parallel first tier:** lint + typecheck + structural + unit-tests + security run simultaneously.
+- **Sequential second tier:** integration-tests + build depend on first tier. E2e depends on both.
+- **Real Postgres + Redis** in CI via GitHub Actions services (Alpine images).
+- **Coverage gate:** 100% line coverage enforced. Below = blocked.
+- **API spec diff:** OpenAPI spec must match code. Out of date = blocked.
+- **Performance budget:** total PR pipeline under 8 minutes.
+- **Deploy:** staging auto-deploys on merge to main with smoke test. Production requires manual approval via GitHub environment protection.
+- **Branch protection:** squash merge only, linear history, 1 approval, all checks required.
+
 ## Final Checks Before Declaring Done
 
 1. `pnpm install` completes without errors
