@@ -8,5 +8,7 @@ coverage
 !.env.example
 apps/*/dist
 apps/*/coverage
+apps/*/node_modules
 packages/*/dist
 packages/*/coverage
+packages/*/node_modules
