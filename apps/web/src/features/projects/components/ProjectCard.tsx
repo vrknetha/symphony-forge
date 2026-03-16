@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { ProjectSummary } from "@/shared/types/models";
+import type { ProjectSummary } from "@symphony/shared";
 
 interface ProjectCardProps {
   project: ProjectSummary;

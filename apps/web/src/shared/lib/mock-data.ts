@@ -4,7 +4,7 @@ import {
   type DocumentSummary,
   type ProjectDetail,
   type ProjectSummary,
-} from "@/shared/types/models";
+} from "@symphony/shared";
 
 export const mockUser: AuthUser = {
   email: "ravi@knacklabs.ai",

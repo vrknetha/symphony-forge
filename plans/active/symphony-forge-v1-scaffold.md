@@ -23,7 +23,7 @@ The repo currently contains the v1 product plan and conventions, but not the act
 - [x] Initialize monorepo root files
 - [x] Scaffold API application
 - [x] Scaffold web application
-- [ ] Add shared package
+- [x] Add shared package
 - [ ] Run verification and final notification command
 
 ## Decision Log
@@ -33,6 +33,7 @@ The repo currently contains the v1 product plan and conventions, but not the act
 | 2026-03-16 | Prefer the product plan over conflicting auth conventions | `PLAN.md` requires Azure AD OIDC, while `architecture.md` mentions Cognito. The convention hierarchy says plans override docs. |
 | 2026-03-16 | Use a plan-aligned structured error envelope with additional metadata | The conventions disagree on error shape, and `AGENTS.md` requires `category`, `retryable`, and `description`. The API scaffold will standardize on one response shape that satisfies the hard rule. |
 | 2026-03-16 | Install the workspace with `pnpm install --ignore-scripts` | The published `proof-sdk` package pulls `node-sass@3` and fails postinstall on current Node. The scaffold keeps the dependency declared for the placeholder integration and reruns required project scripts manually. |
+| 2026-03-16 | Accept an unfinished test layer in the scaffold commit | The monorepo `typecheck`, `build`, and `check:all` pass, but `pnpm test` fails because no Vitest specs exist yet and coverage is 0%. This is a follow-up implementation task, not a build wiring failure. |
 
 ## Risks / Open Questions
 

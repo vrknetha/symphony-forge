@@ -1,7 +1,7 @@
 import { appEnv } from "@/config/env";
 import { apiClient } from "@/shared/lib/api-client";
 import { mockProjectDetail } from "@/shared/lib/mock-data";
-import type { DocumentSummary } from "@/shared/types/models";
+import type { DocumentSummary } from "@symphony/shared";
 
 export async function getDocument(
   projectSlug: string,

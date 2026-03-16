@@ -1,4 +1,4 @@
-import type { DocumentSummary } from "@/shared/types/models";
+import type { DocumentSummary } from "@symphony/shared";
 
 interface EditorPlaceholderProps {
   document: DocumentSummary;

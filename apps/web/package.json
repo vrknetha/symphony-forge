@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
+    "@symphony/shared": "workspace:*",
     "@azure/msal-browser": "^4.26.0",
     "@azure/msal-react": "^3.0.26",
     "@hookform/resolvers": "^5.2.2",

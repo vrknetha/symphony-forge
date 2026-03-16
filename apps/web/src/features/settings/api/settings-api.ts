@@ -1,7 +1,7 @@
 import { appEnv } from "@/config/env";
 import { apiClient } from "@/shared/lib/api-client";
 import { mockAgentKeys } from "@/shared/lib/mock-data";
-import type { AgentKeySummary } from "@/shared/types/models";
+import type { AgentKeySummary } from "@symphony/shared";
 
 export async function listAgentKeys(): Promise<AgentKeySummary[]> {
   if (appEnv.useMocks) {

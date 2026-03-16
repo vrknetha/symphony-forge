@@ -1,0 +1,17 @@
+{
+  "name": "@symphony/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "check:all": "pnpm lint && pnpm typecheck",
+    "lint": "pnpm typecheck",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  }
+}

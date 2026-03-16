@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { AuthUser } from "@/shared/types/models";
+import type { AuthUser } from "@symphony/shared";
 
 interface AuthStore {
   clearUser: () => void;

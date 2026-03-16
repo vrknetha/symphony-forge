@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import type { DocumentSummary } from "@/shared/types/models";
+import type { DocumentSummary } from "@symphony/shared";
 
 interface DocumentRowProps {
   projectSlug: string;

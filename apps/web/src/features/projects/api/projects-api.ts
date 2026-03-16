@@ -1,7 +1,7 @@
 import { appEnv } from "@/config/env";
 import { apiClient } from "@/shared/lib/api-client";
 import { mockProjectDetail, mockProjects } from "@/shared/lib/mock-data";
-import type { ProjectDetail, ProjectSummary } from "@/shared/types/models";
+import type { ProjectDetail, ProjectSummary } from "@symphony/shared";
 
 export async function getProject(slug: string): Promise<ProjectDetail> {
   if (appEnv.useMocks) {

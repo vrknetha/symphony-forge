@@ -1,12 +1,4 @@
-// CONVENTION_CONFLICT: architecture.md routes shared types through packages/shared, but this isolated web-only scaffold cannot modify packages/shared.
-export const docTypes = [
-  "PLAN",
-  "SPEC",
-  "ADR",
-  "NOTES",
-  "RETROSPECTIVE",
-] as const;
-export type DocType = (typeof docTypes)[number];
+import type { DocType } from "../constants/document-templates";
 
 export interface AuthUser {
   email: string;
@@ -46,5 +38,31 @@ export interface AgentKeySummary {
   id: string;
   keyPrefix: string;
   lastUsedAt: string | null;
+  name: string;
+}
+
+export interface CreateProjectInput {
+  description?: string;
+  name: string;
+}
+
+export interface UpdateProjectInput {
+  description?: string;
+  name?: string;
+  status?: "ACTIVE" | "ARCHIVED";
+}
+
+export interface CreateDocumentInput {
+  docType: DocType;
+  title: string;
+}
+
+export interface UpdateDocumentInput {
+  docType?: DocType;
+  title?: string;
+}
+
+export interface CreateAgentKeyInput {
+  capabilities: string[];
   name: string;
 }
