@@ -241,3 +241,283 @@ Module README format:
 | PATCH | /api/v1/users/:id | Update user |
 | DELETE | /api/v1/users/:id | Soft-delete user |
 ```
+
+## API Client Generation (orval)
+
+orval reads the OpenAPI spec produced by NestJS Swagger and generates a fully typed frontend client — TanStack Query v5 hooks, axios calls, request/response types, and MSW handlers. Zero manual API code.
+
+### NestJS Swagger Setup (Backend)
+
+The backend MUST produce a clean, consistent OpenAPI spec for orval to consume.
+
+```typescript
+// apps/api/src/main.ts
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
+const config = new DocumentBuilder()
+  .setTitle('App API')
+  .setVersion('1.0')
+  .addBearerAuth()
+  .build();
+
+const document = SwaggerModule.createDocument(app, config, {
+  operationIdFactory: (controllerKey, methodKey) => methodKey,
+});
+
+SwaggerModule.setup('api/docs', app, document);
+
+// Export spec as JSON for CI consumption
+import { writeFileSync } from 'fs';
+writeFileSync('./openapi.json', JSON.stringify(document, null, 2));
+```
+
+**operationIdFactory:** Using `methodKey` means your controller method names become operationIds. Name them well:
+
+| Controller Method | Generated operationId | Generated Hook |
+|---|---|---|
+| `getInvoices()` | `getInvoices` | `useGetInvoices` |
+| `getInvoiceById()` | `getInvoiceById` | `useGetInvoiceById` |
+| `createInvoice()` | `createInvoice` | `useCreateInvoice` |
+| `updateInvoice()` | `updateInvoice` | `useUpdateInvoice` |
+| `deleteInvoice()` | `deleteInvoice` | `useDeleteInvoice` |
+
+**Backend requirements for clean codegen:**
+
+| Requirement | Why |
+|---|---|
+| `@ApiTags('Invoices')` on every controller | orval groups output files by tag |
+| `@ApiOperation({ summary: '...' })` on every endpoint | Documents the spec |
+| `@ApiResponse({ status, type })` on every endpoint | Generates response types |
+| Method names follow `verbResource` pattern | Clean operationIds → clean hook names |
+| All DTOs use `@ApiProperty` / `@ApiPropertyOptional` | Generates request/response types |
+
+### orval Configuration
+
+```typescript
+// orval.config.ts (project root)
+import { defineConfig } from 'orval';
+
+export default defineConfig({
+  api: {
+    input: {
+      // Option A: Read from running dev server
+      target: 'http://localhost:3000/api-json',
+      // Option B: Read from committed spec file
+      // target: './openapi.json',
+    },
+    output: {
+      target: 'apps/web/src/lib/api/generated',
+      client: 'react-query',
+      mode: 'tags-split',        // one file per @ApiTags group
+      httpClient: 'axios',
+      override: {
+        mutator: {
+          path: 'apps/web/src/lib/api/client.ts',
+          name: 'customInstance',
+        },
+        query: {
+          useQuery: true,
+          useMutation: true,
+          signal: true,           // AbortController support
+        },
+      },
+      mock: true,                 // generate MSW handlers
+    },
+  },
+});
+```
+
+### Custom Axios Instance
+
+```typescript
+// apps/web/src/lib/api/client.ts
+import Axios, { AxiosRequestConfig } from 'axios';
+
+const axios = Axios.create({
+  baseURL: import.meta.env.VITE_API_URL ?? 'http://localhost:3000',
+});
+
+// Auth token injection
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('access_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Error interceptor — normalize to app error shape
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('access_token');
+      window.location.href = '/login';
+    }
+    return Promise.reject(error);
+  },
+);
+
+// orval mutator signature
+export const customInstance = <T>(config: AxiosRequestConfig): Promise<T> =>
+  axios(config).then(({ data }) => data);
+```
+
+### Generated Output Structure
+
+With `mode: 'tags-split'`, orval produces one file per `@ApiTags` group:
+
+```
+apps/web/src/lib/api/generated/
+├── invoices.ts          # Query + mutation hooks for Invoices tag
+├── users.ts             # Query + mutation hooks for Users tag
+├── auth.ts              # Query + mutation hooks for Auth tag
+├── invoices.msw.ts      # MSW handlers for Invoices
+├── users.msw.ts         # MSW handlers for Users
+├── auth.msw.ts          # MSW handlers for Auth
+└── model/               # All request/response types
+    ├── createInvoiceDto.ts
+    ├── updateInvoiceDto.ts
+    ├── invoiceResponseDto.ts
+    ├── paginatedInvoiceListDto.ts
+    └── index.ts
+```
+
+**What gets generated per tag file:**
+
+```typescript
+// apps/web/src/lib/api/generated/invoices.ts (generated — DO NOT EDIT)
+
+// Query hooks (GET endpoints)
+export const useGetInvoices = (params?: GetInvoicesParams, options?: ...) => useQuery(...)
+export const useGetInvoiceById = (id: string, options?: ...) => useQuery(...)
+
+// Mutation hooks (POST/PATCH/DELETE endpoints)
+export const useCreateInvoice = (options?: ...) => useMutation(...)
+export const useUpdateInvoice = (options?: ...) => useMutation(...)
+export const useDeleteInvoice = (options?: ...) => useMutation(...)
+
+// Query keys (for invalidation)
+export const getGetInvoicesQueryKey = (params?: GetInvoicesParams) => [...]
+```
+
+### Package Scripts
+
+```jsonc
+// package.json (root)
+{
+  "scripts": {
+    "gen:api": "orval",
+    "gen:api:watch": "orval --watch",
+    "gen:api:check": "orval && git diff --exit-code apps/web/src/lib/api/generated/"
+  }
+}
+```
+
+### Dev vs CI Workflow
+
+**Development:**
+```bash
+# Terminal 1: Start API
+pnpm --filter api dev
+
+# Terminal 2: Generate client from running server
+pnpm gen:api
+
+# Or watch mode — regenerates when spec changes
+pnpm gen:api:watch
+```
+
+**CI Pipeline:**
+```yaml
+# .github/workflows/ci.yml (relevant step)
+- name: Generate API client
+  run: pnpm gen:api --input ./openapi.json
+
+- name: Check for spec drift
+  run: |
+    pnpm gen:api:check
+    if [ $? -ne 0 ]; then
+      echo "::error::Generated API client is out of date. Run 'pnpm gen:api' and commit."
+      exit 1
+    fi
+
+- name: Detect breaking changes
+  run: npx openapi-diff openapi.json openapi.prev.json --fail-on-incompatible
+```
+
+### Generated Files: gitignore vs Commit
+
+| Approach | Pros | Cons |
+|---|---|---|
+| **`.gitignore` generated files** | No noise in PRs, always fresh | CI must generate before build, new devs need running API |
+| **Commit generated files** | Explicit, visible in PRs, works offline | PRs have noisy diffs, risk of stale committed files |
+
+**Recommended:** Commit `openapi.json`, gitignore generated client code. CI regenerates from the committed spec and fails if the spec itself is stale (checked via `openapi-diff`).
+
+```gitignore
+# .gitignore
+apps/web/src/lib/api/generated/
+!openapi.json
+```
+
+### Usage in Components
+
+```tsx
+// apps/web/src/features/invoices/InvoiceList.tsx
+import { useGetInvoices } from '@/lib/api/generated/invoices';
+import { getGetInvoicesQueryKey } from '@/lib/api/generated/invoices';
+import { useQueryClient } from '@tanstack/react-query';
+
+export function InvoiceList() {
+  const { data, isLoading, error } = useGetInvoices({ page: 1, pageSize: 20 });
+  // data is fully typed — InvoiceResponseDto[]
+}
+```
+
+```tsx
+// apps/web/src/features/invoices/CreateInvoiceForm.tsx
+import { useCreateInvoice } from '@/lib/api/generated/invoices';
+import { getGetInvoicesQueryKey } from '@/lib/api/generated/invoices';
+
+export function CreateInvoiceForm() {
+  const queryClient = useQueryClient();
+  const { mutate, isPending } = useCreateInvoice({
+    mutation: {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: getGetInvoicesQueryKey() });
+      },
+    },
+  });
+
+  const handleSubmit = (values: CreateInvoiceDto) => mutate({ data: values });
+}
+```
+
+### MSW Testing Integration
+
+```typescript
+// apps/web/src/test/setup.ts
+import { setupServer } from 'msw/node';
+import { getInvoicesMSW } from '@/lib/api/generated/invoices.msw';
+import { getUsersMSW } from '@/lib/api/generated/users.msw';
+
+export const server = setupServer(...getInvoicesMSW(), ...getUsersMSW());
+
+beforeAll(() => server.listen());
+afterEach(() => server.resetHandlers());
+afterAll(() => server.close());
+```
+
+### Rules
+
+| Rule | Rationale |
+|---|---|
+| **NEVER** write manual `fetch()` or `axios.get()` calls | Generated hooks handle typing, caching, error states |
+| **NEVER** manually create API request/response types | Types come from the OpenAPI spec — single source of truth |
+| **NEVER** edit files in `generated/` | They are overwritten on every `pnpm gen:api` run |
+| API spec is the contract | Backend changes propagate to frontend automatically via codegen |
+| Breaking spec changes MUST be caught in CI | `openapi-diff` compares current vs previous spec |
+| Every controller method follows `verbResource` naming | Clean operationIds → predictable hook names |
+| Every controller has `@ApiTags` | orval uses tags to split output files |
+| Every endpoint has `@ApiResponse` with typed DTO | Without it, response types default to `unknown` |
