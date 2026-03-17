@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+enum MemberRole {
+  OWNER
+  EDITOR
+  VIEWER
+}
+
+enum DocType {
+  PLAN
+  SPEC
+  ADR
+  NOTES
+  RETROSPECTIVE
+}
+
+model User {
+  id            String          @id @default(cuid())
+  azureOid      String          @unique(map: "uq_users_azure_oid") @map("azure_oid")
+  email         String          @unique(map: "uq_users_email")
+  name          String
+  role          Role            @default(MEMBER)
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  ownedProjects Project[]       @relation("project_owner")
+  memberships   ProjectMember[]
+  createdDocs   Document[]
+
+  @@map("users")
+}
+
+model Project {
+  id          String         @id @default(cuid())
+  name        String
+  slug        String         @unique(map: "uq_projects_slug")
+  description String?
+  status      ProjectStatus  @default(ACTIVE)
+  ownerId     String         @map("owner_id")
+  deletedAt   DateTime?      @map("deleted_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+  owner       User           @relation("project_owner", fields: [ownerId], references: [id])
+  members     ProjectMember[]
+  documents   Document[]
+
+  @@index([deletedAt], map: "idx_projects_deleted_at")
+  @@index([ownerId], map: "idx_projects_owner_id")
+  @@map("projects")
+}
+
+model ProjectMember {
+  id        String     @id @default(cuid())
+  projectId String     @map("project_id")
+  userId    String     @map("user_id")
+  role      MemberRole @default(EDITOR)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  project   Project    @relation(fields: [projectId], references: [id])
+  user      User       @relation(fields: [userId], references: [id])
+
+  @@index([projectId], map: "idx_project_members_project_id")
+  @@index([userId], map: "idx_project_members_user_id")
+  @@unique([projectId, userId], map: "uq_project_members_project_id_user_id")
+  @@map("project_members")
+}
+
+model Document {
+  id               String    @id @default(cuid())
+  title            String
+  slug             String
+  docType          DocType   @default(NOTES) @map("doc_type")
+  projectId        String    @map("project_id")
+  createdById      String    @map("created_by_id")
+  proofDocSlug     String    @unique(map: "uq_documents_proof_doc_slug") @map("proof_doc_slug")
+  proofOwnerSecret String    @map("proof_owner_secret")
+  proofAccessToken String    @map("proof_access_token")
+  deletedAt        DateTime? @map("deleted_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  project          Project   @relation(fields: [projectId], references: [id])
+  createdBy        User      @relation(fields: [createdById], references: [id])
+
+  @@index([createdById], map: "idx_documents_created_by_id")
+  @@index([deletedAt], map: "idx_documents_deleted_at")
+  @@index([projectId], map: "idx_documents_project_id")
+  @@unique([projectId, slug], map: "uq_documents_project_id_slug")
+  @@map("documents")
+}
+
+model AgentKey {
+  id           String    @id @default(cuid())
+  name         String
+  keyHash      String    @unique(map: "uq_agent_keys_key_hash") @map("key_hash")
+  keyPrefix    String    @map("key_prefix")
+  capabilities String[]
+  active       Boolean   @default(true)
+  lastUsedAt   DateTime? @map("last_used_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("agent_keys")
+}
