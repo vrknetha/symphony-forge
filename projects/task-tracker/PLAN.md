@@ -1,81 +1,43 @@
 # Task Tracker — PLAN.md
 
-## What Is This?
+## What
 
-A minimal internal task tracker. Teams create projects, add tasks, assign them, and track completion. No external integrations, no notifications — just clean CRUD with proper auth.
+Internal task tracker for small teams. Create projects, add tasks, assign them, track completion. No integrations, no notifications — just clean CRUD with auth. Exists as a validation project for the symphony-forge harness.
 
-## Who Uses It?
+## Who
 
 - **Team leads** — create projects, assign tasks, track progress
-- **Team members** — view assigned tasks, update status, add comments
+- **Team members** — view assigned tasks, update status, comment
 - **Admins** — manage users, archive projects
 
-## Auth
+## Flows
 
-OIDC provider (generic). JWT validation via JWKS. Roles: ADMIN, MEMBER.
+1. **Sign in** — User authenticates via OIDC, lands on their project list
+2. **Create project** — Lead creates a project, adds team members by email
+3. **Add task** — Member creates a task in a project with title, description, priority
+4. **Work a task** — Member claims a task, updates status as they progress, adds comments
+5. **Track progress** — Lead views project tasks filtered by status, assignee, priority
 
-## Domain Models
+## Domain Concepts
 
-### Project
-- name, slug (unique), description, status (ACTIVE/ARCHIVED), owner
-- Has many tasks, has many members
+- **Project** — container for related tasks. Has members with roles. Can be archived.
+- **Task** — unit of work inside a project. Has status, priority, optional assignee, optional due date.
+- **Comment** — text note on a task. Any project member can comment.
+- **User** — authenticated person. Global role (admin/member) plus per-project role (owner/editor/viewer).
 
-### Task
-- title, description, status (TODO/IN_PROGRESS/DONE), priority (LOW/MEDIUM/HIGH/URGENT)
-- Belongs to project, assigned to user (optional), created by user
-- Due date (optional)
+## Constraints
 
-### ProjectMember
-- project, user, role (OWNER/EDITOR/VIEWER)
+- Auth: generic OIDC provider (JWT via JWKS)
+- Roles: ADMIN and MEMBER globally, OWNER/EDITOR/VIEWER per project
+- Pagination: cursor-based
+- No frontend in v1 — API only
+- Soft deletes on projects and comments
 
-### Comment
-- body (text), task, author
-- Soft-deletable
+## Out of Scope (v1)
 
-## Key Flows
-
-### Flow 1: Create Project
-1. Auth user → POST /api/v1/projects { name, description }
-2. Auto-generates slug, sets creator as OWNER
-3. Returns project with membership
-
-### Flow 2: Add Task
-1. Auth user → POST /api/v1/projects/:slug/tasks { title, description, priority }
-2. Validates user is project member (OWNER or EDITOR)
-3. Sets status=TODO, createdBy=current user
-
-### Flow 3: Update Task Status
-1. Auth user → PATCH /api/v1/projects/:slug/tasks/:id { status }
-2. Validates member role
-
-### Flow 4: List Tasks (filtered)
-1. GET /api/v1/projects/:slug/tasks?status=TODO&assignee=me&priority=HIGH
-2. Paginated (cursor-based), sorted by priority then createdAt
-
-### Flow 5: Add Comment
-1. POST /api/v1/projects/:slug/tasks/:id/comments { body }
-2. Any project member can comment
-
-## API Endpoints
-
-| Method | Path | Role Required |
-|--------|------|---------------|
-| POST | /api/v1/projects | MEMBER+ |
-| GET | /api/v1/projects | MEMBER+ (own projects) |
-| GET | /api/v1/projects/:slug | Project member |
-| PATCH | /api/v1/projects/:slug | OWNER |
-| DELETE | /api/v1/projects/:slug | ADMIN |
-| POST | /api/v1/projects/:slug/tasks | EDITOR+ |
-| GET | /api/v1/projects/:slug/tasks | Project member |
-| PATCH | /api/v1/projects/:slug/tasks/:id | EDITOR+ |
-| DELETE | /api/v1/projects/:slug/tasks/:id | EDITOR+ |
-| POST | /api/v1/projects/:slug/tasks/:id/comments | Project member |
-| GET | /api/v1/projects/:slug/tasks/:id/comments | Project member |
-
-## Non-Goals (v1)
-
-- No real-time updates (WebSockets)
-- No file attachments
-- No email notifications
-- No frontend (API only for this plan)
-- No audit log (future)
+- Real-time updates (WebSockets)
+- File attachments
+- Email notifications
+- Frontend UI
+- Audit log
+- Due date reminders

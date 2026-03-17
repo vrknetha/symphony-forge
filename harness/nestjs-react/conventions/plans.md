@@ -1,14 +1,48 @@
-# Execution Plans
+# Plans
 
-Plans are first-class artifacts. They live in the repo, not in Linear/Jira alone. Agents read plans to understand what's in progress, what was decided, and why.
+Plans are first-class artifacts. They live in the repo. Agents read plans to understand what to build, what's in progress, and what was decided.
 
-## Plan Types
+## Three Plan Types — Don't Confuse Them
 
-| Type | When | Where |
-|------|------|-------|
-| Lightweight | Small changes (1-2 files) | Inline in PR description or commit message |
-| Execution plan | Complex work (3+ files, new domain, refactor) | `plans/active/<name>.md` |
-| Tech debt | Known issues, quality gaps | `plans/debt/<name>.md` |
+| Type | Purpose | Who Writes | Where | Size |
+|------|---------|-----------|-------|------|
+| **Project PLAN.md** | WHAT to build | Human | `projects/<name>/PLAN.md` | ~1 page |
+| **Execution plan** | HOW to build a specific piece | Agent or human | `plans/active/<name>.md` | 1-2 pages |
+| **Tech debt** | Known quality gaps | Agent | `plans/debt/<name>.md` | Short |
+
+### Project PLAN.md — Human Intent (The Input)
+
+This is the starting point. Written by a human. Contains:
+
+- **What** — one paragraph on what we're building and why
+- **Who** — 2-4 user types
+- **Flows** — 3-7 key user journeys in plain English
+- **Domain Concepts** — the nouns and their relationships (not schemas)
+- **Constraints** — auth, integrations, deploy target, business rules
+- **Out of Scope** — what v1 is NOT
+
+**What PLAN.md must NOT contain:**
+
+- Prisma schemas or data models (derived from domain concepts)
+- API endpoint tables (derived from flows + tasks)
+- Page specs or component trees (derived from flows)
+- File structures or directory layouts (convention handles this)
+- Technology choices already locked in conventions
+
+If you're writing column names in PLAN.md, you're doing decomposition by hand. Stop.
+
+See `PLAN_TEMPLATE.md` in the harness root.
+
+### Execution Plans — Build Tracking (The During)
+
+Created AFTER project PLAN.md exists and decomposition is done. Tracks a specific unit of work. One execution plan per branch/feature.
+
+| Condition | Action |
+|-----------|--------|
+| Task touches 1-2 files | Lightweight plan (PR description) |
+| Task touches 3+ files | Execution plan required |
+| New domain or module | Execution plan required |
+| Refactor across boundaries | Execution plan required |
 
 Lightweight plans need no file — the PR description IS the plan.
 

@@ -89,6 +89,16 @@ Every service, guard, pipe, interceptor gets a co-located `.spec.ts`. Every enti
 
 All errors use `AppException` with `{ status, category, code, description, retryable }`. See `code-quality.md`.
 
+## Plan Hierarchy
+
+| Document | Contains | You Read It For |
+|----------|----------|-----------------|
+| `projects/<name>/PLAN.md` | What to build (flows, domain concepts, constraints) | Understanding the problem |
+| `plans/active/<name>.md` | How to build a specific piece (steps, progress, decisions) | Your current task |
+| `conventions/` | How ALL code must be written (patterns, rules, anti-patterns) | Every line of code |
+
+**PLAN.md is intent, not spec.** It says "users create projects and add documents." It does NOT say `POST /api/v1/projects { name, description }`. You derive the API from conventions + intent.
+
 ## When Conventions Conflict With PLAN.md
 
 - PLAN.md wins for project decisions (auth provider, domain model, features)
