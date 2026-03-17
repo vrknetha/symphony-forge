@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg18
     restart: unless-stopped
     ports:
       - '${DB_PORT:-5432}:5432'
