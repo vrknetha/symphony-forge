@@ -48,7 +48,7 @@ Templates rot. One major version bump and you're maintaining the template instea
 
 ## Stack (NestJS + React Harness)
 
-**Backend:** NestJS · Prisma · PostgreSQL · Redis · AWS Cognito  
+**Backend:** NestJS · Prisma · PostgreSQL · Redis · OIDC auth (Azure AD / Cognito / Auth0 per project)  
 **Frontend:** React · Vite · TanStack Router · TanStack Query · Zustand · shadcn/ui  
 **Tooling:** pnpm workspaces · Turborepo · orval · Vitest · GitHub Actions
 

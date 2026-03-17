@@ -1,39 +1,44 @@
+/**
+ * Database seed script.
+ * Minimal local dev data — uses upsert so it's idempotent.
+ * See conventions/database.md — Seed Scripts section.
+ */
 import { PrismaClient, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main(): Promise<void> {
   const admin = await prisma.user.upsert({
+    where: { email: 'admin@dev.local' },
     create: {
-      azureOid: 'azure-admin-seed',
-      email: 'forge-admin@knacklabs.ai',
-      name: 'Forge Admin',
+      azureOid: 'seed-admin-oid',     // placeholder — real value comes from OIDC in production
+      email: 'admin@dev.local',
+      name: 'Dev Admin',
       role: Role.ADMIN,
     },
     update: {
-      name: 'Forge Admin',
+      name: 'Dev Admin',
       role: Role.ADMIN,
     },
-    where: { email: 'forge-admin@knacklabs.ai' },
   });
 
   await prisma.project.upsert({
+    where: { slug: 'seed-project' },
     create: {
-      description: 'Seed project for local development.',
-      name: 'Symphony Forge',
+      name: 'Seed Project',
+      slug: 'seed-project',
+      description: 'Local dev seed project.',
       ownerId: admin.id,
-      slug: 'symphony-forge',
     },
     update: {
-      description: 'Seed project for local development.',
+      description: 'Local dev seed project.',
     },
-    where: { slug: 'symphony-forge' },
   });
 }
 
 main()
   .catch(async (error: unknown) => {
-    process.stderr.write(`${String(error)}\n`);
+    process.stderr.write(`Seed failed: ${String(error)}\n`);
     await prisma.$disconnect();
     process.exitCode = 1;
   })

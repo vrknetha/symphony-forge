@@ -17,7 +17,7 @@
     "start": "node dist/main.js",
     "start:local": "nest start",
     "test": "vitest run --coverage",
-    "test:integration": "vitest run test/**/*.int-spec.ts --coverage=false",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },

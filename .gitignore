@@ -1,14 +1,38 @@
+# Build outputs
 node_modules
 dist
 coverage
 .turbo
 .vite
+
+# Env files (never commit)
 .env
 .env.*
 !.env.example
-apps/*/dist
-apps/*/coverage
-apps/*/node_modules
-packages/*/dist
-packages/*/coverage
-packages/*/node_modules
+!.env.test.example
+apps/**/.env
+apps/**/.env.*
+!apps/**/.env.test.example
+
+# macOS
+.DS_Store
+
+# Editor
+.vscode
+*.swp
+*.swo
+
+# Prisma
+*.db
+*.db-journal
+
+# Test artifacts
+playwright-report
+test-results
+
+# pnpm
+.pnpm-store
+
+# Logs
+*.log
+pino-*.log

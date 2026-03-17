@@ -84,8 +84,8 @@ export class FileStorageModule {
 
 Required providers (every project needs these interfaces from day one):
 - `FileStorage` — S3 / local filesystem
-- `AuthProvider` — Cognito / mock auth
-- `EmailSender` — SES / console logger
+- `AuthProvider` — OIDC provider / mock auth (specific provider per PLAN.md)
+- `EmailSender` — SES / SendGrid / console logger
 - `CacheProvider` — Redis / in-memory Map
 - `EventBus` — see Event System below
 

@@ -19,6 +19,7 @@
 | Guards | 100% | Allow and deny cases |
 | Pipes / Interceptors | 100% | Transform/reject, wrap/modify |
 | Controllers | Skip unit tests | Thin wrappers — integration tests cover them |
+| `*.module.ts` | Excluded from coverage | NestJS wiring only — no business logic |
 | Utils | 100% | Pure functions, easiest to test |
 
 ---

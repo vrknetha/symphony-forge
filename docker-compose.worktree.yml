@@ -1,0 +1,20 @@
+# Override for worktree-isolated environments.
+# Usage: docker compose -f docker-compose.yml -f docker-compose.worktree.yml up -d
+#
+# Env vars set by scripts/setup-worktree.sh:
+#   WORKTREE_NAME, DB_PORT, REDIS_PORT, DB_NAME
+
+version: '3.8'
+
+services:
+  postgres:
+    container_name: pg-${WORKTREE_NAME:-default}
+    ports:
+      - '${DB_PORT:-5432}:5432'
+    environment:
+      POSTGRES_DB: ${DB_NAME:-symphony_forge}
+
+  redis:
+    container_name: redis-${WORKTREE_NAME:-default}
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
