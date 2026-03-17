@@ -14,7 +14,6 @@ export interface TestClaims {
   email?: string;
   name?: string;
   role?: 'ADMIN' | 'MEMBER';
-  azureOid?: string;
   [key: string]: unknown;
 }
 
@@ -25,7 +24,6 @@ export function mockJwt(claims: TestClaims = {}): string {
       email: claims.email ?? 'test@test.com',
       name: claims.name ?? 'Test User',
       role: claims.role ?? 'MEMBER',
-      azureOid: claims.azureOid ?? 'azure-test-oid',
       ...claims,
     },
     TEST_SECRET,

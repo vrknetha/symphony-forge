@@ -1,3 +1,3 @@
 export * from './user.factory';
 export * from './project.factory';
-export * from './document.factory';
+// Add domain-specific factories as you build modules

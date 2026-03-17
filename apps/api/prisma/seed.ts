@@ -11,7 +11,7 @@ async function main(): Promise<void> {
   const admin = await prisma.user.upsert({
     where: { email: 'admin@dev.local' },
     create: {
-      azureOid: 'seed-admin-oid',     // placeholder — real value comes from OIDC in production
+      externalId: 'seed-admin-oid',  // placeholder — real value comes from OIDC `sub` claim
       email: 'admin@dev.local',
       name: 'Dev Admin',
       role: Role.ADMIN,

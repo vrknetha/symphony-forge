@@ -13,13 +13,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
-    "@azure/msal-browser": "^4.26.0",
-    "@azure/msal-react": "^3.0.26",
     "@hookform/resolvers": "^5.2.2",
     "@symphony/shared": "workspace:*",
     "@tanstack/react-query": "^5.80.10",
     "clsx": "^2.1.1",
-    "proof-sdk": "^0.10.37",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-hook-form": "^7.71.2",

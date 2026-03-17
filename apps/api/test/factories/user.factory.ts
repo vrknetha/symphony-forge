@@ -8,7 +8,7 @@ import type { User, Role } from '@prisma/client';
 export function buildUser(overrides: Partial<User> = {}): User {
   return {
     id: faker.string.uuid(),
-    azureOid: faker.string.uuid(),
+    externalId: faker.string.uuid(),
     email: faker.internet.email(),
     name: faker.person.fullName(),
     role: 'MEMBER' as Role,
