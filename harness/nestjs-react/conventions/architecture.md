@@ -35,7 +35,7 @@ All errors follow the standard shape (statusCode, message, errors[], timestamp, 
 
 ## Auth
 
-OIDC-compliant identity provider (e.g. Azure AD, Cognito, Auth0 — specified per project in PLAN.md). JWTs validated against JWKS. No custom token issuance. `@CurrentUser()` decorator for handler injection.
+OIDC-compliant identity provider (e.g. Azure AD, Auth0, Okta — specified per project in PLAN.md). JWTs validated against JWKS. No custom token issuance. `@CurrentUser()` decorator for handler injection.
 
 The specific provider is a project decision, not a convention. Conventions define the contract:
 - Passport strategy wraps provider specifics

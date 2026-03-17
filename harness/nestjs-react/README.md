@@ -10,7 +10,7 @@ A production-ready monorepo template for agent-driven development. Designed to s
 | ORM | Prisma 5 |
 | Database | PostgreSQL 16 |
 | Cache | Redis 7 |
-| Auth | AWS Cognito + @nestjs/passport JWT |
+| Auth | OIDC provider from PLAN.md + @nestjs/passport JWT |
 | Frontend | React 18 + Vite 5 |
 | Routing | TanStack Router |
 | Data Fetching | TanStack Query |
@@ -26,7 +26,7 @@ A production-ready monorepo template for agent-driven development. Designed to s
 - pnpm 9+
 - Node 20+
 - Docker + Docker Compose v2
-- AWS account (for Cognito) — or mock with localstack
+- Auth provider credentials for your chosen OIDC provider — or use local mock auth for development
 
 ## Quick Start
 
@@ -108,3 +108,4 @@ Options:
 - `--port-base`: API port (web will be +1) — default 3000
 - `--db-port`: Postgres port — default 5432
 - `--redis-port`: Redis port — default 6379
+: Redis port — default 6379

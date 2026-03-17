@@ -337,13 +337,14 @@ main branch:
 Repository secrets:
   AWS_ACCESS_KEY_ID          # CDK deploy
   AWS_SECRET_ACCESS_KEY
-  COGNITO_USER_POOL_ID       # E2E test auth
-  COGNITO_CLIENT_ID
+  OIDC_ISSUER_URL            # E2E test auth / provider discovery
+  OIDC_CLIENT_ID
+  OIDC_CLIENT_SECRET
 
 Environment secrets (staging/production):
   DATABASE_URL
   REDIS_URL
-  COGNITO_REGION
+  JWT_SECRET
 ```
 
 Rules:
