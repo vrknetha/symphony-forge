@@ -1,60 +1,76 @@
 # Symphony Forge
 
-Production system for building client software using OpenAI Symphony + harness engineering.
+Production system for building client software using **Codex + OpenClaw ACPX** and harness engineering.
 
 ## What This Is
 
 Symphony Forge turns client ideas into shipped software using AI agents as the primary developers. It provides:
 
-- **Discovery** — A structured intake process that drives toward a precise, buildable spec
-- **Harness** — Architecture conventions and scaffold prompts that agents follow to generate fresh projects (no frozen templates)
-- **Symphony** — OpenAI's multi-agent system, configured to run parallel worktrees on Linear issues
+- **Discovery** — a structured intake process that drives toward a precise, buildable spec
+- **Harness** — architecture conventions and scaffold prompts that agents follow to generate fresh projects
+- **Factory** — a Codex/OpenClaw delivery loop that plans, implements, verifies, reviews, and prepares PRs with deterministic guardrails
 
 ## Structure
 
-```
+```text
 symphony-forge/
-├── skill/SKILL.md                    # Discovery engine — invoke for new projects
-├── harness/nestjs-react/
-│   ├── SCAFFOLD_PROMPT.md            # The prompt — agent reads this, generates fresh project
-│   └── conventions/                  # Architecture, API, testing, linter rules
-├── docs/                             # Philosophy, validation loop, setup guides
-└── projects/                         # Per-client project workspaces (gitignored)
+├── .codex/                         # Codex config, hooks, agents, prompts, deterministic scripts
+├── .factory/                       # Machine-readable run state for feature execution
+├── .github/workflows/              # Template workflow checks
+├── harness/nestjs-react/           # Scaffold prompt + conventions
+├── plans/                          # Active, completed, and debt plans
+├── projects/                       # Per-client project briefs
+├── docs/                           # Setup guides and operating model
+└── WORKFLOW.md                     # Linear <-> GitHub <-> ACP phase contract
 ```
 
 ## How It Works
 
 ### 1. Discovery
 
-Say: "New project: [client name] — [brief description]"
+Capture the feature or project as a brief. The output is an issue and a durable plan context.
 
-The discovery skill drives structured intake across multiple sessions, challenging assumptions and pushing toward a precise spec.
+### 2. Planning
 
-### 2. Scaffold
+Use a high-reasoning model (`claude-opus-4-6` or `gpt-5.4`) to produce a decision-complete plan with acceptance criteria and decomposition. Human approval is required before implementation.
 
-When the spec is ready, give an agent the `SCAFFOLD_PROMPT.md` with the project name filled in. The agent generates a fresh monorepo using latest dependency versions. No frozen template — always current.
+### 3. Implementation
 
-### 3. Validate
+OpenClaw `main` orchestrates. ACP/ACPX `codex` sessions implement bounded tasks in isolated worktrees and branches.
 
-Build a vertical slice (the riskiest flow, end-to-end) before committing to full development. See [docs/validation-loop.md](docs/validation-loop.md).
+### 4. Verify
 
-### 4. Ship
+Run deterministic verification via:
 
-Connect Symphony to Linear. Issues go in, PRs come out. Each agent gets an isolated worktree with its own DB, ports, and environment.
+```bash
+python3 .codex/scripts/verify.py
+```
 
-## Why No Template?
+### 5. Review
 
-Templates rot. One major version bump and you're maintaining the template instead of building products. The scaffold prompt generates everything fresh — latest NestJS, latest React, latest Prisma. The conventions stay stable; the code stays current.
+Spawn separate Codex review subagents for:
+- code quality
+- performance
+- security
 
-## Stack (NestJS + React Harness)
+Each review outputs a score, blockers, residual risks, and a merge recommendation. The parent Codex session can persist structured results with `python3 .codex/scripts/record_review_from_json.py`.
 
-**Backend:** NestJS · Prisma · PostgreSQL · Redis · OIDC auth (Azure AD / Auth0 / Okta per project)  
-**Frontend:** React · Vite · TanStack Router · TanStack Query · Zustand · shadcn/ui  
-**Tooling:** pnpm workspaces · Turborepo · orval · Vitest · GitHub Actions
+### 6. PR Ready
+
+GitHub gets the PR package. Linear stays the source of truth. Merge remains manual.
+
+## Why This Shape
+
+- The harness stays fresh — no frozen app template rot.
+- Codex hooks enforce deterministic behavior at runtime.
+- OpenClaw ACPX keeps coding work in persistent Codex sessions.
+- Codex custom subagents keep review isolated and parallel.
+- The coordinator stays thin-context by pushing coding work to ACP workers and review work to read-only subagents.
 
 ## Docs
 
-- [Harness Philosophy](docs/harness-philosophy.md) — Why the harness exists
-- [Validation Loop](docs/validation-loop.md) — How to confirm a slice is done
-- [Symphony Setup](docs/symphony-setup.md) — Connecting to Linear + running agents
-- [Getting Started](docs/getting-started.md) — First project walkthrough
+- [Codex Factory](docs/codex-factory.md)
+- [Harness Philosophy](docs/harness-philosophy.md)
+- [Validation Loop](docs/validation-loop.md)
+- [Symphony Setup](docs/symphony-setup.md)
+- [Getting Started](docs/getting-started.md)

@@ -1,113 +1,91 @@
-# AGENTS.md — Symphony-Forge
+# AGENTS.md — Symphony Forge
 
 ## What This Is
 
-Plan-driven engineering platform. Engineers write 2-page plans, agents build production code.
+Plan-driven engineering platform. High-reasoning planners define the work. ACP Codex workers implement it. Codex review subagents score it. Humans approve the plan and merge the PR.
+
+## Runtime Split
+
+- **Coordinator:** OpenClaw `main`
+- **Planning:** `claude-opus-4-6` or `gpt-5.4` high reasoning
+- **Implementation:** ACP/ACPX `codex`
+- **Review:** Codex custom subagents `quality-reviewer`, `performance-reviewer`, `security-reviewer`
+
+Keep the coordinator thin-context. Push coding work into ACP Codex sessions. Push review into isolated read-only subagents.
 
 ## Workspace
 
-```
-apps/api/          → NestJS backend (Prisma, PostgreSQL)
-apps/web/          → React + Vite + Tailwind + TanStack + Zustand
-packages/shared/   → Cross-app types, DTOs, constants
-linters/           → Structural integrity checks (5 scripts)
-scripts/           → boot.sh, setup-worktree.sh, teardown-worktree.sh, generate-api-client.sh
-harness/nestjs-react/conventions/  → YOUR RULEBOOK (20 files, ~4000 lines)
-projects/          → Per-project plans (BRIEF.md = source of truth)
-```
-
-## Boot
-
-```bash
-./scripts/boot.sh        # docker up + install + migrate + seed + build shared
-pnpm dev                 # start API + web in parallel
-curl localhost:3000/health  # verify API
+```text
+.codex/                         -> Codex config, hooks, agents, prompts, deterministic scripts
+.factory/                       -> Machine-readable run state
+harness/nestjs-react/           -> Scaffold prompt + architecture conventions
+plans/                          -> Active, completed, debt plans
+projects/                       -> Project BRIEF.md files
+WORKFLOW.md                     -> Issue/branch/PR/session contract
 ```
 
-## Stack (LOCKED)
+## Mandatory Read Order
 
-NestJS + Prisma + PostgreSQL | React + Vite + Tailwind + shadcn + TanStack + Zustand | pnpm + Turborepo | Vitest | GitHub Actions
-
-Auth provider is project-specific (see BRIEF.md). Convention defines the contract, not the provider.
-
-## Architecture
-
-Downward-only imports: UI → Runtime → Service → Repository → Config → Types. Enforced by `linters/check-imports.ts`. See `harness/nestjs-react/conventions/architecture.md`.
-
-## Conventions — Read Before Writing Code
-
-| Building... | Read these |
-|---|---|
-| Any backend module | `code-quality.md`, `api-patterns.md`, `architecture.md` |
-| Database / Prisma | `database.md` |
-| Auth / guards | `security.md` |
-| Tests (MANDATORY) | `testing.md` |
-| Logging | `logging.md` |
-| Frontend | `frontend-patterns.md` |
-| Workers / queues | `workers.md` |
-| Git commits | `git.md` |
-| CI pipeline | `ci-pipeline.md` |
-
-Full list: `harness/nestjs-react/conventions/` (20 files). Do not skim — read each relevant one fully.
+1. `WORKFLOW.md`
+2. `projects/<name>/BRIEF.md` (if present)
+3. `plans/active/<name>.md` (if present)
+4. Relevant convention files in `harness/nestjs-react/conventions/`
 
 ## The One Rule That Gates Everything
 
-**You MUST NOT move to the next module until the current module has 100% test coverage.**
+**Implementation does not start until the plan is approved.**
 
-Every service, guard, pipe, interceptor gets a co-located `.spec.ts`. Every entity gets a factory in `apps/api/test/factories/`. No exceptions.
+A task is not PR-ready until all of these exist:
+- approved plan
+- `.factory/run.json`
+- `.factory/verify.json`
+- three review artifacts under `.factory/reviews/`
 
-## Build Order
+## Deterministic Commands
 
-1. Prisma schema + migrations → test factories → test harness
-2. Common modules (AppException, correlation middleware, response interceptor) + their specs
-3. Auth module + specs → STOP until 100% coverage
-4. Domain modules (one at a time) + specs → STOP after each
-5. Integration tests (`apps/api/test/*.int-spec.ts`)
-6. Frontend pages + component tests
+Use these, not ad hoc variants:
 
-## Common Tasks
+```bash
+python3 .codex/scripts/intake.py --issue ENG-123 --title "Feature title"
+python3 .codex/scripts/update_run.py --phase awaiting-approval --plan-status awaiting-approval
+python3 .codex/scripts/verify.py
+python3 .codex/scripts/record_review.py --aspect quality --score 9 --summary "..."
+python3 .codex/scripts/record_review_from_json.py --aspect quality --input /tmp/quality-review.json
+python3 .codex/scripts/pr_ready.py
+```
 
-| Task | Command |
-|---|---|
-| Add a domain module | `nest g module <name>`, then service/controller/repository/dto/errors/spec |
-| Run migrations | `pnpm db:migrate` |
-| Run all checks | `pnpm check:structural` |
-| Run tests | `pnpm test` |
-| Generate API client | `pnpm generate:api-client` |
-| Create worktree | `./scripts/setup-worktree.sh <branch>` |
+## Review Policy
 
-## What NOT To Do
+Every implementation run gets three independent read-only review outputs:
+- `quality-reviewer`
+- `performance-reviewer`
+- `security-reviewer`
 
-- **No `any`.** Use `unknown` + type narrowing.
-- **No `console.log`.** Use nestjs-pino structured logger.
-- **No raw Prisma in responses.** Map to typed DTOs.
-- **No cross-domain imports.** Use events or shared interfaces.
-- **No tests = not done.** Write specs immediately, not "later."
-- **No files over 200 lines.** Split at 150. Controllers max 100.
+Each reviewer must return:
+- `score`
+- `blocking_findings`
+- `non_blocking_findings`
+- `residual_risks`
+- `recommendation`
+- `reviewed_scope`
 
-## Structured Errors
+Scores must be >= 8/10 and blockers must be empty before PR-ready.
 
-All errors use `AppException` with `{ status, category, code, description, retryable }`. See `code-quality.md`.
+## ACP and Subagent Policy
 
-## Plan Hierarchy
+Use ACP/ACPX Codex sessions for coding. Do not keep large implementation state in the coordinator session.
 
-| Document | Contains | You Read It For |
-|----------|----------|-----------------|
-| `projects/<name>/BRIEF.md` | What to build (flows, domain concepts, constraints) | Understanding the problem |
-| `plans/active/<name>.md` | How to build a specific piece (steps, progress, decisions) | Your current task |
-| `conventions/` | How ALL code must be written (patterns, rules, anti-patterns) | Every line of code |
+After deterministic verification passes, the parent Codex session must explicitly spawn the three review subagents, wait for all of them, and record their outputs into `.factory/reviews/`.
 
-**BRIEF.md is intent, not spec.** It says "users create projects and add documents." It does NOT say `POST /api/v1/projects { name, description }`. You derive the API from conventions + intent.
+Recommended mapping:
+- one Linear issue -> one branch
+- one branch -> one persistent ACP Codex session label
+- one PR -> one review package
 
-## When Conventions Conflict With BRIEF.md
+## What Not To Do
 
-- BRIEF.md wins for project decisions (auth provider, domain model, features)
-- Conventions win for code patterns (file size, testing, logging, errors)
-- If ambiguous: `// CONVENTION_CONFLICT: <convention> says X, BRIEF says Y, chose Y because Z`
-
-## Where to Look Next
-
-- `harness/nestjs-react/conventions/` — all 20 convention files
-- `harness/nestjs-react/SCAFFOLD_PROMPT.md` — full scaffold spec
-- `projects/` — project-specific plans (BRIEF.md per project)
-- `docs/` — getting started, philosophy, validation loop
+- Do not implement before plan approval.
+- Do not bypass `python3 .codex/scripts/verify.py` with direct test/lint/typecheck commands.
+- Do not merge planning, implementation, and review into one vague session.
+- Do not perform review inline when the custom review subagents can be spawned.
+- Do not open a PR without review scores and deterministic verify results.

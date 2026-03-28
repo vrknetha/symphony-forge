@@ -1,148 +1,104 @@
 # Getting Started with Symphony Forge
 
-Symphony Forge is a harness for building agent-ready NestJS + React monorepos. It gives you a bootable, structurally-sound starting point that coding agents can navigate and extend without making architectural mistakes.
+Symphony Forge is a harness plus Codex/OpenClaw factory scaffold for building agent-ready software.
 
 ---
 
 ## Prerequisites
 
-| Tool | Minimum version | Install |
-|------|----------------|---------|
-| Node.js | 20.x | [nodejs.org](https://nodejs.org) |
-| pnpm | 9.x | `npm install -g pnpm@9` |
-| Docker Desktop | any recent | [docker.com](https://www.docker.com) |
-| Git | 2.x | pre-installed on most systems |
+| Tool | Minimum version |
+|------|-----------------|
+| Node.js | 20.x |
+| pnpm | 9.x |
+| Docker Desktop | recent |
+| Git | 2.x |
+| OpenClaw | current |
+| Codex login | subscription auth |
 
-Verify your setup:
+---
+
+## Use as a GitHub Template
+
+Create a new repo from `vrknetha/symphony-forge`, then clone it.
 
 ```bash
-node --version    # v20.x.x
-pnpm --version    # 9.x.x
-docker --version  # Docker version 24.x.x
-git --version     # git version 2.x.x
+gh repo create my-org/my-app --template vrknetha/symphony-forge --private
+
+git clone git@github.com:my-org/my-app.git
+cd my-app
 ```
 
 ---
 
-## Scaffold a New Project
+## Initialize a Feature Run
 
 ```bash
-# Clone symphony-forge (or use the CLI when available)
-git clone https://github.com/your-org/symphony-forge
-cd symphony-forge
-
-# Scaffold a new project from the harness
-pnpm scaffold --template nestjs-react --name my-app --output ~/projects/my-app
-
-# Move into your new project
-cd ~/projects/my-app
+python3 .codex/scripts/intake.py --issue ENG-123 --title "Build billing dashboard"
 ```
 
-The scaffolder replaces all `{{PROJECT_NAME}}`, `{{PORT_BASE}}`, `{{DB_PORT}}`, `{{WEB_PORT}}`, and `{{REDIS_PORT}}` placeholders with real values.
+That creates `.factory/run.json` and establishes the issue/branch contract.
 
 ---
 
-## Boot the Environment
+## Plan First
+
+Use a high-reasoning planner to create the approved plan artifact before implementation.
+
+When approved, move the run forward:
 
 ```bash
-# From your project root
-./scripts/boot.sh
-```
-
-This single command:
-1. Checks Docker is running
-2. Starts Postgres and Redis via Docker Compose
-3. Installs pnpm dependencies (`--frozen-lockfile`)
-4. Waits for Postgres to be ready
-5. Applies Prisma migrations
-6. Seeds the database
-7. Prints the URLs for your API and web app
-
-Expected output:
-```
-╔══════════════════════════════════════════════════╗
-║  ✅  Boot complete!                               ║
-╠══════════════════════════════════════════════════╣
-║  API  →  http://localhost:3000                   ║
-║  Web  →  http://localhost:5173                   ║
-║  DB   →  localhost:5432                          ║
-║                                                  ║
-║  Start dev servers:  pnpm dev                    ║
-║  API docs:           http://localhost:3000/api/docs ║
-╚══════════════════════════════════════════════════╝
+python3 .codex/scripts/update_run.py --phase implementing --plan-status approved
 ```
 
 ---
 
-## Start Dev Servers
+## Implement via ACP Codex
+
+Use OpenClaw + ACPX Codex for coding work. Keep the coordinator thin-context and use persistent ACP coding sessions for implementation.
+
+---
+
+## Verify Deterministically
 
 ```bash
-pnpm dev
+python3 .codex/scripts/verify.py
 ```
 
-Turbo runs all apps in parallel with hot-reload:
-- **API** → http://localhost:3000 (NestJS with Swagger at `/api/docs`)
-- **Web** → http://localhost:5173 (Vite + React)
+This writes `.factory/verify.json`.
 
 ---
 
-## Verify Everything Works
+## Spawn Review Subagents
+
+After verification passes, have the parent Codex session explicitly spawn:
+- `quality-reviewer`
+- `performance-reviewer`
+- `security-reviewer`
+
+These are project-scoped custom agents defined under `.codex/agents/`. They are read-only and framework-independent.
+
+If the parent Codex session already has structured reviewer JSON, prefer:
 
 ```bash
-# Health check
-curl http://localhost:3000/health
+python3 .codex/scripts/record_review_from_json.py --aspect quality --input /tmp/quality-review.json
+python3 .codex/scripts/record_review_from_json.py --aspect performance --input /tmp/performance-review.json
+python3 .codex/scripts/record_review_from_json.py --aspect security --input /tmp/security-review.json
+```
 
-# API docs
-open http://localhost:3000/api/docs
+For manual fallback, record the results with:
 
-# Web app
-open http://localhost:5173
-
-# Run all tests
-pnpm test
-
-# Run structural checks
-pnpm check:all
+```bash
+python3 .codex/scripts/record_review.py --aspect quality --score 9 --summary "Code quality acceptable" --recommendation approve --reviewed-scope src/api/orders.ts
+python3 .codex/scripts/record_review.py --aspect performance --score 8 --summary "No major regressions" --recommendation approve-with-caveats --reviewed-scope src/api/orders.ts
+python3 .codex/scripts/record_review.py --aspect security --score 9 --summary "Security posture acceptable" --recommendation approve --reviewed-scope src/api/orders.ts
 ```
 
 ---
 
-## Next Steps
+## Mark PR Ready
 
-| Task | Command / Doc |
-|------|--------------|
-| Add a domain module | See `AGENTS.md` → "Add a New Domain Module" |
-| Update the database schema | `pnpm db:migrate` |
-| Generate typed API client | `pnpm generate:api-client` |
-| Work with worktrees (Symphony) | `./scripts/setup-worktree.sh <branch>` |
-| Architecture rules | `docs/architecture.md` |
-| Validation loop | `docs/validation-loop.md` |
-| Configure Symphony | `docs/symphony-setup.md` |
+```bash
+python3 .codex/scripts/pr_ready.py
+```
 
----
-
-## Troubleshooting
-
-**Docker not running:**
-```
-❌  Docker is not running. Start Docker Desktop and retry.
-```
-→ Open Docker Desktop and wait for it to fully start, then re-run `./scripts/boot.sh`.
-
-**Port already in use:**
-```
-Error: listen EADDRINUSE :::3000
-```
-→ Another process is using port 3000. Either kill it (`lsof -ti:3000 | xargs kill`) or use a worktree with a different port offset.
-
-**Prisma migration errors:**
-```
-Error: P1001: Can't reach database server
-```
-→ Postgres isn't ready yet. Run `./scripts/boot.sh` again (it waits for Postgres readiness).
-
-**pnpm install fails with frozen-lockfile:**
-```
-ERR_PNPM_OUTDATED_LOCKFILE
-```
-→ Your lockfile is out of date. Run `pnpm install` (without `--frozen-lockfile`) once to update it, then commit the updated `pnpm-lock.yaml`.
+If artifacts are missing or review thresholds are not met, it exits non-zero.

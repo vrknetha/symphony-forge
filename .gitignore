@@ -36,3 +36,8 @@ test-results
 # Logs
 *.log
 pino-*.log
+
+# Factory runtime outputs
+.factory/tool-history.jsonl
+.factory/*.tmp.json
+.worktrees/
