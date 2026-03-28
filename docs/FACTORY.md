@@ -88,6 +88,10 @@ Put source material directly in:
 - `docs/architecture/`
 - `docs/decisions/`
 
+Use:
+- `docs/architecture/README.md` for the architecture doc contract
+- `docs/decisions/README.md` for the decision record contract
+
 Optional supporting docs can live in:
 - `plans/`
 - `docs/product/`

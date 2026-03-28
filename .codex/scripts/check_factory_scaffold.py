@@ -28,6 +28,8 @@ required = [
     root / 'WORKFLOW.md',
     root / 'docs' / 'FACTORY.md',
     root / 'docs' / 'QUALITY.md',
+    root / 'docs' / 'architecture' / 'README.md',
+    root / 'docs' / 'decisions' / 'README.md',
 ]
 missing = [str(path.relative_to(root)) for path in required if not path.exists()]
 if missing:

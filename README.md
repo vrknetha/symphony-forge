@@ -73,6 +73,8 @@ GitHub gets the PR package. Linear stays the source of truth. Merge remains manu
 - [Codex Factory](docs/codex-factory.md)
 - [Factory Contract](docs/FACTORY.md)
 - [Quality Contract](docs/QUALITY.md)
+- [Architecture Docs Contract](docs/architecture/README.md)
+- [Decision Docs Contract](docs/decisions/README.md)
 - [Harness Philosophy](docs/harness-philosophy.md)
 - [Validation Loop](docs/validation-loop.md)
 - [Symphony Setup](docs/symphony-setup.md)

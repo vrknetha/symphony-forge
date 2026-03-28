@@ -5,6 +5,7 @@
 - GitHub mirrors branch, PR, checks, and review evidence.
 - The repo owns workflow policy, prompts, and run artifacts.
 - Architecture and decision docs live in the repo under `docs/architecture/` and `docs/decisions/`.
+- `docs/decisions/` overrides ambiguous or conflicting architecture guidance.
 
 ## Runtime Modes
 - **Plain Codex**: local implementation and subagent runs.

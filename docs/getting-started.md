@@ -37,6 +37,10 @@ Place the application inputs directly in the generated repo:
 - `docs/architecture/`
 - `docs/decisions/`
 
+Start by reading:
+- `docs/architecture/README.md`
+- `docs/decisions/README.md`
+
 This repo is intended to be self-contained. Do not make the factory depend on another local source repo path.
 
 ---
