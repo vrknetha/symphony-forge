@@ -4,6 +4,7 @@
 - Linear owns task and decomposition state.
 - GitHub mirrors branch, PR, checks, and review evidence.
 - The repo owns workflow policy, prompts, and run artifacts.
+- Product intent lives in `docs/product/BRIEF.md`.
 - Architecture and decision docs live in the repo under `docs/architecture/` and `docs/decisions/`.
 - `docs/decisions/` overrides ambiguous or conflicting architecture guidance.
 

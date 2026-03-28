@@ -85,10 +85,12 @@ Defaulting all work to `high` is a bad tradeoff for cost, latency, and focus.
 The generated application repo is self-contained.
 
 Put source material directly in:
+- `docs/product/BRIEF.md`
 - `docs/architecture/`
 - `docs/decisions/`
 
 Use:
+- `docs/product/README.md` for the product brief contract
 - `docs/architecture/README.md` for the architecture doc contract
 - `docs/decisions/README.md` for the decision record contract
 

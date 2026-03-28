@@ -34,10 +34,12 @@ cd my-app
 
 Place the application inputs directly in the generated repo:
 
+- `docs/product/BRIEF.md`
 - `docs/architecture/`
 - `docs/decisions/`
 
 Start by reading:
+- `docs/product/README.md`
 - `docs/architecture/README.md`
 - `docs/decisions/README.md`
 

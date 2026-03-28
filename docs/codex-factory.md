@@ -3,6 +3,7 @@
 Symphony Forge is a doc-driven Codex factory template with optional OpenClaw orchestration.
 
 ## Runtime Model
+- Product intent lives in `docs/product/BRIEF.md`.
 - Architecture and decision docs live in the repo before planning starts.
 - A planner owns decomposition and writes a Linear-first task graph.
 - Plain Codex or OpenClaw + ACP/ACPX handles implementation.
@@ -34,11 +35,12 @@ Reasoning policy:
 - `.codex/` — hooks, agents, prompts, and deterministic scripts
 - `.factory/` — machine-readable run state
 - `plans/` — durable plan history
+- `docs/product/` — product intent and brief
 - `docs/architecture/` and `docs/decisions/` — in-repo source of truth
 
 ## Golden Path
 1. Run intake to initialize `.factory/run.json`
-2. Review in-repo architecture and decision docs
+2. Review product, architecture, and decision docs
 3. Produce and approve a plan
 4. Record decomposition from the docs
 5. Implement one bounded leaf task

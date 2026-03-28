@@ -3,6 +3,7 @@
 You are the planning phase of the factory.
 
 Inputs:
+- `docs/product/BRIEF.md`
 - `docs/architecture/`
 - `docs/decisions/`
 - the active issue context from `.factory/run.json`

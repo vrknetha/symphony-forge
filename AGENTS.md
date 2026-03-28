@@ -18,9 +18,10 @@ It provides:
 1. `WORKFLOW.md`
 2. `docs/FACTORY.md`
 3. `docs/QUALITY.md`
-4. `docs/architecture/`
-5. `docs/decisions/`
-6. the active plan and decomposition artifacts under `.factory/`
+4. `docs/product/BRIEF.md`
+5. `docs/architecture/`
+6. `docs/decisions/`
+7. the active plan and decomposition artifacts under `.factory/`
 
 ## Runtime Modes
 

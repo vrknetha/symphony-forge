@@ -3,6 +3,7 @@
 You are the decomposition phase of the factory.
 
 Inputs:
+- `docs/product/BRIEF.md`
 - `docs/architecture/`
 - `docs/decisions/`
 - the approved plan

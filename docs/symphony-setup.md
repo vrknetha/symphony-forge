@@ -88,6 +88,7 @@ Use GitHub Actions for deterministic checks on push and PR.
 ## Step 4: Configure Docs and Factory State
 
 Put the application inputs directly in the repo before planning:
+- `docs/product/BRIEF.md`
 - `docs/architecture/`
 - `docs/decisions/`
 
