@@ -21,6 +21,8 @@ apps/**/.env.*
 .vscode
 *.swp
 *.swo
+__pycache__/
+*.pyc
 
 # Prisma
 *.db
@@ -36,3 +38,8 @@ test-results
 # Logs
 *.log
 pino-*.log
+
+# Factory runtime outputs
+.factory/tool-history.jsonl
+.factory/*.tmp.json
+.worktrees/

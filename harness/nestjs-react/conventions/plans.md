@@ -6,7 +6,7 @@ Plans are first-class artifacts. They live in the repo. Agents read plans to und
 
 | Type | Purpose | Who Writes | Where | Size |
 |------|---------|-----------|-------|------|
-| **Project BRIEF.md** | WHAT to build | Human | `projects/<name>/BRIEF.md` | ~1 page |
+| **Project BRIEF.md** | WHAT to build | Human | `docs/product/BRIEF.md` | ~1 page |
 | **Execution plan** | HOW to build a specific piece | Agent or human | `plans/active/<name>.md` | 1-2 pages |
 | **Tech debt** | Known quality gaps | Agent | `plans/debt/<name>.md` | Short |
 

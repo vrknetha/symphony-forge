@@ -1,60 +1,83 @@
 # Symphony Forge
 
-Production system for building client software using OpenAI Symphony + harness engineering.
+Production system for building applications from in-repo architecture documents using **Codex**, with optional **OpenClaw ACPX** orchestration.
 
 ## What This Is
 
-Symphony Forge turns client ideas into shipped software using AI agents as the primary developers. It provides:
+Symphony Forge turns architecture docs, decisions, and product briefs already present in the target repo into shipped software using AI agents as the primary developers. It provides:
 
-- **Discovery** — A structured intake process that drives toward a precise, buildable spec
-- **Harness** — Architecture conventions and scaffold prompts that agents follow to generate fresh projects (no frozen templates)
-- **Symphony** — OpenAI's multi-agent system, configured to run parallel worktrees on Linear issues
+- **Discovery** — structured intake that drives toward a precise, buildable spec
+- **Harness** — architecture conventions and scaffold prompts that agents follow to generate fresh projects
+- **Factory** — a doc-driven delivery loop that plans, decomposes, implements, tests, reviews, and prepares PRs with deterministic guardrails
 
 ## Structure
 
-```
+```text
 symphony-forge/
-├── skill/SKILL.md                    # Discovery engine — invoke for new projects
-├── harness/nestjs-react/
-│   ├── SCAFFOLD_PROMPT.md            # The prompt — agent reads this, generates fresh project
-│   └── conventions/                  # Architecture, API, testing, linter rules
-├── docs/                             # Philosophy, validation loop, setup guides
-└── projects/                         # Per-client project workspaces (gitignored)
+├── .codex/                         # Codex config, hooks, agents, prompts, deterministic scripts
+├── .factory/                       # Machine-readable run state for feature execution
+├── .github/workflows/              # Template workflow checks
+├── docs/                           # Setup guides, factory contract, architecture/decision inputs
+├── harness/nestjs-react/           # Scaffold prompt + conventions
+├── plans/                          # Active, completed, and debt plans
+└── WORKFLOW.md                     # Linear <-> GitHub <-> run-artifact contract
 ```
 
 ## How It Works
 
-### 1. Discovery
+### 1. Put the docs in the repo
 
-Say: "New project: [client name] — [brief description]"
+The generated application repo is the system of record. Put architecture and decision docs directly under `docs/architecture/` and `docs/decisions/` before planning.
+Also define product intent in `docs/product/BRIEF.md`.
 
-The discovery skill drives structured intake across multiple sessions, challenging assumptions and pushing toward a precise spec.
+### 2. Planning and decomposition
 
-### 2. Scaffold
+Use a high-reasoning planner to produce a decision-complete plan, then generate a Linear-first task graph from the in-repo docs. Human approval is required before implementation.
 
-When the spec is ready, give an agent the `SCAFFOLD_PROMPT.md` with the project name filled in. The agent generates a fresh monorepo using latest dependency versions. No frozen template — always current.
+### 3. Implementation
 
-### 3. Validate
+Implementation defaults to `gpt-5.3-codex` at medium reasoning. The repo works in plain Codex mode or OpenClaw + ACP/ACPX mode.
 
-Build a vertical slice (the riskiest flow, end-to-end) before committing to full development. See [docs/validation-loop.md](docs/validation-loop.md).
+### 4. Test and verify
 
-### 4. Ship
+Run the `automated-tester` subagent before deterministic verify. After review, run the `functional-checker` subagent for user-visible validation.
 
-Connect Symphony to Linear. Issues go in, PRs come out. Each agent gets an isolated worktree with its own DB, ports, and environment.
+Deterministic validation still runs via:
 
-## Why No Template?
+```bash
+python3 .codex/scripts/verify.py
+```
 
-Templates rot. One major version bump and you're maintaining the template instead of building products. The scaffold prompt generates everything fresh — latest NestJS, latest React, latest Prisma. The conventions stay stable; the code stays current.
+### 5. Review
 
-## Stack (NestJS + React Harness)
+Spawn separate Codex review subagents for:
+- code quality
+- performance
+- security
 
-**Backend:** NestJS · Prisma · PostgreSQL · Redis · OIDC auth (Azure AD / Auth0 / Okta per project)  
-**Frontend:** React · Vite · TanStack Router · TanStack Query · Zustand · shadcn/ui  
-**Tooling:** pnpm workspaces · Turborepo · orval · Vitest · GitHub Actions
+Each review outputs a score, blockers, residual risks, and a merge recommendation.
+
+### 6. PR ready
+
+GitHub gets the PR package. Linear stays the source of truth. Merge remains manual.
+
+## Why This Shape
+
+- The harness stays fresh — no frozen app template rot.
+- Codex hooks enforce deterministic behavior at runtime.
+- OpenClaw ACPX is available for orchestration, but not required for normal repo use.
+- Codex custom subagents keep planning, testing, and review isolated.
+- The coordinator stays thin-context by pushing specialized work into subagents.
 
 ## Docs
 
-- [Harness Philosophy](docs/harness-philosophy.md) — Why the harness exists
-- [Validation Loop](docs/validation-loop.md) — How to confirm a slice is done
-- [Symphony Setup](docs/symphony-setup.md) — Connecting to Linear + running agents
-- [Getting Started](docs/getting-started.md) — First project walkthrough
+- [Codex Factory](docs/codex-factory.md)
+- [Factory Contract](docs/FACTORY.md)
+- [Quality Contract](docs/QUALITY.md)
+- [Product Brief Contract](docs/product/README.md)
+- [Architecture Docs Contract](docs/architecture/README.md)
+- [Decision Docs Contract](docs/decisions/README.md)
+- [Harness Philosophy](docs/harness-philosophy.md)
+- [Validation Loop](docs/validation-loop.md)
+- [Symphony Setup](docs/symphony-setup.md)
+- [Getting Started](docs/getting-started.md)
