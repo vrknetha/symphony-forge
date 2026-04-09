@@ -38,6 +38,14 @@ Use a high-reasoning planner to produce a decision-complete plan, then generate 
 
 Implementation defaults to `gpt-5.3-codex` at medium reasoning. The repo works in plain Codex mode or OpenClaw + ACP/ACPX mode.
 
+Use stage orchestration guidance at any time:
+
+```bash
+python3 .codex/scripts/stage_orchestrator.py
+```
+
+It maps the current phase to required subagents, prompt contract, deterministic commands, and transition rule.
+
 ### 4. Test and verify
 
 Run the `automated-tester` subagent before deterministic verify. After review, run the `functional-checker` subagent for user-visible validation.
@@ -46,6 +54,12 @@ Deterministic validation still runs via:
 
 ```bash
 python3 .codex/scripts/verify.py
+```
+
+For full end-to-end validation and PR-ready gating in one command, use:
+
+```bash
+python3 .codex/scripts/validate_work.py
 ```
 
 ### 5. Review

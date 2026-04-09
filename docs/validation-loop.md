@@ -144,3 +144,11 @@ When Symphony is configured (see `docs/symphony-setup.md`), it runs the validati
 6. Symphony merges the branch and marks the Linear issue Done
 
 The error messages from the linters are deliberately agent-readable — they tell you exactly what to fix and where.
+
+For local factory sessions, the equivalent one-command gate is:
+
+```bash
+python3 .codex/scripts/validate_work.py
+```
+
+It runs deterministic verify, validates `.factory` testing/review artifacts, and marks the run PR-ready only when all gates pass.

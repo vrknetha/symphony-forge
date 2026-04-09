@@ -47,10 +47,12 @@ Required run artifacts:
 3. record decomposition
 4. implement one leaf task
 5. run `automated-tester`
-6. run `python3 .codex/scripts/verify.py`
+6. run `python3 .codex/scripts/verify.py` (or `python3 .codex/scripts/validate_work.py`)
 7. spawn review subagents
 8. run `functional-checker`
-9. run `python3 .codex/scripts/pr_ready.py`
+9. run `python3 .codex/scripts/pr_ready.py` (or rely on `validate_work.py` to mark PR-ready)
+
+Use `python3 .codex/scripts/stage_orchestrator.py` to get the exact subagent and command contract for the current phase.
 
 ## PR Ready Contract
 A branch is PR-ready only when:

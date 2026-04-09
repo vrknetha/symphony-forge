@@ -75,6 +75,9 @@ python3 .codex/scripts/intake.py --issue ENG-123 --title "Feature title"
 python3 .codex/scripts/record_decomposition_from_json.py --input /tmp/decomposition.json
 python3 .codex/scripts/update_run.py --phase awaiting-approval --plan-status awaiting-approval
 python3 .codex/scripts/verify.py
+python3 .codex/scripts/validate_artifacts.py
+python3 .codex/scripts/validate_work.py
+python3 .codex/scripts/stage_orchestrator.py
 python3 .codex/scripts/record_test_from_json.py --kind automated --input /tmp/automated.json
 python3 .codex/scripts/record_review_from_json.py --aspect quality --input /tmp/quality.json
 python3 .codex/scripts/pr_ready.py

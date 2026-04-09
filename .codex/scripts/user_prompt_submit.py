@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from factory_lib import load_json, read_hook_input, repo_root, run_state_path
+from stage_playbook import render_stage_context
 
 payload = read_hook_input()
 prompt = (payload.get("prompt") or "").lower()
@@ -20,6 +21,10 @@ if needs_build and run_state.get("decomposition_status") != "recorded":
 print(json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "UserPromptSubmit",
-        "additionalContext": "If the request is vague, convert it into acceptance criteria and capability-driven task decomposition before coding. Use the planner and decomposer prompts rather than improvising the task graph inline."
+        "additionalContext": (
+            "If the request is vague, convert it into acceptance criteria and capability-driven task decomposition before coding. "
+            "Use the planner and decomposer prompts rather than improvising the task graph inline.\n"
+            + render_stage_context(run_state)
+        ),
     }
 }))

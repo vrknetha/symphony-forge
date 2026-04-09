@@ -79,3 +79,7 @@ PR-ready requires:
 - no review blockers
 - review scores >= 8
 - evidence for acceptance criteria
+
+Validation commands:
+- `python3 .codex/scripts/validate_artifacts.py` checks artifact shape and gate thresholds
+- `python3 .codex/scripts/validate_work.py` runs verify + artifact validation and marks PR-ready on success

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 from factory_lib import load_json, read_hook_input, repo_root, run_state_path
+from stage_playbook import render_stage_context
 
 payload = read_hook_input()
 root = repo_root()
@@ -18,6 +19,7 @@ if run_state:
     context.append(f"Current phase: {run_state.get('phase')}")
     context.append(f"Plan status: {run_state.get('plan_status')}")
     context.append(f"Decomposition status: {run_state.get('decomposition_status')}")
+context.append(render_stage_context(run_state))
 print(json.dumps({
     "hookSpecificOutput": {
         "hookEventName": "SessionStart",

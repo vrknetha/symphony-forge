@@ -80,6 +80,12 @@ python3 .codex/scripts/update_run.py --phase implementing --plan-status approved
 
 Use plain Codex or OpenClaw + ACPX Codex for coding work. Keep the coordinator thin-context and use bounded tasks from the recorded decomposition.
 
+To see the exact subagent routing and required commands for your current phase:
+
+```bash
+python3 .codex/scripts/stage_orchestrator.py
+```
+
 Implementation default:
 - model: `gpt-5.3-codex`
 - reasoning: `medium`
@@ -101,6 +107,12 @@ python3 .codex/scripts/verify.py
 ```
 
 This writes `.factory/verify.json`.
+
+If you want the harness to run deterministic verify, enforce all artifact gates, and mark PR-ready automatically, use:
+
+```bash
+python3 .codex/scripts/validate_work.py
+```
 
 ---
 
@@ -150,3 +162,5 @@ python3 .codex/scripts/pr_ready.py
 ```
 
 If decomposition, testing, review, or verification artifacts are missing, it exits non-zero.
+
+`validate_work.py` already runs this check (and marks PR-ready when successful), so use `pr_ready.py` directly only when you want a separate explicit gate step.
