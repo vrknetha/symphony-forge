@@ -404,10 +404,40 @@ def test_pr_ready_rejects_stale_evidence_after_code_change(repo, tmp_path):
     assert code == 0, out
 
 
+def test_pr_ready_accepts_decomposition_recorded_before_implementation(repo, tmp_path):
+    # Found by the pilot simulation: decomposition is stamped at planning time,
+    # code lands after, evidence is stamped at the implementation commit.
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    code, _ = run(repo, "record_decomposition_from_json.py",
+                  stdin=json.dumps({"status": "recorded"}))
+    assert code == 0
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "plan + decomposition")
+    (repo / "src.py").write_text("VALUE = 1\n")
+    git(repo, "add", "src.py")
+    git(repo, "commit", "-q", "-m", "implementation")
+    write_passing_artifacts(repo)  # evidence stamped at the new HEAD
+    code, out = run(repo, "pr_ready.py")
+    assert code == 0, out
+
+
 def test_pr_ready_tolerates_evidence_only_commits(repo, tmp_path):
     ready_task(repo, tmp_path)
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", "record evidence")  # touches .factory/plans only
+    code, out = run(repo, "pr_ready.py")
+    assert code == 0, out
+
+
+def test_pr_ready_tolerates_harness_upgrade_commits(repo, tmp_path):
+    # Found by the pilot simulation: a forge upgrade mid-task touches .agents/
+    # machinery — that is not product code and must not invalidate evidence.
+    ready_task(repo, tmp_path)
+    (repo / ".agents" / "scripts" / "extra_helper.py").write_text("# upgraded\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "chore: forge upgrade")
     code, out = run(repo, "pr_ready.py")
     assert code == 0, out
 

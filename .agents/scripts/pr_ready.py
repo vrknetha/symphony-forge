@@ -18,8 +18,14 @@ from factory_lib import (
 )
 
 # Commits touching only these paths after evidence was recorded do not
-# invalidate it (recording/archiving the evidence itself, plans, docs).
-EVIDENCE_PATHS = (".factory/", "plans/", "docs/")
+# invalidate it: evidence/plan/doc records, harness machinery and adapters
+# (e.g. a forge upgrade mid-task), canon docs, and the preserved prototype.
+# Evidence attests to PRODUCT code; everything listed here is not that.
+EVIDENCE_PATHS = (
+    ".factory/", "plans/", "docs/", ".agents/", ".claude/", ".codex/",
+    ".github/", "constitution/", "harness/", "prototype/",
+)
+EVIDENCE_FILES = {"forge", "CLAUDE.md", "AGENTS.md", "WORKFLOW.md", "harness.yaml", ".gitignore"}
 
 root = repo_root()
 run_state = load_json(run_state_path(root), default={})
@@ -73,10 +79,15 @@ for aspect in ("quality", "performance", "security"):
 
 # Provenance: every evidence artifact carries the commit it was recorded at;
 # all must agree, and no code may have changed since (evidence-only commits ok).
+# Decomposition is a plan-side artifact — recorded BEFORE implementation by
+# design — so it must be stamped but is exempt from same-commit/freshness.
 head = head_sha(root)
+if decomposition and not decomposition.get("commit") and head:
+    missing.append(
+        "commit provenance on: decomposition (re-record with current tooling)"
+    )
 stamps: dict[str, str | None] = {}
 for label, data in (
-    ("decomposition", decomposition),
     ("verify", verify),
     ("tests", tests),
 ):
@@ -113,7 +124,7 @@ elif head and stamps:
             else:
                 code_changes = [
                     f for f in proc.stdout.splitlines()
-                    if f and not f.startswith(EVIDENCE_PATHS)
+                    if f and not f.startswith(EVIDENCE_PATHS) and f not in EVIDENCE_FILES
                 ]
                 if code_changes:
                     missing.append(
