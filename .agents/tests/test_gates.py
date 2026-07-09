@@ -135,6 +135,14 @@ def test_decomposition_refused_before_signoff(repo):
     assert code != 0 and "sign-off" in out
 
 
+def test_decomposition_refused_before_approved_plan(repo):
+    sign_off(repo)
+    intake(repo)
+    code, out = run(repo, "record_decomposition_from_json.py",
+                    stdin=json.dumps({"status": "recorded"}))
+    assert code != 0 and "approved" in out  # autoreview r10
+
+
 def test_pr_ready_refused_before_signoff(repo):
     intake(repo)
     code, out = run(repo, "pr_ready.py")

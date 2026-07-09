@@ -27,6 +27,14 @@ if state and not state.get("client_signoff"):
         "Recording decomposition requires client sign-off first. Get "
         "docs/decisions/NNNN-client-signoff.md accepted, then run record_signoff.py."
     )
+issue = state.get("issue_key", "") if state else ""
+plan_files = list((root / "plans" / "active").glob(f"{issue}-*.md")) if issue else []
+if state and (state.get("plan_status") != "approved" or not plan_files):
+    raise SystemExit(
+        "Recording decomposition requires an approved, saved plan first "
+        f"(plans/active/{issue or '<issue>'}-*.md via `forge.py plan save`). "
+        "Decomposition of an unapproved plan is the bug this gate exists to stop."
+    )
 dump_json(decomposition_state_path(root), payload)
 if state:
     state["decomposition_status"] = "recorded"
