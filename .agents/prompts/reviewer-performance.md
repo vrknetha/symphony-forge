@@ -19,4 +19,4 @@ Required output contract:
 - reviewed_scope
 
 The reviewer must distinguish measured evidence from inference.
-The parent session should wait for the subagent result, then record it with `record_review.py`.
+The parent session should wait for the subagent result, then record it with `record_review_from_json.py --aspect performance --input <json>`.

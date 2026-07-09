@@ -29,7 +29,7 @@ It provides:
 
 Claude Code coordinates discovery, planning, decisions, and orchestration through `codex-plugin-cc`. During planning, codebase exploration is delegated to Codex read-only runs.
 
-Codex executes exploration, implementation, testing, and review. The same `.factory` artifacts are required whether the repo runs in plain Codex or OpenClaw + ACP/ACPX mode.
+Codex executes exploration, implementation, testing, and review. The `.factory` artifacts are required regardless of how sessions are orchestrated.
 
 ## Phase Contract
 

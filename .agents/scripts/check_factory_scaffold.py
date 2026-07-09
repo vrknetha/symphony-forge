@@ -13,7 +13,6 @@ required = [
     root / '.agents' / 'prompts' / 'tester-automated.md',
     root / '.agents' / 'prompts' / 'tester-functional.md',
     root / '.agents' / 'scripts' / 'verify.py',
-    root / '.agents' / 'scripts' / 'sync_linear.py',
     root / '.agents' / 'scripts' / 'record_decomposition_from_json.py',
     root / '.agents' / 'scripts' / 'render_linear_task_graph.py',
     root / '.agents' / 'scripts' / 'record_test_from_json.py',

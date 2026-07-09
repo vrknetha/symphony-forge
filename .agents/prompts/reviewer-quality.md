@@ -17,4 +17,4 @@ Required output contract:
 - recommendation
 - reviewed_scope
 
-The parent session should wait for the subagent result, then record it with `record_review.py`.
+The parent session should wait for the subagent result, then record it with `record_review_from_json.py --aspect quality --input <json>`.

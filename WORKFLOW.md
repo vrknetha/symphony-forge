@@ -12,10 +12,9 @@
 - `docs/decisions/` overrides ambiguous or conflicting architecture guidance.
 
 ## Runtime Modes
-- **Plain Codex**: local implementation and subagent runs.
-- **OpenClaw + ACP/ACPX**: orchestrated implementation sessions for long-running work.
-
-Both modes must produce the same `.factory` artifacts.
+Claude Code coordinates; Codex executes (local sessions and subagents).
+External orchestrators (e.g. OpenClaw ACP) are a future/optional mode — any
+orchestration must produce the same `.factory` artifacts.
 
 ## Factory Phases
 0a. `discovery` — lightweight problem, stakeholder, and constraint discovery; no `.factory` ceremony required.

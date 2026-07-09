@@ -1,5 +1,11 @@
 # Validation Loop
 
+> **Scope note:** this document describes the contract of GENERATED
+> application repos — the linters, boot scripts, and checks named here
+> (`check-imports.ts`, `boot.sh`, ...) are produced by
+> `harness/nestjs-react/SCAFFOLD_PROMPT.md` in each client repo. They do
+> not exist in this template repo itself.
+
 The validation loop is the process by which Symphony (and human developers) confirm that a completed slice of work is genuinely production-ready — not just "it compiles."
 
 Each iteration of the loop covers four phases. A slice is not done until all four pass.
@@ -134,7 +140,7 @@ This is a manual or automated check that exercises the full slice:
 
 ## Automating the Loop (Symphony Integration)
 
-When Symphony is configured (see `docs/symphony-setup.md`), it runs the validation loop automatically after each agent commit:
+When orchestration is configured, it runs the validation loop automatically after each agent commit:
 
 1. **Webhook fires** on push to the worktree branch
 2. Symphony runs `pnpm check:all && pnpm turbo run typecheck && pnpm turbo run test`

@@ -349,10 +349,6 @@ def test_evidence_recorders_gated_on_preconditions(repo):
          json.dumps({"status": "passed"})),
         ("record_review_from_json.py", ("--aspect", "quality"),
          json.dumps({"score": 9})),
-        ("record_review.py", ("--aspect", "quality", "--score", "9",
-                              "--summary", "ok"), None),
-        ("record_test_result.py", ("--kind", "automated", "--status", "passed",
-                                   "--summary", "ok"), None),
     ):
         code, out = run(repo, script, *args, stdin=stdin)
         assert code != 0 and "sign-off" in out, f"{script}: {out}"

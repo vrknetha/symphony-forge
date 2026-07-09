@@ -28,7 +28,7 @@ The `caw-new-project` skill updates the harness, runs `doctor --fix` (installs t
                         (Claude)  (Codex)     (Codex)                 (subagents)
 ```
 
-- **Before sign-off**: lightweight on purpose — no ceremony. Discovery via gstack `/office-hours`, prototypes are throwaway.
+- **Before sign-off**: lightweight on purpose — no ceremony, no time-box. Discovery via gstack `/office-hours`; the prototype that earns sign-off is preserved in `prototype/` as the permanent UX reference.
 - **After sign-off**: deterministic gates. Plans live in `plans/`, decisions in `docs/decisions/`, evidence in `.factory/`; `pr_ready.py` archives every shipped task's plan + proof to `plans/completed/` and `.factory/history/`.
 - **Continuously**: dump raw context (client emails, transcripts) into `docs/context/` — a ledger tracks harvest status, and agents turn pending files into proposed decisions and doc updates. Dev corrections get mined into proposed skills (`.agents/skills/proposed/`) that humans promote.
 
@@ -71,4 +71,3 @@ symphony-forge/
 - [Product Brief](docs/product/README.md) · [Architecture](docs/architecture/README.md) · [Decisions](docs/decisions/README.md)
 - [Context Inbox](docs/context/README.md) — dump files here, harvest tracked
 - [Degraded Mode](docs/degraded-mode.md) — when codex-plugin-cc is unavailable
-- [Codex Factory](docs/codex-factory.md) · [Symphony Setup](docs/symphony-setup.md)

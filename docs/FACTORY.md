@@ -4,34 +4,14 @@
 
 This document is the operating contract for the factory beyond the short root `AGENTS.md`.
 
-## Runtime Matrix
+## Runtime
 
-### Plain Codex
-Use when:
-- working directly in the repo
-- no orchestration daemon is needed
-- one engineer is driving one issue or small set of issues
-
-Capabilities:
-- planning
-- decomposition
-- implementation
-- testing
-- review subagents
-- PR packaging
-
-### OpenClaw + ACP/ACPX
-Use when:
-- a long-running or scheduled orchestrator is needed
-- many issues are being managed concurrently
-- you want a persistent issue session per task
-
-Capabilities:
-- everything in plain Codex mode
-- plus persistent orchestration, issue polling, and higher-level coordination
-
-### Rule
-The repo contract and artifacts must be identical in both modes.
+Claude Code coordinates (planning, decisions, orchestration via
+codex-plugin-cc); Codex executes (exploration, implementation, testing, review
+subagents, PR packaging). Future/optional: an external orchestrator (e.g.
+OpenClaw ACP) for long-running or multi-issue scheduling — any such mode must
+produce the identical repo contract and `.factory` artifacts, which is the
+only rule that matters here.
 
 ## Prompt Usage Model
 

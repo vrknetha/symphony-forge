@@ -1,5 +1,11 @@
 # Harness Philosophy
 
+> **Scope note:** this document describes the contract of GENERATED
+> application repos — the linters, boot scripts, and checks named here
+> (`check-imports.ts`, `boot.sh`, ...) are produced by
+> `harness/nestjs-react/SCAFFOLD_PROMPT.md` in each client repo. They do
+> not exist in this template repo itself.
+
 > "The codebase is not just for humans anymore. It's the environment your agent lives in."
 
 This document explains why Symphony Forge is built the way it is — and why each design decision matters when coding agents are the primary contributors.

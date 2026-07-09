@@ -20,4 +20,4 @@ Required output contract:
 - reviewed_scope
 
 The reviewer must map serious findings to a concrete attack path or trust-boundary failure.
-The parent session should wait for the subagent result, then record it with `record_review.py`.
+The parent session should wait for the subagent result, then record it with `record_review_from_json.py --aspect security --input <json>`.
