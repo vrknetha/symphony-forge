@@ -34,7 +34,11 @@ else:
         missing.append("recorded decomposition status in .factory/run.json")
 issue_key = run_state.get("issue_key", "")
 plan_files = list((root / "plans" / "active").glob(f"{issue_key}-*.md")) if issue_key else []
-if not plan_files:
+archived_plans = (
+    list((root / "plans" / "completed").glob(f"{issue_key}-*.md")) if issue_key else []
+)
+# Idempotent rerun: a task already gated pr-ready has its plan in plans/completed/.
+if not plan_files and not (run_state.get("phase") == "pr-ready" and archived_plans):
     missing.append(
         f"plans/active/{issue_key or '<issue>'}-*.md (save the approved plan with "
         "`forge.py plan save`)"
