@@ -361,16 +361,27 @@ def cmd_plan_save(args: argparse.Namespace) -> None:
             "plan approval requires client sign-off first. Get docs/decisions/"
             "NNNN-client-signoff.md accepted, run record_signoff.py, then save the plan."
         )
-    ledger = load_json(base / "docs" / "context" / "ledger.json", default={"files": {}})
+    context_dir, ledger_path = _context_paths(base)
+    ledger = load_json(ledger_path, default={"files": {}})
     pending = [
         rel for rel, e in ledger.get("files", {}).items() if e.get("status") == "pending"
     ]
+    # Untracked/changed inbox files are pending too — the ledger only knows
+    # what `context scan` has seen.
+    if context_dir.is_dir():
+        for f in _context_files(context_dir):
+            rel = str(f.relative_to(context_dir))
+            entry = ledger.get("files", {}).get(rel)
+            if entry is None or (
+                entry.get("status") != "pending" and entry.get("sha256") != _sha256(f)
+            ):
+                pending.append(f"{rel} (unscanned)")
     if pending:
         fail(
             f"{len(pending)} docs/context/ file(s) are unharvested: {', '.join(pending[:5])}"
             f"{'…' if len(pending) > 5 else ''}. Plans must not be approved over pending "
-            "context — harvest them (.agents/prompts/harvester.md) or mark irrelevant ones "
-            "`forge.py context mark <file> --ignored --notes <why>`, then save the plan."
+            "context — run `forge.py context scan`, harvest per .agents/prompts/harvester.md "
+            "or mark irrelevant ones `forge.py context mark <file> --ignored`, then save."
         )
     issue = args.issue or state.get("issue_key")
     if not issue:
