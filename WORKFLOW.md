@@ -29,6 +29,18 @@ Both modes must produce the same `.factory` artifacts.
 
 The sign-off gate sits between `prototype` and `planning`. Record accepted client sign-off with `python3 .agents/scripts/record_signoff.py`, which sets `client_signoff` in `.factory/run.json`. `update_run.py` and `pre_tool_use.py` refuse phases at `planning` or later until that field is true.
 
+## Context Inbox & Doc Upkeep
+
+Unstructured context (client emails, transcripts, notes) goes in
+`docs/context/` — dumping is free, tracking is mandatory. `forge.py context
+scan` registers files in `docs/context/ledger.json` (CI enforces freshness);
+an agent following `.agents/prompts/harvester.md` turns pending files into
+proposed decision records and BRIEF/architecture edits, then marks them
+harvested with their outputs. Check `context list --pending` before planning:
+plans must not be written over unharvested context. Broader doc freshness
+follows `harness/nestjs-react/conventions/doc-gardening.md` (gardening agent —
+convention today, not yet automated).
+
 ## Gating Model
 
 Gates are deterministic and run at phase transitions (`update_run.py`, `record_*` scripts, `pr_ready.py`) and on Bash commands (`pre_tool_use.py`) — never on prompt keywords or turn ends. Editing files before plan approval is deliberately not hard-blocked: unapproved work cannot pass verify, testing, review, or `pr_ready.py`, which is where the contract is enforced. This replaces the earlier prompt-keyword and stop-hook guards, which had false positives in both directions and never actually covered non-Bash edits.

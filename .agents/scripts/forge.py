@@ -27,6 +27,7 @@ DOC_CONTRACTS = [
     ("docs/QUALITY.md", "docs/QUALITY.md"),
     ("docs/harness-philosophy.md", "docs/harness-philosophy.md"),
     ("docs/degraded-mode.md", "docs/degraded-mode.md"),
+    ("docs/context/README.md", "docs/context/README.md"),
 ]
 
 DISCOVERY_TEMPLATE = """# Discovery — {name}
@@ -170,6 +171,105 @@ def cmd_decision_new(args: argparse.Namespace) -> None:
     )
 
 
+def _context_paths(base: Path) -> tuple[Path, Path]:
+    context_dir = base / "docs" / "context"
+    return context_dir, context_dir / "ledger.json"
+
+
+def _sha256(path: Path) -> str:
+    import hashlib
+
+    digest = hashlib.sha256()
+    with path.open("rb") as fh:
+        for chunk in iter(lambda: fh.read(65536), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _context_files(context_dir: Path) -> list[Path]:
+    skip = {"README.md", "ledger.json"}
+    return sorted(
+        p for p in context_dir.rglob("*")
+        if p.is_file() and p.name not in skip and not p.name.startswith(".")
+    )
+
+
+def cmd_context_scan(args: argparse.Namespace) -> None:
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    context_dir, ledger_path = _context_paths(base)
+    context_dir.mkdir(parents=True, exist_ok=True)
+    ledger = load_json(ledger_path, default={"files": {}})
+    drift: list[str] = []
+    for f in _context_files(context_dir):
+        rel = str(f.relative_to(context_dir))
+        digest = _sha256(f)
+        entry = ledger["files"].get(rel)
+        if entry is None:
+            drift.append(f"new: {rel}")
+            ledger["files"][rel] = {
+                "sha256": digest, "added": now_iso(), "status": "pending",
+                "outputs": [], "notes": "",
+            }
+        elif entry.get("sha256") != digest:
+            drift.append(f"changed (re-pending): {rel}")
+            entry.update({"sha256": digest, "status": "pending", "updated": now_iso()})
+    on_disk = {str(f.relative_to(context_dir)) for f in _context_files(context_dir)}
+    for rel in sorted(set(ledger["files"]) - on_disk):
+        drift.append(f"missing (marked removed): {rel}")
+        ledger["files"][rel]["status"] = "removed"
+    if args.check:
+        if drift:
+            print("Context ledger out of sync (run `forge.py context scan` and commit):")
+            for line in drift:
+                print(f"- {line}")
+            raise SystemExit(1)
+    else:
+        dump_json(ledger_path, ledger)
+        for line in drift:
+            print(line)
+    counts: dict[str, int] = {}
+    for entry in ledger["files"].values():
+        counts[entry["status"]] = counts.get(entry["status"], 0) + 1
+    summary = ", ".join(f"{k}: {v}" for k, v in sorted(counts.items())) or "empty"
+    print(f"context ledger — {summary}")
+    if counts.get("pending"):
+        print("Harvest pending files per .agents/prompts/harvester.md.")
+
+
+def cmd_context_list(args: argparse.Namespace) -> None:
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    _, ledger_path = _context_paths(base)
+    ledger = load_json(ledger_path, default={"files": {}})
+    for rel, entry in sorted(ledger["files"].items()):
+        if args.pending and entry["status"] != "pending":
+            continue
+        outputs = f" -> {', '.join(entry['outputs'])}" if entry.get("outputs") else ""
+        print(f"[{entry['status']:<9}] {rel}{outputs}")
+
+
+def cmd_context_mark(args: argparse.Namespace) -> None:
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    _, ledger_path = _context_paths(base)
+    ledger = load_json(ledger_path, default={"files": {}})
+    entry = ledger["files"].get(args.file)
+    if entry is None:
+        fail(f"{args.file} is not in the ledger — run `forge.py context scan` first")
+    status = "harvested" if args.harvested else "ignored"
+    missing = [o for o in (args.outputs or []) if not (base / o).exists()]
+    if missing:
+        fail(f"outputs do not exist: {', '.join(missing)} — create them before marking")
+    if args.harvested and not args.outputs:
+        fail("--harvested requires --outputs (what did the harvest produce?)")
+    entry.update({
+        "status": status,
+        "marked_at": now_iso(),
+        "outputs": args.outputs or [],
+        "notes": args.notes or entry.get("notes", ""),
+    })
+    dump_json(ledger_path, ledger)
+    print(f"{args.file}: {status}")
+
+
 def cmd_plan_save(args: argparse.Namespace) -> None:
     base = Path(args.repo).resolve() if args.repo else repo_root()
     state = load_json(run_state_path(base), default={})
@@ -307,6 +407,27 @@ def main() -> None:
     p_save.add_argument("--title", help="plan title (defaults to run.json title)")
     p_save.add_argument("--repo", help="target repo (defaults to this repo)")
     p_save.set_defaults(func=cmd_plan_save)
+
+    p_ctx = sub.add_parser("context", help="track the docs/context inbox")
+    ctx_sub = p_ctx.add_subparsers(dest="context_command", required=True)
+    p_scan = ctx_sub.add_parser("scan", help="register new/changed context files in the ledger")
+    p_scan.add_argument("--check", action="store_true",
+                        help="fail if the ledger is out of sync (CI mode; writes nothing)")
+    p_scan.add_argument("--repo")
+    p_scan.set_defaults(func=cmd_context_scan)
+    p_list = ctx_sub.add_parser("list", help="show ledger entries")
+    p_list.add_argument("--pending", action="store_true")
+    p_list.add_argument("--repo")
+    p_list.set_defaults(func=cmd_context_list)
+    p_mark = ctx_sub.add_parser("mark", help="record harvest outcome for a context file")
+    p_mark.add_argument("file")
+    group = p_mark.add_mutually_exclusive_group(required=True)
+    group.add_argument("--harvested", action="store_true")
+    group.add_argument("--ignored", action="store_true")
+    p_mark.add_argument("--outputs", nargs="*", help="repo-relative paths the harvest produced")
+    p_mark.add_argument("--notes")
+    p_mark.add_argument("--repo")
+    p_mark.set_defaults(func=cmd_context_mark)
 
     p_dec = sub.add_parser("decision", help="manage decision records")
     dec_sub = p_dec.add_subparsers(dest="decision_command", required=True)

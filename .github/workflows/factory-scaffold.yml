@@ -19,6 +19,8 @@ jobs:
         run: python3 .agents/scripts/check_agents_hygiene.py
       - name: Check dual runtime
         run: python3 .agents/scripts/check_dual_runtime.py
+      - name: Check context ledger freshness
+        run: python3 .agents/scripts/forge.py context scan --check
       - name: Compile factory scripts
         run: python3 -m compileall .agents/scripts
       - name: Smoke test forge init

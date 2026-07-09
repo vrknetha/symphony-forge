@@ -38,6 +38,7 @@ required = [
     root / 'docs' / 'product' / 'BRIEF.md',
     root / 'docs' / 'architecture' / 'README.md',
     root / 'docs' / 'decisions' / 'README.md',
+    root / 'docs' / 'context' / 'README.md',
 ]
 missing = [str(path.relative_to(root)) for path in required if not path.exists()]
 if missing:
