@@ -4,13 +4,14 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
-from factory_lib import dump_json, now_iso, repo_root, run_cmd, run_state_path, verify_state_path, load_json
+from factory_lib import gate, dump_json, now_iso, repo_root, run_cmd, run_state_path, verify_state_path, load_json
 
 parser = argparse.ArgumentParser(description="Run deterministic validation sequence")
 parser.add_argument("--print-only", action="store_true", help="Only print the commands that would run")
 args = parser.parse_args()
 
 root = repo_root()
+gate(root, signoff=True, approved_plan=True, decomposition=True)
 commands = [
     ("structural", os.environ.get("FACTORY_STRUCTURAL_CMD") or "pnpm check:all"),
     ("typecheck", os.environ.get("FACTORY_TYPECHECK_CMD") or "pnpm turbo run typecheck"),

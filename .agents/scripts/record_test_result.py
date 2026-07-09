@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from factory_lib import dump_json, load_json, now_iso, repo_root, run_state_path, tests_state_path
+from factory_lib import gate, dump_json, load_json, now_iso, repo_root, run_state_path, tests_state_path
 
 parser = argparse.ArgumentParser(description="Record a testing artifact")
 parser.add_argument("--kind", required=True, choices=["automated", "functional"])
@@ -22,6 +22,7 @@ parser.add_argument("--recommendation")
 args = parser.parse_args()
 
 root = repo_root()
+gate(root, signoff=True, approved_plan=True, decomposition=True)
 path = tests_state_path(root)
 existing = load_json(path, default={}) or {}
 entry = {

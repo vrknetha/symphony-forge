@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import argparse
-from factory_lib import dump_json, load_json, now_iso, repo_root, review_dir, run_state_path
+from factory_lib import gate, dump_json, load_json, now_iso, repo_root, review_dir, run_state_path
 
 parser = argparse.ArgumentParser(description="Record a review result")
 parser.add_argument("--aspect", required=True, choices=["quality", "performance", "security"])
@@ -19,6 +19,7 @@ parser.add_argument("--warning", action="append", default=[])
 args = parser.parse_args()
 
 root = repo_root()
+gate(root, signoff=True, approved_plan=True, decomposition=True)
 path = review_dir(root) / f"{args.aspect}.json"
 blocking_findings = args.blocking_finding + args.blocking
 non_blocking_findings = args.non_blocking_finding + args.warning

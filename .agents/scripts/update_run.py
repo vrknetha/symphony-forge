@@ -56,6 +56,13 @@ if args.phase in IMPL_PHASES:
             f"(plans/active/{issue or '<issue>'}-*.md with plan_status approved). "
             "Implementation never starts before plan approval."
         )
+    effective_decomp = args.decomposition_status or state.get("decomposition_status")
+    if effective_decomp != "recorded" or not (root / ".factory" / "decomposition.json").exists():
+        raise SystemExit(
+            f"Phase '{args.phase}' requires recorded decomposition "
+            "(record_decomposition_from_json.py after plan approval). "
+            "Implementation never starts before decomposition."
+        )
 for key, value in {
     "phase": args.phase,
     "plan_status": args.plan_status,

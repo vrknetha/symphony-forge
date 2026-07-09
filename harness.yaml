@@ -17,7 +17,12 @@ phases:
     owner: "prototype-skill"
     allowed:
       - "ponytail:lite"
-    notes: "Throwaway build for client sign-off; not production code."
+    notes: >-
+      Proof for client sign-off; may take weeks — no gate is time-driven.
+      After sign-off the outcome is PRESERVED under prototype/ (code,
+      screenshots, walkthrough notes) as the UX reference for future UI/UX
+      changes. Reference forever, imported never: production code must not
+      depend on anything in prototype/.
   planning:
     owner: "claude-code:plan-mode"
     alternate: "codex:planner-high"

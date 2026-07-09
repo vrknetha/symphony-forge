@@ -320,9 +320,42 @@ def test_phase_implementing_requires_approved_saved_plan(repo, tmp_path):
                     "--decomposition-status", "recorded")
     assert code != 0 and "approved" in out  # autoreview r9
     save_plan(repo, tmp_path)
+    # Plan approved but decomposition artifact still missing (autoreview r11)
     code, out = run(repo, "update_run.py", "--phase", "implementing",
                     "--decomposition-status", "recorded")
+    assert code != 0 and "decomposition" in out
+    code, _ = run(repo, "record_decomposition_from_json.py",
+                  stdin=json.dumps({"status": "recorded"}))
+    assert code == 0
+    code, out = run(repo, "update_run.py", "--phase", "implementing")
     assert code == 0, out
+
+
+def test_decomposition_refused_without_run_state(repo):
+    (repo / ".factory" / "run.json").unlink()
+    code, out = run(repo, "record_decomposition_from_json.py",
+                    stdin=json.dumps({"status": "recorded"}))
+    assert code != 0 and "run.json" in out  # autoreview r11
+    assert not (repo / ".factory" / "decomposition.json").exists()
+
+
+def test_evidence_recorders_gated_on_preconditions(repo):
+    # The whole writer family shares gate(): verify + test/review recorders
+    # refuse before sign-off/plan/decomposition exist.
+    intake(repo)
+    for script, args, stdin in (
+        ("verify.py", ("--print-only",), None),
+        ("record_test_from_json.py", ("--kind", "automated"),
+         json.dumps({"status": "passed"})),
+        ("record_review_from_json.py", ("--aspect", "quality"),
+         json.dumps({"score": 9})),
+        ("record_review.py", ("--aspect", "quality", "--score", "9",
+                              "--summary", "ok"), None),
+        ("record_test_result.py", ("--kind", "automated", "--status", "passed",
+                                   "--summary", "ok"), None),
+    ):
+        code, out = run(repo, script, *args, stdin=stdin)
+        assert code != 0 and "sign-off" in out, f"{script}: {out}"
 
 
 # --------------------------------------------------------- misc deterministic
