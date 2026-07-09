@@ -25,7 +25,7 @@ cd symphony-forge
 ## 2. Check your machine
 
 ```bash
-python3 .agents/scripts/forge.py doctor
+./forge doctor
 ```
 
 Fix anything it reports — or let it: `doctor --fix` auto-installs everything
@@ -38,7 +38,7 @@ login`) stay manual. Re-run until it says `ready`.
 ## 3. Create your project
 
 ```bash
-python3 .agents/scripts/forge.py init --name my-app --target ../my-app
+./forge init --name my-app --target ../my-app
 cd ../my-app
 ```
 
@@ -63,16 +63,15 @@ on a non-empty target; there is no merge mode.
 4. Capture every client decision as a record:
 
 ```bash
-python3 .agents/scripts/forge.py decision new <slug>
+./forge decision new <slug>
 ```
 
 ## 5. Record client sign-off (the gate)
 
 ```bash
-python3 .agents/scripts/forge.py decision new client-signoff
-# get the client's confirmation, then set in the record:
-#   status: accepted
-#   confirmed_by: "<human name>"
+./forge decision new client-signoff
+# fill Context/Decision/Consequences, get the client's confirmation, then:
+./forge decision accept client-signoff --by "<human name>"
 python3 .agents/scripts/record_signoff.py
 ```
 
@@ -87,7 +86,7 @@ conventions in `harness/nestjs-react/conventions/` and `constitution/`.
 
 ## 7. The feature loop
 
-**At any point, in any phase, run `python3 .agents/scripts/forge.py next`** —
+**At any point, in any phase, run `./forge next`** —
 it prints where the project is and the exact next commands (the `/forge`
 skill in Claude Code runs it for you and routes to the right tool). The steps
 below are what it will walk you through.
@@ -106,7 +105,7 @@ python3 .agents/scripts/intake.py --issue ENG-123 --title "Build billing dashboa
    the approved plan:
 
 ```bash
-python3 .agents/scripts/forge.py plan save --from <approved-plan-file>
+./forge plan save --from <approved-plan-file>
 ```
 
 2. **Decompose** — `docs-decomposer` with `.agents/prompts/decomposer.md`, then:

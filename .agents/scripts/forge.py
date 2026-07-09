@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import datetime
+import re
 import shutil
 import subprocess
 import sys
@@ -18,7 +19,7 @@ from factory_lib import dump_json, load_json, now_iso, repo_root, run_state_path
 
 COPY_TREES = [".agents", ".claude", "constitution", "harness", ".github"]
 COPY_CODEX = ["config.toml", "hooks.json"]  # + agents/ dir
-COPY_FILES = ["harness.yaml", ".gitignore", "WORKFLOW.md", "CLAUDE.md"]
+COPY_FILES = ["harness.yaml", ".gitignore", "WORKFLOW.md", "CLAUDE.md", "forge"]
 DOC_CONTRACTS = [
     ("docs/product/README.md", "docs/product/README.md"),
     ("docs/architecture/README.md", "docs/architecture/README.md"),
@@ -610,6 +611,33 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     print("\nforge doctor: ready. Next: forge.py init --name <project> --target <dir>")
 
 
+def cmd_decision_accept(args: argparse.Namespace) -> None:
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    decisions = base / "docs" / "decisions"
+    slug = args.slug.strip().lower().replace(" ", "-")
+    matches = sorted(decisions.glob(f"[0-9][0-9][0-9][0-9]-{slug}.md"))
+    if not matches:
+        fail(f"no decision record matching docs/decisions/NNNN-{slug}.md")
+    record = matches[-1]
+    text = record.read_text()
+    if "status: accepted" in text:
+        print(f"{record.relative_to(base)} is already accepted.")
+        return
+    text = text.replace("status: proposed", "status: accepted", 1)
+    if 'confirmed_by: ""' in text:
+        text = text.replace('confirmed_by: ""', f'confirmed_by: "{args.by}"', 1)
+    else:
+        text = re.sub(r"confirmed_by: .*", f'confirmed_by: "{args.by}"', text, count=1)
+    record.write_text(text)
+    rel = record.relative_to(base)
+    print(f"Accepted: {rel} (confirmed_by: {args.by})")
+    print("Commit it with the audit trailer:")
+    print(f'  git add {rel} && git commit -m "docs(decisions): accept {slug}" '
+          f'--trailer "Confirmed-by: {args.by}"')
+    if slug == "client-signoff":
+        print("Then arm the gate: python3 .agents/scripts/record_signoff.py")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(prog="forge", description=__doc__)
     sub = parser.add_subparsers(dest="command", required=True)
@@ -675,6 +703,11 @@ def main() -> None:
     p_new.add_argument("--title")
     p_new.add_argument("--repo", help="target repo (defaults to this repo)")
     p_new.set_defaults(func=cmd_decision_new)
+    p_acc = dec_sub.add_parser("accept", help="mark a decision accepted with a human's name")
+    p_acc.add_argument("slug")
+    p_acc.add_argument("--by", required=True, help="the human confirming (not an agent)")
+    p_acc.add_argument("--repo")
+    p_acc.set_defaults(func=cmd_decision_accept)
 
     args = parser.parse_args()
     args.func(args)

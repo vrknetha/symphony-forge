@@ -148,8 +148,10 @@ Each leaf task must include:
 - required tests
 - reviewer focus
 
-Store the decomposition in `.factory/decomposition.json` and mirror it into Linear.
-Use `python3 .agents/scripts/render_linear_task_graph.py` when you want a deterministic Markdown view of the task graph before syncing it to Linear.
+Store the decomposition in `.factory/decomposition.json` — that artifact is
+canonical. Mirroring into a tracker (Linear, GitHub Issues, Jira) is optional;
+`python3 .agents/scripts/render_linear_task_graph.py` renders a deterministic
+Markdown view of the graph if you want one to review or sync.
 
 ## AGENTS Hygiene
 

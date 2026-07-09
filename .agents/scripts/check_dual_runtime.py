@@ -239,14 +239,24 @@ def check_path_parity(root: Path) -> None:
             )
     else:
         violation(".claude/CLAUDE.md is missing. Both runtimes need an adapter.")
-    hooks_json = root / ".codex" / "hooks.json"
-    if hooks_json.exists():
+
+    def check_hook_registration(rel_path: str) -> set[str]:
+        """Validate one runtime's hook registration; returns registered events."""
+        hooks_file = root / rel_path
+        if not hooks_file.exists():
+            violation(
+                f"{rel_path} is missing. Both runtimes must register the same hooks "
+                "(gate parity is enforced, not assumed)."
+            )
+            return set()
         try:
-            hooks = json.loads(hooks_json.read_text())
+            hooks = json.loads(hooks_file.read_text())
         except json.JSONDecodeError:
-            violation(".codex/hooks.json is not valid JSON.")
-            return
+            violation(f"{rel_path} is not valid JSON.")
+            return set()
+        events: set[str] = set()
         for event, entries in (hooks.get("hooks") or {}).items():
+            events.add(event)
             for entry in entries:
                 for hook in entry.get("hooks", []):
                     command = hook.get("command", "")
@@ -254,16 +264,24 @@ def check_path_parity(root: Path) -> None:
                     for script in scripts:
                         if not script.startswith(".agents/scripts/"):
                             violation(
-                                f".codex/hooks.json ({event}) invokes {script}; hook logic "
+                                f"{rel_path} ({event}) invokes {script}; hook logic "
                                 "must live in .agents/scripts/ (thin-adapter rule)."
                             )
                         elif not (root / script).exists():
                             violation(
-                                f".codex/hooks.json ({event}) references {script} which does "
+                                f"{rel_path} ({event}) references {script} which does "
                                 "not exist. Fix the path or restore the script."
                             )
-    else:
-        violation(".codex/hooks.json is missing. The Codex adapter registers hooks there.")
+        return events
+
+    codex_events = check_hook_registration(".codex/hooks.json")
+    claude_events = check_hook_registration(".claude/settings.json")
+    if codex_events and claude_events and codex_events != claude_events:
+        violation(
+            f"Hook parity broken: .codex/hooks.json registers {sorted(codex_events)} but "
+            f".claude/settings.json registers {sorted(claude_events)}. Both runtimes must "
+            "enforce the same gates."
+        )
 
 
 ALLOWED_CLAUDE = {"CLAUDE.md", "settings.json", "settings.local.json"}

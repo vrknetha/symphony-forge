@@ -8,7 +8,8 @@ Symphony Forge is a doc-driven factory template where Claude Code coordinates pl
 - Claude Code owns planning coordination and delegates codebase exploration to Codex read-only runs.
 - Codex or OpenClaw + ACP/ACPX handles implementation.
 - Codex custom subagents handle testing and isolated review.
-- Linear is the source of truth.
+- The repo's artifacts are the source of truth; a tracker (Linear, GitHub
+  Issues, Jira) is an optional mirror.
 - GitHub mirrors implementation state and PR status.
 
 ## Why ACP/ACPX Is Optional
@@ -50,4 +51,4 @@ Reasoning policy:
 6. Run automated testing and deterministic verify
 7. Spawn the three review subagents and wait for all results
 8. Run the functional checker
-9. Mark PR ready and sync GitHub + Linear
+9. Mark PR ready (sync the tracker only if the project uses one)

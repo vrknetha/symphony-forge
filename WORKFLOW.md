@@ -1,9 +1,12 @@
 # WORKFLOW.md — Symphony-Style Codex Factory
 
 ## Source of Truth
-- Linear owns task and decomposition state.
+- The repo owns workflow policy, prompts, run artifacts, plans, and decisions —
+  it is the canonical state.
+- An external tracker (Linear, GitHub Issues, Jira) is OPTIONAL: when one is
+  used, decomposition and task state are mirrored into it; when none is used,
+  `.factory/decomposition.json` and `plans/` are the task graph.
 - GitHub mirrors branch, PR, checks, and review evidence.
-- The repo owns workflow policy, prompts, and run artifacts.
 - Product intent lives in `docs/product/BRIEF.md`.
 - Architecture and decision docs live in the repo under `docs/architecture/` and `docs/decisions/`.
 - `docs/decisions/` overrides ambiguous or conflicting architecture guidance.
@@ -59,7 +62,8 @@ Gates are deterministic and run at phase transitions (`update_run.py`, `record_*
 
 ## Task Graph Rules
 - The planner owns decomposition.
-- Decomposition is capability-driven and Linear-first.
+- Decomposition is capability-driven; the recorded artifact is canonical
+  (mirror to a tracker if the project uses one).
 - Each leaf task must have write scope, dependencies, acceptance criteria, verify commands, and reviewer focus.
 - One task should fit one implementation session and one review package.
 

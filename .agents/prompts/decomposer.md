@@ -9,7 +9,10 @@ Inputs:
 - the approved plan
 - relevant conventions under `harness/`
 
-Your job is to transform the in-repo docs into a Linear-first task graph.
+Your job is to transform the in-repo docs into a task graph. The recorded
+artifact (`.factory/decomposition.json`) is canonical; tracker-specific fields
+(`linear_*`) are filled only when the project mirrors to Linear — a tracker is
+never mandatory.
 
 Rules:
 - decompose by capability and vertical slice

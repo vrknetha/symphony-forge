@@ -360,6 +360,20 @@ def test_evidence_recorders_gated_on_preconditions(repo):
 
 # --------------------------------------------------------- misc deterministic
 
+def test_decision_accept_and_plain_issue_keys(repo):
+    code, out = run(repo, "forge.py", "decision", "new", "client-signoff", "--repo", str(repo))
+    assert code == 0
+    code, out = run(repo, "forge.py", "decision", "accept", "client-signoff", "--by", "Client PM")
+    assert code == 0 and "Accepted" in out
+    code, out = run(repo, "record_signoff.py")
+    assert code == 0, out
+    # Linear-style keys are NOT mandatory (GitHub/Jira/plain all work)
+    for key in ("42", "gh-42", "PROJ_9.1"):
+        code, out = intake(repo, key, f"Task {key}", "--discard-active")
+        assert code == 0, out
+        assert run_state(repo)["issue_key"] == key
+
+
 def test_decision_numbering_allocates_sequentially(repo):
     run(repo, "forge.py", "decision", "new", "first", "--repo", str(repo))
     run(repo, "forge.py", "decision", "new", "second", "--repo", str(repo))

@@ -21,6 +21,8 @@ required = [
     root / '.agents' / 'scripts' / 'record_signoff.py',
     root / '.agents' / 'scripts' / 'check_dual_runtime.py',
     root / '.claude' / 'CLAUDE.md',
+    root / '.claude' / 'settings.json',
+    root / 'forge',
     root / '.claude' / 'skills' / 'forge' / 'SKILL.md',
     root / '.codex' / 'skills' / 'forge' / 'SKILL.md',
     root / '.agents' / 'skills' / 'forge.md',

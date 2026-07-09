@@ -115,12 +115,19 @@ def infer_issue_key(value: str) -> str | None:
 
 
 def ensure_issue_key(explicit: str | None = None, root: Path | None = None) -> str:
+    # An explicitly passed key is accepted as-is (GitHub issue numbers, Jira,
+    # plain slugs) as long as it is filesystem/branch-safe.
+    if explicit and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9._-]*", explicit.strip()):
+        return explicit.strip()
     candidates = [explicit or "", os.environ.get("LINEAR_ISSUE_KEY", ""), branch_name(root)]
     for candidate in candidates:
         key = infer_issue_key(candidate)
         if key:
             return key
-    raise SystemExit("Unable to determine Linear issue key. Set LINEAR_ISSUE_KEY or use a branch like feat/ENG-123-slug.")
+    raise SystemExit(
+        "Unable to determine an issue key. Pass --issue <key> (e.g. ENG-123, GH-42, 42), "
+        "set LINEAR_ISSUE_KEY, or use a branch like feat/ENG-123-slug."
+    )
 
 
 def slugify(text: str) -> str:
