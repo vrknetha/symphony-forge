@@ -361,6 +361,17 @@ def cmd_plan_save(args: argparse.Namespace) -> None:
             "plan approval requires client sign-off first. Get docs/decisions/"
             "NNNN-client-signoff.md accepted, run record_signoff.py, then save the plan."
         )
+    ledger = load_json(base / "docs" / "context" / "ledger.json", default={"files": {}})
+    pending = [
+        rel for rel, e in ledger.get("files", {}).items() if e.get("status") == "pending"
+    ]
+    if pending:
+        fail(
+            f"{len(pending)} docs/context/ file(s) are unharvested: {', '.join(pending[:5])}"
+            f"{'…' if len(pending) > 5 else ''}. Plans must not be approved over pending "
+            "context — harvest them (.agents/prompts/harvester.md) or mark irrelevant ones "
+            "`forge.py context mark <file> --ignored --notes <why>`, then save the plan."
+        )
     issue = args.issue or state.get("issue_key")
     if not issue:
         fail("no --issue given and no issue_key in .factory/run.json (run intake first)")
