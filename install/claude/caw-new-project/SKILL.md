@@ -24,9 +24,11 @@ runnable by you — the user should only have to answer questions.
    ```
 
 2. **Doctor.** Run `python3 "$HARNESS/.agents/scripts/forge.py" doctor`.
-   Fix what you can yourself (installs the user approves); anything needing
-   the user (logins, Claude plugins via `/plugin`) — give them the exact
-   command doctor printed and wait. Do not proceed with required tools missing.
+   If it reports misses, rerun with `--fix` (user approves) — that auto-installs
+   the scriptable skills (gstack, autoreview). Anything needing the user
+   (logins, `/plugin` installs for codex-plugin-cc or ponytail) — give them the
+   exact command doctor printed and wait. Do not proceed with required tools
+   missing.
 
 3. **Ask** (one question): project name, and target directory if not
    `~/Workdir/<name>`.

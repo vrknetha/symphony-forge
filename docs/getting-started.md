@@ -28,10 +28,11 @@ cd symphony-forge
 python3 .agents/scripts/forge.py doctor
 ```
 
-Fix anything it reports — it prints the exact install command per tool. It
+Fix anything it reports — it prints the exact install command per tool, and
+`doctor --fix` auto-installs the scriptable ones (gstack, autoreview). It
 checks: git, Node 20+, pnpm, Docker, Codex CLI + login, Claude Code,
-codex-plugin-cc, gstack, and the autoreview skill. Re-run until it says
-`ready`.
+codex-plugin-cc, gstack, autoreview, and ponytail. Logins and in-app
+`/plugin` installs stay manual by nature. Re-run until it says `ready`.
 
 ## 3. Create your project
 

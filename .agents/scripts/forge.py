@@ -541,15 +541,37 @@ def cmd_doctor(args: argparse.Namespace) -> None:
 
     # Skills
     gstack = home / ".claude" / "skills" / "gstack"
+    if not gstack.is_dir() and args.fix:
+        print("[fix ] installing gstack ...")
+        _run_quiet(["git", "clone", "--depth", "1",
+                    "https://github.com/garrytan/gstack.git", str(gstack)])
     checks.append(_check(
         "gstack skills", gstack.is_dir(), str(gstack) if gstack.is_dir() else "not installed",
         "`git clone --depth 1 https://github.com/garrytan/gstack.git ~/.claude/skills/gstack && ~/.claude/skills/gstack/setup` "
-        "(needed for /office-hours discovery)"))
+        "(needed for /office-hours discovery) — or rerun with --fix"))
     autoreview = home / ".codex" / "skills" / "autoreview"
+    if not autoreview.is_dir() and args.fix:
+        print("[fix ] installing autoreview ...")
+        import tempfile
+        with tempfile.TemporaryDirectory() as tmp:
+            code, _ = _run_quiet(["git", "clone", "--depth", "1",
+                                  "https://github.com/openclaw/agent-skills.git", tmp + "/as"])
+            src = Path(tmp) / "as" / "skills" / "autoreview"
+            if code == 0 and src.is_dir():
+                shutil.copytree(src, autoreview)
     checks.append(_check(
         "autoreview skill", autoreview.is_dir(), str(autoreview) if autoreview.is_dir() else "not installed",
-        "clone https://github.com/openclaw/agent-skills and run scripts/install-skills "
-        "(escalation-tier review; see harness.yaml)", required=False))
+        "clone https://github.com/openclaw/agent-skills and copy skills/autoreview to "
+        "~/.codex/skills/ — or rerun with --fix (escalation-tier review; see harness.yaml)",
+        required=False))
+    ponytail = home / ".claude" / "plugins" / "cache"
+    ponytail_ok = ponytail.is_dir() and any(ponytail.glob("*ponytail*"))
+    checks.append(_check(
+        "ponytail plugin", ponytail_ok,
+        "installed" if ponytail_ok else "not installed",
+        "in Claude Code run: `/plugin marketplace add DietrichGebert/ponytail` then "
+        "`/plugin install ponytail@ponytail` (prototype phase 0b only — see harness.yaml)",
+        required=False))
 
     width = max(len(c["name"]) for c in checks)
     failures = 0
@@ -571,6 +593,9 @@ def main() -> None:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_doc = sub.add_parser("doctor", help="check machine prerequisites for the harness")
+    p_doc.add_argument("--fix", action="store_true",
+                       help="auto-install what is safely scriptable (gstack, autoreview); "
+                            "logins and in-app plugin installs stay manual")
     p_doc.set_defaults(func=cmd_doctor)
 
     p_next = sub.add_parser("next", help="where am I and what do I do now (deterministic)")
