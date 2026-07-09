@@ -382,6 +382,37 @@ def cmd_plan_save(args: argparse.Namespace) -> None:
     )
 
 
+def cmd_plan_assume(args: argparse.Namespace) -> None:
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    state = load_json(run_state_path(base), default={})
+    issue = args.issue or state.get("issue_key")
+    if not issue:
+        fail("no --issue given and no issue_key in .factory/run.json (run intake first)")
+    plans = sorted((base / "plans" / "active").glob(f"{issue}-*.md"))
+    if not plans:
+        fail(
+            f"no active plan for {issue} (plans/active/{issue}-*.md). Save the approved "
+            "plan first with `forge.py plan save` — assumptions attach to a plan."
+        )
+    plan = plans[-1]
+    text = plan.read_text()
+    heading = "## Implementation Assumptions"
+    entry = f"- {datetime.date.today().isoformat()}: {args.text.strip()}\n"
+    if heading in text:
+        text = text.rstrip("\n") + "\n" + entry
+    else:
+        text = (
+            text.rstrip("\n")
+            + f"\n\n{heading}\n\n"
+            "<!-- Made during implementation, NOT part of the approved plan. "
+            "Dev: review these before merge; promote any that matter to docs/decisions/. -->\n"
+            + entry
+        )
+    plan.write_text(text)
+    print(f"Assumption recorded in {plan.relative_to(base)}")
+    print("Dev reviews these before merge; promote durable ones: forge.py decision new <slug>")
+
+
 def _check(name: str, ok: bool, detail: str, fix: str, required: bool = True) -> dict:
     return {"name": name, "ok": ok, "detail": detail, "fix": fix, "required": required}
 
@@ -494,6 +525,12 @@ def main() -> None:
     p_save.add_argument("--title", help="plan title (defaults to run.json title)")
     p_save.add_argument("--repo", help="target repo (defaults to this repo)")
     p_save.set_defaults(func=cmd_plan_save)
+    p_assume = plan_sub.add_parser(
+        "assume", help="record an implementation assumption on the active plan")
+    p_assume.add_argument("text", help="the assumption, one sentence")
+    p_assume.add_argument("--issue", help="issue key (defaults to .factory/run.json)")
+    p_assume.add_argument("--repo")
+    p_assume.set_defaults(func=cmd_plan_assume)
 
     p_ctx = sub.add_parser("context", help="track the docs/context inbox")
     ctx_sub = p_ctx.add_subparsers(dest="context_command", required=True)

@@ -74,6 +74,13 @@ plan is in-repo — `forge.py plan save --from <plan-file>` writes
 `plans/active/<issue>-<slug>.md`; `update_run.py` refuses
 `plan_status approved` without it.
 
+During implementation, any call the plan does not cover is recorded the moment
+it is made — `forge.py plan assume "<one sentence>"` appends it, dated, under
+`## Implementation Assumptions` on the active plan. The dev reviews the
+section before merge and promotes durable assumptions to `docs/decisions/`;
+`pr_ready.py` archives it with the plan. An assumption that would change
+scope or acceptance criteria is a report back to the dev, not an assumption.
+
 ## Artifacts
 Required run artifacts:
 - `.factory/run.json`

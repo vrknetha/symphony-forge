@@ -39,6 +39,7 @@ next actions. Never guess the phase yourself; run it, then execute or route:
 | start a task / new feature | `python3 .agents/scripts/intake.py --issue <KEY> --title "<title>"` — then check `forge.py context list --pending` BEFORE planning |
 | plan is approved | `python3 .agents/scripts/forge.py plan save --from <plan-file>` (plan must follow `.agents/prompts/planner.md`, incl. Decisions section) |
 | record a decision | `python3 .agents/scripts/forge.py decision new <slug>` — human sets `status: accepted` + `confirmed_by`, never you |
+| made an assumption while implementing | `python3 .agents/scripts/forge.py plan assume "<one sentence>"` — dated, on the active plan, dev reviews before merge |
 | client signed off | `python3 .agents/scripts/record_signoff.py` |
 | harvest context / process the dump | follow `.agents/prompts/harvester.md`, then `forge.py context mark ...` |
 | harness status | read `.factory/run.json`; `forge.py context list --pending`; `ls .agents/skills/proposed/` |
