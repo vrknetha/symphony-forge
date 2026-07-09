@@ -1,88 +1,71 @@
 # Symphony Forge
 
-Production system for building applications from in-repo architecture documents using **Claude Code coordination** and **Codex execution**, with optional **OpenClaw ACPX** orchestration.
+CAW's harness for building client applications with **Claude Code coordination** and **Codex execution** — from discovery and client sign-off through scaffolding, per-feature delivery, and a self-evolving record of every decision.
 
-## What This Is
+## Quick Start (devs)
 
-Symphony Forge turns architecture docs, decisions, and product briefs already present in the target repo into shipped software. Claude Code coordinates discovery, planning, decisions, and orchestration through `codex-plugin-cc`, delegating planning-time codebase exploration to Codex read-only runs. Codex executes exploration, implementation, testing, and review.
+```bash
+git clone git@github.com:vrknetha/symphony-forge.git ~/Workdir/symphony-forge
+cd ~/Workdir/symphony-forge
+python3 .agents/scripts/forge.py doctor                       # check your machine, fix what it lists
+python3 .agents/scripts/forge.py init --name my-app --target ~/Workdir/my-app
+cd ~/Workdir/my-app
+python3 .agents/scripts/forge.py next                         # tells you exactly what to do, always
+```
 
-- **Discovery** — structured intake that drives toward a precise, buildable spec
-- **Harness** — architecture conventions and scaffold prompts that agents follow to generate fresh projects
-- **Factory** — a doc-driven delivery loop that plans, decomposes, implements, tests, reviews, and prepares PRs with deterministic guardrails
+**Lost at any point, in any phase: run `forge.py next`** (or invoke the `/forge` skill in Claude Code — it runs it for you and routes to the right tool). It reads the run state, context ledger, plans, and artifacts, and prints the current phase plus the exact next commands. Full walkthrough: [Getting Started](docs/getting-started.md).
+
+## The Lifecycle
+
+```text
+0a discovery ──▶ 0b prototype ──▶ CLIENT SIGN-OFF ──▶ scaffold (nx)
+                                     (hard gate)          │
+      ┌───────────────────────────────────────────────────┘
+      ▼
+  per feature:  intake ▶ plan ▶ decompose ▶ implement ▶ test ▶ verify ▶ review ▶ PR
+                        (Claude)  (Codex)     (Codex)                 (subagents)
+```
+
+- **Before sign-off**: lightweight on purpose — no ceremony. Discovery via gstack `/office-hours`, prototypes are throwaway.
+- **After sign-off**: deterministic gates. Plans live in `plans/`, decisions in `docs/decisions/`, evidence in `.factory/`; `pr_ready.py` archives every shipped task's plan + proof to `plans/completed/` and `.factory/history/`.
+- **Continuously**: dump raw context (client emails, transcripts) into `docs/context/` — a ledger tracks harvest status, and agents turn pending files into proposed decisions and doc updates. Dev corrections get mined into proposed skills (`.agents/skills/proposed/`) that humans promote.
+
+Phase ownership — which tool runs which phase — is declared in [`harness.yaml`](harness.yaml).
 
 ## Structure
 
 ```text
 symphony-forge/
-├── .agents/                        # Shared prompts and deterministic scripts
-├── .claude/                        # Claude Code adapter docs/settings
-├── .codex/                         # Codex config, hooks, and agent registrations
-├── .factory/                       # Machine-readable run state for feature execution
-├── .github/workflows/              # Template workflow checks
-├── constitution/                   # Engineering standards canon
-├── docs/                           # Setup guides, factory contract, architecture/decision inputs
-├── harness/nestjs-react/           # Scaffold prompt + conventions
-├── harness.yaml                    # Runtime precedence and phase map
-├── plans/                          # Active, completed, and debt plans
-└── WORKFLOW.md                     # Linear <-> GitHub <-> run-artifact contract
+├── .agents/                        # Shared substance: prompts, deterministic scripts, proposed skills
+├── .claude/                        # Claude Code adapter + /forge skill (thin, linter-enforced)
+├── .codex/                         # Codex adapter: config, hooks, agent registrations (thin)
+├── .factory/                       # Run state + per-task history archive
+├── .github/workflows/              # Scaffold checks, dual-runtime lint, daily gardener
+├── constitution/                   # CAW engineering standards — THE single source of truth
+├── docs/                           # Contracts, guides, decisions, context inbox
+├── harness/nestjs-react/           # Scaffold prompt + stack conventions
+├── harness.yaml                    # Phase ownership + skill precedence manifest
+├── plans/                          # Active and completed task plans
+├── AGENTS.md                       # The agent contract (both runtimes)
+└── CLAUDE.md                       # Import shim: @AGENTS.md + @.claude/CLAUDE.md
 ```
-
-## How It Works
-
-### 1. Put the docs in the repo
-
-The generated application repo is the system of record. Put architecture and decision docs directly under `docs/architecture/` and `docs/decisions/` before planning.
-Also define product intent in `docs/product/BRIEF.md`.
-
-### 2. Planning and decomposition
-
-Use Claude Code for planning coordination. It delegates codebase exploration to Codex read-only runs, produces a decision-complete plan, then generates a Linear-first task graph from the in-repo docs. Human approval is required before implementation.
-
-### 3. Implementation
-
-Codex handles implementation at medium reasoning by default. The repo works in plain Codex mode or OpenClaw + ACP/ACPX mode.
-
-### 4. Test and verify
-
-Run the `automated-tester` subagent before deterministic verify. After review, run the `functional-checker` subagent for user-visible validation.
-
-Deterministic validation still runs via:
-
-```bash
-python3 .agents/scripts/verify.py
-```
-
-### 5. Review
-
-Spawn separate Codex review subagents for:
-- code quality
-- performance
-- security
-
-Each review outputs a score, blockers, residual risks, and a merge recommendation.
-
-### 6. PR ready
-
-GitHub gets the PR package. Linear stays the source of truth. Merge remains manual.
 
 ## Why This Shape
 
-- The harness stays fresh — no frozen app template rot.
-- Runtime hooks enforce deterministic behavior at phase gates.
-- OpenClaw ACPX is available for orchestration, but not required for normal repo use.
-- Codex custom subagents keep implementation support, testing, and review isolated.
-- Claude Code stays thin-context by pushing code exploration and execution into Codex.
+- **One canon, two runtimes.** Standards live once (`constitution/`, `AGENTS.md`, `harness.yaml`); `.claude/` and `.codex/` are thin adapters. `check_dual_runtime.py` fails CI on any duplication.
+- **Gates at phase transitions, not keystrokes.** Hooks are quiet; `record_signoff.py`, `update_run.py`, and `pr_ready.py` are the deterministic gates. Unapproved work can't ship.
+- **Decisions are exhaust, never forms.** Planning forces a Decisions section; harvesting turns raw context into records; humans confirm every `accepted`.
+- **Evolution is curated.** Recurring corrections become *proposed* skills and constitution PRs; nothing self-activates.
+- **One owner per phase.** Overlapping skills (gstack `/ship`, ponytail in factory code, nested reviewers) are explicitly disabled in `harness.yaml`.
 
 ## Docs
 
-- [Codex Factory](docs/codex-factory.md)
-- [Factory Contract](docs/FACTORY.md)
-- [Quality Contract](docs/QUALITY.md)
-- [Product Brief Contract](docs/product/README.md)
-- [Architecture Docs Contract](docs/architecture/README.md)
-- [Decision Docs Contract](docs/decisions/README.md)
-- [Harness Philosophy](docs/harness-philosophy.md)
-- [Validation Loop](docs/validation-loop.md)
-- [Symphony Setup](docs/symphony-setup.md)
-- [Getting Started](docs/getting-started.md)
-- [Degraded Mode](docs/degraded-mode.md)
+- [Getting Started](docs/getting-started.md) — the blessed path, step by step
+- [Workflow Contract](WORKFLOW.md) — phases, gates, artifacts, evolution loop
+- [Factory Contract](docs/FACTORY.md) · [Quality Contract](docs/QUALITY.md)
+- [Constitution](constitution/README.md) — engineering standards index
+- [Harness Philosophy](docs/harness-philosophy.md) · [Validation Loop](docs/validation-loop.md)
+- [Product Brief](docs/product/README.md) · [Architecture](docs/architecture/README.md) · [Decisions](docs/decisions/README.md)
+- [Context Inbox](docs/context/README.md) — dump files here, harvest tracked
+- [Degraded Mode](docs/degraded-mode.md) — when codex-plugin-cc is unavailable
+- [Codex Factory](docs/codex-factory.md) · [Symphony Setup](docs/symphony-setup.md)

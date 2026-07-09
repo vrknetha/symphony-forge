@@ -35,6 +35,13 @@ state = {
 for key in ("project", "client_signoff", "client_signoff_record", "client_signoff_at"):
     if key in previous:
         state[key] = previous[key]
+# Task-scoped artifacts belong to the previous task (pr_ready.py archived them
+# to .factory/history/); clear them so the new task starts at planning.
+factory = root / ".factory"
+for stale in ("decomposition.json", "verify.json", "tests.json"):
+    (factory / stale).unlink(missing_ok=True)
+for review in (factory / "reviews").glob("*.json"):
+    review.unlink()
 dump_json(run_state_path(root), state)
 print(f"Initialized factory state for {issue_key} -> {branch}")
 if not signed_off:

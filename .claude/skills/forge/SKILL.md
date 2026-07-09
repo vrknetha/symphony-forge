@@ -13,6 +13,25 @@ description: >-
 Canon lives in `AGENTS.md`, `WORKFLOW.md`, and `harness.yaml`
 (<!-- canon: WORKFLOW.md -->). This skill only routes to it.
 
+## ALWAYS start here
+
+```bash
+python3 .agents/scripts/forge.py next
+```
+
+That is the deterministic phase engine — it reads run state, the context
+ledger, plans, and artifacts, and prints where the project is and the exact
+next actions. Never guess the phase yourself; run it, then execute or route:
+
+| `next` says | Invoke |
+|---|---|
+| discovery/prototype | gstack `/office-hours` for the discovery conversation; prototype freely |
+| planning | enter plan mode here (contract: `.agents/prompts/planner.md`); exploration via `/codex:rescue` read-only |
+| implementing | `/codex:rescue --background` with the leaf task |
+| reviewing | spawn the three review subagents; autoreview only for flagged escalations |
+| harvest pending | follow `.agents/prompts/harvester.md` |
+| anything with a command | run the command verbatim |
+
 ## Route by intent
 
 | Dev says | Do |

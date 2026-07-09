@@ -76,6 +76,11 @@ conventions in `harness/nestjs-react/conventions/` and `constitution/`.
 
 ## 7. The feature loop
 
+**At any point, in any phase, run `python3 .agents/scripts/forge.py next`** —
+it prints where the project is and the exact next commands (the `/forge`
+skill in Claude Code runs it for you and routes to the right tool). The steps
+below are what it will walk you through.
+
 For each feature (see `WORKFLOW.md` and `harness.yaml` for phase ownership):
 
 ```bash
