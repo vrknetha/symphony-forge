@@ -1,4 +1,5 @@
 # Logging Conventions
+> Canon: <!-- canon: constitution/05-logging-and-observability.md --> — this file only adds NestJS-React scaffold specifics.
 
 ## Format
 

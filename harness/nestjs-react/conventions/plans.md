@@ -1,4 +1,5 @@
 # Plans
+> Canon: <!-- canon: constitution/00-agentic-development-workflow.md --> — this file only adds NestJS-React scaffold specifics.
 
 Plans are first-class artifacts. They live in the repo. Agents read plans to understand what to build, what's in progress, and what was decided.
 

@@ -50,7 +50,7 @@ This repo is intended to be self-contained. Do not make the factory depend on an
 ## Initialize a Feature Run
 
 ```bash
-python3 .codex/scripts/intake.py --issue ENG-123 --title "Build billing dashboard"
+python3 .agents/scripts/intake.py --issue ENG-123 --title "Build billing dashboard"
 ```
 
 That creates `.factory/run.json` and establishes the issue/branch contract.
@@ -59,19 +59,19 @@ That creates `.factory/run.json` and establishes the issue/branch contract.
 
 ## Plan and Decompose First
 
-Use `planner-high` with `.codex/prompts/planner.md` to create the approved plan artifact. Then use `docs-decomposer` with `.codex/prompts/decomposer.md` to create the task graph.
+Use `planner-high` with `.agents/prompts/planner.md` to create the approved plan artifact. Then use `docs-decomposer` with `.agents/prompts/decomposer.md` to create the task graph.
 
 Record decomposition with:
 
 ```bash
-python3 .codex/scripts/record_decomposition_from_json.py --input /tmp/decomposition.json
-python3 .codex/scripts/render_linear_task_graph.py > /tmp/linear-task-graph.md
+python3 .agents/scripts/record_decomposition_from_json.py --input /tmp/decomposition.json
+python3 .agents/scripts/render_linear_task_graph.py > /tmp/linear-task-graph.md
 ```
 
 When approved, move the run forward:
 
 ```bash
-python3 .codex/scripts/update_run.py --phase implementing --plan-status approved --decomposition-status recorded
+python3 .agents/scripts/update_run.py --phase implementing --plan-status approved --decomposition-status recorded
 ```
 
 ---
@@ -91,13 +91,13 @@ Implementation default:
 Run the `automated-tester` subagent before deterministic verify. If it returns structured JSON, record it with:
 
 ```bash
-python3 .codex/scripts/record_test_from_json.py --kind automated --input /tmp/automated-test.json
+python3 .agents/scripts/record_test_from_json.py --kind automated --input /tmp/automated-test.json
 ```
 
 Then run deterministic verify:
 
 ```bash
-python3 .codex/scripts/verify.py
+python3 .agents/scripts/verify.py
 ```
 
 This writes `.factory/verify.json`.
@@ -116,17 +116,17 @@ These are project-scoped custom agents defined under `.codex/agents/`. They are 
 If the parent Codex session already has structured reviewer JSON, prefer:
 
 ```bash
-python3 .codex/scripts/record_review_from_json.py --aspect quality --input /tmp/quality-review.json
-python3 .codex/scripts/record_review_from_json.py --aspect performance --input /tmp/performance-review.json
-python3 .codex/scripts/record_review_from_json.py --aspect security --input /tmp/security-review.json
+python3 .agents/scripts/record_review_from_json.py --aspect quality --input /tmp/quality-review.json
+python3 .agents/scripts/record_review_from_json.py --aspect performance --input /tmp/performance-review.json
+python3 .agents/scripts/record_review_from_json.py --aspect security --input /tmp/security-review.json
 ```
 
 For manual fallback, record the results with:
 
 ```bash
-python3 .codex/scripts/record_review.py --aspect quality --score 9 --summary "Code quality acceptable" --recommendation approve --reviewed-scope src/api/orders.ts
-python3 .codex/scripts/record_review.py --aspect performance --score 8 --summary "No major regressions" --recommendation approve-with-caveats --reviewed-scope src/api/orders.ts
-python3 .codex/scripts/record_review.py --aspect security --score 9 --summary "Security posture acceptable" --recommendation approve --reviewed-scope src/api/orders.ts
+python3 .agents/scripts/record_review.py --aspect quality --score 9 --summary "Code quality acceptable" --recommendation approve --reviewed-scope src/api/orders.ts
+python3 .agents/scripts/record_review.py --aspect performance --score 8 --summary "No major regressions" --recommendation approve-with-caveats --reviewed-scope src/api/orders.ts
+python3 .agents/scripts/record_review.py --aspect security --score 9 --summary "Security posture acceptable" --recommendation approve --reviewed-scope src/api/orders.ts
 ```
 
 ---
@@ -136,7 +136,7 @@ python3 .codex/scripts/record_review.py --aspect security --score 9 --summary "S
 After review passes, run the `functional-checker` subagent. If it returns structured JSON, record it with:
 
 ```bash
-python3 .codex/scripts/record_test_from_json.py --kind functional --input /tmp/functional-test.json
+python3 .agents/scripts/record_test_from_json.py --kind functional --input /tmp/functional-test.json
 ```
 
 Functional checks are required before PR-ready.
@@ -146,7 +146,7 @@ Functional checks are required before PR-ready.
 ## Mark PR Ready
 
 ```bash
-python3 .codex/scripts/pr_ready.py
+python3 .agents/scripts/pr_ready.py
 ```
 
 If decomposition, testing, review, or verification artifacts are missing, it exits non-zero.

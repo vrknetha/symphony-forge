@@ -1,4 +1,5 @@
 # Code Quality Conventions
+> Canon: <!-- canon: constitution/pnp-coding-standards-modular-monolith.md --> — this file only adds NestJS-React scaffold specifics.
 
 Rules optimized for agent-authored codebases. Enforced by linters and CI — not suggestions.
 

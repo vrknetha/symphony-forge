@@ -15,6 +15,8 @@
 Both modes must produce the same `.factory` artifacts.
 
 ## Factory Phases
+0a. `discovery` — lightweight problem, stakeholder, and constraint discovery; no `.factory` ceremony required.
+0b. `prototype` — lightweight proof work before committing to the factory loop; no `.factory` ceremony required.
 1. `planning`
 2. `decomposing`
 3. `awaiting-approval`
@@ -24,6 +26,8 @@ Both modes must produce the same `.factory` artifacts.
 7. `functional-check`
 8. `pr-ready`
 9. `done` or `blocked`
+
+The sign-off gate sits between `prototype` and `planning`. Record accepted client sign-off with `python3 .agents/scripts/record_signoff.py`, which sets `client_signoff` in `.factory/run.json`. `update_run.py` and `pre_tool_use.py` refuse phases at `planning` or later until that field is true.
 
 ## Task Graph Rules
 - The planner owns decomposition.
@@ -43,14 +47,16 @@ Required run artifacts:
 
 ## Execution Order
 1. ensure architecture and decision docs are present in-repo
-2. create an approved plan
-3. record decomposition
-4. implement one leaf task
-5. run `automated-tester`
-6. run `python3 .codex/scripts/verify.py`
-7. spawn review subagents
-8. run `functional-checker`
-9. run `python3 .codex/scripts/pr_ready.py`
+2. complete discovery and prototype
+3. record client sign-off
+4. create an approved plan
+5. record decomposition
+6. implement one leaf task
+7. run `automated-tester`
+8. run `python3 .agents/scripts/verify.py`
+9. spawn review subagents
+10. run `functional-checker`
+11. run `python3 .agents/scripts/pr_ready.py`
 
 ## PR Ready Contract
 A branch is PR-ready only when:

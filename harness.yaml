@@ -1,0 +1,49 @@
+# harness.yaml — precedence manifest: one owner per lifecycle phase.
+# The dual-runtime linter treats this file as canon. Changes land by PR only.
+version: 1
+
+# When guidance conflicts, earlier wins.
+precedence:
+  - constitution
+  - factory-gates
+  - gstack
+  - other-skills
+
+phases:
+  discovery: # 0a
+    owner: "gstack:/office-hours"
+    notes: "Lightweight on purpose: no .factory ceremony before sign-off."
+  prototype: # 0b
+    owner: "prototype-skill"
+    allowed:
+      - "ponytail:lite"
+    notes: "Throwaway build for client sign-off; not production code."
+  planning:
+    owner: "claude-code:plan-mode"
+    exploration: "codex:read-only"
+    notes: >-
+      The planner delegates ALL codebase exploration to Codex read-only runs
+      (/codex:rescue or `codex exec -s read-only`) and plans from the findings.
+  implementation:
+    owner: "codex:/codex:rescue"
+    prompts: ".agents/prompts/implementer.md"
+  testing:
+    owner: "codex-subagents:automated-tester,functional-checker"
+  review:
+    owner: "codex-subagents:quality,performance,security"
+    escalation:
+      tool: "openclaw:autoreview"
+      when: "security-sensitive|migration|cross-domain"
+      at: "pr-ready"
+    notes: "Never both review loops on one task (never nest reviewers)."
+  ship:
+    owner: ".agents/scripts/pr_ready.py"
+    merge: manual
+
+disabled_in_factory_repos:
+  - "gstack:/codex"
+  - "gstack:/ship"
+  - "codex-plugin-cc:stop-hook-review-gate"
+
+not_installed_v1:
+  - "mattpocock/skills"

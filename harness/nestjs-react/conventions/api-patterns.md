@@ -1,4 +1,5 @@
 # API Patterns & Conventions
+> Canon: <!-- canon: constitution/pnp-api-standards.md --> — this file only adds NestJS-React scaffold specifics.
 
 ## API Versioning
 

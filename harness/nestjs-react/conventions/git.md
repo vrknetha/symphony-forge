@@ -1,4 +1,5 @@
 # Git Conventions
+> Canon: <!-- canon: constitution/pnp-branch-naming-standards.md --> — this file only adds NestJS-React scaffold specifics.
 
 ## Branch Naming
 

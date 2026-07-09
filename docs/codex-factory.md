@@ -1,12 +1,12 @@
-# Codex Factory
+# Dual-Runtime Factory
 
-Symphony Forge is a doc-driven Codex factory template with optional OpenClaw orchestration.
+Symphony Forge is a doc-driven factory template where Claude Code coordinates planning and Codex executes exploration, implementation, testing, and review. OpenClaw orchestration is optional.
 
 ## Runtime Model
 - Product intent lives in `docs/product/BRIEF.md`.
 - Architecture and decision docs live in the repo before planning starts.
-- A planner owns decomposition and writes a Linear-first task graph.
-- Plain Codex or OpenClaw + ACP/ACPX handles implementation.
+- Claude Code owns planning coordination and delegates codebase exploration to Codex read-only runs.
+- Codex or OpenClaw + ACP/ACPX handles implementation.
 - Codex custom subagents handle testing and isolated review.
 - Linear is the source of truth.
 - GitHub mirrors implementation state and PR status.
@@ -32,7 +32,10 @@ Reasoning policy:
 - review and testing: explicit overrides
 
 ## Factory Directories
-- `.codex/` — hooks, agents, prompts, and deterministic scripts
+- `.agents/` — shared prompts and deterministic scripts
+- `.codex/` — Codex config, hooks, and agent registrations
+- `.claude/` — Claude Code adapter docs/settings
+- `constitution/` — engineering standards canon
 - `.factory/` — machine-readable run state
 - `plans/` — durable plan history
 - `docs/product/` — product intent and brief

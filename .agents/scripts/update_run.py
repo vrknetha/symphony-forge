@@ -15,11 +15,28 @@ parser.add_argument("--review-status")
 parser.add_argument("--pr-url")
 args = parser.parse_args()
 
+GATED_PHASES = {
+    "planning",
+    "decomposing",
+    "awaiting-approval",
+    "implementing",
+    "testing",
+    "reviewing",
+    "functional-check",
+    "pr-ready",
+}
+
 root = repo_root()
 path = run_state_path(root)
 state = load_json(path, default={})
 if not state:
     raise SystemExit("Missing .factory/run.json. Run intake first.")
+if args.phase in GATED_PHASES and not state.get("client_signoff"):
+    raise SystemExit(
+        f"Phase '{args.phase}' requires client sign-off. Get "
+        "docs/decisions/NNNN-client-signoff.md accepted (non-empty confirmed_by), "
+        "then run `python3 .agents/scripts/record_signoff.py` first."
+    )
 for key, value in {
     "phase": args.phase,
     "plan_status": args.plan_status,

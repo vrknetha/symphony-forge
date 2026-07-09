@@ -2,7 +2,7 @@
 
 ## What This Repo Is
 
-Symphony Forge is a software-factory template for turning in-repo architecture and decision docs into shipped applications.
+Symphony Forge is a dual-runtime software-factory template for turning in-repo architecture and decision docs into shipped applications.
 
 It provides:
 - planner-owned decomposition
@@ -18,22 +18,24 @@ It provides:
 1. `WORKFLOW.md`
 2. `docs/FACTORY.md`
 3. `docs/QUALITY.md`
-4. `docs/product/BRIEF.md`
-5. `docs/architecture/`
-6. `docs/decisions/`
-7. the active plan and decomposition artifacts under `.factory/`
+4. `harness.yaml`
+5. `constitution/README.md`
+6. `docs/product/BRIEF.md`
+7. `docs/architecture/`
+8. `docs/decisions/`
+9. the active plan and decomposition artifacts under `.factory/`
 
 ## Runtime Modes
 
-Two modes are supported:
-- **Plain Codex** — local Codex sessions and subagents
-- **OpenClaw + ACP/ACPX** — orchestration and long-running issue execution
+Claude Code coordinates discovery, planning, decisions, and orchestration through `codex-plugin-cc`. During planning, codebase exploration is delegated to Codex read-only runs.
 
-The repo must work in both modes. ACP is useful for orchestration, not required for normal use.
+Codex executes exploration, implementation, testing, and review. The same `.factory` artifacts are required whether the repo runs in plain Codex or OpenClaw + ACP/ACPX mode.
 
 ## Phase Contract
 
-1. place architecture and decision docs in-repo
+0a. run lightweight discovery without `.factory` ceremony
+0b. build a lightweight prototype without `.factory` ceremony
+1. record client sign-off before planning
 2. create or update the plan
 3. generate decomposition
 4. wait for approval
@@ -44,11 +46,12 @@ The repo must work in both modes. ACP is useful for orchestration, not required 
 9. run functional checks
 10. mark PR ready
 
+Phases at `planning` or later are refused until `client_signoff` is true in `.factory/run.json`.
 Implementation never starts before plan approval and recorded decomposition.
 
 ## Prompt and Agent Use
 
-Prompt files under `.codex/prompts/` are phase contracts. They are invoked explicitly by the parent Codex session; hooks only load context and enforce gates.
+Prompt files under `.agents/prompts/` are phase contracts. They are invoked explicitly by the parent session; hooks only load context and enforce gates.
 
 Default specialist set:
 - `planner-high`
@@ -71,13 +74,13 @@ Do not default the entire repo to `high` reasoning for every task.
 ## Deterministic Commands
 
 ```bash
-python3 .codex/scripts/intake.py --issue ENG-123 --title "Feature title"
-python3 .codex/scripts/record_decomposition_from_json.py --input /tmp/decomposition.json
-python3 .codex/scripts/update_run.py --phase awaiting-approval --plan-status awaiting-approval
-python3 .codex/scripts/verify.py
-python3 .codex/scripts/record_test_from_json.py --kind automated --input /tmp/automated.json
-python3 .codex/scripts/record_review_from_json.py --aspect quality --input /tmp/quality.json
-python3 .codex/scripts/pr_ready.py
+python3 .agents/scripts/intake.py --issue ENG-123 --title "Feature title"
+python3 .agents/scripts/record_decomposition_from_json.py --input /tmp/decomposition.json
+python3 .agents/scripts/update_run.py --phase awaiting-approval --plan-status awaiting-approval
+python3 .agents/scripts/verify.py
+python3 .agents/scripts/record_test_from_json.py --kind automated --input /tmp/automated.json
+python3 .agents/scripts/record_review_from_json.py --aspect quality --input /tmp/quality.json
+python3 .agents/scripts/pr_ready.py
 ```
 
 ## Hard Gates

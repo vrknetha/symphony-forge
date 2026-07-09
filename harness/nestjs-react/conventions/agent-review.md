@@ -1,4 +1,5 @@
 # Agent Review Loop
+> Canon: <!-- canon: constitution/00-agentic-development-workflow.md --> — this file only adds NestJS-React scaffold specifics.
 
 How quality is maintained in a codebase where agents write all code. Humans review only on escalation. Inspired by the [Ralph Wiggum Loop](https://openai.com/index/harness-engineering/) — agents review agents in a loop until all are satisfied.
 

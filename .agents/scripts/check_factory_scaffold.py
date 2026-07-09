@@ -4,19 +4,23 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-root = Path(__file__).resolve().parents[2]
+root = Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else Path(__file__).resolve().parents[2]
 required = [
     root / '.codex' / 'config.toml',
     root / '.codex' / 'hooks.json',
-    root / '.codex' / 'prompts' / 'planner.md',
-    root / '.codex' / 'prompts' / 'decomposer.md',
-    root / '.codex' / 'prompts' / 'tester-automated.md',
-    root / '.codex' / 'prompts' / 'tester-functional.md',
-    root / '.codex' / 'scripts' / 'verify.py',
-    root / '.codex' / 'scripts' / 'sync_linear.py',
-    root / '.codex' / 'scripts' / 'record_decomposition_from_json.py',
-    root / '.codex' / 'scripts' / 'render_linear_task_graph.py',
-    root / '.codex' / 'scripts' / 'record_test_from_json.py',
+    root / '.agents' / 'prompts' / 'planner.md',
+    root / '.agents' / 'prompts' / 'decomposer.md',
+    root / '.agents' / 'prompts' / 'tester-automated.md',
+    root / '.agents' / 'prompts' / 'tester-functional.md',
+    root / '.agents' / 'scripts' / 'verify.py',
+    root / '.agents' / 'scripts' / 'sync_linear.py',
+    root / '.agents' / 'scripts' / 'record_decomposition_from_json.py',
+    root / '.agents' / 'scripts' / 'render_linear_task_graph.py',
+    root / '.agents' / 'scripts' / 'record_test_from_json.py',
+    root / '.agents' / 'scripts' / 'forge.py',
+    root / '.agents' / 'scripts' / 'record_signoff.py',
+    root / '.agents' / 'scripts' / 'check_dual_runtime.py',
+    root / '.claude' / 'CLAUDE.md',
     root / '.codex' / 'agents' / 'planner-high.toml',
     root / '.codex' / 'agents' / 'docs-decomposer.toml',
     root / '.codex' / 'agents' / 'quality-reviewer.toml',
@@ -24,7 +28,8 @@ required = [
     root / '.codex' / 'agents' / 'security-reviewer.toml',
     root / '.codex' / 'agents' / 'automated-tester.toml',
     root / '.codex' / 'agents' / 'functional-checker.toml',
-    root / '.factory' / 'README.md',
+    root / 'constitution' / 'README.md',
+    root / 'harness.yaml',
     root / 'WORKFLOW.md',
     root / 'docs' / 'FACTORY.md',
     root / 'docs' / 'QUALITY.md',

@@ -1,4 +1,5 @@
 # Agent Observability Conventions
+> Canon: <!-- canon: constitution/05-logging-and-observability.md --> — this file only adds NestJS-React scaffold specifics.
 
 Agents don't guess at performance — they measure it. Every worktree boots an ephemeral
 observability stack so agents can query logs, metrics, and traces. When the worktree

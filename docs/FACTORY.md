@@ -35,14 +35,34 @@ The repo contract and artifacts must be identical in both modes.
 
 ## Prompt Usage Model
 
-Prompt files under `.codex/prompts/` are explicit phase contracts.
+Prompt files under `.agents/prompts/` are explicit phase contracts.
 
 They are used in three ways:
-- `SessionStart` and `UserPromptSubmit` hooks inject context and enforce gates
+- `SessionStart` reports run state
+- `PreToolUse` guards Bash commands at phase gates
+- `Stop` emits a non-blocking reminder when implementation artifacts are incomplete
 - the parent Codex session explicitly loads the relevant phase prompt before acting
 - custom agents use their own `.codex/agents/*.toml` instructions as role-specific prompts
 
 Hooks are not the workflow engine. They only add guardrails and continuation logic.
+
+## Factory Phases
+
+0a. `discovery` — lightweight problem, stakeholder, and constraint discovery. It does not require `.factory` ceremony.
+0b. `prototype` — lightweight proof work before the factory loop. It does not require `.factory` ceremony.
+1. `planning`
+2. `decomposing`
+3. `awaiting-approval`
+4. `implementing`
+5. `testing`
+6. `reviewing`
+7. `functional-check`
+8. `pr-ready`
+9. `done` or `blocked`
+
+The sign-off gate sits between `prototype` and `planning`. `python3 .agents/scripts/record_signoff.py` records an accepted client sign-off decision by setting `client_signoff: true` in `.factory/run.json`.
+
+Phases at `planning` or later are refused by `update_run.py` and `pre_tool_use.py` until `client_signoff` is true.
 
 ## Recommended Specialist Set
 
@@ -65,14 +85,14 @@ Use strong reasoning selectively.
   - model: `gpt-5.4`
   - reasoning: `high`
 - implementation default
-  - model: `gpt-5.3-codex`
+  - model: `gpt-5.5`
   - reasoning: `medium`
 - implementation escalation cases
-  - model: `gpt-5.3-codex`
+  - model: `gpt-5.5`
   - reasoning: `high`
   - use only for migrations, cross-domain refactors, concurrency, security-sensitive work, or ambiguous failure modes
 - reviewers
-  - model: `gpt-5.3-codex`
+  - model: `gpt-5.5`
   - reasoning: `high`
 - functional checker
   - model: `gpt-5.4`
@@ -129,7 +149,7 @@ Each leaf task must include:
 - reviewer focus
 
 Store the decomposition in `.factory/decomposition.json` and mirror it into Linear.
-Use `python3 .codex/scripts/render_linear_task_graph.py` when you want a deterministic Markdown view of the task graph before syncing it to Linear.
+Use `python3 .agents/scripts/render_linear_task_graph.py` when you want a deterministic Markdown view of the task graph before syncing it to Linear.
 
 ## AGENTS Hygiene
 

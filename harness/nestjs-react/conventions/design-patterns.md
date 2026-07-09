@@ -1,4 +1,5 @@
 # Design Patterns
+> Canon: <!-- canon: constitution/03-modular-monolith-structure.md --> — this file only adds NestJS-React scaffold specifics.
 
 How to write code within the architecture boundaries. Enforced by linters, structural tests, and code review.
 

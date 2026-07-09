@@ -1,4 +1,5 @@
 # Architecture Conventions
+> Canon: <!-- canon: constitution/03-modular-monolith-structure.md --> — this file only adds NestJS-React scaffold specifics.
 
 Reference doc for the scaffold prompt. These conventions must be baked into every generated project.
 

@@ -102,7 +102,7 @@ Each repo keeps run state under `.factory/`:
 Initialize a run with:
 
 ```bash
-python3 .codex/scripts/intake.py --issue ENG-123 --title "Feature title"
+python3 .agents/scripts/intake.py --issue ENG-123 --title "Feature title"
 ```
 
 ---

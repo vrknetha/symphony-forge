@@ -1,4 +1,5 @@
 # Monorepo Orchestration Conventions
+> Canon: <!-- canon: constitution/01-monorepo-standard.md --> — this file only adds NestJS-React scaffold specifics.
 
 > **Note:** The filename is `nx.md` for historical reasons. This project uses **pnpm workspaces + Turborepo** — not Nx. All conventions here apply to that stack.
 

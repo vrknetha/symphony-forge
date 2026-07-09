@@ -1,4 +1,5 @@
 # Database Conventions
+> Canon: <!-- canon: constitution/pnp-database-standards.md --> — this file only adds NestJS-React scaffold specifics.
 
 Prisma + PostgreSQL rules for the modular monolith. Every migration, schema change, and query goes through these.
 
