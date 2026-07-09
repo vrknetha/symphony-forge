@@ -13,7 +13,7 @@
 
 ## Runtime Modes
 Claude Code coordinates; Codex executes (local sessions and subagents).
-External orchestrators (e.g. OpenClaw ACP) are a future/optional mode — any
+The stack is Claude Code + Codex, deliberately: any future
 orchestration must produce the same `.factory` artifacts.
 
 ## Factory Phases

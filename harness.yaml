@@ -45,7 +45,7 @@ phases:
   review:
     owner: "codex-subagents:quality,performance,security"
     escalation:
-      tool: "openclaw:autoreview"
+      tool: "autoreview"
       when: "security-sensitive|migration|cross-domain"
       at: "pr-ready"
     notes: "Never both review loops on one task (never nest reviewers)."

@@ -8,10 +8,10 @@ This document is the operating contract for the factory beyond the short root `A
 
 Claude Code coordinates (planning, decisions, orchestration via
 codex-plugin-cc); Codex executes (exploration, implementation, testing, review
-subagents, PR packaging). Future/optional: an external orchestrator (e.g.
-OpenClaw ACP) for long-running or multi-issue scheduling — any such mode must
-produce the identical repo contract and `.factory` artifacts, which is the
-only rule that matters here.
+subagents, PR packaging). That two-runtime stack is deliberate and complete —
+anything that ever drives sessions differently must still produce the
+identical repo contract and `.factory` artifacts, which is the only rule that
+matters here.
 
 ## Prompt Usage Model
 
