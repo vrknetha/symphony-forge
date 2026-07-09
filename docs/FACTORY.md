@@ -82,7 +82,7 @@ This is enough for planning, decomposition, implementation support, testing, and
 Use strong reasoning selectively.
 
 - planner / decomposer / architecture reconciler
-  - model: `gpt-5.4`
+  - model: `gpt-5.5`
   - reasoning: `high`
 - implementation default
   - model: `gpt-5.5`
@@ -95,7 +95,7 @@ Use strong reasoning selectively.
   - model: `gpt-5.5`
   - reasoning: `high`
 - functional checker
-  - model: `gpt-5.4`
+  - model: `gpt-5.5`
   - reasoning: `high`
 
 Defaulting all work to `high` is a bad tradeoff for cost, latency, and focus.

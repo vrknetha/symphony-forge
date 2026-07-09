@@ -13,20 +13,20 @@ Every change must pass five independent checks:
 ## Review Subagents
 
 ### quality-reviewer
-- model: `gpt-5.3-codex`
+- model: `gpt-5.5`
 - reasoning: `high`
 - mode: `read-only`
 - focus: correctness, regressions, maintainability-as-risk, test gaps, contract drift
 
 ### performance-reviewer
-- model: `gpt-5.3-codex`
+- model: `gpt-5.5`
 - reasoning: `high`
 - mode: `read-only`
 - focus: hot paths, algorithmic complexity, query fanout, I/O amplification, memory churn, concurrency bottlenecks
 - must distinguish measured evidence from inference
 
 ### security-reviewer
-- model: `gpt-5.3-codex`
+- model: `gpt-5.5`
 - reasoning: `high`
 - mode: `read-only`
 - focus: OWASP-style trust boundaries, authn/authz, secrets, injection, data exposure, unsafe defaults, abuse paths
@@ -34,7 +34,7 @@ Every change must pass five independent checks:
 ## Testing Subagents
 
 ### automated-tester
-- model: `gpt-5.3-codex`
+- model: `gpt-5.5`
 - reasoning: `high`
 - mode: `workspace-write`
 - focus: add or update automated tests, run scoped test commands, report remaining gaps
@@ -50,7 +50,7 @@ Required output:
 - `reviewed_scope`
 
 ### functional-checker
-- model: `gpt-5.4`
+- model: `gpt-5.5`
 - reasoning: `high`
 - mode: `workspace-write` when tooling needs artifacts, otherwise `read-only`
 - focus: user-visible behavior, end-to-end flows, browser/runtime checks, manual-validation quality

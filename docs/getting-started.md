@@ -81,7 +81,7 @@ python3 .agents/scripts/update_run.py --phase implementing --plan-status approve
 Use plain Codex or OpenClaw + ACPX Codex for coding work. Keep the coordinator thin-context and use bounded tasks from the recorded decomposition.
 
 Implementation default:
-- model: `gpt-5.3-codex`
+- model: `gpt-5.5`
 - reasoning: `medium`
 
 ---
