@@ -21,6 +21,7 @@ required = [
     root / '.agents' / 'scripts' / 'record_signoff.py',
     root / '.agents' / 'scripts' / 'check_dual_runtime.py',
     root / '.claude' / 'CLAUDE.md',
+    root / 'CLAUDE.md',
     root / '.codex' / 'agents' / 'planner-high.toml',
     root / '.codex' / 'agents' / 'docs-decomposer.toml',
     root / '.codex' / 'agents' / 'quality-reviewer.toml',

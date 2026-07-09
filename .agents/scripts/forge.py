@@ -18,7 +18,7 @@ from factory_lib import dump_json, load_json, now_iso, repo_root, run_state_path
 
 COPY_TREES = [".agents", ".claude", "constitution", "harness", ".github"]
 COPY_CODEX = ["config.toml", "hooks.json"]  # + agents/ dir
-COPY_FILES = ["harness.yaml", ".gitignore", "WORKFLOW.md"]
+COPY_FILES = ["harness.yaml", ".gitignore", "WORKFLOW.md", "CLAUDE.md"]
 DOC_CONTRACTS = [
     ("docs/product/README.md", "docs/product/README.md"),
     ("docs/architecture/README.md", "docs/architecture/README.md"),

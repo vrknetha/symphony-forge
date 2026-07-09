@@ -212,6 +212,24 @@ def check_plan_decision_refs(root: Path) -> None:
 
 
 def check_path_parity(root: Path) -> None:
+    root_claude = root / "CLAUDE.md"
+    if root_claude.exists():
+        text = root_claude.read_text(errors="replace")
+        if "@AGENTS.md" not in text:
+            violation(
+                "CLAUDE.md (root) does not import @AGENTS.md. It is the Claude Code "
+                "entrypoint and must import the shared contract, never restate it."
+            )
+        if len(text.splitlines()) > 10:
+            violation(
+                "CLAUDE.md (root) exceeds 10 lines. It is an import shim "
+                "(@AGENTS.md + @.claude/CLAUDE.md); content belongs in those files."
+            )
+    else:
+        violation(
+            "CLAUDE.md (root) is missing. Claude Code auto-loads the root file; add the "
+            "import shim (@AGENTS.md + @.claude/CLAUDE.md)."
+        )
     claude_md = root / ".claude" / "CLAUDE.md"
     if claude_md.exists():
         if "AGENTS.md" not in claude_md.read_text(errors="replace"):
