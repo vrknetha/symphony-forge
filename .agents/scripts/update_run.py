@@ -37,6 +37,16 @@ if args.phase in GATED_PHASES and not state.get("client_signoff"):
         "docs/decisions/NNNN-client-signoff.md accepted (non-empty confirmed_by), "
         "then run `python3 .agents/scripts/record_signoff.py` first."
     )
+if args.plan_status == "approved":
+    issue = state.get("issue_key", "")
+    plan_files = list((root / "plans" / "active").glob(f"{issue}-*.md")) if issue else []
+    if not plan_files:
+        raise SystemExit(
+            "plan_status 'approved' requires the plan in-repo. Save it first with "
+            f"`python3 .agents/scripts/forge.py plan save --from <plan-file>` "
+            f"(expected plans/active/{issue or '<issue>'}-*.md). Approval is the plan "
+            "file, not this flag."
+        )
 for key, value in {
     "phase": args.phase,
     "plan_status": args.plan_status,

@@ -21,6 +21,9 @@ Read `AGENTS.md` first; it is the contract. Standards live in `constitution/`
 
 ## Ground rules
 
+- Per-task planning happens HERE, in plan mode (contract: `.agents/prompts/planner.md`,
+  including the mandatory Decisions section). Approval is not real until the plan
+  is in-repo: `python3 .agents/scripts/forge.py plan save --from <plan-file>`.
 - Decisions land in `docs/decisions/` via `python3 .agents/scripts/forge.py decision new <slug>`.
 - Phases ≥ planning require client sign-off (`python3 .agents/scripts/record_signoff.py`).
 - `python3 .agents/scripts/check_dual_runtime.py` must stay green.

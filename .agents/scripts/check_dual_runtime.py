@@ -189,6 +189,28 @@ def check_decision_records(root: Path) -> None:
                     )
 
 
+DECISION_REF = re.compile(r"docs/decisions/(\d{4}-[a-z0-9][a-z0-9-]*\.md)")
+
+
+def check_plan_decision_refs(root: Path) -> None:
+    plans = root / "plans"
+    if not plans.is_dir():
+        return
+    for plan in plans.rglob("*.md"):
+        try:
+            text = plan.read_text(errors="replace")
+        except OSError:
+            continue
+        for match in DECISION_REF.finditer(text):
+            ref = root / "docs" / "decisions" / match.group(1)
+            if not ref.exists():
+                violation(
+                    f"{plan.relative_to(root)} references docs/decisions/{match.group(1)} "
+                    "which does not exist. Create it with `forge.py decision new <slug>` "
+                    "or fix the reference — plans must not cite phantom decisions."
+                )
+
+
 def check_path_parity(root: Path) -> None:
     claude_md = root / ".claude" / "CLAUDE.md"
     if claude_md.exists():
@@ -276,6 +298,7 @@ def main() -> int:
     check_duplication(root)
     check_canon_markers(root)
     check_decision_records(root)
+    check_plan_decision_refs(root)
     check_path_parity(root)
     check_thin_adapter(root)
     for warning in warnings:

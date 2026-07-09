@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-from factory_lib import dump_json, now_iso, repo_root
+from factory_lib import dump_json, load_json, now_iso, repo_root, run_state_path, slugify
 
 COPY_TREES = [".agents", ".claude", "constitution", "harness", ".github"]
 COPY_CODEX = ["config.toml", "hooks.json"]  # + agents/ dir
@@ -170,6 +170,35 @@ def cmd_decision_new(args: argparse.Namespace) -> None:
     )
 
 
+def cmd_plan_save(args: argparse.Namespace) -> None:
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    state = load_json(run_state_path(base), default={})
+    issue = args.issue or state.get("issue_key")
+    if not issue:
+        fail("no --issue given and no issue_key in .factory/run.json (run intake first)")
+    source = Path(args.source).expanduser()
+    if not source.is_file():
+        fail(f"plan source {source} not found — pass the approved plan file via --from")
+    title = args.title or state.get("title") or issue
+    dest_dir = base / "plans" / "active"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / f"{issue}-{slugify(title)}.md"
+    header = (
+        f"---\nissue: {issue}\ntitle: {title}\nstatus: approved\nsaved: {now_iso()}\n---\n\n"
+    )
+    dest.write_text(header + source.read_text())
+    if state:
+        state["plan_status"] = "approved"
+        state["plan_file"] = str(dest.relative_to(base))
+        state["updated_at"] = now_iso()
+        dump_json(run_state_path(base), state)
+    print(f"Plan saved to {dest.relative_to(base)} (plan_status: approved)")
+    print(
+        "Decisions made while planning must exist as docs/decisions/ records "
+        "(forge.py decision new <slug>) and be referenced in the plan."
+    )
+
+
 def _check(name: str, ok: bool, detail: str, fix: str, required: bool = True) -> dict:
     return {"name": name, "ok": ok, "detail": detail, "fix": fix, "required": required}
 
@@ -268,6 +297,16 @@ def main() -> None:
     p_init.add_argument("--stack", default="nestjs-react")
     p_init.add_argument("--force", action="store_true")
     p_init.set_defaults(func=cmd_init)
+
+    p_plan = sub.add_parser("plan", help="manage task plans")
+    plan_sub = p_plan.add_subparsers(dest="plan_command", required=True)
+    p_save = plan_sub.add_parser("save", help="persist an approved plan into plans/active/")
+    p_save.add_argument("--from", dest="source", required=True,
+                        help="path to the approved plan file (e.g. the Claude Code plan)")
+    p_save.add_argument("--issue", help="issue key (defaults to .factory/run.json)")
+    p_save.add_argument("--title", help="plan title (defaults to run.json title)")
+    p_save.add_argument("--repo", help="target repo (defaults to this repo)")
+    p_save.set_defaults(func=cmd_plan_save)
 
     p_dec = sub.add_parser("decision", help="manage decision records")
     dec_sub = p_dec.add_subparsers(dest="decision_command", required=True)

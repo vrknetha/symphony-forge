@@ -82,8 +82,15 @@ For each feature (see `WORKFLOW.md` and `harness.yaml` for phase ownership):
 python3 .agents/scripts/intake.py --issue ENG-123 --title "Build billing dashboard"
 ```
 
-1. **Plan** — Claude Code plan mode; delegate all codebase exploration to
-   Codex read-only runs (`/codex:rescue` or `codex exec -s read-only`).
+1. **Plan** — Claude Code plan mode following `.agents/prompts/planner.md`;
+   delegate all codebase exploration to Codex read-only runs (`/codex:rescue`
+   or `codex exec -s read-only`). Record every new decision
+   (`forge.py decision new <slug>`), then persist the approved plan:
+
+```bash
+python3 .agents/scripts/forge.py plan save --from <approved-plan-file>
+```
+
 2. **Decompose** — `docs-decomposer` with `.agents/prompts/decomposer.md`, then:
 
 ```bash

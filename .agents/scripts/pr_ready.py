@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import shutil
+
 from factory_lib import (
     decomposition_state_path,
     dump_json,
@@ -26,6 +28,13 @@ else:
         missing.append("approved plan status in .factory/run.json")
     if run_state.get("decomposition_status") != "recorded":
         missing.append("recorded decomposition status in .factory/run.json")
+issue_key = run_state.get("issue_key", "")
+plan_files = list((root / "plans" / "active").glob(f"{issue_key}-*.md")) if issue_key else []
+if not plan_files:
+    missing.append(
+        f"plans/active/{issue_key or '<issue>'}-*.md (save the approved plan with "
+        "`forge.py plan save`)"
+    )
 if not decomposition:
     missing.append(".factory/decomposition.json")
 if not verify or not verify.get("ok"):
@@ -59,4 +68,19 @@ run_state["review_status"] = "passed"
 run_state["tests_status"] = "passed"
 run_state["updated_at"] = now_iso()
 dump_json(run_state_path(root), run_state)
-print("PR_READY")
+
+# Archive what was decided and built: run artifacts to .factory/history/<issue>,
+# the task plan to plans/completed/. This is the durable "what was built" record.
+history = root / ".factory" / "history" / issue_key
+history.mkdir(parents=True, exist_ok=True)
+for artifact in (run_state_path(root), decomposition_state_path(root),
+                 verify_state_path(root), tests_state_path(root)):
+    if artifact.exists():
+        shutil.copy2(artifact, history / artifact.name)
+if review_dir(root).is_dir():
+    shutil.copytree(review_dir(root), history / "reviews", dirs_exist_ok=True)
+completed = root / "plans" / "completed"
+completed.mkdir(parents=True, exist_ok=True)
+for plan_file in plan_files:
+    shutil.move(str(plan_file), completed / plan_file.name)
+print(f"PR_READY (archived to .factory/history/{issue_key}/, plan moved to plans/completed/)")

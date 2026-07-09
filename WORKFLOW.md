@@ -39,15 +39,30 @@ Gates are deterministic and run at phase transitions (`update_run.py`, `record_*
 - Each leaf task must have write scope, dependencies, acceptance criteria, verify commands, and reviewer focus.
 - One task should fit one implementation session and one review package.
 
+## Task Planning
+Per-task planning runs in Claude Code plan mode (exploration delegated to
+Codex read-only). The plan follows `.agents/prompts/planner.md`, including the
+mandatory **Decisions** section: every choice not derivable from BRIEF,
+architecture, or existing records becomes a `docs/decisions/` record
+(`forge.py decision new`) before decomposition is recorded. Approval means the
+plan is in-repo — `forge.py plan save --from <plan-file>` writes
+`plans/active/<issue>-<slug>.md`; `update_run.py` refuses
+`plan_status approved` without it.
+
 ## Artifacts
 Required run artifacts:
 - `.factory/run.json`
+- `plans/active/<issue>-<slug>.md` (the approved plan)
 - `.factory/decomposition.json`
 - `.factory/verify.json`
 - `.factory/tests.json`
 - `.factory/reviews/quality.json`
 - `.factory/reviews/performance.json`
 - `.factory/reviews/security.json`
+
+On PR-ready, `pr_ready.py` archives the run artifacts to
+`.factory/history/<issue>/` and moves the plan to `plans/completed/` — the
+durable record of what was decided and what was built.
 
 ## Execution Order
 1. ensure architecture and decision docs are present in-repo
