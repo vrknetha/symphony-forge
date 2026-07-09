@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from factory_lib import decomposition_state_path, dump_json, gate, now_iso, repo_root, run_state_path
+from factory_lib import head_sha, decomposition_state_path, dump_json, gate, now_iso, repo_root, run_state_path
 
 parser = argparse.ArgumentParser(description="Record decomposition from structured JSON")
 parser.add_argument("--input", help="Path to decomposition JSON. If omitted, read from stdin.")
@@ -22,6 +22,7 @@ else:
 
 root = repo_root()
 state = gate(root, signoff=True, approved_plan=True)
+payload["commit"] = head_sha(root)
 dump_json(decomposition_state_path(root), payload)
 state["decomposition_status"] = "recorded"
 state["updated_at"] = now_iso()

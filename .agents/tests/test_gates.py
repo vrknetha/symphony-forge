@@ -26,6 +26,20 @@ def run(repo: Path, script: str, *args: str, stdin: str | None = None):
     return proc.returncode, proc.stdout + proc.stderr
 
 
+GIT_ID = ["-c", "user.email=test@caw.dev", "-c", "user.name=Gate Tests"]
+
+
+def git(repo: Path, *args: str) -> str:
+    proc = subprocess.run(["git", *GIT_ID, *args], cwd=repo,
+                          capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    return proc.stdout.strip()
+
+
+def head(repo: Path) -> str:
+    return git(repo, "rev-parse", "HEAD")
+
+
 @pytest.fixture()
 def repo(tmp_path: Path) -> Path:
     target = tmp_path / "app"
@@ -35,6 +49,8 @@ def repo(tmp_path: Path) -> Path:
         capture_output=True, text=True,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
+    git(target, "add", "-A")
+    git(target, "commit", "-q", "-m", "scaffold")
     return target
 
 
@@ -61,18 +77,21 @@ def save_plan(repo: Path, tmp_path: Path) -> tuple[int, str]:
     return run(repo, "forge.py", "plan", "save", "--from", str(plan))
 
 
-def write_passing_artifacts(repo: Path) -> None:
+def write_passing_artifacts(repo: Path, commit: str | None = None) -> None:
+    sha = commit or head(repo)
     f = repo / ".factory"
-    (f / "decomposition.json").write_text(json.dumps({"status": "recorded"}))
-    (f / "verify.json").write_text(json.dumps({"ok": True}))
+    (f / "decomposition.json").write_text(
+        json.dumps({"status": "recorded", "commit": sha}))
+    (f / "verify.json").write_text(json.dumps({"ok": True, "commit": sha}))
     (f / "tests.json").write_text(json.dumps({
         "automated": {"status": "passed"},
         "functional": {"status": "passed", "score": 9},
+        "commit": sha,
     }))
     (f / "reviews").mkdir(exist_ok=True)
     for aspect in ("quality", "performance", "security"):
         (f / "reviews" / f"{aspect}.json").write_text(
-            json.dumps({"score": 9, "blocking_findings": []})
+            json.dumps({"score": 9, "blocking_findings": [], "commit": sha})
         )
 
 
@@ -352,6 +371,77 @@ def test_evidence_recorders_gated_on_preconditions(repo):
     ):
         code, out = run(repo, script, *args, stdin=stdin)
         assert code != 0 and "sign-off" in out, f"{script}: {out}"
+
+
+# ----------------------------------------------------- provenance and upgrade
+
+def ready_task(repo: Path, tmp_path: Path) -> None:
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    write_passing_artifacts(repo)
+    run(repo, "update_run.py", "--decomposition-status", "recorded")
+
+
+def test_pr_ready_rejects_unstamped_evidence(repo, tmp_path):
+    ready_task(repo, tmp_path)
+    verify = repo / ".factory" / "verify.json"
+    verify.write_text(json.dumps({"ok": True}))  # no commit stamp
+    code, out = run(repo, "pr_ready.py")
+    assert code != 0 and "provenance" in out
+
+
+def test_pr_ready_rejects_stale_evidence_after_code_change(repo, tmp_path):
+    ready_task(repo, tmp_path)
+    (repo / "app.py").write_text("print('changed after evidence')\n")
+    git(repo, "add", "app.py")
+    git(repo, "commit", "-q", "-m", "code change after evidence")
+    code, out = run(repo, "pr_ready.py")
+    assert code != 0 and "fresh evidence" in out
+    # Re-recording at the new commit clears it
+    write_passing_artifacts(repo)
+    code, out = run(repo, "pr_ready.py")
+    assert code == 0, out
+
+
+def test_pr_ready_tolerates_evidence_only_commits(repo, tmp_path):
+    ready_task(repo, tmp_path)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "record evidence")  # touches .factory/plans only
+    code, out = run(repo, "pr_ready.py")
+    assert code == 0, out
+
+
+def test_upgrade_replaces_machinery_preserves_project(repo, tmp_path):
+    # Degrade machinery, add project-owned content + a proposed skill
+    (repo / ".agents" / "scripts" / "verify.py").unlink()
+    proposed = repo / ".agents" / "skills" / "proposed"
+    proposed.mkdir(parents=True, exist_ok=True)
+    (proposed / "keep-me.md").write_text("status: proposed\n")
+    run(repo, "forge.py", "decision", "new", "keep-decision", "--repo", str(repo))
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "project state")
+    proc = subprocess.run(
+        [sys.executable, str(HARNESS / ".agents" / "scripts" / "forge.py"),
+         "upgrade", "--target", str(repo)],
+        cwd=HARNESS, capture_output=True, text=True,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert (repo / ".agents" / "scripts" / "verify.py").exists()  # machinery restored
+    assert (proposed / "keep-me.md").exists()  # evolution state preserved
+    assert list((repo / "docs" / "decisions").glob("*keep-decision.md"))  # project-owned untouched
+    assert head(repo) in (repo / "constitution" / "VENDORED_FROM").read_text() or \
+        "symphony-forge @" in (repo / "constitution" / "VENDORED_FROM").read_text()
+
+
+def test_upgrade_refuses_dirty_target(repo):
+    (repo / "dirty.txt").write_text("uncommitted\n")
+    proc = subprocess.run(
+        [sys.executable, str(HARNESS / ".agents" / "scripts" / "forge.py"),
+         "upgrade", "--target", str(repo)],
+        cwd=HARNESS, capture_output=True, text=True,
+    )
+    assert proc.returncode != 0 and "uncommitted" in proc.stdout + proc.stderr
 
 
 # --------------------------------------------------------- misc deterministic

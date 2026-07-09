@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from factory_lib import gate, dump_json, load_json, now_iso, repo_root, run_state_path, tests_state_path
+from factory_lib import head_sha, gate, dump_json, load_json, now_iso, repo_root, run_state_path, tests_state_path
 
 
 def ensure_list(value):
@@ -49,6 +49,8 @@ for key in (
 ):
     entry[key] = ensure_list(payload.get(key))
 entry["recorded_at"] = now_iso()
+entry["commit"] = head_sha(root)
+existing["commit"] = entry["commit"]
 existing[args.kind] = entry
 existing["updated_at"] = now_iso()
 dump_json(path, existing)

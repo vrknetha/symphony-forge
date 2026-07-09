@@ -161,3 +161,17 @@ python3 .agents/scripts/check_factory_scaffold.py
 
 If codex-plugin-cc is unavailable, see `docs/degraded-mode.md` — same phase
 prompts, same artifacts, direct `codex exec`.
+
+## Upgrading a project to a newer harness
+
+From the harness clone (clean target tree required):
+
+```bash
+./forge upgrade --target ../my-app
+```
+
+Harness-owned machinery (`.agents/`, adapters, `constitution/`, contracts) is
+replaced; project-owned content (`harness.yaml`, `AGENTS.md`, plans, decisions,
+context, prototype, `.factory/`) is never touched, and
+`.agents/skills/proposed/` survives the swap. Review the diff, run the checks,
+commit.

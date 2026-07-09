@@ -2,10 +2,12 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 
 from factory_lib import (
     decomposition_state_path,
     dump_json,
+    head_sha,
     load_json,
     now_iso,
     repo_root,
@@ -14,6 +16,10 @@ from factory_lib import (
     tests_state_path,
     verify_state_path,
 )
+
+# Commits touching only these paths after evidence was recorded do not
+# invalidate it (recording/archiving the evidence itself, plans, docs).
+EVIDENCE_PATHS = (".factory/", "plans/", "docs/")
 
 root = repo_root()
 run_state = load_json(run_state_path(root), default={})
@@ -64,6 +70,56 @@ for aspect in ("quality", "performance", "security"):
         missing.append(str(path.relative_to(root)))
     elif data.get("score", 0) < 8 or blockers:
         missing.append(f"{aspect} review must be >= 8 with no blockers")
+
+# Provenance: every evidence artifact carries the commit it was recorded at;
+# all must agree, and no code may have changed since (evidence-only commits ok).
+head = head_sha(root)
+stamps: dict[str, str | None] = {}
+for label, data in (
+    ("decomposition", decomposition),
+    ("verify", verify),
+    ("tests", tests),
+):
+    if data:
+        stamps[label] = data.get("commit")
+for aspect in ("quality", "performance", "security"):
+    data = load_json(review_dir(root) / f"{aspect}.json", default={})
+    if data:
+        stamps[f"review:{aspect}"] = data.get("commit")
+unstamped = [label for label, sha in stamps.items() if not sha]
+if unstamped and head:
+    missing.append(
+        f"commit provenance on: {', '.join(unstamped)} (re-record with current tooling — "
+        "artifacts without a commit stamp are unverifiable evidence)"
+    )
+elif head and stamps:
+    distinct = {sha for sha in stamps.values()}
+    if len(distinct) > 1:
+        missing.append(
+            f"consistent evidence: artifacts span commits {sorted(s[:8] for s in distinct)} — "
+            "re-record so all evidence reflects one code state"
+        )
+    else:
+        stamp = distinct.pop()
+        if stamp != head:
+            proc = subprocess.run(
+                ["git", "diff", "--name-only", f"{stamp}..{head}"],
+                cwd=root, capture_output=True, text=True,
+            )
+            if proc.returncode != 0:
+                missing.append(
+                    f"evidence commit {stamp[:8]} is unknown to this repo — re-record"
+                )
+            else:
+                code_changes = [
+                    f for f in proc.stdout.splitlines()
+                    if f and not f.startswith(EVIDENCE_PATHS)
+                ]
+                if code_changes:
+                    missing.append(
+                        f"fresh evidence: code changed since it was recorded at {stamp[:8]} "
+                        f"({', '.join(code_changes[:5])}) — rerun verify/tests/reviews"
+                    )
 
 if missing:
     print("PR not ready:")

@@ -95,6 +95,11 @@ Required run artifacts:
 - `.factory/reviews/performance.json`
 - `.factory/reviews/security.json`
 
+Every evidence artifact is stamped with the commit it was recorded at.
+`pr_ready.py` refuses unstamped artifacts, artifacts spanning different
+commits, and evidence recorded before the latest code change (commits touching
+only `.factory/`, `plans/`, or `docs/` do not invalidate evidence).
+
 On PR-ready, `pr_ready.py` archives the run artifacts to
 `.factory/history/<issue>/` and moves the plan to `plans/completed/` — the
 durable record of what was decided and what was built.

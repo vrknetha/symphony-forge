@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import os
 import subprocess
-from factory_lib import gate, dump_json, now_iso, repo_root, run_cmd, run_state_path, verify_state_path, load_json
+from factory_lib import head_sha, gate, dump_json, now_iso, repo_root, run_cmd, run_state_path, verify_state_path, load_json
 
 parser = argparse.ArgumentParser(description="Run deterministic validation sequence")
 parser.add_argument("--print-only", action="store_true", help="Only print the commands that would run")
@@ -38,6 +38,7 @@ state = load_json(run_state_path(root), default={})
 verify = {
     "ok": all_ok,
     "completed_at": now_iso(),
+    "commit": head_sha(root),
     "results": results,
 }
 dump_json(verify_state_path(root), verify)

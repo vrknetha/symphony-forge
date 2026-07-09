@@ -6,7 +6,7 @@ import json
 import sys
 from pathlib import Path
 
-from factory_lib import gate, dump_json, load_json, now_iso, repo_root, review_dir, run_state_path
+from factory_lib import head_sha, gate, dump_json, load_json, now_iso, repo_root, review_dir, run_state_path
 
 
 def ensure_list(value):
@@ -51,6 +51,7 @@ review = {
     "blocking": blocking_findings,
     "warnings": non_blocking_findings,
     "recorded_at": now_iso(),
+    "commit": head_sha(root),
 }
 dump_json(path, review)
 state = load_json(run_state_path(root), default={})

@@ -97,6 +97,14 @@ def gate(
     return state
 
 
+def head_sha(root: Path | None = None) -> str | None:
+    proc = subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=root or repo_root(),
+        capture_output=True, text=True,
+    )
+    return proc.stdout.strip() if proc.returncode == 0 else None
+
+
 def read_hook_input() -> dict[str, Any]:
     raw = sys.stdin.read().strip()
     if not raw:

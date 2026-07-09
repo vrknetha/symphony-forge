@@ -10,7 +10,7 @@ from __future__ import annotations
 import argparse
 
 from forge_cli import context as ctx
-from forge_cli import decisions, doctor, phase, plans, scaffold
+from forge_cli import decisions, doctor, phase, plans, scaffold, upgrade
 
 
 def main() -> None:
@@ -32,6 +32,13 @@ def main() -> None:
     p_init.add_argument("--stack", default="nestjs-react")
     p_init.add_argument("--force", action="store_true")
     p_init.set_defaults(func=scaffold.cmd_init)
+
+    p_up = sub.add_parser("upgrade",
+                          help="re-vendor harness machinery into a client repo (run from the harness)")
+    p_up.add_argument("--target", required=True, help="the client repo to upgrade")
+    p_up.add_argument("--force", action="store_true",
+                      help="proceed even if the target has uncommitted changes")
+    p_up.set_defaults(func=upgrade.cmd_upgrade)
 
     p_plan = sub.add_parser("plan", help="manage task plans")
     plan_sub = p_plan.add_subparsers(dest="plan_command", required=True)

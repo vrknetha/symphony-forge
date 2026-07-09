@@ -39,7 +39,8 @@ next actions. Never guess the phase yourself; run it, then execute or route:
 | harness status | read `.factory/run.json`; `forge.py context list --pending`; `ls .agents/skills/proposed/` |
 | is this PR ready | `python3 .agents/scripts/pr_ready.py` (never bypass with ad hoc checks) |
 | mine for skills / retro | follow `.agents/prompts/skill-miner.md` |
-| machine setup | `python3 .agents/scripts/forge.py doctor` |
+| machine setup | `./forge doctor` (`--fix` installs the toolchain) |
+| update a client repo to the latest harness | from the HARNESS clone: `./forge upgrade --target <client-repo>` (clean tree required; review the diff, run the linter + gate tests, commit) |
 
 ## Hard rules
 
