@@ -71,14 +71,22 @@ if missing:
         print(f"- {item}")
     raise SystemExit(1)
 
+# Move the plan to plans/completed/ FIRST, so the run state we persist and
+# archive references the plan's final location, not a path about to vanish.
+completed = root / "plans" / "completed"
+completed.mkdir(parents=True, exist_ok=True)
+for plan_file in plan_files:
+    shutil.move(str(plan_file), completed / plan_file.name)
+    run_state["plan_file"] = str((completed / plan_file.name).relative_to(root))
+
 run_state["phase"] = "pr-ready"
 run_state["review_status"] = "passed"
 run_state["tests_status"] = "passed"
 run_state["updated_at"] = now_iso()
 dump_json(run_state_path(root), run_state)
 
-# Archive what was decided and built: run artifacts to .factory/history/<issue>,
-# the task plan to plans/completed/. This is the durable "what was built" record.
+# Archive what was decided and built: run artifacts to .factory/history/<issue>.
+# This is the durable "what was built" record.
 history = root / ".factory" / "history" / issue_key
 history.mkdir(parents=True, exist_ok=True)
 for artifact in (run_state_path(root), decomposition_state_path(root),
@@ -87,8 +95,4 @@ for artifact in (run_state_path(root), decomposition_state_path(root),
         shutil.copy2(artifact, history / artifact.name)
 if review_dir(root).is_dir():
     shutil.copytree(review_dir(root), history / "reviews", dirs_exist_ok=True)
-completed = root / "plans" / "completed"
-completed.mkdir(parents=True, exist_ok=True)
-for plan_file in plan_files:
-    shutil.move(str(plan_file), completed / plan_file.name)
 print(f"PR_READY (archived to .factory/history/{issue_key}/, plan moved to plans/completed/)")

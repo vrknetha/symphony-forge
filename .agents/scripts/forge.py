@@ -363,7 +363,17 @@ def cmd_context_mark(args: argparse.Namespace) -> None:
     if entry is None:
         fail(f"{args.file} is not in the ledger — run `forge.py context scan` first")
     status = "harvested" if args.harvested else "ignored"
-    missing = [o for o in (args.outputs or []) if not (base / o).exists()]
+    outputs = args.outputs or []
+    escaping = []
+    for o in outputs:
+        candidate = (base / o).resolve()
+        if Path(o).is_absolute() or not candidate.is_relative_to(base):
+            escaping.append(o)
+    if escaping:
+        fail(
+            f"outputs must be repo-relative paths inside the repo: {', '.join(escaping)}"
+        )
+    missing = [o for o in outputs if not (base / o).exists()]
     if missing:
         fail(f"outputs do not exist: {', '.join(missing)} — create them before marking")
     if args.harvested and not args.outputs:
