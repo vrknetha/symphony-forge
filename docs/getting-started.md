@@ -17,7 +17,7 @@ Clone it wherever you keep repos — `./setup` records the location for the
 bootstrap skill:
 
 ```bash
-git clone git@github.com:vrknetha/symphony-forge.git
+git clone git@github.com:cawstudios/symphony-forge.git
 cd symphony-forge
 ./setup
 ```
