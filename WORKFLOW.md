@@ -29,6 +29,10 @@ Both modes must produce the same `.factory` artifacts.
 
 The sign-off gate sits between `prototype` and `planning`. Record accepted client sign-off with `python3 .agents/scripts/record_signoff.py`, which sets `client_signoff` in `.factory/run.json`. `update_run.py` and `pre_tool_use.py` refuse phases at `planning` or later until that field is true.
 
+## Gating Model
+
+Gates are deterministic and run at phase transitions (`update_run.py`, `record_*` scripts, `pr_ready.py`) and on Bash commands (`pre_tool_use.py`) — never on prompt keywords or turn ends. Editing files before plan approval is deliberately not hard-blocked: unapproved work cannot pass verify, testing, review, or `pr_ready.py`, which is where the contract is enforced. This replaces the earlier prompt-keyword and stop-hook guards, which had false positives in both directions and never actually covered non-Bash edits.
+
 ## Task Graph Rules
 - The planner owns decomposition.
 - Decomposition is capability-driven and Linear-first.
