@@ -291,10 +291,14 @@ def _sha256(path: Path) -> str:
 
 
 def _context_files(context_dir: Path) -> list[Path]:
+    # Only the inbox's own top-level README and ledger are infrastructure;
+    # a dumped subdirectory may legitimately contain files with those names.
     skip = {"README.md", "ledger.json"}
     return sorted(
         p for p in context_dir.rglob("*")
-        if p.is_file() and p.name not in skip and not p.name.startswith(".")
+        if p.is_file()
+        and str(p.relative_to(context_dir)) not in skip
+        and not p.name.startswith(".")
     )
 
 
@@ -364,6 +368,8 @@ def cmd_context_mark(args: argparse.Namespace) -> None:
         fail(f"outputs do not exist: {', '.join(missing)} — create them before marking")
     if args.harvested and not args.outputs:
         fail("--harvested requires --outputs (what did the harvest produce?)")
+    if args.ignored and not (args.notes or "").strip():
+        fail("--ignored requires --notes (why is this context irrelevant? auditable rationale)")
     entry.update({
         "status": status,
         "marked_at": now_iso(),
