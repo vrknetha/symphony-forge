@@ -20,12 +20,12 @@ The `caw-new-project` skill updates the harness, runs `doctor --fix` (installs t
 ## The Lifecycle
 
 ```text
-0a discovery ──▶ 0b prototype ──▶ CLIENT SIGN-OFF ──▶ scaffold (nx)
-                                     (hard gate)          │
-      ┌───────────────────────────────────────────────────┘
+0a discovery ──▶ 0b prototype ──▶ CLIENT SIGN-OFF ──▶ scaffold (nx) ──▶ roadmap
+                                     (hard gate)                           │
+      ┌────────────────────────────────────────────────────────────────────┘
       ▼
-  per feature:  intake ▶ plan ▶ decompose ▶ implement ▶ test ▶ verify ▶ review ▶ PR
-                        (Claude)  (Codex)     (Codex)                 (subagents)
+  per feature:  intake ▶ plan ▶ decompose ▶ implement+test ▶ verify ▶ review ▶ PR
+                       (Claude)   (Codex)       (Codex)              (autoreview)
 ```
 
 - **Before sign-off**: lightweight on purpose — no ceremony, no time-box. Discovery via gstack `/office-hours`; the prototype that earns sign-off is preserved in `prototype/` as the permanent UX reference.
@@ -33,6 +33,34 @@ The `caw-new-project` skill updates the harness, runs `doctor --fix` (installs t
 - **Continuously**: dump raw context (client emails, transcripts) into `docs/context/` — a ledger tracks harvest status, and agents turn pending files into proposed decisions and doc updates. Dev corrections get mined into proposed skills (`.agents/skills/proposed/`) that humans promote.
 
 Phase ownership — which tool runs which phase — is declared in [`harness.yaml`](harness.yaml).
+
+## Who Runs What (skills by stage)
+
+`harness.yaml` is the ALLOWLIST — these are the only pinned tools per stage,
+and recorders refuse evidence from anything else (`generated_by` is checked
+against `.agents/schemas/`). Adopting a new tool = a PR here, never a local
+choice.
+
+| Stage | You say | Skill / agent invoked | Deterministic record |
+|---|---|---|---|
+| machine setup | "Set up my machine" | `caw-new-project` skill → `./forge doctor --fix` | doctor report |
+| new project | "Set up a new CAW project called X" | `caw-new-project` skill → `./forge init` | scaffolded repo |
+| any phase, lost | "What now?" | `/forge` skill → `./forge next` | — |
+| 0a discovery | "Let's run office hours" | gstack `/office-hours` | `docs/product/DISCOVERY.md`, `BRIEF.md` |
+| 0b prototype | build freely | ponytail (lite) allowed | preserved under `prototype/` |
+| sign-off | "The client signed off" | none — HUMAN runs `decision accept` | `record_signoff.py` → `run.json` |
+| workspace | "Scaffold the workspace" | Codex `/codex:rescue` + `SCAFFOLD_PROMPT.md` | nx workspace |
+| roadmap (handoff) | "Build the project roadmap" | `docs-decomposer` (project-level) | `./forge roadmap import` → `plans/roadmap.json` |
+| intake | "Start the next task on the roadmap" | `/forge` → `intake.py` | `.factory/run.json` |
+| plan | "Plan this task" | Claude plan mode (or Codex `planner-high`); exploration via Codex read-only | `./forge plan save` → `plans/active/` |
+| decompose | "Decompose it" | `docs-decomposer` | `record_decomposition_from_json.py` (incl. `user_facing`) |
+| implement + test | "Implement it" | Codex `/codex:rescue --background` (implementer writes the tests) | `record_test_from_json.py --kind automated` |
+| verify | "Run verify" | none — deterministic script | `verify.py` → `.factory/verify.json` |
+| review | "Review it" | **autoreview** (ONE Codex run, three lenses) | `record_review_from_json.py` ×3 |
+| functional check | only if `user_facing: true` | `functional-checker` subagent | `record_test_from_json.py --kind functional` |
+| ship | "Is this PR ready?" | none — deterministic gate | `pr_ready.py` → archives + roadmap done |
+| context harvest | "Process the context dump" | agent per `harvester.md` | `./forge context mark` |
+| retro / evolution | "Mine for skills" | agent per `skill-miner.md` + daily `gardener` workflow | proposals in `.agents/skills/proposed/` |
 
 ## Structure
 
