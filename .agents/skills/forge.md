@@ -43,6 +43,7 @@ or route:
 |---|---|
 | set up my machine | `./forge doctor` (`--fix` installs the toolchain; logins stay manual) |
 | create a new project | `./forge init --name <project> --target <dir>` (or the `caw-new-project` skill) |
+| migrate an existing repo into the harness | `caw-migrate-project` skill — core: `./forge adopt --target <repo>` from the harness clone (clean tree; old AGENTS/CLAUDE preserved to docs/context/) |
 | what's left to build / show the roadmap | `./forge roadmap list` (`--pending` for what's next) |
 | here's the project backlog / handoff decomposition | `./forge roadmap import --input <json>` |
 | add a feature to the roadmap | `./forge roadmap add <KEY> "<title>" --epic <epic>` |

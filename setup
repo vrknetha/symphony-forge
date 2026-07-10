@@ -1,15 +1,19 @@
 #!/bin/sh
-# One-time per-machine install: puts the caw-new-project bootstrap skill in
-# ~/.claude/skills so any Claude Code session can scaffold CAW projects by
-# conversation. Idempotent; re-run after harness updates.
+# One-time per-machine install: puts the CAW bootstrap skills in
+# ~/.claude/skills and ~/.codex/skills so any session can scaffold NEW
+# projects (caw-new-project) or migrate EXISTING repos (caw-migrate-project)
+# by conversation. Idempotent; re-run after harness updates.
 set -e
 HERE="$(cd "$(dirname "$0")" && pwd)"
-for RUNTIME in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
-  DEST="$RUNTIME/caw-new-project"
-  mkdir -p "$DEST"
-  sed "s|{{HARNESS_PATH}}|$HERE|g" \
-    "$HERE/install/claude/caw-new-project/SKILL.md" > "$DEST/SKILL.md"
-  echo "Installed: $DEST/SKILL.md (harness: $HERE)"
+for SKILL in caw-new-project caw-migrate-project; do
+  for RUNTIME in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
+    DEST="$RUNTIME/$SKILL"
+    mkdir -p "$DEST"
+    sed "s|{{HARNESS_PATH}}|$HERE|g" \
+      "$HERE/install/claude/$SKILL/SKILL.md" > "$DEST/SKILL.md"
+    echo "Installed: $DEST/SKILL.md (harness: $HERE)"
+  done
 done
 echo 'Try it in Claude Code: "Set up a new CAW project called my-app"'
+echo '               ...or: "Migrate this repo into the harness"'
 "$HERE/.agents/scripts/forge.py" doctor 2>/dev/null || python3 "$HERE/.agents/scripts/forge.py" doctor || true

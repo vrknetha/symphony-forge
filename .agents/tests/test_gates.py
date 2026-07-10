@@ -693,3 +693,63 @@ def test_functional_check_required_when_user_facing(repo, tmp_path):
     (f / "tests.json").write_text(json.dumps(tests))
     code, out = run(repo, "pr_ready.py")
     assert code != 0 and "functional" in out
+
+
+# --------------------------------------------------------------------- adopt
+
+def existing_repo(tmp_path: Path) -> Path:
+    """A pre-harness, agent-built repo: own code, own CLAUDE.md, own CI."""
+    repo = tmp_path / "legacy"
+    (repo / "src").mkdir(parents=True)
+    (repo / "src" / "app.js").write_text("console.log('prototype')\n")
+    (repo / "README.md").write_text("# Legacy prototype\n")
+    (repo / "CLAUDE.md").write_text("# Legacy agent instructions\nAlways use tabs.\n")
+    (repo / ".github" / "workflows").mkdir(parents=True)
+    (repo / ".github" / "workflows" / "their-ci.yml").write_text("name: theirs\n")
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "pre-harness state")
+    return repo
+
+
+def adopt(repo: Path) -> tuple[int, str]:
+    proc = subprocess.run(
+        [sys.executable, str(HARNESS / ".agents" / "scripts" / "forge.py"),
+         "adopt", "--target", str(repo), "--name", "legacy"],
+        capture_output=True, text=True,
+    )
+    return proc.returncode, proc.stdout + proc.stderr
+
+
+def test_adopt_vendors_harness_and_preserves_project(tmp_path):
+    repo = existing_repo(tmp_path)
+    code, out = adopt(repo)
+    assert code == 0, out
+    # machinery is in; project content untouched; their CI survived the merge
+    assert (repo / ".agents" / "scripts" / "forge.py").exists()
+    assert (repo / "src" / "app.js").read_text() == "console.log('prototype')\n"
+    assert (repo / "README.md").read_text() == "# Legacy prototype\n"
+    assert (repo / ".github" / "workflows" / "their-ci.yml").exists()
+    # old CLAUDE.md preserved for harvest; shim installed
+    kept = repo / "docs" / "context" / "migrated-CLAUDE.md"
+    assert kept.exists() and "tabs" in kept.read_text()
+    assert "@AGENTS.md" in (repo / "CLAUDE.md").read_text()
+    # sign-off gate armed, project-owned files created
+    state = json.loads((repo / ".factory" / "run.json").read_text())
+    assert state["client_signoff"] is False
+    assert (repo / "harness.yaml").exists()
+    # the adopted repo passes the same checks as a scaffold
+    code, out = run(repo, "check_dual_runtime.py", str(repo))
+    assert code == 0, out
+    code, out = run(repo, "check_factory_scaffold.py", str(repo))
+    assert code == 0, out
+    # adopting twice routes to upgrade instead
+    code, out = adopt(repo)
+    assert code != 0 and "upgrade" in out
+
+
+def test_adopt_refuses_dirty_tree(tmp_path):
+    repo = existing_repo(tmp_path)
+    (repo / "wip.txt").write_text("uncommitted\n")
+    code, out = adopt(repo)
+    assert code != 0 and "uncommitted" in out

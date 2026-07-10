@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 """forge — the harness CLI. `./forge <command>` from the repo root.
 
-Commands: doctor, init, next, plan (save|assume), roadmap (import|list|add),
-context (scan|list|mark), decision (new|accept). Implementations live in
-forge_cli/ — one module per concern; this file is argument wiring only.
+Commands: doctor, init, adopt, upgrade, next, plan (save|assume),
+roadmap (import|list|add), context (scan|list|mark), decision (new|accept).
+Implementations live in forge_cli/ — one module per concern; this file is
+argument wiring only.
 """
 from __future__ import annotations
 
 import argparse
 
+from forge_cli import adopt as adopt_mod
 from forge_cli import context as ctx
 from forge_cli import decisions, doctor, phase, plans, roadmap, scaffold, upgrade
 
@@ -32,6 +34,12 @@ def main() -> None:
     p_init.add_argument("--stack", default="nestjs-react")
     p_init.add_argument("--force", action="store_true")
     p_init.set_defaults(func=scaffold.cmd_init)
+
+    p_adopt = sub.add_parser("adopt",
+                             help="vendor the harness into an EXISTING repo (run from the harness)")
+    p_adopt.add_argument("--target", required=True, help="the existing repo to migrate")
+    p_adopt.add_argument("--name", help="project name (defaults to the target directory name)")
+    p_adopt.set_defaults(func=adopt_mod.cmd_adopt)
 
     p_up = sub.add_parser("upgrade",
                           help="re-vendor harness machinery into a client repo (run from the harness)")

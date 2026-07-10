@@ -182,6 +182,28 @@ python3 .agents/scripts/check_factory_scaffold.py
 If codex-plugin-cc is unavailable, see `docs/degraded-mode.md` — same phase
 prompts, same artifacts, direct `codex exec`.
 
+## Migrating an existing repo into the harness
+
+Already built a prototype (or an early project) with agents, outside the
+harness? Say: **"Migrate this repo into the harness."** (the
+`caw-migrate-project` skill installed by `./setup`)
+
+The deterministic core is `forge adopt`, run from the harness clone against a
+CLEAN target tree:
+
+```bash
+./forge adopt --target ../legacy-repo --name my-app
+```
+
+It vendors the machinery, preserves any pre-existing `AGENTS.md`/`CLAUDE.md`
+into `docs/context/migrated-*` (the harvester picks them up), creates
+project-owned files only where missing, and never deletes existing work —
+every overwrite is a reviewable git diff. The skill then walks the judgment
+part: sorting code into `prototype/`, dumping notes into `docs/context/`,
+harvesting DISCOVERY/BRIEF and decision records, formalizing a historical
+sign-off, and handing off to `./forge next`. Repos that already carry the
+harness are routed to `forge upgrade` instead.
+
 ## Upgrading a project to a newer harness
 
 Say: **"Upgrade this repo to the latest harness."** From the harness clone

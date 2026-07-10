@@ -45,6 +45,7 @@ choice.
 |---|---|---|---|
 | machine setup | "Set up my machine" | `caw-new-project` skill → `./forge doctor --fix` | doctor report |
 | new project | "Set up a new CAW project called X" | `caw-new-project` skill → `./forge init` | scaffolded repo |
+| existing repo | "Migrate this repo into the harness" | `caw-migrate-project` skill → `./forge adopt` | vendored machinery; old context → `docs/context/` |
 | any phase, lost | "What now?" | `/forge` skill → `./forge next` | — |
 | 0a discovery | "Let's run office hours" | gstack `/office-hours` | `docs/product/DISCOVERY.md`, `BRIEF.md` |
 | 0b prototype | build freely | ponytail (lite) allowed | preserved under `prototype/` |
