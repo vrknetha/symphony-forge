@@ -105,6 +105,8 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         ("anthropic frontend-design", "anthropics/skills",
          ["-s", "frontend-design", "-a", "*", "-y"],
          home / ".claude" / "skills" / "frontend-design"),
+        ("emilkowalski skills", "emilkowalski/skills", ["--all"],
+         home / ".claude" / "skills" / "emil-design-eng"),
     ]
     for name, repo, extra, sentinel in skill_packs:
         if not sentinel.is_dir() and args.fix and which("npx"):
