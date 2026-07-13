@@ -98,15 +98,23 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         "clone https://github.com/openclaw/agent-skills and copy skills/autoreview to "
         "~/.codex/skills/ — or rerun with --fix (escalation-tier review; see harness.yaml)",
         required=False))
-    mp_sentinel = home / ".claude" / "skills" / "ask-matt"  # first skill in the pack
-    if not mp_sentinel.is_dir() and args.fix and which("npx"):
-        print("[fix ] installing mattpocock/skills ...")
-        run_quiet(["npx", "-y", "skills", "add", "mattpocock/skills", "-g", "--all", "--copy"])
-    checks.append(_check(
-        "mattpocock skills", mp_sentinel.is_dir(),
-        "installed" if mp_sentinel.is_dir() else "not installed",
-        "`npx -y skills add mattpocock/skills -g --all --copy` — or rerun with --fix",
-        required=False))
+    # Skill packs installed via the `skills` CLI; the sentinel dir marks presence.
+    skill_packs = [
+        ("mattpocock skills", "mattpocock/skills", ["--all"],
+         home / ".claude" / "skills" / "ask-matt"),
+        ("anthropic frontend-design", "anthropics/skills",
+         ["-s", "frontend-design", "-a", "*", "-y"],
+         home / ".claude" / "skills" / "frontend-design"),
+    ]
+    for name, repo, extra, sentinel in skill_packs:
+        if not sentinel.is_dir() and args.fix and which("npx"):
+            print(f"[fix ] installing {repo} ...")
+            run_quiet(["npx", "-y", "skills", "add", repo, "-g", "--copy", *extra])
+        checks.append(_check(
+            name, sentinel.is_dir(),
+            "installed" if sentinel.is_dir() else "not installed",
+            f"`npx -y skills add {repo} -g --copy {' '.join(extra)}` — or rerun with --fix",
+            required=False))
     ponytail_cache = home / ".claude" / "plugins" / "cache"
 
     def ponytail_ok() -> bool:
