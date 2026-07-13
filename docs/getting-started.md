@@ -37,7 +37,8 @@ Say: **"Set up my machine for CAW projects."**
 
 `--fix` auto-installs everything installable (Codex CLI via npm,
 codex-plugin-cc and ponytail via the `claude plugin` CLI, gstack and
-autoreview from their GitHub repos). Only logins (`codex login`) stay manual.
+autoreview from their GitHub repos, mattpocock/skills via the `skills` CLI).
+Only logins (`codex login`) stay manual.
 Re-run until it says `ready`.
 
 ## 3. Create your project

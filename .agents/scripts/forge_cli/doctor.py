@@ -98,6 +98,15 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         "clone https://github.com/openclaw/agent-skills and copy skills/autoreview to "
         "~/.codex/skills/ — or rerun with --fix (escalation-tier review; see harness.yaml)",
         required=False))
+    mp_sentinel = home / ".claude" / "skills" / "ask-matt"  # first skill in the pack
+    if not mp_sentinel.is_dir() and args.fix and which("npx"):
+        print("[fix ] installing mattpocock/skills ...")
+        run_quiet(["npx", "-y", "skills", "add", "mattpocock/skills", "-g", "--all", "--copy"])
+    checks.append(_check(
+        "mattpocock skills", mp_sentinel.is_dir(),
+        "installed" if mp_sentinel.is_dir() else "not installed",
+        "`npx -y skills add mattpocock/skills -g --all --copy` — or rerun with --fix",
+        required=False))
     ponytail_cache = home / ".claude" / "plugins" / "cache"
 
     def ponytail_ok() -> bool:

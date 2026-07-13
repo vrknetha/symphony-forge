@@ -97,6 +97,3 @@ disabled_in_factory_repos:
   - "gstack:/codex"
   - "gstack:/ship"
   - "codex-plugin-cc:stop-hook-review-gate"
-
-not_installed_v1:
-  - "mattpocock/skills"
