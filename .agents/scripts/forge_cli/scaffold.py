@@ -12,7 +12,8 @@ from .common import fail
 
 COPY_TREES = [".agents", ".claude", "constitution", "harness", ".github"]
 COPY_CODEX = ["config.toml", "hooks.json"]  # + agents/ and skills/ dirs
-COPY_FILES = ["harness.yaml", ".gitignore", "WORKFLOW.md", "CLAUDE.md", "forge"]
+COPY_FILES = ["harness.yaml", ".gitignore", ".gitattributes", ".envrc",
+              "WORKFLOW.md", "CLAUDE.md", "forge"]
 DOC_CONTRACTS = [
     ("docs/product/README.md", "docs/product/README.md"),
     ("docs/architecture/README.md", "docs/architecture/README.md"),
@@ -131,6 +132,8 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     print(f"Scaffolded {args.name} at {target}")
     print("Next steps:")
+    print("  0. cd in and run `direnv allow` (once per machine) — pins gstack "
+         "output into the repo's .gstack/, not ~/.gstack")
     print("  1. Fill docs/product/DISCOVERY.md (phase 0a) and BRIEF.md")
     print("  2. Prototype (phase 0b), then: ./forge decision new client-signoff")
     print("  3. After `./forge decision accept client-signoff --by <name>`: "

@@ -116,6 +116,23 @@ def cmd_adopt(args: argparse.Namespace) -> None:
     if not (target / ".gitignore").exists():
         shutil.copy2(harness / ".gitignore", target / ".gitignore")
         created.append(".gitignore")
+    elif ".gstack/sessions/" not in (target / ".gitignore").read_text():
+        with (target / ".gitignore").open("a") as fh:
+            fh.write("\n# Project-local gstack store: projects/ committed, machine noise not\n"
+                     ".gstack/sessions/\n.gstack/analytics/\n.gstack/cdp-profile/\n"
+                     ".gstack/tmp/\n.gstack/.*\n")
+        created.append(".gitignore (gstack entries appended)")
+    if not (target / ".envrc").exists():
+        shutil.copy2(harness / ".envrc", target / ".envrc")
+        created.append(".envrc (run `direnv allow` in the repo)")
+    attrs = target / ".gitattributes"
+    if not attrs.exists():
+        shutil.copy2(harness / ".gitattributes", attrs)
+        created.append(".gitattributes")
+    elif "merge=jsonl-append" not in attrs.read_text():
+        with attrs.open("a") as fh:
+            fh.write("\n.gstack/**/*.jsonl merge=jsonl-append\n")
+        created.append(".gitattributes (jsonl merge rule appended)")
     brief_src = harness / "harness" / "nestjs-react" / "BRIEF_TEMPLATE.md"
     if brief_src.exists() and not (target / "docs" / "product" / "BRIEF.md").exists():
         (target / "docs" / "product").mkdir(parents=True, exist_ok=True)

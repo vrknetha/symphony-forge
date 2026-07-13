@@ -7,6 +7,14 @@
   used, decomposition and task state are mirrored into it; when none is used,
   `.factory/decomposition.json` and `plans/` are the task graph.
 - GitHub mirrors branch, PR, checks, and review evidence.
+- gstack output is PROJECT-LOCAL: `.envrc` pins `GSTACK_HOME` to
+  `<repo>/.gstack` (activate with `direnv allow`), so office-hours design
+  docs, the decision store, and learnings are committed under
+  `.gstack/projects/<slug>/` — shared by every dev, never stranded in a
+  personal `~/.gstack`. Machine noise (sessions, analytics, browser profiles)
+  is gitignored; JSONL stores union-merge via the `jsonl-append` driver
+  (registered per clone by the SessionStart hook), so concurrent devs never
+  conflict. History already in a personal store: `./forge gstack migrate`.
 - Product intent lives in `docs/product/BRIEF.md`.
 - Architecture and decision docs live in the repo under `docs/architecture/` and `docs/decisions/`.
 - `docs/decisions/` overrides ambiguous or conflicting architecture guidance.

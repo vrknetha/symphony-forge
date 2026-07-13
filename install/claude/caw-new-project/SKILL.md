@@ -39,7 +39,12 @@ runnable by you — the user should only have to answer questions.
    ```
    Never pass `--force` without explicit user confirmation — it overwrites.
 
-5. **Hand off.** `cd <dir>`, run `python3 .agents/scripts/forge.py next`,
+5. **Enable the project-local gstack store.** `cd <dir>` and run
+   `direnv allow` — this activates `.envrc` (GSTACK_HOME pinned to the
+   repo's `.gstack/`), so office-hours design docs, decisions, and learnings
+   are committed and shared instead of stranded in `~/.gstack`.
+
+6. **Hand off.** Run `python3 .agents/scripts/forge.py next`,
    relay its output, and tell the user: from here, this repo's own `/forge`
    skill (and `forge.py next`) drives every phase — discovery first.
 

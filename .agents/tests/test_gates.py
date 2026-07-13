@@ -753,3 +753,45 @@ def test_adopt_refuses_dirty_tree(tmp_path):
     (repo / "wip.txt").write_text("uncommitted\n")
     code, out = adopt(repo)
     assert code != 0 and "uncommitted" in out
+
+
+# ------------------------------------------------------- project-local gstack
+
+def test_scaffold_pins_gstack_into_the_repo(repo):
+    envrc = repo / ".envrc"
+    assert envrc.exists() and 'GSTACK_HOME="$PWD/.gstack"' in envrc.read_text()
+    attrs = repo / ".gitattributes"
+    assert attrs.exists() and "merge=jsonl-append" in attrs.read_text()
+    assert ".gstack/sessions/" in (repo / ".gitignore").read_text()
+
+
+def test_gstack_migrate_unions_personal_store(repo, tmp_path):
+    # A personal ~/.gstack with history for this project (slug = dirname "app")
+    personal = tmp_path / "home-gstack"
+    store = personal / "projects" / "app"
+    store.mkdir(parents=True)
+    (store / "dev-main-design-1.md").write_text("# Approved design\n")
+    (store / "learnings.jsonl").write_text('{"ts":"2026-07-01","note":"a"}\n')
+    # Repo store already has one overlapping and one different learning line
+    repo_store = repo / ".gstack" / "projects" / "app"
+    repo_store.mkdir(parents=True)
+    (repo_store / "learnings.jsonl").write_text('{"ts":"2026-07-02","note":"b"}\n')
+    code, out = run(repo, "forge.py", "gstack", "migrate",
+                    "--source", str(personal), "--repo", str(repo))
+    assert code == 0, out
+    assert (repo_store / "dev-main-design-1.md").read_text() == "# Approved design\n"
+    lines = (repo_store / "learnings.jsonl").read_text().splitlines()
+    assert '{"ts":"2026-07-01","note":"a"}' in lines
+    assert '{"ts":"2026-07-02","note":"b"}' in lines  # union, no clobber
+    # Second run is idempotent: nothing new to merge
+    code, out = run(repo, "forge.py", "gstack", "migrate",
+                    "--source", str(personal), "--repo", str(repo))
+    assert code == 0 and "0 jsonl line(s) merged" in out and "0 file(s) copied" in out
+
+
+def test_gstack_migrate_fails_clearly_without_store(repo, tmp_path):
+    empty = tmp_path / "empty-gstack"
+    empty.mkdir()
+    code, out = run(repo, "forge.py", "gstack", "migrate",
+                    "--source", str(empty), "--repo", str(repo))
+    assert code != 0 and "no personal gstack store" in out

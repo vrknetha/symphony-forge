@@ -43,3 +43,11 @@ pino-*.log
 .factory/tool-history.jsonl
 .factory/*.tmp.json
 .worktrees/
+
+# Project-local gstack store (.envrc pins GSTACK_HOME here): projects/ is
+# committed — design docs, decisions, learnings. Machine noise is not.
+.gstack/sessions/
+.gstack/analytics/
+.gstack/cdp-profile/
+.gstack/tmp/
+.gstack/.*

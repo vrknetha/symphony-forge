@@ -47,7 +47,7 @@ choice.
 | new project | "Set up a new CAW project called X" | `caw-new-project` skill → `./forge init` | scaffolded repo |
 | existing repo | "Migrate this repo into the harness" | `caw-migrate-project` skill → `./forge adopt` | vendored machinery; old context → `docs/context/` |
 | any phase, lost | "What now?" | `/forge` skill → `./forge next` | — |
-| 0a discovery | "Let's run office hours" | gstack `/office-hours` | `docs/product/DISCOVERY.md`, `BRIEF.md` |
+| 0a discovery | "Let's run office hours" | gstack `/office-hours` | `docs/product/DISCOVERY.md`, `BRIEF.md`; design docs + decisions in `.gstack/projects/` (in-repo via `.envrc`) |
 | 0b prototype | build freely | ponytail (lite) allowed | preserved under `prototype/` |
 | sign-off | "The client signed off" | none — HUMAN runs `decision accept` | `record_signoff.py` → `run.json` |
 | workspace | "Scaffold the workspace" | Codex `/codex:rescue` + `SCAFFOLD_PROMPT.md` | nx workspace |

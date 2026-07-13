@@ -37,6 +37,37 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         "docker", which("docker") is not None, which("docker") or "not on PATH",
         "Docker Desktop (needed once the nx workspace exists)", required=False))
 
+    # direnv — pins GSTACK_HOME into each repo (.envrc) so gstack output is
+    # project-local and committed, not stranded in ~/.gstack.
+    if not which("direnv") and args.fix and which("brew"):
+        print("[fix ] installing direnv ...")
+        run_quiet(["brew", "install", "direnv"])
+    direnv = which("direnv")
+    hook_ok = False
+    if direnv:
+        for rc in (home / ".zshrc", home / ".bashrc"):
+            if rc.exists() and "direnv hook" in rc.read_text():
+                hook_ok = True
+        if not hook_ok and args.fix:
+            rc = home / ".zshrc"
+            with rc.open("a") as fh:
+                fh.write('\n# direnv (symphony-forge: project-local GSTACK_HOME via .envrc)\n'
+                         'eval "$(direnv hook zsh)"\n')
+            print(f"[fix ] added direnv hook to {rc}")
+            hook_ok = True
+        if hook_ok and args.fix and Path.cwd().joinpath(".envrc").exists():
+            run_quiet([direnv, "allow", str(Path.cwd())])
+    if not direnv:
+        direnv_detail = "not on PATH"
+    elif not hook_ok:
+        direnv_detail = f"{direnv} (shell hook missing)"
+    else:
+        direnv_detail = direnv
+    checks.append(_check(
+        "direnv + shell hook", bool(direnv) and hook_ok, direnv_detail,
+        "`brew install direnv` + `eval \"$(direnv hook zsh)\"` in ~/.zshrc, then "
+        "`direnv allow` in each repo — or rerun with --fix (keeps gstack output in-repo)"))
+
     # Codex — the execution plane
     if not which("codex") and args.fix and which("npm"):
         print("[fix ] installing @openai/codex ...")

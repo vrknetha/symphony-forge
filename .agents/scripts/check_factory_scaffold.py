@@ -37,6 +37,8 @@ required = [
     root / '.codex' / 'agents' / 'functional-checker.toml',
     root / 'constitution' / 'README.md',
     root / 'harness.yaml',
+    root / '.envrc',
+    root / '.gitattributes',
     root / 'WORKFLOW.md',
     root / 'docs' / 'FACTORY.md',
     root / 'docs' / 'QUALITY.md',

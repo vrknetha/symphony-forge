@@ -24,9 +24,10 @@ from forge_cli.roadmap import mark_status
 # Evidence attests to PRODUCT code; everything listed here is not that.
 EVIDENCE_PATHS = (
     ".factory/", "plans/", "docs/", ".agents/", ".claude/", ".codex/",
-    ".github/", "constitution/", "harness/", "prototype/",
+    ".github/", "constitution/", "harness/", "prototype/", ".gstack/",
 )
-EVIDENCE_FILES = {"forge", "CLAUDE.md", "AGENTS.md", "WORKFLOW.md", "harness.yaml", ".gitignore"}
+EVIDENCE_FILES = {"forge", "CLAUDE.md", "AGENTS.md", "WORKFLOW.md", "harness.yaml",
+                  ".gitignore", ".gitattributes", ".envrc"}
 
 root = repo_root()
 run_state = load_json(run_state_path(root), default={})

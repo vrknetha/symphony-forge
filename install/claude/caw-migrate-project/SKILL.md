@@ -47,6 +47,16 @@ content. Never delete existing work — everything moves, nothing vanishes.
    adopt output. If the repo had its own `.gitignore` or CI workflows, merge
    the harness entries instead of losing theirs.
 
+5b. **Activate the project-local gstack store and pull in personal history.**
+   ```bash
+   direnv allow
+   python3 "$HARNESS/.agents/scripts/forge.py" gstack migrate --repo <repo>
+   ```
+   From now on gstack writes into `<repo>/.gstack/` (committed, shared);
+   `gstack migrate` union-merges whatever this dev already accumulated in
+   `~/.gstack/projects/<slug>/` — run it on EVERY machine that holds history
+   (JSONL stores merge, nothing is clobbered).
+
 6. **Sort the existing content** — ask the user ONE question first: *is this
    repo the prototype itself, or does it carry production-intent code?*
    - **Prototype repo**: move the app code under `prototype/` (reference

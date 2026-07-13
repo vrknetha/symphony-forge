@@ -61,6 +61,14 @@ contracts, and an armed sign-off gate. It fails on a non-empty target.
 > Do NOT create client projects with `gh repo create --template` — a template
 > copy drags along the harness's own plans, run state, and history.
 
+> **Once per machine per repo:** run `direnv allow` inside the project.
+> That activates `.envrc`, which pins `GSTACK_HOME` to the repo's `.gstack/`
+> — every gstack output (office-hours design docs, decisions, learnings)
+> lands IN the repo, committed and shared, instead of a personal `~/.gstack`.
+> Multiple devs never conflict: JSONL stores union-merge (`.gitattributes`
+> `jsonl-append` driver, auto-registered per clone). Old history on your
+> machine? Say **"migrate my gstack history"** (`./forge gstack migrate`).
+
 ## 4. Discovery and prototype (phases 0a / 0b — lightweight on purpose)
 
 Say: **"Let's run office hours on this idea."** (gstack `/office-hours`) and

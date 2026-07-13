@@ -12,6 +12,7 @@ import argparse
 
 from forge_cli import adopt as adopt_mod
 from forge_cli import context as ctx
+from forge_cli import gstack as gstack_mod
 from forge_cli import decisions, doctor, phase, plans, roadmap, scaffold, upgrade
 
 
@@ -103,6 +104,15 @@ def main() -> None:
     p_mark.add_argument("--notes")
     p_mark.add_argument("--repo")
     p_mark.set_defaults(func=ctx.cmd_mark)
+
+    p_gs = sub.add_parser("gstack", help="project-local gstack store operations")
+    gs_sub = p_gs.add_subparsers(dest="gstack_command", required=True)
+    p_gm = gs_sub.add_parser(
+        "migrate", help="one-time: merge a dev's personal ~/.gstack project store into the repo")
+    p_gm.add_argument("--slug", help="gstack project slug (default: derived from origin/dirname)")
+    p_gm.add_argument("--source", help="personal gstack home (default: ~/.gstack)")
+    p_gm.add_argument("--repo")
+    p_gm.set_defaults(func=gstack_mod.cmd_migrate)
 
     p_dec = sub.add_parser("decision", help="manage decision records")
     dec_sub = p_dec.add_subparsers(dest="decision_command", required=True)
