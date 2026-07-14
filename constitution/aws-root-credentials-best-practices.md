@@ -1,6 +1,6 @@
 # AWS Account Root Credentials Best Practices v1.0
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 The following document dictates the process to be followed in managing/storing AWS accounts ROOT credentials. There is never a reason to use ROOT credentials unless required under certain use cases described below.
 _[diagram omitted]_

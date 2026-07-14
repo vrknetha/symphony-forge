@@ -1,11 +1,11 @@
 # Terraform Playbook for Infrastructure as Code - v1.0
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ## Introduction
 Welcome to the Terraform Playbook for Infrastructure as Code. This playbook is split into 2 parts, covering the following:
 - Enforce and Ensure TF Coding best practices are followed:.
-  - Via CAW Terraform Coding Standard v1.0 Document.
+  - Via KnackLabs Terraform Coding Standard v1.0 Document.
   - VsCode TF extension
 - Terraform CI / Automation best practices covering the following:
   - TF Fmt
@@ -38,8 +38,8 @@ To Download and install Terraform, please follow the official guide - [link](htt
 - Resource naming should follow the shared naming convention built from `locals.tf`, using values such as parent organization, cloud provider, region, environment, and project.
 - Environment-specific values should be passed through `terraform.tfvars` or the relevant environment variable mechanism. Sensitive values must be handled as sensitive variables and should not be hardcoded into resource files.
 - Terraform code must go through quality gates before provisioning actual infrastructure, including formatting, validation, security review, cost review where applicable, and pull request review.
-- Any team or person outside CAW’s DevOps team wanting to contribute to the Terraform codebase should submit a pull request to the DevOps team for review.
-- Do not copy Terraform examples directly from the Terraform Registry, Stack Overflow, or other external sources without adapting them to CAW’s standards, naming conventions, backend setup, tagging model, and review process.
+- Any team or person outside KnackLabs’s DevOps team wanting to contribute to the Terraform codebase should submit a pull request to the DevOps team for review.
+- Do not copy Terraform examples directly from the Terraform Registry, Stack Overflow, or other external sources without adapting them to KnackLabs’s standards, naming conventions, backend setup, tagging model, and review process.
 - External/community modules should only be used when there is a clear reason and the module is explicitly reviewed and pinned to a version. Do not introduce new custom module trees for normal project resource
 ```markdown
 ## Current Folder Structure
@@ -96,7 +96,7 @@ aws_vpc_cidr_block   = "10.0.0.0/16"
 enable_dns_support   = true
 enable_dns_hostnames = true
 
-parent_org_name = "caw"
+parent_org_name = "knacklabs"
 cloud_provider  = "aws"
 region          = "aps1"
 environment     = "dev"
@@ -106,7 +106,7 @@ Shared naming and derived values should be defined in `locals.tf` and reused acr
 By using this single-root, resource-file-based layout, the Terraform code remains easy to review, avoids unnecessary module indirection, and keeps environment-specific infrastructure changes explicit
 
 ### Module Creation
-Here at CAW Studios, we use a combination of community and custom modules to help speed up the development and provide accessibility to the developers. Creating Terraform modules involves defining reusable infrastructure components that can be easily reused across different Terraform projects. Modules allow for the creation of self-contained pieces of infrastructure code that can be easily tested, maintained, and versioned. We have developed a host of custom modules, including a module for [VPC, RDS, ALB](https://github.com/cawstudios/aws-terraform-modules), etc.
+Here at KnackLabs, we use a combination of community and custom modules to help speed up the development and provide accessibility to the developers. Creating Terraform modules involves defining reusable infrastructure components that can be easily reused across different Terraform projects. Modules allow for the creation of self-contained pieces of infrastructure code that can be easily tested, maintained, and versioned. We have developed a host of custom modules, including a module for [VPC, RDS, ALB](https://github.com/knacklabs-ai/aws-terraform-modules), etc.
 In the case of community modules being used, these are never fetched from the registry, a custom version compatible with the infrastructure is made available offline as part of the project, and any changes needed for the module are made and pushed as part of the same project so that any version updates do not break existing functionality.
 ```json
 module "vpc" {
@@ -120,7 +120,7 @@ In the example above, `terraform-aws-vpc-master` module is referenced using the 
 When you run terraform apply, Terraform will use the module to create a VPC with the specified name.
 By using offline module creation and referencing in Terraform, you can create reusable Terraform configurations as separate modules and reference them in your main configuration, which can help you simplify and organize your infrastructure code.
 
-## Terraform Coding Best Practices at CAW
+## Terraform Coding Best Practices at KnackLabs
 
 ### Terraform Syntax and Configuration Files
 Terraform uses declarative language designed to be easy to read and understand. Terraform code is written in HashiCorp Configuration Language (HCL), similar to JSON or YAML. In HCL, resources are defined using blocks, and each contains one or more arguments configuring the resource. For example, here is a simple resource block that defines an AWS EC2 instance:
@@ -162,10 +162,10 @@ Version control allows you to track changes to your Terraform code and collabora
 #### Implementing naming conventions for resources and variables
 Consistent naming conventions make it easier to understand and maintain Terraform code. Use descriptive names for resources and variables that are easy to understand and follow a consistent naming convention defined in the [naming conventions playbook](/553bbdbedb9246148f81e340f37e6898).
 ECS
-- caw-aws-aps1-prod-ecs-acme-strapi-*testing (Denotes a testing instance)*
+- knacklabs-aws-aps1-prod-ecs-acme-strapi-*testing (Denotes a testing instance)*
 - *acme-aws-aps1-prod-ecs-acmev2-landing_pages*
-- *caw-aws-aps1-acme-prod-ecs-acmev2-backend (Denotes Caw account ílhosting acme infra)*
-- *caw-aws-aps1-prod-ecs-acmev2-strapi*
+- *knacklabs-aws-aps1-acme-prod-ecs-acmev2-backend (Denotes KnackLabs account ílhosting acme infra)*
+- *knacklabs-aws-aps1-prod-ecs-acmev2-strapi*
 RDS
 - acme-aws-aps1-stage-rds-calibrate-RdsName-*01-replica* (Denotes role is replica)
 - *acme-aws-aps1-prod-rds-acmev2-master*
@@ -182,10 +182,10 @@ DynamoDB is a popular remote backend for storing Terraform state because it prov
 ```javascript
 terraform {
   backend "s3" {
-    bucket = "caw-aws-aps1-dev-s3-acme-main-tfstate-bucket"
+    bucket = "knacklabs-aws-aps1-dev-s3-acme-main-tfstate-bucket"
     key    = "s3-backend-acme-core-infra-module.tfstate"
     region = "ap-south-1"
-		dynamodb_table = "caw-aws-aps1-dev-dynamo_db-acme-stateLock-db"
+		dynamodb_table = "knacklabs-aws-aps1-dev-dynamo_db-acme-stateLock-db"
   }
 }
 ```
@@ -341,7 +341,7 @@ output "instance_id" {
 In this example, an AWS EC2 instance is created using the `aws_instance` resource. Two outputs are defined using the output block, which exports the instance's public IP and instance ID. These values can then be used in other parts of your Terraform code or in other Terraform configurations.
 
 ## Terraform Automation Standards Playbook
-CAW Studios' infrastructure deployment and management is done via CI/CD pipelines.  At a high level, ensure the following principles are followed:
+KnackLabs' infrastructure deployment and management is done via CI/CD pipelines.  At a high level, ensure the following principles are followed:
 - NO Operator/DevOps personnel will pull TF code to the local laptop and execute the `terraform appl`ication locally.
 - Although it’s okay to run `terraform plan` locally, `terraform apply` needs to be run via CI Job only to maintain an audit trail of who has done what.
 - Additionally, `terraform plan` should never be run with the `-target` flag can lead to unintended consequences, such as missing dependencies or not taking into account the full picture of the infrastructure. When a resource is targeted, Terraform may not consider other resources that depend on it, which can result in incomplete plans that don't accurately reflect the overall state of the infrastructure.

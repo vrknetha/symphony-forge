@@ -1,6 +1,6 @@
 # Playbook 08 - Notification Module
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ### 🎯 Purpose
 The **Notification Module** is a standardized, reusable domain module responsible for handling all outbound notifications across the platform.

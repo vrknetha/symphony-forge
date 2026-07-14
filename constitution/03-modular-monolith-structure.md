@@ -1,6 +1,6 @@
 # Playbook 03 - Modular Monolith Codebase Structure
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ### **What is a Modular Monolith?**
 A **Modular Monolith** is an architectural style in which the application is deployed as a **single deployable unit** (like a monolith), but is internally structured into **well-defined, independent, self-contained modules** — each representing a domain.

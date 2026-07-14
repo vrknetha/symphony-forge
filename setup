@@ -2,7 +2,7 @@
 #
 # One-time per-machine Symphony Forge setup.
 #
-# - Installs CAW bootstrap skills for Claude and Codex
+# - Installs KnackLabs bootstrap skills for Claude and Codex
 # - Supports python3, python, and the Windows py launcher
 # - Attempts to repair/install missing required dependencies
 # - Performs final verification
@@ -63,7 +63,7 @@ run_python() {
 }
 
 install_bootstrap_skills() {
-  for SKILL in caw-new-project caw-migrate-project; do
+  for SKILL in knacklabs-new-project knacklabs-migrate-project; do
     SOURCE="$HERE/install/claude/$SKILL/SKILL.md"
 
     [ -f "$SOURCE" ] ||
@@ -111,7 +111,7 @@ MESSAGE
   install_bootstrap_skills
 
   echo
-  echo 'Try it in Claude Code: "Set up a new CAW project called my-app"'
+  echo 'Try it in Claude Code: "Set up a new KnackLabs project called my-app"'
   echo '               ...or: "Migrate this repo into the harness"'
 
   echo

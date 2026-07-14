@@ -1,8 +1,8 @@
 # AWS Tagging & Naming Conventions Standard v1.0
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
-At CAW, we develop many apps. We like to follow common best practices across all the apps we develop. This playbook describes an opinionated scaffolding that jump-starts projects. This came about due to many commonalities between several of our projects. This document will cover AWS Resource Naming conventions, Tagging standards for AWS resources, and implementation & enforcement approaches from a governance point of view. A standard naming convention aims to identify the ownership/identity of the resources easily. The tags' objectives are multifold, i.e., from attaching relevant metadata to the AWS services to using mandatory Tags such as Cost Allocations Tags in AWS Cost Explorer, AWS CUR, etc., to filter resources based on clients/projects, etc.
+At KnackLabs, we develop many apps. We like to follow common best practices across all the apps we develop. This playbook describes an opinionated scaffolding that jump-starts projects. This came about due to many commonalities between several of our projects. This document will cover AWS Resource Naming conventions, Tagging standards for AWS resources, and implementation & enforcement approaches from a governance point of view. A standard naming convention aims to identify the ownership/identity of the resources easily. The tags' objectives are multifold, i.e., from attaching relevant metadata to the AWS services to using mandatory Tags such as Cost Allocations Tags in AWS Cost Explorer, AWS CUR, etc., to filter resources based on clients/projects, etc.
 Note the best practices are just recommendations and not unbreakable rules. Context is the King; So always tweak the below recommendations as applicable to your product.
 _[diagram omitted]_
 
@@ -16,7 +16,7 @@ Each resource created in AWS or any other cloud environment should follow the be
 
 | **Attribute** | **Possible Values** | **Mandatory** |
 | --- | --- | --- |
-| **Parent Org. Name** | CAW, hBits, Flipspaces, etc. | YES |
+| **Parent Org. Name** | KnackLabs, hBits, Flipspaces, etc. | YES |
 | **Cloud  Provider** | AWS, GCP, AZURE | YES |
 | **Region** | aps1, aps2, usw1, usw2 | YES |
 | **Client/Customer Name** | hBits, Flipspaces, etc. | NO |
@@ -41,7 +41,7 @@ The optional attributes are applied based on the requirement and resource type p
 - *ECS*
   - acme-aws-aps1-prod-ecs-example-rsc-*testing (Denotes a testing instance)*
   - *acme-aws-aps1-prod-ecs-examplelanding_pages*
-  - *acme-aws-aps1-hbitsprod-ecs-examplebackend (Denotes Caw account ílhosting acme infra)*
+  - *acme-aws-aps1-hbitsprod-ecs-examplebackend (Denotes KnackLabs account ílhosting acme infra)*
   - *acme-aws-aps1-prod-ecs-hbitsv2-strapi*
 - *RDS*
   - acme-aws-aps1-stage-rds-example-RdsName-*01-replica* (Denotes role is replica)
@@ -52,7 +52,7 @@ The optional attributes are applied based on the requirement and resource type p
 - *S3*:
   - acme-aws-usw2-prod-s3-example-rds_logs-*private* (Denotes bucket is private)
 - *KINESIS:*
-  - acme-aws-aps1-traceable-uat-kinesis-<Team Or Project>-metrics-<optional Name suffix> (Denotes traceable as client of Caw)
+  - acme-aws-aps1-traceable-uat-kinesis-<Team Or Project>-metrics-<optional Name suffix> (Denotes traceable as client of KnackLabs)
 
 **Attribute Standards:**
 1. **Use all lowercase** and not Camel or Pascal Case in attribute names.
@@ -93,8 +93,8 @@ B**usiness Tags:**
 
 | **KEY** | **VALUES** | **MANDATORY** | **CA TAG** |
 | --- | --- | --- | --- |
-| org (parent) | Caw, hBits, Flipspaces, etc. | YES | YES |
-| org:cost-center | Specific to CAW if any | YES | YES |
+| org (parent) | KnackLabs, hBits, Flipspaces, etc. | YES | YES |
+| org:cost-center | Specific to KnackLabs if any | YES | YES |
 | org:team | Software-engg, devops. QA etc. | YES | YES |
 | org:owner | user1;user1@example.com | YES | NO |
 | Org:client (relevant for multi-tenant setup) | hBits, traceable, etc. | YES | YES |

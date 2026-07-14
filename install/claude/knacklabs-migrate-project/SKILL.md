@@ -1,5 +1,5 @@
 ---
-name: caw-migrate-project
+name: knacklabs-migrate-project
 description: >-
   Migrate an EXISTING repo — a prototype or early project built with agents
   before the harness — into the Symphony Forge harness: vendor the machinery
@@ -7,7 +7,7 @@ description: >-
   harvest it into DISCOVERY/BRIEF and decision records, and hand off to the
   factory loop. Invoke when the user says "migrate this repo", "adopt the
   harness", "bring this project into symphony forge", "harness-ify this
-  repo", or "/caw-migrate-project".
+  repo", or "/knacklabs-migrate-project".
 ---
 
 # Migrate an Existing Repo into the Harness

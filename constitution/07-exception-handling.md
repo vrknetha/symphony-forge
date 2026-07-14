@@ -1,9 +1,9 @@
 # Playbook 07 - Exception Handling
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ### 🎯 Purpose
-Standardize how exceptions are caught, logged, traced, classified, and returned across CAW projects.
+Standardize how exceptions are caught, logged, traced, classified, and returned across KnackLabs projects.
 This ensures:
 - Predictable, consistent error handling
 - Full observability (logs + metrics + traces)
@@ -127,7 +127,7 @@ Validation failures are common and should not pollute error logs.
 ---
 
 ### 📦 Standard API Error Response Payload
-> CAW-wide standard — consistent across NestJS, FastAPI, workers, etc.
+> KnackLabs-wide standard — consistent across NestJS, FastAPI, workers, etc.
 ```json
 {
   "success": false,

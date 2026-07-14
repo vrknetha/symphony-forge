@@ -1,9 +1,9 @@
 # Playbook 02 - Shared Library Best Practices for Monorepo
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ### Purpose
-In our monorepo setup at CAW, the **shared library** (often in `/shared` or `/libs`) is where we place reusable code that multiple parts of the application (backend and clients, or multiple clients) need to share. This ensures consistency, reduces code duplication, and makes it easy to maintain shared logic.
+In our monorepo setup at KnackLabs, the **shared library** (often in `/shared` or `/libs`) is where we place reusable code that multiple parts of the application (backend and clients, or multiple clients) need to share. This ensures consistency, reduces code duplication, and makes it easy to maintain shared logic.
 
 ---
 

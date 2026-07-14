@@ -1,6 +1,6 @@
 # Playbook 06 - Logger and Log Transports
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ## 🎯 Purpose
 This playbook explains the difference between a **logger** and **logger transports**, and provides guidance on which transports to use in different environments.

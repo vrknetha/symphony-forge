@@ -1,14 +1,14 @@
 ---
-name: caw-new-project
+name: knacklabs-new-project
 description: >-
-  Bootstrap a new CAW client project from the Symphony Forge harness:
+  Bootstrap a new KnackLabs client project from the Symphony Forge harness:
   update the harness clone, verify machine prerequisites (doctor), scaffold
   the repo (forge init), and hand off to the project's /forge skill. Invoke
-  when the user says "new CAW project", "set up a client project", "start a
-  project with the harness", "scaffold <name>", or "/caw-new-project".
+  when the user says "new KnackLabs project", "set up a client project", "start a
+  project with the harness", "scaffold <name>", or "/knacklabs-new-project".
 ---
 
-# New CAW Project
+# New KnackLabs Project
 
 You are bootstrapping a client repo from the harness. Everything below is
 runnable by you — the user should only have to answer questions.

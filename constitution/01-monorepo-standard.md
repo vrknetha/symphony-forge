@@ -1,9 +1,9 @@
 # Playbook 01 - Monorepo Standard
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ## Purpose
-At CAW, we prefer to use a **monorepo** structure wherever possible. This means housing the backend, web clients, and mobile apps in a single repository. This approach offers:
+At KnackLabs, we prefer to use a **monorepo** structure wherever possible. This means housing the backend, web clients, and mobile apps in a single repository. This approach offers:
 - Unified dependency management
 - Consistent versioning across all parts of the application
 - Easier code sharing and collaboration between teams

@@ -1,6 +1,6 @@
 # Playbook 04 - Event & Service Bus
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ---
 *Authoritative guidelines for event naming, publishing, consumption, idempotency, retries, and microservice readiness.*

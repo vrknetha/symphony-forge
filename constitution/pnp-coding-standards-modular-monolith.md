@@ -1,6 +1,6 @@
 # PnP — Coding Standards for Modular Monolith
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ---
 *For NestJS (TypeScript/JavaScript) and FastAPI (Python)*

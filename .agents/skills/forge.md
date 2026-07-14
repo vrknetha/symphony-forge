@@ -42,8 +42,8 @@ or route:
 | Dev says | Do |
 |---|---|
 | set up my machine | `./forge doctor` (`--fix` installs the toolchain; logins stay manual) |
-| create a new project | `./forge init --name <project> --target <dir>` (or the `caw-new-project` skill) |
-| migrate an existing repo into the harness | `caw-migrate-project` skill — core: `./forge adopt --target <repo>` from the harness clone (clean tree; old AGENTS/CLAUDE preserved to docs/context/) |
+| create a new project | `./forge init --name <project> --target <dir>` (or the `knacklabs-new-project` skill) |
+| migrate an existing repo into the harness | `knacklabs-migrate-project` skill — core: `./forge adopt --target <repo>` from the harness clone (clean tree; old AGENTS/CLAUDE preserved to docs/context/) |
 | migrate my gstack history / gstack outputs are on my machine | `./forge gstack migrate` — union-merges ~/.gstack/projects/<slug>/ into the repo's .gstack/ (then commit). Going forward .envrc + `direnv allow` keeps gstack in-repo |
 | what's left to build / show the roadmap | `./forge roadmap list` (`--pending` for what's next) |
 | here's the project backlog / handoff decomposition | `./forge roadmap import --input <json>` |

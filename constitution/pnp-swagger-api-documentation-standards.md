@@ -1,6 +1,6 @@
 # PnP — Swagger / API Documentation Standards
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ---
 *For NestJS + FastAPI in all Modular Monolith V1 projects*

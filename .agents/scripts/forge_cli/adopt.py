@@ -6,7 +6,7 @@ is copied in; project content is never destroyed: the target must be clean so
 every overwrite is a reviewable git diff, pre-existing AGENTS.md/CLAUDE.md
 are preserved into docs/context/ for harvest, and project-owned files are
 created only where missing. Content mapping (what is prototype, what is
-context, what becomes the BRIEF) is judgment — the caw-migrate-project skill
+context, what becomes the BRIEF) is judgment — the knacklabs-migrate-project skill
 drives that afterwards.
 """
 from __future__ import annotations
@@ -174,7 +174,7 @@ def cmd_adopt(args: argparse.Namespace) -> None:
         print("Preserved for harvest: " + ", ".join(preserved))
     if created:
         print("Created (project-owned): " + ", ".join(created))
-    print("Next (the caw-migrate-project skill walks all of this):")
+    print("Next (the knacklabs-migrate-project skill walks all of this):")
     print("  1. git diff — review every overwrite; merge old .gitignore/CI entries if needed")
     print("  2. Sort existing content: prototype work -> prototype/, raw notes -> docs/context/")
     print("  3. ./forge context scan, then harvest into DISCOVERY.md/BRIEF.md and decisions")

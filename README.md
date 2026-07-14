@@ -1,6 +1,6 @@
 # Symphony Forge
 
-CAW's harness for building client applications with **Claude Code coordination** and **Codex execution** — from discovery and client sign-off through scaffolding, per-feature delivery, and a self-evolving record of every decision.
+KnackLabs's harness for building client applications with **Claude Code coordination** and **Codex execution** — from discovery and client sign-off through scaffolding, per-feature delivery, and a self-evolving record of every decision.
 
 ## Quick Start (devs)
 
@@ -13,9 +13,9 @@ cd symphony-forge && ./setup
 
 Then, in Claude Code:
 
-> **"Set up a new CAW project called my-app"**
+> **"Set up a new KnackLabs project called my-app"**
 
-The `caw-new-project` skill updates the harness, runs `doctor --fix` (installs the toolchain; only logins stay manual), scaffolds the repo with `forge init`, and hands you to the project's own `/forge` skill. From then on, **ask "what now?" in any phase** — `/forge` runs the deterministic `./forge next` engine and routes you (same answer for Codex sessions via `AGENTS.md`). Manual equivalents for every step: [Getting Started](docs/getting-started.md).
+The `knacklabs-new-project` skill updates the harness, runs `doctor --fix` (installs the toolchain; only logins stay manual), scaffolds the repo with `forge init`, and hands you to the project's own `/forge` skill. From then on, **ask "what now?" in any phase** — `/forge` runs the deterministic `./forge next` engine and routes you (same answer for Codex sessions via `AGENTS.md`). Manual equivalents for every step: [Getting Started](docs/getting-started.md).
 
 ## The Lifecycle
 
@@ -43,9 +43,9 @@ choice.
 
 | Stage | You say | Skill / agent invoked | Deterministic record |
 |---|---|---|---|
-| machine setup | "Set up my machine" | `caw-new-project` skill → `./forge doctor --fix` | doctor report |
-| new project | "Set up a new CAW project called X" | `caw-new-project` skill → `./forge init` | scaffolded repo |
-| existing repo | "Migrate this repo into the harness" | `caw-migrate-project` skill → `./forge adopt` | vendored machinery; old context → `docs/context/` |
+| machine setup | "Set up my machine" | `knacklabs-new-project` skill → `./forge doctor --fix` | doctor report |
+| new project | "Set up a new KnackLabs project called X" | `knacklabs-new-project` skill → `./forge init` | scaffolded repo |
+| existing repo | "Migrate this repo into the harness" | `knacklabs-migrate-project` skill → `./forge adopt` | vendored machinery; old context → `docs/context/` |
 | any phase, lost | "What now?" | `/forge` skill → `./forge next` | — |
 | 0a discovery | "Let's run office hours" | gstack `/office-hours` | `docs/product/DISCOVERY.md`, `BRIEF.md`; design docs + decisions in `.gstack/projects/` (in-repo via `.envrc`) |
 | 0b prototype | build freely | ponytail (lite) allowed | preserved under `prototype/` |
@@ -73,7 +73,7 @@ symphony-forge/
 ├── .codex/                         # Codex adapter: config, hooks, agent registrations (thin)
 ├── .factory/                       # Run state + per-task history archive
 ├── .github/workflows/              # Scaffold checks, dual-runtime lint, daily gardener
-├── constitution/                   # CAW engineering standards — THE single source of truth
+├── constitution/                   # KnackLabs engineering standards — THE single source of truth
 ├── docs/                           # Contracts, guides, decisions, context inbox
 ├── harness/nestjs-react/           # Scaffold prompt + stack conventions
 ├── harness.yaml                    # Phase ownership + skill precedence manifest

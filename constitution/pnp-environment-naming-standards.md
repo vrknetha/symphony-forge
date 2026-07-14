@@ -1,9 +1,9 @@
 # PnP — Environment Naming Standards
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ### 🎯 1. Purpose
-This playbook defines a unified naming convention for environment names across all CAW projects to ensure consistency and clarity.
+This playbook defines a unified naming convention for environment names across all KnackLabs projects to ensure consistency and clarity.
 
 ---
 

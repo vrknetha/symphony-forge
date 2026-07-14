@@ -26,7 +26,7 @@ def run(repo: Path, script: str, *args: str, stdin: str | None = None):
     return proc.returncode, proc.stdout + proc.stderr
 
 
-GIT_ID = ["-c", "user.email=test@caw.dev", "-c", "user.name=Gate Tests"]
+GIT_ID = ["-c", "user.email=test@knacklabs.dev", "-c", "user.name=Gate Tests"]
 
 # Minimal payload satisfying .agents/schemas/decomposition.json
 DECOMP = {"status": "recorded", "generated_by": "docs-decomposer",

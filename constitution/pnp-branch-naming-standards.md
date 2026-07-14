@@ -1,6 +1,6 @@
 # PnP — Branch Naming Standards
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 *For all Git-based development across projects*
 
@@ -71,7 +71,7 @@ All branches must follow this mandatory structure:
 
 #### ✔ Feature branch
 ```plain text
-feature/CAW-101-google-auth
+feature/KnackLabs-101-google-auth
 
 ```
 (From PDF)

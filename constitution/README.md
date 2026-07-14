@@ -1,6 +1,6 @@
-# CAW Engineering Constitution
+# KnackLabs Engineering Constitution
 
-This directory is the **single source of truth** for CAW engineering standards.
+This directory is the **single source of truth** for KnackLabs engineering standards.
 The former Notion pages are deprecated; changes land only as PRs to this repo.
 Deviations must be deliberate and stated ("Context is King" — prefer the
 standard, deviate with a written reason).

@@ -29,7 +29,7 @@ cd symphony-forge
 
 ## 2. Check your machine
 
-Say: **"Set up my machine for CAW projects."**
+Say: **"Set up my machine for KnackLabs projects."**
 
 ```bash
 ./forge doctor --fix
@@ -44,7 +44,7 @@ Re-run until it says `ready`.
 
 ## 3. Create your project
 
-Say: **"Set up a new CAW project called my-app."** (the `caw-new-project`
+Say: **"Set up a new KnackLabs project called my-app."** (the `knacklabs-new-project`
 skill installed by `./setup`)
 
 ```bash
@@ -224,7 +224,7 @@ prompts, same artifacts, direct `codex exec`.
 
 Already built a prototype (or an early project) with agents, outside the
 harness? Say: **"Migrate this repo into the harness."** (the
-`caw-migrate-project` skill installed by `./setup`)
+`knacklabs-migrate-project` skill installed by `./setup`)
 
 The deterministic core is `forge adopt`, run from the harness clone against a
 CLEAN target tree:

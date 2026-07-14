@@ -1,9 +1,9 @@
 # Playbook for AWS Organization Unit & Sub Accounts
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 _[diagram omitted]_
-This playbook explains the account hierarchy to be followed under AWS organizations & account naming conventions leveraging AWS organization Units, AWS accounts & SCPs, etc. Please ensure the standards mentioned in this document are followed for any AWS accounts created at CAW.
+This playbook explains the account hierarchy to be followed under AWS organizations & account naming conventions leveraging AWS organization Units, AWS accounts & SCPs, etc. Please ensure the standards mentioned in this document are followed for any AWS accounts created at KnackLabs.
 
 ### What is AWS Organization? 
 AWS Organizations is a service that allows you to manage and govern multiple AWS accounts centrally. Some of the terminologies used in AWS Organizations include:
@@ -26,8 +26,8 @@ Service control policies (SCPs) are a type of organizational policy you can use 
 _[diagram omitted]_
 
 ### **Standards for AWS Organization Units and Sub-accounts.**
-- For every new AWS Account being created under a project, use a mailing list as the root username instead of individual users’ email IDs; if the user leaves the org, the root creds are lost since it’s mapped to the user's email id. Please create new AWS Accounts with the following DL. Ex: <client>-<projectName>-<environment>@cawstudios.com	Ex: ems-calibrate-prod@cawstudios.com
-- In CAW, we use the above model to manage our accounts into distinct units. We begin with a root account for the organization and then create separate organization units for each project. Within each organization unit, we create sub-accounts for each environment associated with that project.
+- For every new AWS Account being created under a project, use a mailing list as the root username instead of individual users’ email IDs; if the user leaves the org, the root creds are lost since it’s mapped to the user's email id. Please create new AWS Accounts with the following DL. Ex: <client>-<projectName>-<environment>@knacklabs.ai	Ex: ems-calibrate-prod@knacklabs.ai
+- In KnackLabs, we use the above model to manage our accounts into distinct units. We begin with a root account for the organization and then create separate organization units for each project. Within each organization unit, we create sub-accounts for each environment associated with that project.
 - An entire AWS Organization, with its root account and subaccount, belongs to a specific customer or client. This is a single tenancy model. The same structure is replicated for another client or customer.
 - You may apply corresponding SCPs for best practices at an OU level so that all the accounts within that OU / Project inherit the same policies.
 - Under the root account, create a separate OU called Shared-Services, which will have an AWS account to host shared services across multiple projects for a given Client/Customer. The purpose of this shared account is to host CI/CD services (GitHub Self hosted runner, ArgoCD, etc) or common security services like GuardDuty, which can leverage AWS Organization and source events across multiple AWS accounts. Shared Services account access is limited to administrators only.

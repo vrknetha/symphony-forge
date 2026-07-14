@@ -1,9 +1,9 @@
 # Playbook 05 - Logging & Observability
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ## 🎯 1. Purpose
-This playbook defines CAW’s standards for **logging, observability, metrics, tracing, and alerting**, ensuring that all logs are consistent, structured, and include the environment from which they originate.
+This playbook defines KnackLabs’s standards for **logging, observability, metrics, tracing, and alerting**, ensuring that all logs are consistent, structured, and include the environment from which they originate.
 
 ---
 

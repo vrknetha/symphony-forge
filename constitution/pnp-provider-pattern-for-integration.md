@@ -1,6 +1,6 @@
 # PnP — Provider Pattern for Integration
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ### 🎯 **1. Purpose**
 The Provider Pattern standardizes **how we integrate with external services** (SMS, Email, Payment Gateways, Maps, KYC, Credit Bureau, Analytics, etc.).

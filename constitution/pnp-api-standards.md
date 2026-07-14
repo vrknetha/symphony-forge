@@ -1,6 +1,6 @@
 # PnP — API Standards
 
-_Source: CAW Studios — Engineering @ CAW (Notion). Synced 2026-06-22._
+_Source: KnackLabs — Engineering @ KnackLabs (Notion). Synced 2026-06-22._
 
 ---
 *Applicable to all NestJS, FastAPI, and modular monolith V1 projects.*
