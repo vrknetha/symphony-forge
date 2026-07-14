@@ -49,6 +49,7 @@ choice.
 | any phase, lost | "What now?" | `/forge` skill → `./forge next` | — |
 | 0a discovery | "Let's run office hours" | gstack `/office-hours` | `docs/product/DISCOVERY.md`, `BRIEF.md`; design docs + decisions in `.gstack/projects/` (in-repo via `.envrc`) |
 | 0b prototype | build freely | ponytail (lite) allowed | preserved under `prototype/` |
+| handover grill | "Grill the handover" / "Grill the epics" | `griller` contract (adversarial gaps/contradictions pass) | `record_grill_from_json.py` → `.factory/grills/`; sign-off + roadmap import refuse without a fresh pass |
 | sign-off | "The client signed off" | none — HUMAN runs `decision accept` | `record_signoff.py` → `run.json` |
 | workspace | "Scaffold the workspace" | Codex `/codex:rescue` + `SCAFFOLD_PROMPT.md` | nx workspace |
 | epics (PM) | "Build the project roadmap" | `docs-decomposer` proposes; PM accepts `epics-approved` | epics in `plans/roadmap.json`; import gated on the accept |

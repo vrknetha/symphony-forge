@@ -58,7 +58,15 @@ def repo(tmp_path: Path) -> Path:
     return target
 
 
+def record_grill(repo: Path, gate: str, verdict: str = "pass", **over) -> tuple[int, str]:
+    payload = {"generated_by": "griller", "gate": gate, "verdict": verdict,
+               "gaps": [], "contradictions": [], "resolutions": [], **over}
+    return run(repo, "record_grill_from_json.py", "--gate", gate, stdin=json.dumps(payload))
+
+
 def sign_off(repo: Path) -> None:
+    code, out = record_grill(repo, "signoff")
+    assert code == 0, out
     code, out = run(repo, "forge.py", "decision", "new", "client-signoff", "--repo", str(repo))
     assert code == 0, out
     record = next((repo / "docs" / "decisions").glob("*-client-signoff.md"))
@@ -191,7 +199,10 @@ def test_intake_starts_discovery_before_signoff_and_planning_after(repo, tmp_pat
 
 def test_record_signoff_requires_accepted_and_confirmed(repo):
     code, out = run(repo, "record_signoff.py")
-    assert code != 0
+    assert code != 0 and "grill" in out.lower()  # grill gate fires first
+    record_grill(repo, "signoff")
+    code, out = run(repo, "record_signoff.py")
+    assert code != 0  # grilled, but no decision record yet
     run(repo, "forge.py", "decision", "new", "client-signoff", "--repo", str(repo))
     code, out = run(repo, "record_signoff.py")
     assert code != 0 and "status" in out  # proposed, not accepted
@@ -504,6 +515,7 @@ def test_upgrade_refuses_dirty_target(repo):
 # --------------------------------------------------------- misc deterministic
 
 def test_decision_accept_and_plain_issue_keys(repo):
+    record_grill(repo, "signoff")
     code, out = run(repo, "forge.py", "decision", "new", "client-signoff", "--repo", str(repo))
     assert code == 0
     code, out = run(repo, "forge.py", "decision", "accept", "client-signoff", "--by", "Client PM")
@@ -556,7 +568,8 @@ ROADMAP = {"generated_by": "human", "items": [
 
 
 def approve_epics(repo: Path) -> None:
-    """The PM->EM handoff gate: an accepted epics-approved decision."""
+    """The PM->EM handoff gate: a passing epics grill + accepted decision."""
+    record_grill(repo, "epics")
     if list((repo / "docs" / "decisions").glob("*epics-approved*.md")):
         return
     run(repo, "forge.py", "decision", "new", "epics-approved", "--repo", str(repo))
@@ -882,11 +895,14 @@ def test_next_routes_design_skills_by_feature_type(repo, tmp_path):
 
 # --------------------------------------------------------- roles and handoffs
 
-def test_roadmap_import_gated_on_pm_epics_approval(repo, tmp_path):
+def test_roadmap_import_gated_on_grill_then_pm_epics_approval(repo, tmp_path):
     src = tmp_path / "rm.json"
     src.write_text(json.dumps(ROADMAP))
     code, out = run(repo, "forge.py", "roadmap", "import", "--input", str(src))
-    assert code != 0 and "epics-approved" in out  # PM handoff gate
+    assert code != 0 and "grill" in out.lower()  # grill gate fires first
+    record_grill(repo, "epics")
+    code, out = run(repo, "forge.py", "roadmap", "import", "--input", str(src))
+    assert code != 0 and "epics-approved" in out  # then the PM accept gate
     approve_epics(repo)
     code, out = run(repo, "forge.py", "roadmap", "import", "--input", str(src))
     assert code == 0, out
@@ -944,3 +960,47 @@ def test_team_roster_and_em_assignment(repo, tmp_path):
 def test_next_tags_steps_with_roles(repo):
     code, out = run(repo, "forge.py", "next")
     assert code == 0 and "[PM]" in out  # discovery is the PM's seat
+
+
+# ------------------------------------------------------------ handover grills
+
+def test_grill_recorder_refuses_pass_with_unresolved_findings(repo):
+    code, out = record_grill(repo, "signoff",
+                             gaps=["no data-retention answer"], resolutions=[])
+    assert code != 0 and "unresolved" in out
+    # blocked verdict with the same findings IS recordable (audit trail)
+    code, out = record_grill(repo, "signoff", verdict="blocked",
+                             gaps=["no data-retention answer"])
+    assert code == 0, out
+    # ...but a blocked grill never satisfies the gate
+    run(repo, "forge.py", "decision", "new", "client-signoff", "--repo", str(repo))
+    record = next((repo / "docs" / "decisions").glob("*-client-signoff.md"))
+    record.write_text(record.read_text()
+                      .replace("status: proposed", "status: accepted")
+                      .replace('confirmed_by: ""', 'confirmed_by: "Client PM"'))
+    code, out = run(repo, "record_signoff.py")
+    assert code != 0 and "blocked" in out
+
+
+def test_stale_grill_refused_after_handover_docs_change(repo):
+    record_grill(repo, "signoff")
+    # resolve-then-edit AFTER the grill: BRIEF changes, committed
+    brief = repo / "docs" / "product" / "BRIEF.md"
+    brief.write_text(brief.read_text() + "\n## Late scope addition\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "scope change after grill")
+    run(repo, "forge.py", "decision", "new", "client-signoff", "--repo", str(repo))
+    record = next((repo / "docs" / "decisions").glob("*-client-signoff.md"))
+    record.write_text(record.read_text()
+                      .replace("status: proposed", "status: accepted")
+                      .replace('confirmed_by: ""', 'confirmed_by: "Client PM"'))
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "signoff record")
+    code, out = run(repo, "record_signoff.py")
+    assert code != 0 and "STALE" in out
+    # re-grill against the current docs -> gate passes
+    # (the signoff record added after the grill is expected exhaust, ignored)
+    code, out = record_grill(repo, "signoff")
+    assert code == 0, out
+    code, out = run(repo, "record_signoff.py")
+    assert code == 0, out

@@ -13,8 +13,10 @@ Owns the business truth: what we're building and why.
 | Discovery conversation | "Let's run office hours" (gstack `/office-hours`) |
 | Product intent | own `docs/product/DISCOVERY.md` + `BRIEF.md` |
 | Client decisions | "Record that as a decision" → you are the human who runs `./forge decision accept <slug> --by "<you>"` |
+| **Grill before sign-off** | "Grill the handover" — an adversarial pass (`.agents/prompts/griller.md`) interrogates DISCOVERY/BRIEF/decisions for gaps and contradictions, one question at a time; findings become doc edits or decision records. `record_signoff.py` REFUSES without a fresh, passing `.factory/grills/signoff.json` |
 | Client sign-off | the `client-signoff` decision + `record_signoff.py` — nothing proceeds without you |
-| **Epics (the PM→EM handoff)** | after sign-off, the project-level decomposition proposes epics; you review them, then accept: `./forge decision new epics-approved` (list the epics in it) → `./forge decision accept epics-approved --by "<you>"`. **Roadmap import is refused until this exists.** |
+| **Grill the epics handover** | same drill against the proposed epics/stories (coverage vs BRIEF, criteria vs decisions, order sanity) — `roadmap import` refuses without a passing `epics` grill |
+| **Epics (the PM→EM handoff)** | after the grill: `./forge decision new epics-approved` (list the epics in it) → `./forge decision accept epics-approved --by "<you>"`. **Roadmap import is refused until this exists.** |
 | Scope changes later | epics live in `plans/roadmap.json` (`epics` block) — change them by PR |
 
 ## EM — engineering manager
@@ -44,9 +46,12 @@ Owns one story at a time, on its own branch (see Concurrency in WORKFLOW.md).
 ## Handoff summary
 
 ```text
-client ──sign-off gate──▶ PM ──epics-approved gate──▶ EM ──roadmap item + assign──▶ dev
-   (decision + record_signoff)   (decision accept)        (intake activates; pr_ready closes)
+client ──[grill]──sign-off gate──▶ PM ──[grill]──epics-approved gate──▶ EM ──roadmap item + assign──▶ dev
+      (decision + record_signoff)          (decision accept)            (intake activates; pr_ready closes)
 ```
 
-Every handoff is an artifact plus a gate — never a conversation that
-evaporates. Humans accept; agents do the rest.
+Every handoff is an artifact plus a gate, and every gate is preceded by a
+recorded grill — the adversarial gaps-and-contradictions pass whose verdict
+the gate checks (`.factory/grills/<gate>.json`, stale if the docs change
+after it). Never a conversation that evaporates. Humans accept; agents do
+the rest.

@@ -39,6 +39,8 @@ orchestration must produce the same `.factory` artifacts.
 
 The sign-off gate sits between `prototype` and `planning`. Record accepted client sign-off with `python3 .agents/scripts/record_signoff.py`, which sets `client_signoff` in `.factory/run.json`. `update_run.py` and `pre_tool_use.py` refuse phases at `planning` or later until that field is true.
 
+Every handover gate is preceded by a recorded GRILL (`.agents/prompts/griller.md`): an adversarial gaps-and-contradictions interrogation of what one role hands the next — `signoff` (client→PM: DISCOVERY/BRIEF/decisions) and `epics` (PM→EM: epics/stories vs BRIEF). The verdict lands in `.factory/grills/<gate>.json` via `record_grill_from_json.py` (schema-validated, `generated_by: griller`); `record_signoff.py` and `forge roadmap import` refuse without a fresh pass — stale means the handover docs changed after the grill. Findings must resolve into doc edits or decision records before a `pass` is even recordable.
+
 ## Context Inbox & Doc Upkeep
 
 Unstructured context (client emails, transcripts, notes) goes in

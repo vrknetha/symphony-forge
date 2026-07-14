@@ -36,6 +36,11 @@ def cmd_next(args: argparse.Namespace) -> None:
         phase("discovery/prototype (0a/0b)")
         steps.append("[PM] Fill docs/product/DISCOVERY.md and BRIEF.md; prototype freely (no ceremony)")
         steps.append("[PM] Capture client decisions: forge.py decision new <slug>")
+        signoff_grill = load_json(factory / "grills" / "signoff.json", default={})
+        if signoff_grill.get("verdict") != "pass":
+            steps.append("[PM] Before sign-off: grill the handover for gaps/contradictions "
+                         "(.agents/prompts/griller.md), resolve findings, record: "
+                         "record_grill_from_json.py --gate signoff")
         steps.append("[PM] When the client confirms: forge.py decision new client-signoff, "
                      "then forge.py decision accept client-signoff --by <name> (human), "
                      "then run record_signoff.py")
@@ -61,6 +66,11 @@ def cmd_next(args: argparse.Namespace) -> None:
                          "extend it, or start an off-roadmap task: "
                          "python3 .agents/scripts/intake.py --issue <KEY> --title \"<title>\"")
         else:
+            epics_grill = load_json(factory / "grills" / "epics.json", default={})
+            if epics_grill.get("verdict") != "pass":
+                steps.append("[PM] Grill the epics handover for coverage gaps/contradictions "
+                             "(.agents/prompts/griller.md), record: "
+                             "record_grill_from_json.py --gate epics")
             steps.append("[PM] Approve the epics: forge.py decision new epics-approved, then "
                          "a human runs decision accept epics-approved --by <PM>")
             steps.append("[EM] Then record the backlog: ./forge roadmap import --input <json> "

@@ -7,7 +7,7 @@ import re
 import sys
 from pathlib import Path
 
-from factory_lib import dump_json, load_json, now_iso, repo_root, run_state_path
+from factory_lib import dump_json, load_json, now_iso, repo_root, require_grill, run_state_path
 
 FRONTMATTER = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
@@ -26,6 +26,14 @@ def parse_frontmatter(text: str) -> dict[str, str]:
 
 def main() -> int:
     root = repo_root()
+    # The handover must be grilled for gaps/contradictions BEFORE it becomes
+    # the contract downstream work builds on. Fresh = product docs unchanged
+    # since the grill (the sign-off record itself is expected exhaust).
+    require_grill(
+        root, "signoff",
+        ("docs/product/", "docs/decisions/", "prototype/"),
+        ignore_names=("client-signoff",),
+    )
     decisions = root / "docs" / "decisions"
     candidates = sorted(decisions.glob("[0-9][0-9][0-9][0-9]-client-signoff.md"))
     if not candidates:

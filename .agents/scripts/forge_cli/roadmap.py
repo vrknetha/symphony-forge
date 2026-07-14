@@ -15,7 +15,9 @@ import json
 import re
 from pathlib import Path
 
-from factory_lib import dump_json, load_json, now_iso, repo_root, validate_payload
+from factory_lib import (
+    dump_json, load_json, now_iso, repo_root, require_grill, validate_payload,
+)
 
 from .common import fail
 
@@ -84,6 +86,14 @@ def check_item(item: dict, pos: int) -> None:
 
 def cmd_import(args: argparse.Namespace) -> None:
     base = Path(args.repo).resolve() if args.repo else repo_root()
+    # Grill BEFORE the PM accepts: the epics/stories are interrogated for
+    # coverage gaps and contradictions against BRIEF + decisions, so what the
+    # EM distributes downstream is already de-risked.
+    require_grill(
+        base, "epics",
+        ("docs/product/", "docs/decisions/"),
+        ignore_names=("epics-approved", "client-signoff"),
+    )
     if not epics_approved(base):
         fail(
             "the roadmap import is the PM->EM handoff and requires PM approval of "

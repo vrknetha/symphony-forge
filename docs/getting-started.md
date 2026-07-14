@@ -83,10 +83,17 @@ decision."**
 ./forge decision new <slug>
 ```
 
-## 5. Record client sign-off (the gate)
+## 5. Grill, then record client sign-off (the gate)
 
-Say: **"The client signed off."** The agent drafts the record and relays the
-accept command — a HUMAN runs the accept:
+First say: **"Grill the handover."** The agent interrogates DISCOVERY, BRIEF,
+decisions, and prototype notes for gaps and contradictions — one question at
+a time, findings resolved into doc edits or decision records — and records
+the verdict (`record_grill_from_json.py --gate signoff`).
+**`record_signoff.py` refuses without a fresh, passing grill** (fresh =
+product docs unchanged since it ran).
+
+Then say: **"The client signed off."** The agent drafts the record and relays
+the accept command — a HUMAN runs the accept:
 
 ```bash
 ./forge decision new client-signoff
@@ -109,9 +116,12 @@ decomposition (`docs-decomposer`) against the BRIEF and architecture docs,
 producing **epics** (for the PM) and **stories** with acceptance criteria and
 a `skill` tag (for the EM). Then the handoffs, each an artifact plus a gate:
 
-1. **PM approves the epics** (import is refused without this):
+1. **Grill the epics handover, then PM approves** (import is refused without
+   both — a passing `epics` grill AND the accepted decision). Say: **"Grill
+   the epics"** — coverage vs the BRIEF, criteria vs decisions, order sanity:
 
 ```bash
+python3 .agents/scripts/record_grill_from_json.py --gate epics --input <json>
 ./forge decision new epics-approved
 ./forge decision accept epics-approved --by "<PM name>"   # human-typed
 ```

@@ -46,7 +46,8 @@ or route:
 | migrate an existing repo into the harness | `knacklabs-migrate-project` skill — core: `./forge adopt --target <repo>` from the harness clone (clean tree; old AGENTS/CLAUDE preserved to docs/context/) |
 | migrate my gstack history / gstack outputs are on my machine | `./forge gstack migrate` — union-merges ~/.gstack/projects/<slug>/ into the repo's .gstack/ (then commit). Going forward .envrc + `direnv allow` keeps gstack in-repo |
 | what's left to build / show the roadmap | `./forge roadmap list` (`--pending` for what's next; grouped by epic, shows @assignee) |
-| PM approves the epics | `./forge decision new epics-approved` — THE PM runs the accept; roadmap import is refused without it |
+| grill the handover / stress-test before a gate | `.agents/prompts/griller.md` — one question at a time vs the actual docs; resolve findings; record `record_grill_from_json.py --gate signoff\|epics`. Sign-off and roadmap import REFUSE without a fresh pass |
+| PM approves the epics | `./forge decision new epics-approved` — THE PM runs the accept; roadmap import is refused without it (and without a passing epics grill) |
 | here's the project backlog / handoff decomposition | `./forge roadmap import --input <json>` (epics + stories w/ acceptance_criteria + skill) |
 | add a story to the roadmap | `./forge roadmap add <KEY> "<title>" --epic <epic> --skill frontend\|backend\|fullstack` |
 | define the team / who's on this project | `./forge team set <handle> --role dev --skills frontend,backend` (optional roster; `./forge team list`) |

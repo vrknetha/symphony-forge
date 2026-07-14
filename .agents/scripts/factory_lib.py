@@ -149,6 +149,61 @@ def head_sha(root: Path | None = None) -> str | None:
     return proc.stdout.strip() if proc.returncode == 0 else None
 
 
+def require_grill(
+    root: Path,
+    gate: str,
+    prefixes: tuple[str, ...],
+    ignore_names: tuple[str, ...] = (),
+) -> None:
+    """Handover gates call this: a fresh, passing grill or no passage.
+
+    `ignore_names` filters expected exhaust from the staleness check (e.g.
+    the client-signoff record itself, which is created AFTER the grill)."""
+    path = factory_dir(root) / "grills" / f"{gate}.json"
+    data = load_json(path, default={})
+    if not data:
+        raise SystemExit(
+            f"Handover grill required first: interrogate the handover for gaps and "
+            f"contradictions per .agents/prompts/griller.md, resolve findings, then record "
+            f"`python3 .agents/scripts/record_grill_from_json.py --gate {gate}`."
+        )
+    if data.get("verdict") != "pass":
+        raise SystemExit(
+            f".factory/grills/{gate}.json verdict is {data.get('verdict')!r} — resolve the "
+            "recorded findings and re-grill; this gate needs a pass."
+        )
+    if not data.get("commit") and head_sha(root):
+        raise SystemExit(
+            f".factory/grills/{gate}.json has no commit stamp — re-record with current tooling."
+        )
+    stale = [
+        f for f in changed_since(root, data.get("commit") or "", prefixes)
+        if not any(token in Path(f).name for token in ignore_names)
+    ]
+    if stale:
+        raise SystemExit(
+            f"the {gate} grill is STALE — handover docs changed since it ran: "
+            f"{', '.join(stale[:5])}. Re-run the grill against the current docs."
+        )
+
+
+def changed_since(root: Path, stamp: str, prefixes: tuple[str, ...]) -> list[str]:
+    """Committed files under `prefixes` changed between `stamp` and HEAD.
+
+    Returns ["<unknown commit>"] when the stamp is not in this repo's history,
+    so callers treat an unverifiable stamp as stale rather than fresh."""
+    head = head_sha(root)
+    if not head or not stamp or stamp == head:
+        return []
+    proc = subprocess.run(
+        ["git", "diff", "--name-only", f"{stamp}..{head}"],
+        cwd=root, capture_output=True, text=True,
+    )
+    if proc.returncode != 0:
+        return [f"<commit {stamp[:8]} unknown to this repo>"]
+    return [f for f in proc.stdout.splitlines() if f.startswith(prefixes)]
+
+
 def read_hook_input() -> dict[str, Any]:
     raw = sys.stdin.read().strip()
     if not raw:

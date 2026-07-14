@@ -16,7 +16,12 @@ precedence:
 phases:
   discovery: # 0a
     owner: "gstack:/office-hours"
-    notes: "Lightweight on purpose: no .factory ceremony before sign-off."
+    grill:
+      contract: ".agents/prompts/griller.md"
+      allowed: ["griller"]
+      schema: ".agents/schemas/grill.json"
+      gate: "record_signoff.py refuses without a fresh, passing .factory/grills/signoff.json"
+    notes: "Lightweight on purpose: no .factory ceremony before sign-off — except the handover grill."
   prototype: # 0b
     owner: "prototype-skill"
     allowed:
@@ -38,6 +43,11 @@ phases:
     schema: ".agents/schemas/roadmap.json"
     roles: "docs/ROLES.md — PM approves epics, EM grooms + assigns, dev picks"
     gate: "accepted epics-approved decision (PM) — import refuses without it"
+    grill:
+      contract: ".agents/prompts/griller.md"
+      allowed: ["griller"]
+      schema: ".agents/schemas/grill.json"
+      gate: "roadmap import also refuses without a fresh, passing .factory/grills/epics.json"
     notes: >-
       The project-level decomposition after sign-off: PM-approved epics and
       EM-groomed stories (story, acceptance_criteria, skill, assignee) in
