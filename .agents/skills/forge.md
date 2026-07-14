@@ -30,7 +30,7 @@ or route:
 | roadmap missing | run the project-level decomposition (`.agents/prompts/decomposer.md`), then `./forge roadmap import --input <json>` |
 | planning | plan per `.agents/prompts/planner.md` (Claude plan mode default, `planner-high` Codex agent alternate); exploration read-only via Codex |
 | decomposing | run docs-decomposer per task, record with `record_decomposition_from_json.py` (schema incl. `user_facing`) |
-| implementing | delegate the leaf task (Claude: `/codex:rescue --background`; Codex: `.agents/prompts/implementer.md`) — the implementer writes and records the tests; user-facing tasks load the harness.yaml `ui_guidance` skills (emil-design-eng, apple-design) |
+| implementing | delegate the leaf task (Claude: `/codex:rescue --background`; Codex: `.agents/prompts/implementer.md`) — the implementer writes and records the tests; user-facing tasks MUST load + attest emil-design-eng + frontend-design in `skills_used` (recorder-enforced; harness.yaml `required_skills`) |
 | verifying | `python3 .agents/scripts/verify.py` |
 | reviewing | ONE autoreview run in Codex, three lenses (`.agents/prompts/reviewer.md`) |
 | functional-check | only shown when the task is user-facing; run `functional-checker` |

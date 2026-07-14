@@ -13,6 +13,10 @@
     "non_blocking_findings": "list",
     "residual_risks": "list",
     "recommendation": "str",
-    "reviewed_scope": "list"
+    "reviewed_scope": "list",
+    "skills_used": "list"
+  },
+  "required_skills": {
+    "user_facing": ["review-animations"]
   }
 }

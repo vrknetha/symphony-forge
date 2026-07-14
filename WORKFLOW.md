@@ -83,6 +83,12 @@ re-derives it per task:
   `.agents/schemas/<artifact>.json` — required fields, types, and a
   `generated_by` value inside the pinned allowlist. Nonconforming payloads
   and unpinned generators are refused outright; there is no override flag.
+- **Mandatory phase skills are attested, not assumed.** Each schema's
+  `required_skills` names the skills a feature type demands (e.g.
+  `user_facing` → `emil-design-eng` + `frontend-design` on the testing
+  artifact, `review-animations` on review artifacts); the recorder refuses
+  the artifact unless `skills_used` attests them. Advisory skills are listed
+  in `skills_used` when used. Same trust model as `generated_by`.
 - **Prompts are the interface, recorder commands are the contract.** Devs
   speak intents ("start a task for invoices", "is this PR ready?"); agents
   run the mapped deterministic command. Anything an agent cannot route lands

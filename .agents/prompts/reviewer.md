@@ -20,10 +20,11 @@ Procedure:
      flexibility/configurability, code duplicating stdlib or platform
      features — EXCEPT structure the constitution mandates (modules, DTOs,
      the response envelope, provider pattern), which is never a finding.
-     When the decomposition has `user_facing: true` AND the diff touches
-     animation/motion code, load the `review-animations` skill as input to
-     this lens (easing/duration/spring choices, reduced-motion). It informs
-     your findings; the artifact stays `generated_by: autoreview`.
+     When the decomposition has `user_facing: true`, loading the
+     `review-animations` skill as input to this lens is MANDATORY
+     (easing/duration/spring choices, reduced-motion) — attest it in each
+     artifact's `skills_used` list or the recorder refuses the artifact. It
+     informs your findings; the artifact stays `generated_by: autoreview`.
    - **performance** — hot paths, algorithmic complexity, query fanout, I/O
      amplification, memory churn, concurrency bottlenecks; distinguish
      measured evidence from inference.

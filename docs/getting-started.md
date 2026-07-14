@@ -176,10 +176,12 @@ python3 .agents/scripts/update_run.py --phase implementing --plan-status approve
 
 3. **Implement** — say: **"Implement it."** (Codex,
    `/codex:rescue --background`, one bounded task at a time). Feature type
-   routes the design skills automatically: `user_facing: true` tasks load
-   `emil-design-eng` (UI polish), plus `apple-design` for gesture/motion work
-   (harness.yaml `ui_guidance`); backend tasks skip them. The implementer
-   writes and runs the tests and records the artifact itself:
+   routes the design skills, ENFORCED at record time: `user_facing: true`
+   tasks MUST load `emil-design-eng` + `frontend-design` and attest them in
+   the artifact's `skills_used` — the recorder refuses otherwise
+   (`apple-design`/`animation-vocabulary` advisory for motion work); backend
+   tasks skip them all. The implementer writes and runs the tests and
+   records the artifact itself:
 
 ```bash
 python3 .agents/scripts/record_test_from_json.py --kind automated --input /tmp/automated-test.json

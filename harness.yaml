@@ -27,6 +27,7 @@ phases:
     allowed:
       - "ponytail:lite"
       - "emil-design-eng"
+      - "frontend-design"
       - "apple-design"
     notes: >-
       Proof for client sign-off; may take weeks — no gate is time-driven.
@@ -80,9 +81,13 @@ phases:
   implementation:
     owner: "codex:/codex:rescue"
     prompts: ".agents/prompts/implementer.md"
-    ui_guidance: # loaded by feature type — the decomposition's user_facing flag
-      - skill: "emil-design-eng"
-        when: "user_facing: true — any UI/component/styling work"
+    required_skills: # ENFORCED by feature type — the decomposition's user_facing flag:
+      # the recorder refuses a user-facing testing artifact unless skills_used
+      # attests every one of these (mirrored in .agents/schemas/test-automated.json).
+      user_facing:
+        - "emil-design-eng"
+        - "frontend-design"
+    advisory_skills:
       - skill: "apple-design"
         when: "user_facing: true AND the task involves gestures, transitions, or motion"
       - skill: "animation-vocabulary"
@@ -90,9 +95,10 @@ phases:
     notes: >-
       The implementer also writes and runs the automated tests and records
       the testing artifact — there is no separate tester subagent.
-      ui_guidance skills are advisory inputs (emilkowalski/skills, installed
-      by doctor); they never record artifacts, so they carry no generated_by
-      pin — the implementer remains the attested generator.
+      Design skills (emilkowalski/skills + Anthropic frontend-design,
+      installed by doctor) never record artifacts, so they carry no
+      generated_by pin — the implementer remains the attested generator and
+      lists what it loaded in skills_used.
   testing:
     owner: "codex:implementer"
     allowed:
@@ -110,10 +116,12 @@ phases:
       - "autoreview"
     contract: ".agents/prompts/reviewer.md"
     schema: ".agents/schemas/review.json"
-    ui_guidance:
-      - skill: "review-animations"
-        when: "user_facing: true AND the diff touches animation/motion code —
-          loaded as INPUT to autoreview's quality lens, not a second reviewer"
+    required_skills: # enforced: user-facing review artifacts must attest this in skills_used
+      user_facing:
+        - "review-animations"
+    required_skills_note: >-
+      Loaded as INPUT to autoreview's quality lens, not a second reviewer —
+      the artifact stays generated_by: autoreview.
     notes: >-
       ONE autoreview run reviews through three lenses (quality incl.
       over-engineering, performance, security) and emits the three gate

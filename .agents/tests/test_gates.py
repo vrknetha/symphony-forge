@@ -96,7 +96,8 @@ def write_passing_artifacts(repo: Path, commit: str | None = None) -> None:
         json.dumps({**DECOMP, "commit": sha}))
     (f / "verify.json").write_text(json.dumps({"ok": True, "commit": sha}))
     (f / "tests.json").write_text(json.dumps({
-        "automated": {"status": "passed", "generated_by": "implementer"},
+        "automated": {"status": "passed", "generated_by": "implementer",
+                      "skills_used": ["emil-design-eng", "frontend-design"]},
         "functional": {"status": "passed", "score": 9,
                        "generated_by": "functional-checker"},
         "commit": sha,
@@ -105,7 +106,8 @@ def write_passing_artifacts(repo: Path, commit: str | None = None) -> None:
     for aspect in ("quality", "performance", "security"):
         (f / "reviews" / f"{aspect}.json").write_text(
             json.dumps({"score": 9, "blocking_findings": [],
-                        "generated_by": "autoreview", "commit": sha})
+                        "generated_by": "autoreview",
+                        "skills_used": ["review-animations"], "commit": sha})
         )
 
 
@@ -690,7 +692,8 @@ def test_recorders_refuse_nonconforming_payloads(repo, tmp_path):
     # happy path: recorded, attested, no legacy keys written
     code, out = run(repo, "record_review_from_json.py", "--aspect", "quality",
                     stdin=json.dumps({"generated_by": "autoreview", "score": 9,
-                                      "summary": "ok", "blocking_findings": []}))
+                                      "summary": "ok", "blocking_findings": [],
+                                      "skills_used": ["review-animations"]}))
     assert code == 0, out
     recorded = json.loads((repo / ".factory" / "reviews" / "quality.json").read_text())
     assert recorded["generated_by"] == "autoreview" and "blocking" not in recorded
@@ -698,7 +701,8 @@ def test_recorders_refuse_nonconforming_payloads(repo, tmp_path):
     code, out = run(repo, "record_test_from_json.py", "--kind", "automated",
                     stdin=json.dumps({"generated_by": "implementer", "status": "passed",
                                       "summary": "unit suite", "blocking_findings": [],
-                                      "commands_run": ["pytest"]}))
+                                      "commands_run": ["pytest"],
+                                      "skills_used": ["emil-design-eng", "frontend-design"]}))
     assert code == 0, out
 
 
@@ -1004,3 +1008,52 @@ def test_stale_grill_refused_after_handover_docs_change(repo):
     assert code == 0, out
     code, out = run(repo, "record_signoff.py")
     assert code == 0, out
+
+
+# ------------------------------------------------ mandatory skill attestation
+
+def test_user_facing_artifacts_must_attest_design_skills(repo, tmp_path):
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    run(repo, "record_decomposition_from_json.py", stdin=json.dumps(DECOMP))  # user_facing
+    # testing artifact without the mandatory design skills -> refused
+    base = {"generated_by": "implementer", "status": "passed", "summary": "ok",
+            "blocking_findings": [], "commands_run": ["pytest"]}
+    code, out = run(repo, "record_test_from_json.py", "--kind", "automated",
+                    stdin=json.dumps(base))
+    assert code != 0 and "emil-design-eng" in out and "frontend-design" in out
+    # partial attestation still refused
+    code, out = run(repo, "record_test_from_json.py", "--kind", "automated",
+                    stdin=json.dumps({**base, "skills_used": ["emil-design-eng"]}))
+    assert code != 0 and "frontend-design" in out
+    # full attestation passes
+    code, out = run(repo, "record_test_from_json.py", "--kind", "automated",
+                    stdin=json.dumps({**base, "skills_used":
+                                      ["emil-design-eng", "frontend-design"]}))
+    assert code == 0, out
+    # review artifact must attest review-animations on user-facing tasks
+    review = {"generated_by": "autoreview", "score": 9, "summary": "ok",
+              "blocking_findings": []}
+    code, out = run(repo, "record_review_from_json.py", "--aspect", "quality",
+                    stdin=json.dumps(review))
+    assert code != 0 and "review-animations" in out
+    code, out = run(repo, "record_review_from_json.py", "--aspect", "quality",
+                    stdin=json.dumps({**review, "skills_used": ["review-animations"]}))
+    assert code == 0, out
+    # backend task: no design-skill requirement
+    code, out = run(repo, "record_decomposition_from_json.py",
+                    stdin=json.dumps({**DECOMP, "user_facing": False}))
+    assert code == 0, out
+    code, out = run(repo, "record_test_from_json.py", "--kind", "automated",
+                    stdin=json.dumps(base))
+    assert code == 0, out
+
+
+def test_linter_catches_unpinned_required_skill(repo):
+    schema = repo / ".agents" / "schemas" / "test-automated.json"
+    data = json.loads(schema.read_text())
+    data["required_skills"]["user_facing"].append("rogue-design-skill")
+    schema.write_text(json.dumps(data))
+    code, out = run(repo, "check_dual_runtime.py", str(repo))
+    assert code != 0 and "rogue-design-skill" in out

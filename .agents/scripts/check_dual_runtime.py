@@ -364,6 +364,13 @@ def check_schemas(root: Path) -> None:
                     f"{rel}: generator '{name}' is not mentioned in harness.yaml. "
                     "Pin it there (the allowlist) or remove it from the schema."
                 )
+        for condition, skills in (schema.get("required_skills") or {}).items():
+            for skill in skills:
+                if skill not in manifest:
+                    violation(
+                        f"{rel}: required skill '{skill}' ({condition}) is not "
+                        "mentioned in harness.yaml. Pin it there or remove it."
+                    )
 
 
 def main() -> int:

@@ -22,17 +22,19 @@ Rules:
   Assumptions`, where the dev reviews it before merge and promotes durable
   ones to `docs/decisions/`. An assumption that would *change* the plan's
   scope or acceptance criteria is not an assumption — stop and report instead.
-- **Feature-type guidance (pinned in harness.yaml `ui_guidance`).** Check the
-  recorded decomposition BEFORE writing code:
-  - `user_facing: true` and the task touches UI/components/styling → load the
-    `emil-design-eng` skill first and follow it while implementing.
-  - The task involves gestures, transitions, springs, or any motion → also
-    load `apple-design`; use `animation-vocabulary` to name effects precisely
-    in specs and comments.
-  - `user_facing: false` → skip all of these; do not load design skills for
-    backend work.
-  These are advisory inputs, not recorders — you remain the attested
-  `generated_by` on every artifact.
+- **Feature-type skills (pinned in harness.yaml; ENFORCED at record time).**
+  Check the recorded decomposition BEFORE writing code:
+  - `user_facing: true` → loading `emil-design-eng` AND `frontend-design` is
+    MANDATORY, before writing components/styles — and you must attest them in
+    the testing artifact's `skills_used` list, or the recorder refuses it.
+  - Gestures, transitions, springs, or any motion → also load `apple-design`
+    (advisory); use `animation-vocabulary` to name effects precisely. List
+    advisory skills in `skills_used` too when you use them.
+  - `user_facing: false` → skip all design skills; backend work records
+    without them.
+  Design skills advise; they never record — you remain the attested
+  `generated_by`, and `skills_used` is your attestation of what shaped the
+  work.
 - **You own the automated tests.** There is no separate tester subagent:
   write or update tests for the changed behavior, run the scoped test
   commands, and record the artifact yourself — JSON per

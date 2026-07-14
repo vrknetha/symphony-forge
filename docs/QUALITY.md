@@ -14,7 +14,10 @@ Every change must pass these independent checks:
 Artifact shapes are NOT described here — each artifact's contract is its
 schema under `.agents/schemas/`, enforced by the recorder that writes it.
 Every payload carries `generated_by`, checked against the pins in
-`harness.yaml`.
+`harness.yaml` — and `skills_used`, checked against the schema's
+`required_skills` for the feature type: user-facing testing artifacts must
+attest `emil-design-eng` + `frontend-design`; user-facing review artifacts
+must attest `review-animations`. No attestation, no artifact.
 
 ## Review — one autoreview run, three lenses
 

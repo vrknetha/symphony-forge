@@ -57,7 +57,7 @@ choice.
 | intake | "Start the next task on the roadmap" | `/forge` → `intake.py` | `.factory/run.json` |
 | plan | "Plan this task" | Claude plan mode (or Codex `planner-high`); exploration via Codex read-only | `./forge plan save` → `plans/active/` |
 | decompose | "Decompose it" | `docs-decomposer` | `record_decomposition_from_json.py` (incl. `user_facing`) |
-| implement + test | "Implement it" | Codex `/codex:rescue --background` (implementer writes the tests); `user_facing` tasks auto-load `emil-design-eng` / `apple-design` | `record_test_from_json.py --kind automated` |
+| implement + test | "Implement it" | Codex `/codex:rescue --background` (implementer writes the tests); `user_facing` tasks MUST use `emil-design-eng` + `frontend-design` (attested in `skills_used`, enforced by the recorder) | `record_test_from_json.py --kind automated` |
 | verify | "Run verify" | none — deterministic script | `verify.py` → `.factory/verify.json` |
 | review | "Review it" | **autoreview** (ONE Codex run, three lenses) | `record_review_from_json.py` ×3 |
 | functional check | only if `user_facing: true` | `functional-checker` subagent | `record_test_from_json.py --kind functional` |

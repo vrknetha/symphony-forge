@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 from factory_lib import (
-    dump_json, gate, head_sha, load_json, now_iso, repo_root, review_dir,
-    run_state_path, validate_payload,
+    dump_json, gate, head_sha, load_json, now_iso, repo_root, require_skills,
+    review_dir, run_state_path, validate_payload,
 )
 
 
@@ -38,6 +38,7 @@ else:
 root = repo_root()
 gate(root, signoff=True, approved_plan=True, decomposition=True)
 validate_payload(root, "review", payload)
+require_skills(root, "review", payload)
 path = review_dir(root) / f"{args.aspect}.json"
 review = dict(payload)
 review["aspect"] = args.aspect

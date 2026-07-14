@@ -149,6 +149,28 @@ def head_sha(root: Path | None = None) -> str | None:
     return proc.stdout.strip() if proc.returncode == 0 else None
 
 
+def require_skills(root: Path, name: str, payload: dict) -> None:
+    """Feature-type skill enforcement (same trust model as generated_by):
+    when the recorded decomposition says user_facing, the artifact must
+    ATTEST the phase's mandatory skills in skills_used. Advisory skills are
+    listed too when used, but only the required set gates."""
+    schema = json.loads(schema_path(root, name).read_text())
+    required = schema.get("required_skills", {})
+    if not required:
+        return
+    decomposition = load_json(decomposition_state_path(root), default={})
+    if not decomposition.get("user_facing"):
+        return
+    used = payload.get("skills_used") or []
+    missing = [s for s in required.get("user_facing", []) if s not in used]
+    if missing:
+        raise SystemExit(
+            f"user-facing task: this artifact must attest the mandatory design skills "
+            f"in skills_used — missing: {', '.join(missing)}. Load them, do the work "
+            "with them, and list them (pinned in harness.yaml; installed by doctor)."
+        )
+
+
 def require_grill(
     root: Path,
     gate: str,

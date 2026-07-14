@@ -7,8 +7,8 @@ import sys
 from pathlib import Path
 
 from factory_lib import (
-    dump_json, gate, head_sha, load_json, now_iso, repo_root, run_state_path,
-    tests_state_path, validate_payload,
+    dump_json, gate, head_sha, load_json, now_iso, repo_root, require_skills,
+    run_state_path, tests_state_path, validate_payload,
 )
 
 
@@ -38,6 +38,7 @@ else:
 root = repo_root()
 gate(root, signoff=True, approved_plan=True, decomposition=True)
 validate_payload(root, f"test-{args.kind}", payload)
+require_skills(root, f"test-{args.kind}", payload)
 path = tests_state_path(root)
 existing = load_json(path, default={}) or {}
 entry = dict(payload)

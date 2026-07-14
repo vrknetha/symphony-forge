@@ -103,9 +103,10 @@ def cmd_next(args: argparse.Namespace) -> None:
             steps.append("[dev] Implement the next bounded leaf task via /codex:rescue --background "
                          "(.agents/prompts/implementer.md)")
             if user_facing:
-                steps.append("User-facing task: implementer loads the pinned design skills "
-                             "(emil-design-eng; apple-design for gesture/motion work — "
-                             "harness.yaml ui_guidance)")
+                steps.append("User-facing task: emil-design-eng + frontend-design are "
+                             "MANDATORY (recorder refuses the artifact without them in "
+                             "skills_used); apple-design advisory for gesture/motion — "
+                             "harness.yaml required_skills")
             steps.append("[dev] The implementer writes/runs the tests and records: "
                          "record_test_from_json.py --kind automated --input <json>")
         elif not verify.get("ok"):
