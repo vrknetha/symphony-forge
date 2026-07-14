@@ -14,15 +14,19 @@ from pathlib import Path
 from factory_lib import head_sha, repo_root
 
 from .common import fail
-from .scaffold import COPY_CODEX, DOC_CONTRACTS
+from .scaffold import COPY_CODEX, COPY_WORKFLOWS, DOC_CONTRACTS
 
 # Harness-owned: replaced wholesale on upgrade.
-UPGRADE_TREES = [".agents", ".claude", "constitution", "harness", ".github"]
+UPGRADE_TREES = [".agents", ".claude", "constitution", "harness"]
 UPGRADE_FILES = ["forge", "CLAUDE.md", "WORKFLOW.md"]
 # Project-owned: never touched — listed here as the explicit contract.
+# .github/workflows/ is project-owned EXCEPT the harness's own COPY_WORKFLOWS,
+# which are refreshed file-by-file below — the rest of the tree (deployment,
+# release, etc.) is left exactly as the project has it.
 PROJECT_OWNED = [
     "harness.yaml", "AGENTS.md", ".factory/", "plans/", "prototype/",
     "docs/product/", "docs/decisions/", "docs/architecture/", "docs/context/",
+    ".github/ (except the harness factory workflows)",
 ]
 # Preserved across the .agents replacement (project evolution state).
 PRESERVE_IN_AGENTS = [".agents/skills/proposed"]
@@ -62,6 +66,14 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
         if dst.exists():
             shutil.rmtree(dst)
         shutil.copytree(src, dst)
+    # .github/workflows/ is mixed ownership: refresh only the harness's own
+    # factory workflows, file-by-file, so the project's other workflows survive.
+    for rel in COPY_WORKFLOWS:
+        src = harness / rel
+        if src.exists():
+            dst = target / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
     (target / ".codex").mkdir(exist_ok=True)
     for name in COPY_CODEX:
         shutil.copy2(harness / ".codex" / name, target / ".codex" / name)
@@ -123,7 +135,8 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
         drift = ("\nNOTE: harness.yaml differs from the harness default (project-owned, "
                  "left untouched) — diff manually if the phase contract changed upstream.")
     print(f"Upgraded {target} to symphony-forge @ {commit[:8]}")
-    print("Replaced (harness-owned): " + ", ".join(UPGRADE_TREES + UPGRADE_FILES) + ", doc contracts")
+    print("Replaced (harness-owned): "
+          + ", ".join(UPGRADE_TREES + UPGRADE_FILES + COPY_WORKFLOWS) + ", doc contracts")
     if ensured:
         print("Added (missing on this older scaffold): " + ", ".join(ensured))
     print("Untouched (project-owned): " + ", ".join(PROJECT_OWNED) + drift)

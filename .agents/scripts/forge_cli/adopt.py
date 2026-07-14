@@ -19,7 +19,13 @@ from pathlib import Path
 from factory_lib import dump_json, head_sha, now_iso, repo_root
 
 from .common import fail
-from .scaffold import COPY_CODEX, DISCOVERY_TEMPLATE, DOC_CONTRACTS, PROTOTYPE_README
+from .scaffold import (
+    COPY_CODEX,
+    COPY_WORKFLOWS,
+    DISCOVERY_TEMPLATE,
+    DOC_CONTRACTS,
+    PROTOTYPE_README,
+)
 from .upgrade import UPGRADE_TREES
 
 # Harness-owned files: replaced outright (visible in the diff).
@@ -66,9 +72,13 @@ def cmd_adopt(args: argparse.Namespace) -> None:
                 vendor_file(path, target / path.relative_to(harness))
 
     # Machinery trees are MERGED per file, not replaced wholesale — an existing
-    # repo's own .github/workflows/ or .claude/skills/ must survive.
+    # repo's own .claude/skills/ must survive.
     for tree in UPGRADE_TREES:
         vendor_tree(tree)
+    # .github is not a machinery tree (mixed ownership): vendor only the harness
+    # factory workflows, so the repo's own workflows (CI, deployment) survive.
+    for rel in COPY_WORKFLOWS:
+        vendor_file(harness / rel, target / rel)
     for rel in COPY_CODEX:
         vendor_file(harness / ".codex" / rel, target / ".codex" / rel)
     for sub in ("agents", "skills"):

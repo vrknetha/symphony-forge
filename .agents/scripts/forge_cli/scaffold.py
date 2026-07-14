@@ -10,7 +10,15 @@ from factory_lib import dump_json, now_iso, repo_root
 
 from .common import fail
 
-COPY_TREES = [".agents", ".claude", "constitution", "harness", ".github"]
+COPY_TREES = [".agents", ".claude", "constitution", "harness"]
+# .github/workflows/ is MIXED ownership: only these generic factory workflows
+# are harness-owned and vendored. A client repo's own workflows (deployment,
+# release, etc.) are project-owned — copied file-by-file so we never clobber or
+# leak them (init) and never delete them (upgrade rmtree'd the whole tree).
+COPY_WORKFLOWS = [
+    ".github/workflows/factory-scaffold.yml",
+    ".github/workflows/gardener.yml",
+]
 COPY_CODEX = ["config.toml", "hooks.json"]  # + agents/ and skills/ dirs
 COPY_FILES = ["harness.yaml", ".gitignore", ".gitattributes", ".envrc",
               "WORKFLOW.md", "CLAUDE.md", "forge"]
@@ -74,6 +82,12 @@ def cmd_init(args: argparse.Namespace) -> None:
         src = root / tree
         if src.exists():
             shutil.copytree(src, target / tree, dirs_exist_ok=True)
+    for rel in COPY_WORKFLOWS:
+        src = root / rel
+        if src.exists():
+            dst = target / rel
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
     (target / ".codex").mkdir(exist_ok=True)
     for name in COPY_CODEX:
         shutil.copy2(root / ".codex" / name, target / ".codex" / name)

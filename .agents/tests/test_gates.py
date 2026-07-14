@@ -470,6 +470,27 @@ def test_upgrade_replaces_machinery_preserves_project(repo, tmp_path):
         "symphony-forge @" in (repo / "constitution" / "VENDORED_FROM").read_text()
 
 
+def test_upgrade_refreshes_factory_workflows_and_keeps_project_ones(repo):
+    # .github/workflows/ is mixed ownership: upgrade must refresh the harness
+    # factory workflows without deleting the project's own (deployment/release).
+    wf = repo / ".github" / "workflows"
+    (wf / "deploy.yml").write_text("name: deploy to prod\n")
+    (wf / "factory-scaffold.yml").write_text("name: stale factory\n")  # drift
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "project deploy workflow + drifted factory workflow")
+    proc = subprocess.run(
+        [sys.executable, str(HARNESS / ".agents" / "scripts" / "forge.py"),
+         "upgrade", "--target", str(repo)],
+        cwd=HARNESS, capture_output=True, text=True,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    # project-owned workflow survives (previously rmtree'd with the whole .github)
+    assert (wf / "deploy.yml").read_text() == "name: deploy to prod\n"
+    # harness factory workflow refreshed from the harness (drift overwritten)
+    assert (wf / "factory-scaffold.yml").read_text() == \
+        (HARNESS / ".github" / "workflows" / "factory-scaffold.yml").read_text()
+
+
 def test_upgrade_refuses_dirty_target(repo):
     (repo / "dirty.txt").write_text("uncommitted\n")
     proc = subprocess.run(
@@ -730,6 +751,8 @@ def test_adopt_vendors_harness_and_preserves_project(tmp_path):
     assert (repo / "src" / "app.js").read_text() == "console.log('prototype')\n"
     assert (repo / "README.md").read_text() == "# Legacy prototype\n"
     assert (repo / ".github" / "workflows" / "their-ci.yml").exists()
+    # harness factory workflow delivered alongside the preserved project one
+    assert (repo / ".github" / "workflows" / "factory-scaffold.yml").exists()
     # old CLAUDE.md preserved for harvest; shim installed
     kept = repo / "docs" / "context" / "migrated-CLAUDE.md"
     assert kept.exists() and "tabs" in kept.read_text()
@@ -756,6 +779,14 @@ def test_adopt_refuses_dirty_tree(tmp_path):
 
 
 # ------------------------------------------------------- project-local gstack
+
+def test_scaffold_delivers_factory_workflows(repo):
+    # forge init vendors the harness factory workflows (by allowlist, not by
+    # copying the whole .github tree).
+    wf = repo / ".github" / "workflows"
+    assert (wf / "factory-scaffold.yml").exists()
+    assert (wf / "gardener.yml").exists()
+
 
 def test_scaffold_pins_gstack_into_the_repo(repo):
     envrc = repo / ".envrc"
