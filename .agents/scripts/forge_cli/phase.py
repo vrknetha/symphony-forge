@@ -123,6 +123,12 @@ def cmd_next(args: argparse.Namespace) -> None:
                          "record_test_from_json.py --kind functional --input <json>")
         else:
             phase("ready for PR gate")
+            from .assumptions import blocking_for_issue
+            unguided = blocking_for_issue(base, state.get("issue_key", ""))
+            if unguided:
+                steps.append(f"[EM] Guide {len(unguided)} open assumption(s) first "
+                             "(pr_ready refuses them): forge.py assumptions list --open, "
+                             "then assumptions resolve <id> --status ... --notes ...")
             steps.append("[dev] Run: python3 .agents/scripts/pr_ready.py (archives the task; merge stays manual)")
             steps.append("[EM] Next task afterwards: pick from ./forge roadmap list --pending, "
                          "then intake.py --issue <KEY> --title \"<title>\"")

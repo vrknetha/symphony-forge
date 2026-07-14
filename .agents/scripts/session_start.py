@@ -41,6 +41,13 @@ if pending:
     context.append(
         f"Unharvested context: {pending} file(s) in docs/context/ — harvest before planning."
     )
+from forge_cli.assumptions import open_count  # noqa: E402
+assumptions_open = open_count(root)
+if assumptions_open:
+    context.append(
+        f"Assumptions awaiting orchestrator guidance: {assumptions_open} "
+        "(plans/assumptions.md — `forge.py assumptions list --open`)."
+    )
 proposed = len(list((root / ".agents" / "skills" / "proposed").glob("*.md")))
 if proposed:
     context.append(

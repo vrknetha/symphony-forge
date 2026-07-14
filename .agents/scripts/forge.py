@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 
 from forge_cli import adopt as adopt_mod
+from forge_cli import assumptions as assumptions_mod
 from forge_cli import context as ctx
 from forge_cli import gstack as gstack_mod
 from forge_cli import decisions, doctor, phase, plans, roadmap, scaffold, team, upgrade
@@ -123,6 +124,19 @@ def main() -> None:
     p_mark.add_argument("--notes")
     p_mark.add_argument("--repo")
     p_mark.set_defaults(func=ctx.cmd_mark)
+
+    p_as = sub.add_parser("assumptions", help="the implementation assumptions ledger (plans/assumptions.md)")
+    as_sub = p_as.add_subparsers(dest="assumptions_command", required=True)
+    p_al = as_sub.add_parser("list", help="show the ledger")
+    p_al.add_argument("--open", action="store_true", help="only open/fix-needed rows")
+    p_al.add_argument("--repo")
+    p_al.set_defaults(func=assumptions_mod.cmd_list)
+    p_ar = as_sub.add_parser("resolve", help="orchestrator guidance on an assumption")
+    p_ar.add_argument("id", help="ledger id, e.g. A-0003")
+    p_ar.add_argument("--status", required=True, help="confirmed | fix-needed | promoted")
+    p_ar.add_argument("--notes", required=True, help="the guidance itself")
+    p_ar.add_argument("--repo")
+    p_ar.set_defaults(func=assumptions_mod.cmd_resolve)
 
     p_gs = sub.add_parser("gstack", help="project-local gstack store operations")
     gs_sub = p_gs.add_subparsers(dest="gstack_command", required=True)

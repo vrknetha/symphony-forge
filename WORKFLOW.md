@@ -151,10 +151,15 @@ plan is in-repo — `forge.py plan save --from <plan-file>` writes
 
 During implementation, any call the plan does not cover is recorded the moment
 it is made — `forge.py plan assume "<one sentence>"` appends it, dated, under
-`## Implementation Assumptions` on the active plan. The dev reviews the
-section before merge and promotes durable assumptions to `docs/decisions/`;
-`pr_ready.py` archives it with the plan. An assumption that would change
-scope or acceptance criteria is a report back to the dev, not an assumption.
+`## Implementation Assumptions` on the active plan AND as a structured row in
+`plans/assumptions.md` (id, date, issue, assumption, status, guidance). The
+ledger is the orchestrator's console: it reviews `open` rows and guides each
+one — `forge.py assumptions resolve <id> --status confirmed|fix-needed|promoted
+--notes "..."`. `pr_ready.py` refuses to ship a task with unguided
+(`open`/`fix-needed`) rows; the session-start hook and `forge next` surface
+the open count. Promoted assumptions become `docs/decisions/` records. An
+assumption that would change scope or acceptance criteria is a report back
+to the dev, not an assumption.
 
 ## Artifacts
 Required run artifacts:

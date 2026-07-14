@@ -1,5 +1,8 @@
-model = "gpt-5.5"
-model_reasoning_effort = "medium"
+# Implementation default (what /codex:rescue runs): the fast GPT-5.6 tier at
+# deep effort — bounded tasks with approved plans are exactly Luna's shape,
+# xhigh buys the reasoning back. Agents under .codex/agents/ override per-role.
+model = "gpt-5.6-luna"
+model_reasoning_effort = "xhigh"
 plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
 sandbox_mode = "danger-full-access"

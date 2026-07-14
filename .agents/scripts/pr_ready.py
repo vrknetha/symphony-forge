@@ -16,6 +16,7 @@ from factory_lib import (
     tests_state_path,
     verify_state_path,
 )
+from forge_cli.assumptions import blocking_for_issue
 from forge_cli.roadmap import mark_status
 
 # Commits touching only these paths after evidence was recorded do not
@@ -83,6 +84,16 @@ for aspect in ("quality", "performance", "security"):
         missing.append(str(path.relative_to(root)))
     elif data.get("score", 0) < 8 or blockers:
         missing.append(f"{aspect} review must be >= 8 with no blockers")
+
+# Assumptions are guided before shipping: the orchestrator confirms, demands
+# a fix, or promotes each one — an unguided assumption is an unreviewed call.
+unguided = blocking_for_issue(root, issue_key) if issue_key else []
+if unguided:
+    ids = ", ".join(f"{r['id']} ({r['status']})" for r in unguided)
+    missing.append(
+        f"orchestrator guidance on {len(unguided)} assumption(s): {ids} — "
+        "resolve via `forge.py assumptions resolve <id> --status confirmed|promoted --notes ...`"
+    )
 
 # Provenance: every evidence artifact carries the commit it was recorded at;
 # all must agree, and no code may have changed since (evidence-only commits ok).

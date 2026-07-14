@@ -1057,3 +1057,44 @@ def test_linter_catches_unpinned_required_skill(repo):
     schema.write_text(json.dumps(data))
     code, out = run(repo, "check_dual_runtime.py", str(repo))
     assert code != 0 and "rogue-design-skill" in out
+
+
+# ------------------------------------------------------- assumptions ledger
+
+def test_assumptions_ledger_gates_pr_ready(repo, tmp_path):
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    code, out = run(repo, "forge.py", "plan", "assume", "IDs are UUIDv7")
+    assert code == 0 and "A-0001" in out, out
+    ledger = (repo / "plans" / "assumptions.md").read_text()
+    assert "| A-0001 |" in ledger and "| open |" in ledger and "ENG-1" in ledger
+    # drive to the gate: refused while the assumption is unguided
+    run(repo, "record_decomposition_from_json.py", stdin=json.dumps(DECOMP))
+    write_passing_artifacts(repo)
+    run(repo, "update_run.py", "--decomposition-status", "recorded")
+    code, out = run(repo, "pr_ready.py")
+    assert code != 0 and "A-0001" in out and "guidance" in out
+    # guidance validations: notes mandatory, status constrained
+    code, out = run(repo, "forge.py", "assumptions", "resolve", "A-0001",
+                    "--status", "confirmed", "--notes", "")
+    assert code != 0 and "notes" in out
+    code, out = run(repo, "forge.py", "assumptions", "resolve", "A-0001",
+                    "--status", "maybe", "--notes", "x")
+    assert code != 0 and "status" in out
+    # fix-needed still blocks the gate (guidance given, fix not done)
+    code, out = run(repo, "forge.py", "assumptions", "resolve", "A-0001",
+                    "--status", "fix-needed", "--notes", "use UUIDv4, v7 lib unvetted")
+    assert code == 0, out
+    code, out = run(repo, "pr_ready.py")
+    assert code != 0 and "A-0001" in out
+    # confirmed clears it
+    code, out = run(repo, "forge.py", "assumptions", "resolve", "A-0001",
+                    "--status", "confirmed", "--notes", "switched to UUIDv4; verified")
+    assert code == 0, out
+    code, out = run(repo, "pr_ready.py")
+    assert code == 0, out
+    # list --open is the orchestrator's console
+    run(repo, "forge.py", "plan", "assume", "second call")  # plan archived -> refused
+    code, out = run(repo, "forge.py", "assumptions", "list", "--open")
+    assert code == 0 and "A-0001" not in out

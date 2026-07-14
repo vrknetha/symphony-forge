@@ -58,7 +58,8 @@ or route:
 | record the decomposition | `python3 .agents/scripts/record_decomposition_from_json.py --input <json>`, then `update_run.py --phase implementing --decomposition-status recorded` |
 | record a decision | `./forge decision new <slug>` — draft only |
 | human confirms a decision | THE HUMAN runs `./forge decision accept <slug> --by "Name"` — never you; relay the command and wait |
-| made an assumption while implementing | `python3 .agents/scripts/forge.py plan assume "<one sentence>"` — dated, on the active plan, dev reviews before merge |
+| made an assumption while implementing | `python3 .agents/scripts/forge.py plan assume "<one sentence>"` — lands on the active plan AND as an open row in plans/assumptions.md |
+| review / guide the assumptions (orchestrator) | `./forge assumptions list --open`, then `./forge assumptions resolve <id> --status confirmed\|fix-needed\|promoted --notes "..."` — pr_ready refuses unguided rows |
 | record the test results | `python3 .agents/scripts/record_test_from_json.py --kind automated\|functional --input <json>` |
 | run verify / does it build | `python3 .agents/scripts/verify.py` (never bypass with ad hoc commands) |
 | record the review | `python3 .agents/scripts/record_review_from_json.py --aspect quality\|performance\|security --input <json>` |

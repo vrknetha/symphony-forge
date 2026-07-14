@@ -81,5 +81,10 @@ def cmd_assume(args: argparse.Namespace) -> None:
             + entry
         )
     plan.write_text(text)
-    print(f"Assumption recorded in {plan.relative_to(base)}")
-    print("Dev reviews these before merge; promote durable ones: forge.py decision new <slug>")
+    from .assumptions import append_row
+    entry_id = append_row(base, issue, args.text)
+    print(f"Assumption recorded in {plan.relative_to(base)} and ledgered as {entry_id} "
+          "(plans/assumptions.md)")
+    print("The orchestrator guides it: forge.py assumptions resolve "
+          f"{entry_id} --status confirmed|fix-needed|promoted --notes \"...\" — "
+          "pr_ready refuses while it is open.")

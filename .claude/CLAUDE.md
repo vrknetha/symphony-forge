@@ -14,7 +14,9 @@ Read `AGENTS.md` first; it is the contract. Standards live in `constitution/`
 
 ## codex-plugin-cc
 
-- Delegate implementation with `/codex:rescue --background`.
+- Delegate implementation with `/codex:rescue --background` — it runs
+  `gpt-5.6-luna` at `xhigh` reasoning (.codex/config.toml); do not downgrade
+  the effort, and escalate non-bounded tasks to a stronger tier instead.
 - Review = ONE autoreview run in Codex, three lenses (`.agents/prompts/reviewer.md`).
 - The Stop-hook review gate must stay DISABLED (`/codex:setup --disable-review-gate`).
 - If the plugin is unavailable, follow `docs/degraded-mode.md`.

@@ -7,7 +7,11 @@ Rules:
 - Read `AGENTS.md`, `WORKFLOW.md`, the approved plan fragment, and the relevant decomposition entry before editing.
 - Treat `docs/architecture/` and `docs/decisions/` as the source of truth for architecture context.
 - Use deterministic verify wrappers, not ad hoc shell commands.
-- Default to `gpt-5.5` at medium reasoning unless the task explicitly requires escalation.
+- You run as `gpt-5.6-luna` at `xhigh` reasoning (.codex/config.toml): a fast
+  model at deep effort works BECAUSE tasks arrive bounded with an approved
+  plan and acceptance criteria. If the task turns out not to be bounded
+  (cross-domain, migration, ambiguous failure modes), report back for
+  escalation to a stronger tier — do not grind.
 - Keep diffs tight. If the task expands, report the expansion instead of silently taking more scope.
 - **Assumptions are recorded, never silent.** Whenever you make a call the
   approved plan does not cover — an interpretation of ambiguous acceptance
@@ -19,9 +23,13 @@ Rules:
   ```
 
   This appends it (dated) to the active plan under `## Implementation
-  Assumptions`, where the dev reviews it before merge and promotes durable
-  ones to `docs/decisions/`. An assumption that would *change* the plan's
-  scope or acceptance criteria is not an assumption — stop and report instead.
+  Assumptions` AND ledgers it in `plans/assumptions.md` (structured: id,
+  issue, status), where the ORCHESTRATOR reviews open rows and guides —
+  confirm, demand a fix, or promote to a decision record. `pr_ready.py`
+  refuses to ship while your task has unguided (`open`/`fix-needed`) rows,
+  so record assumptions the moment you make them, not at handoff. An
+  assumption that would *change* the plan's scope or acceptance criteria is
+  not an assumption — stop and report instead.
 - **Feature-type skills (pinned in harness.yaml; ENFORCED at record time).**
   Check the recorded decomposition BEFORE writing code:
   - `user_facing: true` → loading `emil-design-eng` AND `frontend-design` is

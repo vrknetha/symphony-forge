@@ -65,12 +65,13 @@ Use strong reasoning selectively.
   - model: `gpt-5.5`
   - reasoning: `high`
 - implementation default
-  - model: `gpt-5.5`
-  - reasoning: `medium`
+  - model: `gpt-5.6-luna`
+  - reasoning: `xhigh`
+  - rationale: bounded tasks with approved plans are the fast tier's shape;
+    deep effort on a cheap model beats medium effort on an expensive one here
 - implementation escalation cases
-  - model: `gpt-5.5`
-  - reasoning: `high`
-  - use only for migrations, cross-domain refactors, concurrency, security-sensitive work, or ambiguous failure modes
+  - model: a stronger GPT-5.6 tier (Terra/Sol)
+  - use only for migrations, cross-domain refactors, concurrency, security-sensitive work, or ambiguous failure modes — the implementer reports back rather than grinding
 - review (autoreview run)
   - model: `gpt-5.5`
   - reasoning: `high`

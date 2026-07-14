@@ -31,6 +31,7 @@ Owns the backlog shape and distribution: epics → stories → devs.
 | Distribute | `./forge roadmap assign <KEY> --to <dev>` — validated against the roster; match item `skill` to dev skills (a fullstack dev can take anything; specialists take their lane). Assignments survive re-imports |
 | Watch the board | `./forge roadmap list` (grouped by epic, shows @assignee) — `forge next` flags unassigned pending items to you |
 | Plan quality | a dev's plan approval (`forge plan save`) is your review point — the plan must satisfy the story's acceptance criteria |
+| Guide implementation assumptions | `./forge assumptions list --open` → `resolve <id> --status confirmed\|fix-needed\|promoted --notes "..."` — every call the plan didn't cover lands in `plans/assumptions.md`, and `pr_ready` refuses to ship a task with unguided rows |
 
 ## dev — developer
 
