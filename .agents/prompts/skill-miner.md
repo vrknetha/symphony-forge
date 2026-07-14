@@ -19,6 +19,21 @@ A pattern qualifies when it recurred **3+ times** across different tasks:
 the same class of agent mistake corrected by a dev, the same review blocker,
 the same missing convention, the same question answered repeatedly.
 
+## Check the rejection ledger FIRST
+
+Read `.agents/skills/rejected/` before proposing anything. A pattern
+substantially similar to a rejected proposal is re-proposed ONLY when its
+occurrence count has grown materially since the rejection — and the new
+proposal must cite the prior rejection and say what changed. Re-mining the
+same rejection every retro is noise, and noise is how curation dies.
+
+## Measure the promoted ones
+
+For each previously PROMOTED proposal (see `.factory/evolution.json`), check
+whether its pattern actually stopped recurring after promotion. A promoted
+skill whose corrections continue unchanged is a failed experiment — propose
+its retirement (kind: convention-change) with the before/after evidence.
+
 ## What to produce (NEVER activate anything yourself)
 
 Write each proposal to `.agents/skills/proposed/<slug>.md` with:
@@ -47,8 +62,10 @@ Routing by kind:
 Then update `.factory/evolution.json` (`last_mine`, `proposals` list) and
 STOP. A human reviews `.agents/skills/proposed/` and promotes: skills move to
 `.claude/skills/<name>/SKILL.md` (Claude) or get an AGENTS.md line (both
-runtimes); rejected proposals get `status: rejected` with a reason, kept as
-the record of what was considered.
+runtimes). Rejected proposals are MOVED to `.agents/skills/rejected/` with
+`status: rejected`, `rejected_by: <human>`, and a reason appended — the
+rejection ledger is what stops the miner from proposing them again, so a
+deleted rejection is a future re-proposal.
 
 ## Rules
 

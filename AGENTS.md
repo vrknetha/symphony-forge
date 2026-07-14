@@ -23,7 +23,7 @@ It provides:
 5. `constitution/README.md`
 6. `docs/product/BRIEF.md`
 7. `docs/architecture/`
-8. `docs/decisions/`
+8. active decisions — `./forge decision list --active`, not raw `docs/decisions/`
 9. the active plan and decomposition artifacts under `.factory/`
 
 ## Runtime Modes

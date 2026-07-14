@@ -55,6 +55,40 @@ refuses while anything is pending. Broader doc freshness
 follows `harness/nestjs-react/conventions/doc-gardening.md` (gardening agent —
 convention today, not yet automated).
 
+## Repo Hygiene — garbage cannot become contract
+
+Devs will throw everything at the repo (gstack exhaust, old prototypes, raw
+text). The doors check what enters; these mechanisms manage what accumulates:
+
+- **Inbox guards**: `context scan` REFUSES files over 5MB and files with
+  secret-shaped content (keys, tokens, credentials) — refused files stay
+  unscanned, so the plan gate keeps blocking until they're fixed. The inbox
+  itself is append-only by design (raw record); agents work from
+  `context list --pending`, never by listing the directory.
+- **Decision lifecycle**: statuses are `proposed | accepted | superseded` —
+  never deleted, never hand-flagged. Replacing a decision goes through
+  `forge.py decision new <slug> --supersedes <old-slug>`, which cross-links
+  both records; the linter enforces both pointers resolve, that superseded
+  records name their successor, and that ACCEPTED records have real
+  Context/Decision/Consequences substance (boilerplate is refused). Agents
+  read the live corpus via `forge.py decision list --active`; the retro
+  (skill-miner) sweeps active decisions for mutual contradictions and
+  proposes supersessions.
+- **Prototype isolation**: the linter fails any production code importing
+  from `prototype/` — reference forever, imported never is enforced, not
+  hoped.
+- **gstack noise**: derived caches (`brain-cache/`), per-session churn
+  (`timeline.jsonl`), and slug caches are gitignored and excluded from
+  `gstack migrate`; only design docs, decisions, and learnings are record.
+- **Budget watchdog**: CI runs `check_repo_budget.py` — any tracked file
+  over 5MB fails, and `docs/context/`, `.gstack/`, `prototype/` have
+  cumulative budgets with early warnings. The budget is the backstop for
+  the categories nobody predicted.
+- **Ledger compaction**: `forge.py assumptions archive` moves resolved rows
+  from finished tasks to `plans/assumptions-archive.md` at milestones;
+  rejected skill proposals move to `.agents/skills/rejected/` (the miner's
+  memory — it must not re-propose them without materially new evidence).
+
 ## Evolution Loop
 
 Dev corrections are the harness's training data. At retro cadence, an agent

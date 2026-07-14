@@ -29,7 +29,7 @@ PROJECT_OWNED = [
     ".github/ (except the harness factory workflows)",
 ]
 # Preserved across the .agents replacement (project evolution state).
-PRESERVE_IN_AGENTS = [".agents/skills/proposed"]
+PRESERVE_IN_AGENTS = [".agents/skills/proposed", ".agents/skills/rejected"]
 
 
 def cmd_upgrade(args: argparse.Namespace) -> None:
@@ -122,7 +122,8 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
         with gitignore.open("a") as fh:
             fh.write("\n# Project-local gstack store: projects/ committed, machine noise not\n"
                      ".gstack/sessions/\n.gstack/analytics/\n.gstack/cdp-profile/\n"
-                     ".gstack/tmp/\n.gstack/.*\n")
+                     ".gstack/tmp/\n.gstack/.*\n.gstack/**/brain-cache/\n"
+                     ".gstack/**/timeline.jsonl\n.gstack/slug-cache/\n")
         ensured.append(".gitignore (gstack entries appended)")
 
     commit = head_sha(harness) or "unknown"

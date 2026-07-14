@@ -26,6 +26,9 @@ from .common import fail
 
 MIGRATE_SUFFIXES = {".md", ".markdown", ".json", ".jsonl", ".txt"}
 MIGRATE_MAX_BYTES = 2_000_000
+# Derived caches and per-session churn are noise, not record — never migrate.
+MIGRATE_SKIP_DIRS = {"brain-cache", "tmp", "sessions", "analytics"}
+MIGRATE_SKIP_NAMES = {"timeline.jsonl"}
 
 
 def slug_candidates(base: Path) -> list[str]:
@@ -98,6 +101,10 @@ def cmd_migrate(args: argparse.Namespace) -> None:
         dest_root = repo_store / src.name
         for path in sorted(src.rglob("*")):
             if not path.is_file() or path.name.startswith("."):
+                continue
+            rel_parts = set(path.relative_to(src).parts[:-1])
+            if rel_parts & MIGRATE_SKIP_DIRS or path.name in MIGRATE_SKIP_NAMES:
+                skipped += 1
                 continue
             if path.suffix.lower() not in MIGRATE_SUFFIXES \
                     or path.stat().st_size > MIGRATE_MAX_BYTES:

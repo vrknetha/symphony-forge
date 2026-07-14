@@ -141,8 +141,20 @@ def check_canon_markers(root: Path) -> None:
 FRONTMATTER = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
 
 
+DECISION_STATUSES = {"proposed", "accepted", "superseded"}
+
+
+def _section_has_substance(text: str, heading: str) -> bool:
+    match = re.search(rf"^## {heading}\n(.*?)(?=^## |\Z)", text, re.MULTILINE | re.DOTALL)
+    if not match:
+        return False
+    body = re.sub(r"<!--.*?-->", "", match.group(1), flags=re.DOTALL).strip()
+    return len(body) >= 20
+
+
 def check_decision_records(root: Path) -> None:
     decisions = sorted((root / "docs" / "decisions").glob("[0-9][0-9][0-9][0-9]-*.md"))
+    stems = {record.stem for record in decisions}
     seen: dict[int, Path] = {}
     for record in decisions:
         number = int(record.name[:4])
@@ -165,6 +177,36 @@ def check_decision_records(root: Path) -> None:
             for k, _, v in (line.partition(":") for line in match.group(1).splitlines())
             if k.strip()
         )
+        status = fields.get("status", "")
+        if status not in DECISION_STATUSES:
+            violation(
+                f"{record.relative_to(root)} has status '{status}' — allowed: "
+                f"{', '.join(sorted(DECISION_STATUSES))}. Decisions are never deleted "
+                "or hand-flagged; supersede via `forge.py decision new --supersedes <slug>`."
+            )
+        # Lifecycle cross-references must resolve BOTH ways — a dangling
+        # supersede pointer is exactly how a corpus rots into contradiction.
+        for field in ("supersedes", "superseded_by"):
+            target = fields.get(field)
+            if target and target not in stems:
+                violation(
+                    f"{record.relative_to(root)}: {field}: {target} does not exist "
+                    "in docs/decisions/."
+                )
+        if status == "superseded" and not fields.get("superseded_by"):
+            violation(
+                f"{record.relative_to(root)} is superseded but names no superseded_by — "
+                "history must point at the decision that replaced it."
+            )
+        text = record.read_text(errors="replace")
+        if status == "accepted":
+            for heading in ("Context", "Decision", "Consequences"):
+                if not _section_has_substance(text, heading):
+                    violation(
+                        f"{record.relative_to(root)} is accepted but its '{heading}' section "
+                        "is empty or template boilerplate. An accepted decision with no "
+                        "substance is unreviewable — write it before accepting."
+                    )
         if fields.get("status") == "accepted":
             if not fields.get("confirmed_by"):
                 violation(
@@ -339,6 +381,37 @@ def check_thin_adapter(root: Path) -> None:
                 )
 
 
+CODE_SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".vue", ".svelte"}
+PROTOTYPE_IMPORT = re.compile(
+    r"""(?:from|import|require)\s*\(?\s*['"][^'"]*(?:^|/)?prototype/""",
+)
+
+
+def check_prototype_isolation(root: Path) -> None:
+    """prototype/ is 'reference forever, imported never' — enforce the never.
+
+    Any import/require path reaching into prototype/ from production code
+    turns the preserved reference into a load-bearing dependency."""
+    proc = subprocess.run(["git", "ls-files"], cwd=root, capture_output=True, text=True)
+    if proc.returncode != 0:
+        return
+    for rel in proc.stdout.splitlines():
+        if rel.startswith(("prototype/", ".agents/", ".claude/", ".codex/")):
+            continue
+        if Path(rel).suffix not in CODE_SUFFIXES:
+            continue
+        path = root / rel
+        if not path.is_file():
+            continue
+        for lineno, line in enumerate(path.read_text(errors="replace").splitlines(), 1):
+            if PROTOTYPE_IMPORT.search(line):
+                violation(
+                    f"{rel}:{lineno} imports from prototype/ — the prototype is a "
+                    "preserved reference, never a dependency. Reimplement the piece "
+                    "in production code."
+                )
+
+
 def check_schemas(root: Path) -> None:
     """Schemas and the harness.yaml allowlist must not silently diverge:
     every pinned generator in .agents/schemas/*.json must appear in
@@ -391,6 +464,7 @@ def main() -> int:
     check_path_parity(root)
     check_thin_adapter(root)
     check_schemas(root)
+    check_prototype_isolation(root)
     for warning in warnings:
         print(warning)
     if violations:

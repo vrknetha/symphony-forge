@@ -15,7 +15,7 @@ import datetime
 import re
 from pathlib import Path
 
-from factory_lib import repo_root
+from factory_lib import load_json, repo_root, run_state_path
 
 from .common import fail
 
@@ -98,6 +98,34 @@ def cmd_list(args: argparse.Namespace) -> None:
             continue
         guidance = f" — {r['guidance']}" if r["guidance"] else ""
         print(f"[{r['status']:<10}] {r['id']} {r['issue']}: {r['assumption']}{guidance}")
+
+
+def cmd_archive(args: argparse.Namespace) -> None:
+    """Milestone compaction: resolved rows from finished tasks move to
+    plans/assumptions-archive.md, keeping the working ledger scannable.
+    Open/fix-needed rows and the active task's rows never move."""
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    active_issue = load_json(run_state_path(base), default={}).get("issue_key", "")
+    rows = load_rows(base)
+    keep = [r for r in rows if r["status"] in BLOCKING or r["issue"] == active_issue]
+    moved = [r for r in rows if r not in keep]
+    if not moved:
+        print("Nothing to archive — all rows are open or belong to the active task.")
+        return
+    archive = ledger_path(base).with_name("assumptions-archive.md")
+    if not archive.exists():
+        archive.write_text(
+            "# Assumptions Archive\n\nResolved rows compacted from "
+            "plans/assumptions.md at milestones (`forge assumptions archive`).\n\n"
+            "| id | date | issue | assumption | status | guidance |\n"
+            "|----|------|-------|------------|--------|----------|\n"
+        )
+    with archive.open("a") as fh:
+        for r in moved:
+            fh.write(f"| {r['id']} | {r['date']} | {r['issue']} | {r['assumption']} "
+                     f"| {r['status']} | {r['guidance']} |\n")
+    save_rows(base, keep)
+    print(f"Archived {len(moved)} resolved assumption(s) -> {archive.relative_to(base)}")
 
 
 def cmd_resolve(args: argparse.Namespace) -> None:

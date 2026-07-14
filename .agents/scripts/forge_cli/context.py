@@ -2,11 +2,41 @@
 from __future__ import annotations
 
 import argparse
+import re
 from pathlib import Path
 
 from factory_lib import dump_json, load_json, now_iso, repo_root
 
 from .common import fail
+
+# Inbox guards: dumping is free, but the inbox must not become a liability.
+# Files over the cap or containing secret-shaped content are REFUSED at scan
+# time (they stay unscanned, so the plan gate keeps blocking until fixed).
+MAX_CONTEXT_BYTES = 5_000_000
+SECRET_PATTERNS = [
+    (re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA |PGP )?PRIVATE KEY-----"), "private key block"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "AWS access key id"),
+    (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{30,}\b"), "GitHub token"),
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{20,}\b"), "API secret key"),
+    (re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}\b"), "Slack token"),
+    (re.compile(r"(?i)\b(?:password|passwd|secret|api[_-]?key|token)\s*[:=]\s*['\"][^'\"\s]{8,}['\"]"),
+     "hardcoded credential"),
+    (re.compile(r"\beyJ[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\b"), "JWT"),
+]
+
+
+def secret_findings(path: Path) -> list[str]:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except (UnicodeDecodeError, OSError):
+        return []  # binary: size cap still applies; secret scan is text-only
+    findings = []
+    for lineno, line in enumerate(text.splitlines(), 1):
+        for pattern, label in SECRET_PATTERNS:
+            if pattern.search(line):
+                findings.append(f"line {lineno}: {label}")
+                break
+    return findings
 
 
 def context_paths(base: Path) -> tuple[Path, Path]:
@@ -62,9 +92,19 @@ def cmd_scan(args: argparse.Namespace) -> None:
     context_dir, ledger_path = context_paths(base)
     context_dir.mkdir(parents=True, exist_ok=True)
     ledger = load_json(ledger_path, default={"files": {}})
+    refused: list[str] = []
     drift: list[str] = []
     for f in context_files(context_dir):
         rel = f.relative_to(context_dir).as_posix()
+        if f.stat().st_size > MAX_CONTEXT_BYTES:
+            refused.append(f"{rel}: {f.stat().st_size // 1_000_000}MB exceeds the "
+                           f"{MAX_CONTEXT_BYTES // 1_000_000}MB inbox cap — summarize or split it")
+            continue
+        secrets = secret_findings(f)
+        if secrets:
+            refused.append(f"{rel}: secret-shaped content ({'; '.join(secrets[:3])}) — "
+                           "REDACT before it enters git history")
+            continue
         digest = sha256_file(f)
         entry = ledger["files"].get(rel)
         if entry is None:
@@ -80,6 +120,13 @@ def cmd_scan(args: argparse.Namespace) -> None:
     for rel in sorted(set(ledger["files"]) - on_disk):
         drift.append(f"missing (marked removed): {rel}")
         ledger["files"][rel]["status"] = "removed"
+    if refused:
+        if not args.check:
+            dump_json(ledger_path, ledger)  # register what passed; refuse the rest
+        print("REFUSED (not registered — fix, then rescan):")
+        for line in refused:
+            print(f"- {line}")
+        raise SystemExit(1)
     if args.check:
         if drift:
             print("Context ledger out of sync (run `forge.py context scan` and commit):")

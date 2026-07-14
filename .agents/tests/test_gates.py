@@ -1098,3 +1098,123 @@ def test_assumptions_ledger_gates_pr_ready(repo, tmp_path):
     run(repo, "forge.py", "plan", "assume", "second call")  # plan archived -> refused
     code, out = run(repo, "forge.py", "assumptions", "list", "--open")
     assert code == 0 and "A-0001" not in out
+
+
+# --------------------------------------------------------------- repo hygiene
+
+def test_context_scan_refuses_secrets_and_oversized_files(repo):
+    inbox = repo / "docs" / "context"
+    (inbox / "client-email.txt").write_text(
+        'From: client\npassword = "hunter2secret"\nAKIAIOSFODNN7EXAMPLE\n')
+    code, out = run(repo, "forge.py", "context", "scan")
+    assert code != 0 and "REDACT" in out and "client-email.txt" in out
+    # refused = unregistered = still blocks planning
+    code, out = run(repo, "forge.py", "context", "list", "--pending")
+    assert "client-email.txt" not in out  # not in ledger at all
+    # redacted version scans clean
+    (inbox / "client-email.txt").write_text("From: client\ncredentials redacted\n")
+    code, out = run(repo, "forge.py", "context", "scan")
+    assert code == 0, out
+    # oversized dump refused
+    (inbox / "huge-export.txt").write_text("x" * 6_000_000)
+    code, out = run(repo, "forge.py", "context", "scan")
+    assert code != 0 and "cap" in out
+
+
+def test_repo_budget_watchdog(repo):
+    code, out = run(repo, "check_repo_budget.py", str(repo))
+    assert code == 0, out
+    big = repo / "assets-dump.bin"
+    big.write_bytes(b"\0" * 6_000_000)
+    git(repo, "add", "-f", str(big))
+    code, out = run(repo, "check_repo_budget.py", str(repo))
+    assert code != 0 and "assets-dump.bin" in out
+
+
+def test_decision_supersede_lifecycle(repo):
+    def substantiate(slug):
+        record = next((repo / "docs" / "decisions").glob(f"*-{slug}.md"))
+        record.write_text(record.read_text()
+            .replace("<!-- Why this decision was needed; the forces at play. -->",
+                     "We needed to pick a queue technology for events.")
+            .replace("<!-- What was decided, in one or two sentences. -->",
+                     "Use Redis streams for the event bus.")
+            .replace("<!-- What follows: tradeoffs accepted, doors closed, work implied. -->",
+                     "No Kafka operational burden; revisit at 10k events/sec."))
+    run(repo, "forge.py", "decision", "new", "event-bus", "--repo", str(repo))
+    substantiate("event-bus")
+    run(repo, "forge.py", "decision", "accept", "event-bus", "--by", "PM")
+    code, out = run(repo, "forge.py", "decision", "new", "event-bus-v2",
+                    "--supersedes", "event-bus", "--repo", str(repo))
+    assert code == 0 and "Superseded" in out, out
+    old = next((repo / "docs" / "decisions").glob("*-event-bus.md")).read_text()
+    assert "status: superseded" in old and "superseded_by:" in old
+    substantiate("event-bus-v2")
+    run(repo, "forge.py", "decision", "accept", "event-bus-v2", "--by", "PM")
+    code, out = run(repo, "check_dual_runtime.py", str(repo))
+    assert code == 0, out
+    # the active corpus hides the superseded record
+    code, out = run(repo, "forge.py", "decision", "list", "--active")
+    assert "event-bus-v2" in out
+    assert "] 0001-event-bus:" not in out
+    # dangling lifecycle pointer is a violation
+    old_path = next((repo / "docs" / "decisions").glob("*-event-bus.md"))
+    old_path.write_text(old_path.read_text().replace(
+        "superseded_by: 0002-event-bus-v2", "superseded_by: 0099-phantom"))
+    code, out = run(repo, "check_dual_runtime.py", str(repo))
+    assert code != 0 and "0099-phantom" in out
+
+
+def test_accepted_decision_requires_substance(repo):
+    run(repo, "forge.py", "decision", "new", "empty-call", "--repo", str(repo))
+    run(repo, "forge.py", "decision", "accept", "empty-call", "--by", "PM")
+    code, out = run(repo, "check_dual_runtime.py", str(repo))
+    assert code != 0 and "substance" in out or "boilerplate" in out
+
+
+def test_prototype_import_ban(repo):
+    src = repo / "src"
+    src.mkdir(exist_ok=True)
+    (src / "app.ts").write_text('import { helper } from "../prototype/utils";\n')
+    git(repo, "add", "src/app.ts")
+    code, out = run(repo, "check_dual_runtime.py", str(repo))
+    assert code != 0 and "prototype" in out
+    (src / "app.ts").write_text('const p = Object.prototype.toString;\n')  # not a violation
+    git(repo, "add", "src/app.ts")
+    code, out = run(repo, "check_dual_runtime.py", str(repo))
+    assert code == 0, out
+
+
+def test_gstack_migrate_skips_caches_and_churn(repo, tmp_path):
+    personal = tmp_path / "home-gstack"
+    store = personal / "projects" / "app"
+    (store / "brain-cache").mkdir(parents=True)
+    (store / "brain-cache" / "salience.md").write_text("derived\n")
+    (store / "timeline.jsonl").write_text('{"event":"noise"}\n')
+    (store / "design.md").write_text("# keeper\n")
+    code, out = run(repo, "forge.py", "gstack", "migrate",
+                    "--source", str(personal), "--repo", str(repo))
+    assert code == 0, out
+    dest = repo / ".gstack" / "projects" / "app"
+    assert (dest / "design.md").exists()
+    assert not (dest / "brain-cache").exists()
+    assert not (dest / "timeline.jsonl").exists()
+
+
+def test_assumptions_archive_compacts_resolved_rows(repo, tmp_path):
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    run(repo, "forge.py", "plan", "assume", "first call")
+    run(repo, "forge.py", "assumptions", "resolve", "A-0001",
+        "--status", "confirmed", "--notes", "fine")
+    # a resolved row from a DIFFERENT (finished) task archives; active stays
+    intake(repo, "ENG-2", "Payments", "--discard-active")
+    save_plan(repo, tmp_path)
+    run(repo, "forge.py", "plan", "assume", "second call")
+    code, out = run(repo, "forge.py", "assumptions", "archive")
+    assert code == 0 and "Archived 1" in out, out
+    ledger = (repo / "plans" / "assumptions.md").read_text()
+    archive = (repo / "plans" / "assumptions-archive.md").read_text()
+    assert "A-0001" in archive and "A-0001" not in ledger
+    assert "A-0002" in ledger  # active task's row never moves

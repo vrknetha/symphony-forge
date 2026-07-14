@@ -57,6 +57,10 @@ or route:
 | plan is approved | `python3 .agents/scripts/forge.py plan save --from <plan-file>` (plan must follow `.agents/prompts/planner.md`, incl. Decisions section) |
 | record the decomposition | `python3 .agents/scripts/record_decomposition_from_json.py --input <json>`, then `update_run.py --phase implementing --decomposition-status recorded` |
 | record a decision | `./forge decision new <slug>` — draft only |
+| this decision replaces an old one | `./forge decision new <slug> --supersedes <old-slug>` — never edit/delete the old record by hand |
+| what decisions are in force | `./forge decision list --active` — the live corpus (superseded records are history) |
+| compact the assumptions ledger | `./forge assumptions archive` — resolved rows from finished tasks move to the archive |
+| is the repo getting heavy | `python3 .agents/scripts/check_repo_budget.py` (CI runs it too) |
 | human confirms a decision | THE HUMAN runs `./forge decision accept <slug> --by "Name"` — never you; relay the command and wait |
 | made an assumption while implementing | `python3 .agents/scripts/forge.py plan assume "<one sentence>"` — lands on the active plan AND as an open row in plans/assumptions.md |
 | review / guide the assumptions (orchestrator) | `./forge assumptions list --open`, then `./forge assumptions resolve <id> --status confirmed\|fix-needed\|promoted --notes "..."` — pr_ready refuses unguided rows |

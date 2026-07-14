@@ -45,9 +45,13 @@ pino-*.log
 .worktrees/
 
 # Project-local gstack store (.envrc pins GSTACK_HOME here): projects/ is
-# committed — design docs, decisions, learnings. Machine noise is not.
+# committed — design docs, decisions, learnings. Machine noise, derived
+# caches, and per-session churn logs are not.
 .gstack/sessions/
 .gstack/analytics/
 .gstack/cdp-profile/
 .gstack/tmp/
 .gstack/.*
+.gstack/**/brain-cache/
+.gstack/**/timeline.jsonl
+.gstack/slug-cache/

@@ -29,6 +29,8 @@ required = [
     root / '.agents' / 'scripts' / 'forge.py',
     root / '.agents' / 'scripts' / 'record_signoff.py',
     root / '.agents' / 'scripts' / 'check_dual_runtime.py',
+    root / '.agents' / 'scripts' / 'check_repo_budget.py',
+    root / '.agents' / 'skills' / 'rejected' / '.gitkeep',
     root / '.claude' / 'CLAUDE.md',
     root / '.claude' / 'settings.json',
     root / 'forge',

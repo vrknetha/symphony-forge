@@ -130,7 +130,8 @@ def cmd_adopt(args: argparse.Namespace) -> None:
         with (target / ".gitignore").open("a") as fh:
             fh.write("\n# Project-local gstack store: projects/ committed, machine noise not\n"
                      ".gstack/sessions/\n.gstack/analytics/\n.gstack/cdp-profile/\n"
-                     ".gstack/tmp/\n.gstack/.*\n")
+                     ".gstack/tmp/\n.gstack/.*\n.gstack/**/brain-cache/\n"
+                     ".gstack/**/timeline.jsonl\n.gstack/slug-cache/\n")
         created.append(".gitignore (gstack entries appended)")
     if not (target / ".envrc").exists():
         shutil.copy2(harness / ".envrc", target / ".envrc")

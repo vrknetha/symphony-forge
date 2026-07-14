@@ -137,6 +137,10 @@ def main() -> None:
     p_ar.add_argument("--notes", required=True, help="the guidance itself")
     p_ar.add_argument("--repo")
     p_ar.set_defaults(func=assumptions_mod.cmd_resolve)
+    p_aa = as_sub.add_parser("archive",
+                             help="compact resolved rows from finished tasks to assumptions-archive.md")
+    p_aa.add_argument("--repo")
+    p_aa.set_defaults(func=assumptions_mod.cmd_archive)
 
     p_gs = sub.add_parser("gstack", help="project-local gstack store operations")
     gs_sub = p_gs.add_subparsers(dest="gstack_command", required=True)
@@ -152,8 +156,14 @@ def main() -> None:
     p_new = dec_sub.add_parser("new", help="create the next NNNN-<slug>.md record")
     p_new.add_argument("slug")
     p_new.add_argument("--title")
+    p_new.add_argument("--supersedes",
+                       help="slug of the decision this replaces (old record is marked superseded)")
     p_new.add_argument("--repo", help="target repo (defaults to this repo)")
     p_new.set_defaults(func=decisions.cmd_new)
+    p_dl = dec_sub.add_parser("list", help="show decision records (--active: the live corpus)")
+    p_dl.add_argument("--active", action="store_true")
+    p_dl.add_argument("--repo")
+    p_dl.set_defaults(func=decisions.cmd_list)
     p_acc = dec_sub.add_parser("accept", help="mark a decision accepted with a human's name")
     p_acc.add_argument("slug")
     p_acc.add_argument("--by", required=True, help="the human confirming (not an agent)")
