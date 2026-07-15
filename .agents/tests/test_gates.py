@@ -1218,3 +1218,40 @@ def test_assumptions_archive_compacts_resolved_rows(repo, tmp_path):
     archive = (repo / "plans" / "assumptions-archive.md").read_text()
     assert "A-0001" in archive and "A-0001" not in ledger
     assert "A-0002" in ledger  # active task's row never moves
+
+
+# ------------------------------------------------------------- planning lock
+
+def hook(repo: Path, payload: dict) -> tuple[int, str]:
+    return run(repo, "pre_tool_use.py", stdin=json.dumps(payload))
+
+
+def test_planning_lock_forces_plan_mode(repo, tmp_path):
+    sign_off(repo)
+    intake(repo)  # planning phase, no approved plan
+    # product-code edit in normal mode -> denied, routed to plan mode
+    code, out = hook(repo, {"tool_name": "Edit", "permission_mode": "default",
+                            "tool_input": {"file_path": str(repo / "src" / "app.ts")}})
+    assert code == 0 and "deny" in out and "PLAN MODE" in out
+    # planning-phase writes stay open: the plan itself, decisions, docs
+    for ok_path in ("plans/draft.md", "docs/decisions/0009-x.md", ".factory/notes.json"):
+        code, out = hook(repo, {"tool_name": "Write", "permission_mode": "default",
+                                "tool_input": {"file_path": str(repo / ok_path)}})
+        assert "deny" not in out, ok_path
+    # plan mode itself is never blocked by the lock
+    code, out = hook(repo, {"tool_name": "Edit", "permission_mode": "plan",
+                            "tool_input": {"file_path": str(repo / "src" / "app.ts")}})
+    assert "deny" not in out
+    # implementation delegation blocked; read-only exploration open
+    code, out = hook(repo, {"tool_name": "Bash", "permission_mode": "default",
+                            "tool_input": {"command": "codex exec 'implement the thing'"}})
+    assert "deny" in out and "PLAN MODE" in out
+    code, out = hook(repo, {"tool_name": "Bash", "permission_mode": "default",
+                            "tool_input": {"command":
+                                           "codex exec --profile explore -s read-only 'map the module'"}})
+    assert "deny" not in out
+    # approved plan lifts the lock entirely
+    save_plan(repo, tmp_path)
+    code, out = hook(repo, {"tool_name": "Edit", "permission_mode": "default",
+                            "tool_input": {"file_path": str(repo / "src" / "app.ts")}})
+    assert "deny" not in out

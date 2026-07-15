@@ -35,6 +35,13 @@ if run_state.get("issue_key"):
         f"Decomposition status: {run_state.get('decomposition_status')}",
         f"Client sign-off: {run_state.get('client_signoff', False)}",
     ]
+    if run_state.get("client_signoff") and run_state.get("plan_status") != "approved":
+        context.append(
+            "PLANNING IS MANDATORY: enter PLAN MODE now (shift+tab) and plan per "
+            ".agents/prompts/planner.md — the PreToolUse hook blocks product-code "
+            "edits and non-read-only codex exec until the plan is saved and approved. "
+            "Codex alternative: the planner-high agent."
+        )
 ledger = load_json(root / "docs" / "context" / "ledger.json", default={"files": {}})
 pending = sum(1 for e in ledger.get("files", {}).values() if e.get("status") == "pending")
 if pending:

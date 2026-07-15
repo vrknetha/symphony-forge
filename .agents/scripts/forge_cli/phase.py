@@ -80,8 +80,10 @@ def cmd_next(args: argparse.Namespace) -> None:
                          "--issue <KEY> --title \"<title>\"")
     elif state.get("plan_status") != "approved":
         phase("planning")
-        steps.append("[dev] Plan per .agents/prompts/planner.md — Claude Code plan mode (default, "
-                     "exploration via Codex read-only) or the planner-high Codex agent")
+        steps.append("[dev] MANDATORY: switch to PLAN MODE (shift+tab) and plan per "
+                     ".agents/prompts/planner.md — product-code edits are hook-blocked "
+                     "until the plan is approved (Codex alternative: planner-high; "
+                     "exploration: codex exec --profile explore -s read-only)")
         steps.append("[dev] Record new decisions as you go: forge.py decision new <slug>")
         steps.append("[dev] On approval: forge.py plan save --from <plan-file>")
     elif state.get("decomposition_status") != "recorded":

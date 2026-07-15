@@ -24,9 +24,12 @@ Read `AGENTS.md` first; it is the contract. Standards live in `constitution/`
 
 ## Ground rules
 
-- Per-task planning defaults to plan mode HERE (contract: `.agents/prompts/planner.md`,
-  incl. the mandatory Decisions section); Codex `planner-high` is the sanctioned
-  alternative — same contract. Approval is not real until the plan is in-repo:
+- Per-task planning is MANDATORY and happens in PLAN MODE here (contract:
+  `.agents/prompts/planner.md`, incl. the mandatory Decisions section); the
+  PreToolUse hook blocks product-code edits and non-read-only codex exec
+  while the task is unplanned — do not fight it, switch to plan mode. Codex
+  `planner-high` is the sanctioned alternative — same contract. Approval is
+  not real until the plan is in-repo:
   `python3 .agents/scripts/forge.py plan save --from <plan-file>`.
 - Decisions land in `docs/decisions/` via `./forge decision new <slug>`; only a
   HUMAN runs `./forge decision accept <slug> --by "Name"`.

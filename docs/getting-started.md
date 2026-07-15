@@ -156,11 +156,14 @@ Each story lives on its own branch with its own committed `.factory/` state —
 parallel devs are parallel branches; `pr_ready.py` archives evidence before
 merge.
 
-1. **Plan** — say: **"Plan this task."** Claude Code plan mode per
-   `.agents/prompts/planner.md` — codebase exploration is delegated, never
-   done by Claude Code itself: `codex exec --profile explore -s read-only`
-   (gpt-5.6-terra @ high). `planner-high` in Codex is the sanctioned
-   alternate. New decisions get records; on approval say: **"Save the plan."**
+1. **Plan (mandatory — enforced)** — say: **"Plan this task."** and switch to
+   PLAN MODE (shift+tab). While the task is unplanned, the hook blocks
+   product-code edits and non-read-only `codex exec`, so there is no way to
+   "just start coding". Plan per `.agents/prompts/planner.md`; exploration is
+   delegated, never done by Claude Code itself:
+   `codex exec --profile explore -s read-only` (gpt-5.6-terra @ high).
+   `planner-high` in Codex is the sanctioned alternate. New decisions get
+   records; on approval say: **"Save the plan."**
 
 ```bash
 ./forge plan save --from <approved-plan-file>

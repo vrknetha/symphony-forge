@@ -20,6 +20,15 @@
             "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.agents/scripts/pre_tool_use.py\""
           }
         ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 \"$(git rev-parse --show-toplevel)/.agents/scripts/pre_tool_use.py\""
+          }
+        ]
       }
     ],
     "Stop": [
