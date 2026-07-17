@@ -1459,3 +1459,22 @@ def test_signal_events_block_ship_until_resolved(repo, tmp_path):
     # channel archived with the task, working copy cleaned
     assert (repo / ".factory" / "history" / "ENG-1" / "signals.jsonl").exists()
     assert not (repo / ".factory" / "signals.jsonl").exists()
+
+
+def test_codex_exec_ban_matches_invocations_not_prose(repo):
+    def bash(cmd):
+        return hook(repo, {"tool_name": "Bash", "permission_mode": "default",
+                           "tool_input": {"command": cmd}})
+    # invocations: denied in every position
+    for cmd in ('codex exec "build it"',
+                'FACTORY_DEGRADED=1 codex exec -s read-only "x"',
+                'cd /tmp && codex exec "x"',
+                'echo hi | codex exec "x"',
+                'OUT=$(codex exec "x")'):
+        code, out = bash(cmd)
+        assert "deny" in out, cmd
+    # prose mentioning the phrase (heredocs, greps, docs): allowed
+    for cmd in ('cat > notes.md << EOF\nthe hook denies raw codex exec always\nEOF',
+                'grep -rn "codex exec" docs/ || true'):
+        code, out = bash(cmd)
+        assert "deny" not in out, cmd

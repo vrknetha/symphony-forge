@@ -69,7 +69,12 @@ for pattern in blocked:
 # repo-pinned invocation shape. There is NO escape hatch — doctor installs
 # codex-plugin-cc as a required tool; if it breaks, repair it or work in a
 # Codex session directly (docs/degraded-mode.md).
-if "codex exec" in command:
+# Match INVOCATIONS (command position, env prefixes, pipeline segments,
+# command substitution) — not prose in heredocs/echo that mentions the phrase.
+CODEX_EXEC_INVOCATION = re.compile(
+    r"(?:^|[;&|]\s*|\$\(\s*)(?:\w+=\S+\s+)*codex\s+exec\b", re.MULTILINE
+)
+if CODEX_EXEC_INVOCATION.search(command):
     deny(
         "Direct `codex exec` is off-contract — invoke Codex through the plugin: "
         "/codex:rescue [--background] [--write] [--model <m>] [--effort <e>] \"<task>\" "
