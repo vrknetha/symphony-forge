@@ -1346,3 +1346,42 @@ def test_trailer_check_targets_the_acceptance_commit(repo):
     git(repo, "commit", "-q", "--amend", "-m", "accept queue-choice", "--trailer", "Confirmed-by: PM")
     code, out = run(repo, "check_dual_runtime.py", str(repo))
     assert code == 0 and "Confirmed-by" not in out
+
+
+# ------------------------------------------------------------ parallelization
+
+def test_roadmap_parallel_frontier(repo, tmp_path):
+    sign_off(repo)
+    code, out = import_roadmap(repo, tmp_path, {"generated_by": "docs-decomposer", "items": [
+        {"key": "P-1", "title": "Auth API", "skill": "backend"},
+        {"key": "P-2", "title": "Notes UI", "skill": "frontend"},
+        {"key": "P-3", "title": "Profile page", "skill": "frontend",
+         "depends_on": ["P-1"]},
+    ]})
+    assert code == 0, out
+    # dangling and self edges are refused at import
+    code, out = import_roadmap(repo, tmp_path, {"generated_by": "docs-decomposer", "items": [
+        {"key": "P-4", "title": "X", "depends_on": ["P-99"]}]})
+    assert code != 0 and "P-99" in out
+    code, out = import_roadmap(repo, tmp_path, {"generated_by": "docs-decomposer", "items": [
+        {"key": "P-5", "title": "Y", "depends_on": ["P-5"]}]})
+    assert code != 0 and "itself" in out
+    # frontier: P-1 and P-2 run in parallel worktrees; P-3 blocked on P-1
+    code, out = run(repo, "forge.py", "roadmap", "parallel")
+    assert code == 0, out
+    assert "2 stories are independent" in out and "git worktree add" in out
+    assert "P-1" in out and "P-2" in out and "BLOCKED P-3" in out and "waiting on: P-1" in out
+    # forge next surfaces the fan-out to the EM
+    code, out = run(repo, "forge.py", "next")
+    assert "PARALLELIZE" in out and "roadmap parallel" in out
+    # completing P-1 unblocks P-3
+    from_json = (repo / "plans" / "roadmap.json")
+    import_roadmap(repo, tmp_path, {"generated_by": "docs-decomposer", "items": [
+        {"key": "P-1", "title": "Auth API", "skill": "backend"}]})  # no-op merge keeps status
+    data = json.loads(from_json.read_text())
+    for item in data["items"]:
+        if item["key"] == "P-1":
+            item["status"] = "done"
+    from_json.write_text(json.dumps(data))
+    code, out = run(repo, "forge.py", "roadmap", "parallel")
+    assert "BLOCKED" not in out and "P-3" in out

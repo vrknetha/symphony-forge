@@ -44,7 +44,11 @@ When you run at handoff — the first, project-level decomposition after client
 sign-off — you are producing the PM→EM handoff: epics for the PM to approve,
 stories for the EM to distribute.
 
-1. Emit epics + story items in ONE payload (build-wave order = list order):
+1. Emit epics + story items in ONE payload (build-wave order = list order).
+   Give each item `depends_on: ["<KEY>", ...]` for REAL dependencies only
+   (story B consumes story A's API) — never blanket wave ordering: every
+   edge you omit is a story the orchestrator can run in a parallel worktree
+   (`forge roadmap parallel`), so over-serializing wastes the team.
 
 ```json
 {"generated_by": "docs-decomposer",

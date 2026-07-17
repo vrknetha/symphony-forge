@@ -46,6 +46,7 @@ or route:
 | migrate an existing repo into the harness | `knacklabs-migrate-project` skill — core: `./forge adopt --target <repo>` from the harness clone (clean tree; old AGENTS/CLAUDE preserved to docs/context/) |
 | migrate my gstack history / gstack outputs are on my machine | `./forge gstack migrate` — union-merges ~/.gstack/projects/<slug>/ into the repo's .gstack/ (then commit). Going forward .envrc + `direnv allow` keeps gstack in-repo |
 | what's left to build / show the roadmap | `./forge roadmap list` (`--pending` for what's next; grouped by epic, shows @assignee) |
+| what can run in parallel / fan out the work | `./forge roadmap parallel` — the unblocked frontier, one `git worktree add` + intake per story; drive each with `/codex:rescue --background`. Fan out WITHIN a task only across disjoint `write_scope` leaf tasks |
 | grill the handover / stress-test before a gate | `.agents/prompts/griller.md` — one question at a time vs the actual docs; resolve findings; record `record_grill_from_json.py --gate signoff\|epics\|plan`. Sign-off, roadmap import, AND plan save REFUSE without a fresh pass |
 | grill me on this plan | `/grill-me` against the draft plan (satisfies the plan-gate contract), then record `--gate plan` — mandatory before `plan save` |
 | PM approves the epics | `./forge decision new epics-approved` — THE PM runs the accept; roadmap import is refused without it (and without a passing epics grill) |

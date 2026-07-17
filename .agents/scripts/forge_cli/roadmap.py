@@ -82,6 +82,26 @@ def check_item(item: dict, pos: int) -> None:
     if skill is not None and skill not in ITEM_SKILLS:
         fail(f"roadmap item {item['key']}: skill must be one of "
              f"{', '.join(sorted(ITEM_SKILLS))}")
+    deps = item.get("depends_on")
+    if deps is not None and not isinstance(deps, list):
+        fail(f"roadmap item {item['key']}: depends_on must be a list of story keys")
+
+
+def ready_pending(items: list[dict]) -> tuple[list[dict], list[tuple[dict, list[str]]]]:
+    """The parallelizable frontier: pending items whose depends_on are all
+    done. Anything else pending is blocked, with the keys it waits on."""
+    status = {i.get("key"): i.get("status", "pending") for i in items}
+    ready: list[dict] = []
+    blocked: list[tuple[dict, list[str]]] = []
+    for item in items:
+        if item.get("status", "pending") != "pending":
+            continue
+        waiting = [d for d in item.get("depends_on", []) if status.get(d) != "done"]
+        if waiting:
+            blocked.append((item, waiting))
+        else:
+            ready.append(item)
+    return ready, blocked
 
 
 def cmd_import(args: argparse.Namespace) -> None:
@@ -120,6 +140,15 @@ def cmd_import(args: argparse.Namespace) -> None:
         if item["key"] in seen:
             fail(f"duplicate roadmap key: {item['key']}")
         seen.add(item["key"])
+    # Dependency edges must resolve to real stories (incoming or existing) —
+    # a dangling edge would silently serialize or silently unblock.
+    known = seen | {i["key"] for i in load_items(base)}
+    for item in incoming:
+        for dep in item.get("depends_on", []):
+            if dep == item["key"]:
+                fail(f"roadmap item {item['key']} depends on itself")
+            if dep not in known:
+                fail(f"roadmap item {item['key']}: depends_on '{dep}' is not on the roadmap")
     incoming_epics = payload.get("epics", [])
     for pos, epic in enumerate(incoming_epics, 1):
         if not isinstance(epic, dict) or not epic.get("id") or not epic.get("title"):
@@ -195,6 +224,38 @@ def mark_status_free_update(base: Path, key: str, **fields: str) -> bool:
             save_roadmap(base, items)
             return True
     return False
+
+
+def cmd_parallel(args: argparse.Namespace) -> None:
+    """The orchestrator's fan-out view: which stories can run CONCURRENTLY
+    right now (pending, dependencies done), each in its own worktree —
+    one task per branch with its own committed .factory state (decision
+    0002), implementations driven via /codex:rescue --background."""
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    from factory_lib import slugify
+    items = load_items(base)
+    if not items:
+        print("No roadmap yet — nothing to parallelize (./forge roadmap import first).")
+        return
+    ready, blocked = ready_pending(items)
+    if not ready:
+        print("No pending stories are unblocked right now.")
+    else:
+        print(f"{len(ready)} stor{'y is' if len(ready) == 1 else 'ies are'} independent "
+              "and can run IN PARALLEL — one worktree each:")
+        for item in ready:
+            who = f" @{item['assignee']}" if item.get("assignee") else ""
+            skill = f" [{item['skill']}]" if item.get("skill") else ""
+            branch = f"feat/{item['key']}-{slugify(item['title'])}"
+            print(f"\n  {item['key']} — {item['title']}{skill}{who}")
+            print(f"    git worktree add ../{base.name}-{item['key']} -b {branch}")
+            print(f"    (cd ../{base.name}-{item['key']} && python3 .agents/scripts/intake.py "
+                  f"--issue {item['key']} --title \"{item['title']}\")")
+    for item, waiting in blocked:
+        print(f"\n  BLOCKED {item['key']} — waiting on: {', '.join(waiting)}")
+    print("\nEach worktree carries its own branch + .factory state; roadmap "
+          "status flips converge when branches merge. Parallelize stories, "
+          "never one story's dependent leaf tasks.")
 
 
 def cmd_list(args: argparse.Namespace) -> None:

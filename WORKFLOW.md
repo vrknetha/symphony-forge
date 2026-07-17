@@ -172,6 +172,19 @@ Roadmap status flips (`active`/`done`) happen on the task branch and merge
 normally; the JSONL stores under `.gstack/` union-merge via the
 `jsonl-append` driver.
 
+**The orchestrator parallelizes aggressively when requirements separate.**
+`depends_on` edges on roadmap items are the deterministic separation signal
+(the decomposer derives them from real build-wave dependencies, never blanket
+ordering); `./forge roadmap parallel` prints the ready frontier — pending
+stories whose dependencies are all done — with a `git worktree add` + intake
+command per story. Each worktree is a full checkout on its own branch with
+its own `.factory/` state, so every gate (plan mode lock, plan grill,
+recorders, ship gate) applies per story, concurrently. Implementations run
+as parallel background rescues. Within ONE task, fan out only across leaf
+tasks with disjoint `write_scope` in the recorded decomposition. Roadmap
+flips from parallel branches converge on merge (same-file JSON conflicts are
+possible when adjacent items change — trivial unions, resolve and move on).
+
 ## Task Planning
 Per-task planning runs in Claude Code plan mode by default (exploration
 delegated to Codex: `/codex:rescue --model gpt-5.6-terra --effort high` —

@@ -7,7 +7,7 @@ from pathlib import Path
 from factory_lib import load_json, repo_root, run_state_path
 
 from .context import pending_context
-from .roadmap import load_items
+from .roadmap import load_items, ready_pending
 
 
 def cmd_next(args: argparse.Namespace) -> None:
@@ -58,7 +58,12 @@ def cmd_next(args: argparse.Namespace) -> None:
             if unassigned and (base / "plans" / "team.json").exists():
                 steps.append(f"[EM] {unassigned} pending item(s) unassigned — distribute: "
                              "./forge roadmap assign <KEY> --to <dev>")
-            if len(pending_items) > 1:
+            ready, _ = ready_pending(items)
+            if len(ready) > 1:
+                steps.append(f"[EM] {len(ready)} stories are independent — PARALLELIZE: "
+                             "./forge roadmap parallel (one worktree per story, "
+                             "background rescue per story)")
+            elif len(pending_items) > 1:
                 steps.append(f"({len(pending_items) - 1} more pending — "
                              "./forge roadmap list --pending)")
         elif items:

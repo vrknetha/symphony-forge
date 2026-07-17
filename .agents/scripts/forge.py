@@ -85,6 +85,10 @@ def main() -> None:
     p_ra.add_argument("--skill", help="frontend | backend | fullstack")
     p_ra.add_argument("--repo")
     p_ra.set_defaults(func=roadmap.cmd_add)
+    p_rp = rm_sub.add_parser("parallel",
+                             help="the fan-out view: unblocked stories that can run concurrently (one worktree each)")
+    p_rp.add_argument("--repo")
+    p_rp.set_defaults(func=roadmap.cmd_parallel)
     p_ras = rm_sub.add_parser("assign", help="EM distribution: put a dev on a story")
     p_ras.add_argument("key")
     p_ras.add_argument("--to", required=True, help="dev handle (checked against plans/team.json)")
