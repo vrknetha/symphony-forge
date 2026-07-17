@@ -66,14 +66,16 @@ for pattern in blocked:
 
 # Raw `codex exec` bypasses the sanctioned runtime (/codex:rescue -> the
 # plugin companion): no session threading, no background management, no
-# repo-pinned invocation shape. Degraded mode (plugin unavailable) is the
-# one exception — mark it explicitly per docs/degraded-mode.md.
-if "codex exec" in command and "FACTORY_DEGRADED=1" not in command:
+# repo-pinned invocation shape. There is NO escape hatch — doctor installs
+# codex-plugin-cc as a required tool; if it breaks, repair it or work in a
+# Codex session directly (docs/degraded-mode.md).
+if "codex exec" in command:
     deny(
         "Direct `codex exec` is off-contract — invoke Codex through the plugin: "
         "/codex:rescue [--background] [--write] [--model <m>] [--effort <e>] \"<task>\" "
-        "(read-only unless --write). If codex-plugin-cc is genuinely unavailable, "
-        "follow docs/degraded-mode.md and prefix the command with FACTORY_DEGRADED=1."
+        "(read-only unless --write). Plugin missing or broken? `./forge doctor --fix` "
+        "reinstalls it; meanwhile work in a Codex session directly "
+        "(docs/degraded-mode.md) — same prompts, same artifacts, same gates."
     )
 
 check_bypass = ["pnpm test", "pnpm lint", "pnpm typecheck", "pnpm check:all"]
@@ -113,10 +115,6 @@ if run_state and planning_locked(run_state) and permission_mode != "plan":
     if tool_name == "Bash" and "codex-companion.mjs" in command \
             and " task" in command and "--write" in command:
         # Writing delegation during planning = implementation before a plan.
-        deny(PLAN_MODE_MSG.format(issue=issue))
-    if tool_name == "Bash" and "codex exec" in command and "FACTORY_DEGRADED=1" in command \
-            and "read-only" not in command:
-        # Even degraded mode does not implement before a plan.
         deny(PLAN_MODE_MSG.format(issue=issue))
 
 if run_state and not run_state.get("client_signoff"):

@@ -1266,15 +1266,11 @@ def test_planning_lock_forces_plan_mode(repo, tmp_path):
     code, out = hook(repo, {"tool_name": "Bash", "permission_mode": "default",
                             "tool_input": {"command": companion + " --write"}})
     assert "deny" in out and "PLAN MODE" in out
-    # degraded mode: read-only exploration passes with the marker; writing
-    # degraded runs are still refused while unplanned
+    # there is NO escape hatch — env-var prefixes don't open a side door
     code, out = hook(repo, {"tool_name": "Bash", "permission_mode": "default",
                             "tool_input": {"command":
                                            "FACTORY_DEGRADED=1 codex exec -s read-only 'map it'"}})
-    assert "deny" not in out
-    code, out = hook(repo, {"tool_name": "Bash", "permission_mode": "default",
-                            "tool_input": {"command": "FACTORY_DEGRADED=1 codex exec 'build it'"}})
-    assert "deny" in out and "PLAN MODE" in out
+    assert "deny" in out and "codex:rescue" in out
     # approved plan lifts the lock entirely
     save_plan(repo, tmp_path)
     code, out = hook(repo, {"tool_name": "Edit", "permission_mode": "default",

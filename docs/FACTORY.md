@@ -67,7 +67,7 @@ Use strong reasoning selectively.
 - code exploration (planning phase)
   - model: `gpt-5.6-terra`
   - reasoning: `high`
-  - via `/codex:rescue --model gpt-5.6-terra --effort high` (read-only by default) — Claude Code never explores application code itself; raw `codex exec` is hook-blocked outside degraded mode
+  - via `/codex:rescue --model gpt-5.6-terra --effort high` (read-only by default) — Claude Code never explores application code itself; raw `codex exec` is hook-blocked, no exceptions
 - implementation default
   - model: `gpt-5.6-sol`
   - reasoning: `medium`

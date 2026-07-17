@@ -73,8 +73,8 @@ phases:
       the contract is identical: same sections (incl. Decisions), same
       forge.py plan save step, same gates. When planning in Claude, delegate
       ALL codebase exploration to Codex read-only runs
-      (/codex:rescue --model gpt-5.6-terra --effort high — read-only by default;
-      raw codex exec is hook-blocked outside degraded mode).
+      (/codex:rescue --model gpt-5.6-terra --effort high — read-only by
+      default; raw codex exec is hook-blocked, no exceptions).
       Approval is the saved plan file, not a flag.
   decomposition:
     owner: "codex:docs-decomposer"

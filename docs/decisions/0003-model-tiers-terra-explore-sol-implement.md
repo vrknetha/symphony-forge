@@ -17,8 +17,8 @@ high effort, implementation the flagship at medium. Codex profiles
 ## Decision
 
 - Code exploration (planning phase): `/codex:rescue --model gpt-5.6-terra
-  --effort high` (read-only by default; the explore profile remains for
-  degraded mode).
+  --effort high` (read-only by default; the explore profile serves
+  Codex-native sessions).
   Claude Code NEVER explores application code itself.
 - Implementation (/codex:rescue): gpt-5.6-sol @ medium
   (.codex/config.toml); effort escalates to high for migrations,

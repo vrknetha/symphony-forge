@@ -1,37 +1,32 @@
 # Degraded Mode
 
-Use this ONLY when `codex-plugin-cc` is unavailable. The coordinator is
-thinner, but the artifacts and gates do not change.
+`codex-plugin-cc` is a REQUIRED tool — `./forge doctor --fix` installs it on
+every machine, so "the plugin isn't installed" is a setup failure, not a
+workflow branch. If it breaks mid-project (upstream regression, cache
+corruption), degraded mode is two moves — neither of which is raw
+`codex exec`, which stays hook-blocked with no escape hatch:
 
-**The `FACTORY_DEGRADED=1` marker is mandatory.** The PreToolUse hook blocks
-raw `codex exec` (the sanctioned runtime is `/codex:rescue` → the plugin
-companion); prefixing the command with `FACTORY_DEGRADED=1` is the explicit,
-auditable declaration that you are here because the plugin is down — not a
-convenience bypass. The planning lock still applies: even degraded, writing
-Codex runs are refused while the active task is unplanned.
-
-## Exploration
-
-Ask read-only questions directly (the explore profile pins terra @ high):
+## 1. Repair it
 
 ```bash
-FACTORY_DEGRADED=1 codex exec --profile explore -s read-only "What files implement the billing workflow, and what tests cover it?"
+./forge doctor --fix
+# or explicitly:
+claude plugin marketplace add https://github.com/openai/codex-plugin-cc
+claude plugin install codex@openai-codex
 ```
 
-## Implementation
+## 2. Meanwhile: work in Codex directly
 
-Run Codex with the implementer prompt plus the bounded task text:
+The Codex CLI is itself a sanctioned runtime — a Codex session reads the same
+`AGENTS.md`, `.codex/config.toml` (gpt-5.6-sol @ medium), agents, and skills:
 
-```bash
-FACTORY_DEGRADED=1 codex exec "$(cat .agents/prompts/implementer.md)
-
-Task:
-Implement the approved leaf task from .factory/decomposition.json."
-```
-
-## Testing and Review
-
-Use the existing specialist agents and record their JSON outputs:
+- **Exploration**: a read-only Codex session, or `codex --profile explore`
+  (gpt-5.6-terra @ high, `.codex/explore.config.toml`).
+- **Planning**: the `planner-high` agent with `.agents/prompts/planner.md` —
+  the plan grill and `forge plan save` gates apply unchanged.
+- **Implementation**: a Codex session following
+  `.agents/prompts/implementer.md`, one bounded task at a time.
+- **Testing / review / functional**: same specialist agents, same recorders:
 
 ```bash
 python3 .agents/scripts/record_test_from_json.py --kind automated --input /tmp/automated.json
@@ -43,14 +38,6 @@ python3 .agents/scripts/record_test_from_json.py --kind functional --input /tmp/
 python3 .agents/scripts/pr_ready.py
 ```
 
-## Gates
-
-Discovery and prototype stay lightweight. Before planning, record accepted client sign-off:
-
-```bash
-python3 .agents/scripts/record_signoff.py
-```
-
-After that, keep the normal `.factory` artifacts and run the same gates. Do
-not bypass `verify.py`, review artifacts, or `pr_ready.py` — and go back to
-`/codex:rescue` the moment the plugin is available again.
+The artifacts and gates never change — degraded mode swaps the coordinator,
+never the contract. Return to Claude + `/codex:rescue` the moment the plugin
+works again.

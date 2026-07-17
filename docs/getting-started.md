@@ -162,7 +162,7 @@ merge.
    "just start coding". Plan per `.agents/prompts/planner.md`; exploration is
    delegated, never done by Claude Code itself:
    `/codex:rescue --model gpt-5.6-terra --effort high` (read-only by default;
-   raw `codex exec` is hook-blocked outside degraded mode).
+   raw `codex exec` is hook-blocked, no exceptions).
    `planner-high` in Codex is the sanctioned alternate. New decisions get
    records. **Before approval, grilling the plan is mandatory** — say:
    **"Grill me on this plan"** (`/grill-me`); the verdict is recorded
