@@ -26,6 +26,19 @@ else:
 root = repo_root()
 state = gate(root, signoff=True, approved_plan=True)
 validate_payload(root, "decomposition", payload)
+tasks = payload.get("tasks") or []
+if not tasks:
+    raise SystemExit(
+        "decomposition needs at least one leaf task — an empty task graph opens the "
+        "implementation gates with nothing bounded to implement."
+    )
+for pos, task in enumerate(tasks, 1):
+    if not isinstance(task, dict) or not isinstance(task.get("id"), str) \
+            or not isinstance(task.get("title"), str) or not task["id"].strip():
+        raise SystemExit(
+            f"decomposition task {pos} must be an object with string 'id' and 'title' "
+            "(plus write_scope/acceptance_criteria per the decomposer contract)."
+        )
 payload["commit"] = head_sha(root)
 dump_json(decomposition_state_path(root), payload)
 state["decomposition_status"] = "recorded"

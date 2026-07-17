@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import argparse
 from factory_lib import dump_json, ensure_issue_key, load_json, now_iso, repo_root, run_state_path, slugify
-from forge_cli.roadmap import mark_status
+from forge_cli.roadmap import activation_state, mark_status
 
 parser = argparse.ArgumentParser(description="Initialize factory run state")
 parser.add_argument("--issue", help="Linear issue key, e.g. ENG-123")
@@ -16,6 +16,13 @@ args = parser.parse_args()
 
 root = repo_root()
 issue_key = ensure_issue_key(args.issue, root)
+# depends_on is enforced at activation, not just displayed in the frontier.
+outcome, waiting = activation_state(root, issue_key)
+if outcome == "blocked":
+    raise SystemExit(
+        f"{issue_key} is BLOCKED on the roadmap — waiting on: {', '.join(waiting)}. "
+        "Ship the dependencies first (./forge roadmap parallel shows the ready frontier)."
+    )
 branch = args.branch or f"feat/{issue_key}-{slugify(args.title)}"
 previous = load_json(run_state_path(root), default={})
 signed_off = bool(previous.get("client_signoff"))
@@ -72,7 +79,10 @@ if stale_files or active_plans:
             print(f"Abandoned plan moved to plans/debt/{plan.name}")
 dump_json(run_state_path(root), state)
 print(f"Initialized factory state for {issue_key} -> {branch}")
-if mark_status(root, issue_key, "active"):
+if outcome == "done":
+    print(f"Roadmap: {issue_key} is already done — status left unchanged; "
+          "reopening a shipped story is a roadmap PR, not an intake side effect.")
+elif outcome == "activate" and mark_status(root, issue_key, "active"):
     print(f"Roadmap: {issue_key} marked active (plans/roadmap.json)")
 if not signed_off:
     print(

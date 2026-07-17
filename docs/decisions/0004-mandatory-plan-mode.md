@@ -32,3 +32,8 @@ stay open.
 - Devs editing docs/decisions/plans during planning are unaffected;
   hotfix-style work still requires an intake + plan (fast plans are fine,
   skipped plans are not).
+- Known boundary, accepted: arbitrary Bash mutations (sed -i, tee,
+  redirects) are NOT classified by the lock — only the edit tools and Codex
+  delegation are. Bash-level writes are backstopped by the artifact gates
+  (unplanned work cannot pass verify/review/pr_ready), the same trust model
+  as before this decision.

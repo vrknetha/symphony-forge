@@ -33,13 +33,17 @@ def cmd_save(args: argparse.Namespace) -> None:
     issue = args.issue or state.get("issue_key")
     if not issue:
         fail("no --issue given and no issue_key in .factory/run.json (run intake first)")
+    source = Path(args.source).expanduser()
+    if not source.is_file():
+        fail(f"plan source {source} not found — pass the approved plan file via --from")
     # Approval requires the plan to have been GRILLED (grill-me / griller.md
-    # --gate plan): fresh, passing, and for THIS task — an ungrilled plan
-    # cannot become the implementation contract.
+    # --gate plan): fresh, passing, for THIS task, and bound by digest to
+    # THIS draft — grilling one version never approves an edited one.
     require_grill(
         base, "plan",
-        ("docs/product/", "docs/decisions/"),
+        ("docs/product/", "docs/decisions/", "docs/architecture/"),
         ignore_names=("client-signoff", "epics-approved"),
+        expect_digest_of=source,
     )
     plan_grill = load_json(base / ".factory" / "grills" / "plan.json", default={})
     if plan_grill.get("issue") != issue:
@@ -47,9 +51,6 @@ def cmd_save(args: argparse.Namespace) -> None:
             f"the recorded plan grill is for {plan_grill.get('issue')!r}, not {issue!r} — "
             "grill THIS task's plan (record_grill_from_json.py --gate plan)."
         )
-    source = Path(args.source).expanduser()
-    if not source.is_file():
-        fail(f"plan source {source} not found — pass the approved plan file via --from")
     title = args.title or state.get("title") or issue
     dest_dir = base / "plans" / "active"
     dest_dir.mkdir(parents=True, exist_ok=True)

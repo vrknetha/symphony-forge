@@ -58,10 +58,13 @@ stories for the EM to distribute.
             "skill": "frontend|backend|fullstack"}]}
 ```
 
-2. The PM must approve the epics BEFORE the import — relay:
+2. The epics grill must be recorded AGAINST THIS FILE
+   (`record_grill_from_json.py --gate epics --input-digest /tmp/roadmap.json`)
+   and the PM must approve BEFORE the import — relay:
    `./forge decision new epics-approved` (list the epics), then THE PM runs
    `./forge decision accept epics-approved --by "<PM>"`.
-3. Then record: `./forge roadmap import --input /tmp/roadmap.json`.
+3. Then record: `./forge roadmap import --input /tmp/roadmap.json` — the
+   import verifies the grill digest matches this exact file.
 
 `plans/roadmap.json` survives every task cycle (intake marks items active,
 pr_ready marks them done, the EM assigns with `forge roadmap assign`,

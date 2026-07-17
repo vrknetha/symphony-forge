@@ -40,12 +40,17 @@ def load_items(base: Path) -> list[dict]:
     return load_roadmap(base).get("items", [])
 
 
-def save_roadmap(base: Path, items: list[dict], epics: list[dict] | None = None) -> None:
+def save_roadmap(base: Path, items: list[dict], epics: list[dict] | None = None,
+                 generated_by: str | None = None) -> None:
     data = load_roadmap(base)
     items.sort(key=lambda item: item.get("order", 0))
     data["items"] = items
     if epics is not None:
         data["epics"] = epics
+    if generated_by:
+        data["generated_by"] = generated_by
+    # The persisted file satisfies its own schema: attribution survives.
+    data.setdefault("generated_by", "human")
     data["updated_at"] = now_iso()
     roadmap_path(base).parent.mkdir(parents=True, exist_ok=True)
     dump_json(roadmap_path(base), data)
@@ -63,29 +68,78 @@ def mark_status(base: Path, key: str, status: str, **extra: str) -> bool:
     return False
 
 
+FRONTMATTER = re.compile(r"^---\n(.*?)\n---\n", re.DOTALL)
+
+
 def epics_approved(base: Path) -> bool:
-    """The PM->EM handoff gate: an accepted epics-approved decision record."""
+    """The PM->EM handoff gate: an accepted epics-approved decision record —
+    judged on PARSED frontmatter, never on prose that mentions the words."""
     for record in (base / "docs" / "decisions").glob("*epics-approved*.md"):
-        text = record.read_text()
-        confirmed = re.search(r'confirmed_by:\s*"([^"]+)"', text)
-        if "status: accepted" in text and confirmed:
+        match = FRONTMATTER.match(record.read_text())
+        if not match:
+            continue
+        fields = {
+            k.strip(): v.strip().strip('"').strip("'")
+            for k, _, v in (line.partition(":") for line in match.group(1).splitlines())
+            if k.strip()
+        }
+        if fields.get("status") == "accepted" and fields.get("confirmed_by"):
             return True
     return False
 
 
+def activation_state(base: Path, key: str) -> tuple[str, list[str]]:
+    """What intake may do with a roadmap key: ('activate'|'blocked'|'done'|
+    'absent', waiting_on). depends_on is ENFORCED here, not just displayed."""
+    items = load_items(base)
+    status = {i.get("key"): i.get("status", "pending") for i in items}
+    for item in items:
+        if item.get("key") != key:
+            continue
+        if item.get("status") == "done":
+            return "done", []
+        waiting = [d for d in item.get("depends_on", []) if status.get(d) != "done"]
+        return ("blocked", waiting) if waiting else ("activate", [])
+    return "absent", []
+
+
 def check_item(item: dict, pos: int) -> None:
-    if not isinstance(item, dict) or not item.get("key") or not item.get("title"):
-        fail(f"roadmap item {pos} needs at least 'key' and 'title'")
+    if not isinstance(item, dict):
+        fail(f"roadmap item {pos} must be an object")
+    for field in ("key", "title"):
+        value = item.get(field)
+        if not isinstance(value, str) or not value.strip():
+            fail(f"roadmap item {pos}: '{field}' must be a non-empty string")
+    for field in ("epic", "story"):
+        if field in item and not isinstance(item[field], str):
+            fail(f"roadmap item {item['key']}: '{field}' must be a string")
     criteria = item.get("acceptance_criteria")
     if criteria is not None and not isinstance(criteria, list):
         fail(f"roadmap item {item['key']}: acceptance_criteria must be a list")
     skill = item.get("skill")
-    if skill is not None and skill not in ITEM_SKILLS:
+    if skill is not None and (not isinstance(skill, str) or skill not in ITEM_SKILLS):
         fail(f"roadmap item {item['key']}: skill must be one of "
              f"{', '.join(sorted(ITEM_SKILLS))}")
     deps = item.get("depends_on")
-    if deps is not None and not isinstance(deps, list):
-        fail(f"roadmap item {item['key']}: depends_on must be a list of story keys")
+    if deps is not None:
+        if not isinstance(deps, list) or not all(
+            isinstance(d, str) and d.strip() for d in deps
+        ):
+            fail(f"roadmap item {item['key']}: depends_on must be a list of story keys")
+
+
+def check_dag(items: list[dict]) -> None:
+    """The merged dependency graph must stay acyclic — a cycle deadlocks the
+    ready frontier forever (Kahn's algorithm; leftovers = cycle members)."""
+    deps = {i["key"]: set(i.get("depends_on", [])) for i in items}
+    remaining = dict(deps)
+    while remaining:
+        free = [k for k, d in remaining.items() if not (d & remaining.keys())]
+        if not free:
+            fail(f"dependency cycle in roadmap: {', '.join(sorted(remaining))} — "
+                 "no story in this set can ever become ready")
+        for k in free:
+            remaining.pop(k)
 
 
 def ready_pending(items: list[dict]) -> tuple[list[dict], list[tuple[dict, list[str]]]]:
@@ -105,15 +159,26 @@ def ready_pending(items: list[dict]) -> tuple[list[dict], list[tuple[dict, list[
     return ready, blocked
 
 
+def require_signoff(base: Path, action: str) -> None:
+    from factory_lib import load_json as _lj, run_state_path as _rsp
+    if not _lj(_rsp(base), default={}).get("client_signoff"):
+        fail(f"{action} is a post-sign-off activity — record client sign-off first "
+             "(record_signoff.py).")
+
+
 def cmd_import(args: argparse.Namespace) -> None:
     base = Path(args.repo).resolve() if args.repo else repo_root()
-    # Grill BEFORE the PM accepts: the epics/stories are interrogated for
-    # coverage gaps and contradictions against BRIEF + decisions, so what the
-    # EM distributes downstream is already de-risked.
+    require_signoff(base, "the roadmap handoff")
+    source = Path(args.input).expanduser()
+    if not source.is_file():
+        fail(f"roadmap input {source} not found")
+    # Grill BEFORE the PM accepts — and the grill must be bound to THIS
+    # exact input (digest match), so grilling proposal A never imports B.
     require_grill(
         base, "epics",
         ("docs/product/", "docs/decisions/"),
         ignore_names=("epics-approved", "client-signoff"),
+        expect_digest_of=source,
     )
     if not epics_approved(base):
         fail(
@@ -122,9 +187,6 @@ def cmd_import(args: argparse.Namespace) -> None:
             "in the record), then A HUMAN runs "
             '`./forge decision accept epics-approved --by "<PM name>"`.'
         )
-    source = Path(args.input).expanduser()
-    if not source.is_file():
-        fail(f"roadmap input {source} not found")
     try:
         payload = json.loads(source.read_text())
     except json.JSONDecodeError as exc:
@@ -152,8 +214,13 @@ def cmd_import(args: argparse.Namespace) -> None:
                 fail(f"roadmap item {item['key']}: depends_on '{dep}' is not on the roadmap")
     incoming_epics = payload.get("epics", [])
     for pos, epic in enumerate(incoming_epics, 1):
-        if not isinstance(epic, dict) or not epic.get("id") or not epic.get("title"):
-            fail(f"epic {pos} needs at least 'id' and 'title'")
+        if not isinstance(epic, dict):
+            fail(f"epic {pos} must be an object")
+        for field in ("id", "title"):
+            if not isinstance(epic.get(field), str) or not epic[field].strip():
+                fail(f"epic {pos}: '{field}' must be a non-empty string")
+    if len({e["id"] for e in incoming_epics}) != len(incoming_epics):
+        fail("duplicate epic id in input")
     existing = {item["key"]: item for item in load_items(base)}
     merged: list[dict] = []
     added = updated = 0
@@ -165,17 +232,23 @@ def cmd_import(args: argparse.Namespace) -> None:
         else:
             updated += 1
         entry.update({k: v for k, v in item.items() if k not in LIFECYCLE_FIELDS})
-        entry["order"] = item.get("order", pos)
+        # List position IS execution order (the input contract) — a caller-
+        # supplied order field must not silently reshuffle the backlog.
+        entry["order"] = pos
         merged.append(entry)
     # Items on the roadmap but absent from the input are kept — removing
     # scope is a deliberate PR edit, never a silent import side effect.
     kept = list(existing.values())
+    for offset, item in enumerate(kept, 1):
+        item["order"] = len(merged) + offset  # kept scope trails the new sequence
     merged.extend(kept)
+    check_dag(merged)
     # Epics merge by id, same keep-what-input-omits rule.
     current_epics = {e["id"]: e for e in load_roadmap(base).get("epics", [])}
     for epic in incoming_epics:
         current_epics[epic["id"]] = {**current_epics.get(epic["id"], {}), **epic}
-    save_roadmap(base, merged, epics=list(current_epics.values()))
+    save_roadmap(base, merged, epics=list(current_epics.values()),
+                 generated_by=payload["generated_by"])
     summary = f"Roadmap: {added} added, {updated} updated"
     if kept:
         summary += f", {len(kept)} existing item(s) kept"
@@ -186,11 +259,13 @@ def cmd_import(args: argparse.Namespace) -> None:
 
 def cmd_add(args: argparse.Namespace) -> None:
     base = Path(args.repo).resolve() if args.repo else repo_root()
+    require_signoff(base, "roadmap grooming")
     items = load_items(base)
     if any(item.get("key") == args.key for item in items):
         fail(f"{args.key} is already on the roadmap")
     order = max((item.get("order", 0) for item in items), default=0) + 1
     item = {"key": args.key, "title": args.title, "order": order, "status": "pending"}
+    check_item(item, order)
     if args.epic:
         item["epic"] = args.epic
     if args.skill:
@@ -205,13 +280,24 @@ def cmd_add(args: argparse.Namespace) -> None:
 def cmd_assign(args: argparse.Namespace) -> None:
     """EM distribution: put a dev's handle on a story, checked against the roster."""
     base = Path(args.repo).resolve() if args.repo else repo_root()
-    from .team import member_handles  # local import: team is optional machinery
-    handles = member_handles(base)
-    if handles and args.to not in handles:
-        fail(
-            f"'{args.to}' is not on the team roster ({', '.join(sorted(handles))}) — "
-            f"add them first: ./forge team set {args.to} --skills <frontend,backend|fullstack>"
-        )
+    from .team import load_members  # local import: team is optional machinery
+    members = {m.get("handle"): m for m in load_members(base)}
+    if members:
+        member = members.get(args.to)
+        if member is None:
+            fail(
+                f"'{args.to}' is not on the team roster ({', '.join(sorted(members))}) — "
+                f"add them first: ./forge team set {args.to} --skills <frontend,backend|fullstack>"
+            )
+        if member.get("role", "dev") != "dev":
+            fail(f"'{args.to}' is on the roster as {member.get('role')} — stories are "
+                 "assigned to devs.")
+        item = next((i for i in load_items(base) if i.get("key") == args.key), None)
+        need = item.get("skill") if item else None
+        has = set(member.get("skills") or [])
+        if need and has and need not in has and "fullstack" not in has:
+            print(f"WARNING: {args.key} needs [{need}] but @{args.to} has "
+                  f"[{', '.join(sorted(has))}] — assigning anyway (EM's call).")
     if not mark_status_free_update(base, args.key, assignee=args.to):
         fail(f"{args.key} is not on the roadmap")
     print(f"{args.key} assigned to {args.to}")
@@ -305,16 +391,18 @@ def cmd_parallel(args: argparse.Namespace) -> None:
     if not ready:
         print("No pending stories are unblocked right now.")
     else:
+        import shlex
         print(f"{len(ready)} stor{'y is' if len(ready) == 1 else 'ies are'} independent "
               "and can run IN PARALLEL — one worktree each:")
         for item in ready:
             who = f" @{item['assignee']}" if item.get("assignee") else ""
             skill = f" [{item['skill']}]" if item.get("skill") else ""
             branch = f"feat/{item['key']}-{slugify(item['title'])}"
+            wt = shlex.quote(f"../{base.name}-{item['key']}")
             print(f"\n  {item['key']} — {item['title']}{skill}{who}")
-            print(f"    git worktree add ../{base.name}-{item['key']} -b {branch}")
-            print(f"    (cd ../{base.name}-{item['key']} && python3 .agents/scripts/intake.py "
-                  f"--issue {item['key']} --title \"{item['title']}\")")
+            print(f"    git worktree add {wt} -b {shlex.quote(branch)}")
+            print(f"    (cd {wt} && python3 .agents/scripts/intake.py "
+                  f"--issue {shlex.quote(item['key'])} --title {shlex.quote(item['title'])})")
     for item, waiting in blocked:
         print(f"\n  BLOCKED {item['key']} — waiting on: {', '.join(waiting)}")
     print("\nEach worktree carries its own branch + .factory state; roadmap "

@@ -44,13 +44,18 @@ Method:
    `"generated_by": "griller"`):
 
 ```bash
-python3 .agents/scripts/record_grill_from_json.py --gate <signoff|epics> --input <json>
+python3 .agents/scripts/record_grill_from_json.py --gate <signoff|epics|plan> --input <json> [--input-digest <artifact>]
 ```
 
 5. Commit the resolution edits BEFORE recording the grill — the gates check
-   freshness: if the product docs change after the grill, it is stale and
-   must be re-run. (The sign-off / epics-approved decision records
-   themselves are expected afterwards and don't stale it.)
+   freshness against BOTH committed history and the working tree: any
+   guarded doc changing after the grill (even uncommitted) stales it.
+   (The sign-off / epics-approved decision records themselves are expected
+   afterwards and don't stale it.)
+6. `--input-digest` is REQUIRED for the epics and plan gates: pass the exact
+   roadmap input / plan draft you interrogated. The gate verifies the
+   digest — grilling version A never approves an edited version B; if the
+   artifact changes, re-grill it.
 
 A `pass` with unresolved findings is refused by the recorder. Grill hard;
 downstream implementation inherits whatever you let through.

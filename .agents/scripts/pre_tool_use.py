@@ -71,8 +71,10 @@ for pattern in blocked:
 # Codex session directly (docs/degraded-mode.md).
 # Match INVOCATIONS (command position, env prefixes, pipeline segments,
 # command substitution) — not prose in heredocs/echo that mentions the phrase.
+# `codex [global flags] exec` counts too — flags between must not bypass.
 CODEX_EXEC_INVOCATION = re.compile(
-    r"(?:^|[;&|]\s*|\$\(\s*)(?:\w+=\S+\s+)*codex\s+exec\b", re.MULTILINE
+    r"(?:^|[;&|]\s*|\$\(\s*)(?:\w+=\S+\s+)*codex(?:\s+-{1,2}[\w-]+(?:[= ]\S+)?)*\s+exec\b",
+    re.MULTILINE,
 )
 if CODEX_EXEC_INVOCATION.search(command):
     deny(
@@ -112,11 +114,19 @@ if run_state and planning_locked(run_state) and permission_mode != "plan":
     issue = run_state.get("issue_key", "?")
     if tool_name in EDIT_TOOLS:
         target = (tool_input.get("file_path") or tool_input.get("notebook_path") or "")
-        rel = target
-        if target.startswith(str(root)):
-            rel = target[len(str(root)):].lstrip("/")
-        if rel and not rel.startswith(PLANNING_WRITE_OK) and rel not in PLANNING_WRITE_OK_FILES:
-            deny(PLAN_MODE_MSG.format(issue=issue))
+        if target:
+            # Canonicalize BEFORE the allowlist: plans/../src/x and symlinked
+            # detours must be judged by where they actually land.
+            from pathlib import Path as _P
+            resolved = _P(target).expanduser().resolve()
+            try:
+                rel = resolved.relative_to(root.resolve()).as_posix()
+            except ValueError:
+                rel = resolved.as_posix()  # outside the repo: not product code
+            if rel and not rel.startswith(PLANNING_WRITE_OK) \
+                    and rel not in PLANNING_WRITE_OK_FILES \
+                    and not rel.startswith("/"):
+                deny(PLAN_MODE_MSG.format(issue=issue))
     if tool_name == "Bash" and "codex-companion.mjs" in command \
             and " task" in command and "--write" in command:
         # Writing delegation during planning = implementation before a plan.

@@ -144,6 +144,7 @@ def main() -> None:
     p_ar.add_argument("id", help="ledger id, e.g. A-0003")
     p_ar.add_argument("--status", required=True, help="confirmed | fix-needed | promoted")
     p_ar.add_argument("--notes", required=True, help="the guidance itself")
+    p_ar.add_argument("--decision", help="decision slug (required with --status promoted)")
     p_ar.add_argument("--repo")
     p_ar.set_defaults(func=assumptions_mod.cmd_resolve)
     p_aa = as_sub.add_parser("archive",

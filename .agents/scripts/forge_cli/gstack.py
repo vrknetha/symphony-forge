@@ -87,6 +87,11 @@ def cmd_migrate(args: argparse.Namespace) -> None:
         if src.is_dir() and src.resolve() not in seen:
             seen.add(src.resolve())
             sources.append(src)
+        # The bare directory name is a FALLBACK for remoteless repos — when an
+        # origin-derived store matched, a same-named store from some OTHER
+        # project must not ride along (it may hold another client's designs).
+        if sources and not args.slug:
+            break
     if not sources:
         available = sorted(p.name for p in projects.glob("*") if p.is_dir()) \
             if projects.is_dir() else []

@@ -30,7 +30,8 @@ GIT_ID = ["-c", "user.email=test@knacklabs.dev", "-c", "user.name=Gate Tests"]
 
 # Minimal payload satisfying .agents/schemas/decomposition.json
 DECOMP = {"status": "recorded", "generated_by": "docs-decomposer",
-          "user_facing": True, "tasks": []}
+          "user_facing": True,
+          "tasks": [{"id": "T1", "title": "core slice", "write_scope": ["src/"]}]}
 
 
 def git(repo: Path, *args: str) -> str:
@@ -58,13 +59,18 @@ def repo(tmp_path: Path) -> Path:
     return target
 
 
-def record_grill(repo: Path, gate: str, verdict: str = "pass", **over) -> tuple[int, str]:
+def record_grill(repo: Path, gate: str, verdict: str = "pass",
+                 digest_of: Path | None = None, **over) -> tuple[int, str]:
     payload = {"generated_by": "griller", "gate": gate, "verdict": verdict,
                "gaps": [], "contradictions": [], "resolutions": [], **over}
-    return run(repo, "record_grill_from_json.py", "--gate", gate, stdin=json.dumps(payload))
+    extra = ["--input-digest", str(digest_of)] if digest_of else []
+    return run(repo, "record_grill_from_json.py", "--gate", gate, *extra,
+               stdin=json.dumps(payload))
 
 
 def sign_off(repo: Path) -> None:
+    if json.loads((repo / ".factory" / "run.json").read_text()).get("client_signoff"):
+        return  # idempotent: already signed off
     code, out = record_grill(repo, "signoff")
     assert code == 0, out
     code, out = run(repo, "forge.py", "decision", "new", "client-signoff", "--repo", str(repo))
@@ -84,9 +90,9 @@ def intake(repo: Path, key: str = "ENG-1", title: str = "Invoices", *extra: str)
 
 
 def save_plan(repo: Path, tmp_path: Path) -> tuple[int, str]:
-    record_grill(repo, "plan")  # plan approval is grill-gated; refusal tests use save_plan_raw
     plan = tmp_path / "plan.md"
     plan.write_text("## Decisions\nNo new decisions\n")
+    record_grill(repo, "plan", digest_of=plan)  # grill bound to THIS draft
     return run(repo, "forge.py", "plan", "save", "--from", str(plan))
 
 
@@ -157,11 +163,12 @@ def test_full_lifecycle_and_archive(repo, tmp_path):
     assert not (repo / ".factory" / "reviews").exists()
     assert not (repo / ".factory" / "grills" / "plan.json").exists()
     live = run_state(repo)
-    assert live["last_shipped"] == "ENG-1" and live["client_signoff"] is True
-    assert "issue_key" not in live
+    assert live["phase"] == "shipped" and live["client_signoff"] is True
+    assert "issue_key" not in live and "last_shipped" not in live
+    assert "updated_at" not in live  # byte-stable across parallel branches
     # Idempotent rerun (autoreview r2)
     code, out = run(repo, "pr_ready.py")
-    assert code == 0 and "already shipped ENG-1" in out
+    assert code == 0 and "shipped so far: ENG-1" in out
 
 
 # ---------------------------------------------------------- sign-off gating
@@ -586,9 +593,9 @@ ROADMAP = {"generated_by": "human", "items": [
 ]}
 
 
-def approve_epics(repo: Path) -> None:
-    """The PM->EM handoff gate: a passing epics grill + accepted decision."""
-    record_grill(repo, "epics")
+def approve_epics(repo: Path, src: Path) -> None:
+    """The PM->EM handoff gate: a digest-bound epics grill + accepted decision."""
+    record_grill(repo, "epics", digest_of=src)
     if list((repo / "docs" / "decisions").glob("*epics-approved*.md")):
         return
     run(repo, "forge.py", "decision", "new", "epics-approved", "--repo", str(repo))
@@ -601,9 +608,11 @@ def approve_epics(repo: Path) -> None:
 
 
 def import_roadmap(repo: Path, tmp_path: Path, payload=None) -> tuple[int, str]:
-    approve_epics(repo)
+    if not json.loads((repo / ".factory" / "run.json").read_text()).get("client_signoff"):
+        sign_off(repo)  # roadmap mutations are post-sign-off
     src = tmp_path / "roadmap-input.json"
     src.write_text(json.dumps(payload if payload is not None else ROADMAP))
+    approve_epics(repo, src)
     return run(repo, "forge.py", "roadmap", "import", "--input", str(src))
 
 
@@ -613,7 +622,6 @@ def roadmap_items(repo: Path) -> dict:
 
 
 def test_roadmap_lifecycle(repo, tmp_path):
-    sign_off(repo)
     code, out = import_roadmap(repo, tmp_path)
     assert code == 0 and "2 added" in out, out
     # forge next suggests the first pending item with the exact intake command
@@ -641,7 +649,6 @@ def test_roadmap_lifecycle(repo, tmp_path):
 
 
 def test_roadmap_reimport_preserves_lifecycle_and_kept_items(repo, tmp_path):
-    sign_off(repo)
     import_roadmap(repo, tmp_path)
     intake(repo)  # ENG-1 -> active
     # Refined roadmap: retitles ENG-1, drops ENG-2, adds ENG-3
@@ -658,6 +665,7 @@ def test_roadmap_reimport_preserves_lifecycle_and_kept_items(repo, tmp_path):
 
 
 def test_roadmap_import_and_add_validation(repo, tmp_path):
+    sign_off(repo)
     code, out = import_roadmap(repo, tmp_path, {"items": [{"key": "A", "title": "x"}]})
     assert code != 0 and "generated_by" in out  # schema: unattributed import refused
     code, out = import_roadmap(repo, tmp_path,
@@ -916,20 +924,30 @@ def test_next_routes_design_skills_by_feature_type(repo, tmp_path):
 
 # --------------------------------------------------------- roles and handoffs
 
-def test_roadmap_import_gated_on_grill_then_pm_epics_approval(repo, tmp_path):
+def test_roadmap_import_gated_on_signoff_grill_then_pm_approval(repo, tmp_path):
     src = tmp_path / "rm.json"
     src.write_text(json.dumps(ROADMAP))
     code, out = run(repo, "forge.py", "roadmap", "import", "--input", str(src))
-    assert code != 0 and "grill" in out.lower()  # grill gate fires first
-    record_grill(repo, "epics")
+    assert code != 0 and "sign-off" in out  # post-sign-off activity
+    sign_off(repo)
+    code, out = run(repo, "forge.py", "roadmap", "import", "--input", str(src))
+    assert code != 0 and "grill" in out.lower()  # then the grill gate
+    # a grill bound to a DIFFERENT file must not open the gate
+    other = tmp_path / "other.json"
+    other.write_text("{}")
+    record_grill(repo, "epics", digest_of=other)
+    code, out = run(repo, "forge.py", "roadmap", "import", "--input", str(src))
+    assert code != 0 and "THIS input" in out
+    record_grill(repo, "epics", digest_of=src)
     code, out = run(repo, "forge.py", "roadmap", "import", "--input", str(src))
     assert code != 0 and "epics-approved" in out  # then the PM accept gate
-    approve_epics(repo)
+    approve_epics(repo, src)
     code, out = run(repo, "forge.py", "roadmap", "import", "--input", str(src))
     assert code == 0, out
 
 
 def test_epics_and_story_fields_recorded_and_grouped(repo, tmp_path):
+    sign_off(repo)
     code, out = import_roadmap(repo, tmp_path, {
         "generated_by": "docs-decomposer",
         "epics": [{"id": "billing", "title": "Billing", "objective": "money in"}],
@@ -952,7 +970,7 @@ def test_epics_and_story_fields_recorded_and_grouped(repo, tmp_path):
 
 
 def test_team_roster_and_em_assignment(repo, tmp_path):
-    import_roadmap(repo, tmp_path)
+    import_roadmap(repo, tmp_path)  # helper signs off
     # roster validations
     code, out = run(repo, "forge.py", "team", "set", "alice", "--role", "dev")
     assert code != 0 and "--skills" in out
@@ -1303,12 +1321,21 @@ def test_plan_save_requires_a_fresh_same_issue_grill(repo, tmp_path):
     # ungrilled plan -> refused
     code, out = save_plan_raw(repo, tmp_path)
     assert code != 0 and "grill" in out.lower()
+    plan_file = tmp_path / "plan.md"
+    plan_file.write_text("## Decisions\nNo new decisions\n")
     # blocked grill never satisfies the gate
-    record_grill(repo, "plan", verdict="blocked", gaps=["criteria 2 unaddressed"])
+    record_grill(repo, "plan", verdict="blocked", digest_of=plan_file,
+                 gaps=["criteria 2 unaddressed"])
     code, out = save_plan_raw(repo, tmp_path)
     assert code != 0 and "blocked" in out
-    # passing grill for THIS issue -> save works
-    code, out = record_grill(repo, "plan")
+    # a grill of a DIFFERENT draft never approves this one
+    other = tmp_path / "other-plan.md"
+    other.write_text("something else\n")
+    record_grill(repo, "plan", digest_of=other)
+    code, out = save_plan_raw(repo, tmp_path)
+    assert code != 0 and "THIS input" in out
+    # passing grill bound to THIS draft -> save works
+    code, out = record_grill(repo, "plan", digest_of=plan_file)
     assert code == 0, out
     code, out = save_plan_raw(repo, tmp_path)
     assert code == 0, out
@@ -1326,9 +1353,13 @@ def test_plan_save_requires_a_fresh_same_issue_grill(repo, tmp_path):
 def test_plan_grill_recorder_stamps_the_active_issue(repo, tmp_path):
     sign_off(repo)
     intake(repo)
-    code, out = record_grill(repo, "plan", issue="ENG-9")  # wrong task
+    draft = tmp_path / "d.md"
+    draft.write_text("x\n")
+    code, out = record_grill(repo, "plan", issue="ENG-9", digest_of=draft)  # wrong task
     assert code != 0 and "does not match" in out
-    code, out = record_grill(repo, "plan")
+    code, out = record_grill(repo, "plan")  # digest is mandatory for plan gate
+    assert code != 0 and "input-digest" in out
+    code, out = record_grill(repo, "plan", digest_of=draft)
     assert code == 0, out
     data = json.loads((repo / ".factory" / "grills" / "plan.json").read_text())
     assert data["issue"] == "ENG-1"
@@ -1361,7 +1392,6 @@ def test_trailer_check_targets_the_acceptance_commit(repo):
 # ------------------------------------------------------------ parallelization
 
 def test_roadmap_parallel_frontier(repo, tmp_path):
-    sign_off(repo)
     code, out = import_roadmap(repo, tmp_path, {"generated_by": "docs-decomposer", "items": [
         {"key": "P-1", "title": "Auth API", "skill": "backend"},
         {"key": "P-2", "title": "Notes UI", "skill": "frontend"},
@@ -1400,7 +1430,6 @@ def test_roadmap_parallel_frontier(repo, tmp_path):
 # ----------------------------------------------------------- roadmap healing
 
 def test_roadmap_heal_unions_duplicates_done_wins(repo, tmp_path):
-    sign_off(repo)
     import_roadmap(repo, tmp_path)
     # simulate a bad hand-merge: duplicate keys with diverged statuses
     p = repo / "plans" / "roadmap.json"
@@ -1443,15 +1472,17 @@ def test_signal_events_block_ship_until_resolved(repo, tmp_path):
                     "--by", "implementer", "-m",
                     "plan says soft-delete; decision 0001 says hard-delete")
     assert code == 0 and "S-0001" in out and "PAUSE" in out
+    import re as _re
+    sig_id = _re.search(r"S-0001-[0-9a-f]{4}", out).group(0)
     # the orchestrator sees it everywhere, and the ship gate refuses
     code, out = run(repo, "forge.py", "next")
     assert "OPEN worker signal" in out and "S-0001" in out
     code, out = run(repo, "pr_ready.py")
     assert code != 0 and "S-0001" in out
     # resolution needs substance, then unblocks
-    code, out = run(repo, "forge.py", "signal", "resolve", "S-0001", "--notes", " ")
+    code, out = run(repo, "forge.py", "signal", "resolve", sig_id, "--notes", " ")
     assert code != 0 and "notes" in out
-    code, out = run(repo, "forge.py", "signal", "resolve", "S-0001",
+    code, out = run(repo, "forge.py", "signal", "resolve", sig_id,
                     "--notes", "decision 0001 wins: hard-delete; plan revised")
     assert code == 0 and "resume" in out
     code, out = run(repo, "pr_ready.py")
@@ -1478,3 +1509,83 @@ def test_codex_exec_ban_matches_invocations_not_prose(repo):
                 'grep -rn "codex exec" docs/ || true'):
         code, out = bash(cmd)
         assert "deny" not in out, cmd
+
+
+# --------------------------------------------------- review-hardening guards
+
+def test_review_hardening_guards(repo, tmp_path):
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    # empty task graph refused; malformed task refused
+    code, out = run(repo, "record_decomposition_from_json.py",
+                    stdin=json.dumps({**DECOMP, "tasks": []}))
+    assert code != 0 and "at least one leaf task" in out
+    code, out = run(repo, "record_decomposition_from_json.py",
+                    stdin=json.dumps({**DECOMP, "tasks": [{"id": 7}]}))
+    assert code != 0 and "string 'id'" in out
+    run(repo, "record_decomposition_from_json.py", stdin=json.dumps(DECOMP))
+    # out-of-scale review score refused at record time
+    code, out = run(repo, "record_review_from_json.py", "--aspect", "quality",
+                    stdin=json.dumps({"generated_by": "autoreview", "score": 999,
+                                      "summary": "x", "blocking_findings": [],
+                                      "skills_used": ["review-animations"]}))
+    assert code != 0 and "0..10" in out
+    # non-object payload refused, not crashed
+    code, out = run(repo, "record_review_from_json.py", "--aspect", "quality",
+                    stdin=json.dumps([1, 2, 3]))
+    assert code != 0 and "JSON object" in out and "Traceback" not in out
+    # planning-lock path traversal + flags-between invocation bypass
+    intake(repo, "ENG-2", "Refunds", "--discard-active")
+    code, out = hook(repo, {"tool_name": "Edit", "permission_mode": "default",
+                            "tool_input": {"file_path":
+                                           str(repo / "plans" / ".." / "src" / "x.ts")}})
+    assert "deny" in out and "PLAN MODE" in out
+    code, out = hook(repo, {"tool_name": "Bash", "permission_mode": "default",
+                            "tool_input": {"command": "codex --profile explore exec 'x'"}})
+    assert "deny" in out and "codex:rescue" in out
+
+
+def test_roadmap_dependency_and_lifecycle_guards(repo, tmp_path):
+    import_roadmap(repo, tmp_path, {"generated_by": "docs-decomposer", "items": [
+        {"key": "G-1", "title": "API"},
+        {"key": "G-2", "title": "UI", "depends_on": ["G-1"]},
+    ]})
+    # cycles refused at import
+    code, out = import_roadmap(repo, tmp_path, {"generated_by": "docs-decomposer", "items": [
+        {"key": "C-1", "title": "a", "depends_on": ["C-2"]},
+        {"key": "C-2", "title": "b", "depends_on": ["C-1"]},
+    ]})
+    assert code != 0 and "cycle" in out
+    # intake ENFORCES depends_on, not just displays it
+    code, out = intake(repo, "G-2", "UI")
+    assert code != 0 and "BLOCKED" in out and "G-1" in out
+    # a done story is not silently reopened by re-intake
+    code, out = intake(repo, "G-1", "API")
+    assert code == 0
+    save_plan(repo, tmp_path)
+    run(repo, "record_decomposition_from_json.py", stdin=json.dumps(DECOMP))
+    write_passing_artifacts(repo)
+    run(repo, "update_run.py", "--decomposition-status", "recorded")
+    run(repo, "pr_ready.py")
+    code, out = intake(repo, "G-1", "API")
+    assert code == 0 and "already done" in out
+    assert roadmap_items(repo)["G-1"]["status"] == "done"
+    # ...and shipping G-1 unblocked G-2
+    code, out = intake(repo, "G-2", "UI")
+    assert code == 0
+
+
+def test_promoted_assumption_requires_decision_record(repo, tmp_path):
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    run(repo, "forge.py", "plan", "assume", "cache TTL is 60s")
+    code, out = run(repo, "forge.py", "assumptions", "resolve", "A-0001",
+                    "--status", "promoted", "--notes", "durable choice")
+    assert code != 0 and "--decision" in out
+    run(repo, "forge.py", "decision", "new", "cache-ttl", "--repo", str(repo))
+    code, out = run(repo, "forge.py", "assumptions", "resolve", "A-0001",
+                    "--status", "promoted", "--notes", "durable choice",
+                    "--decision", "cache-ttl")
+    assert code == 0 and "cache-ttl" in out

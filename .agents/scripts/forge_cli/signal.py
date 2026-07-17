@@ -56,9 +56,16 @@ def cmd_raise(args: argparse.Namespace) -> None:
         fail("a signal needs a message — one sentence: what contradicts / what is unclear")
     validate_payload(base, "signal", payload)
     events = load_events(base)
-    next_id = max((int(e["id"][2:]) for e in events if e.get("event") == "raised"), default=0) + 1
+    seq = sum(1 for e in events if e.get("event") == "raised") + 1
+    # Collision-resistant across concurrent workers: two rescues raising at
+    # the same moment must not share an ID (resolution is keyed by it).
+    import hashlib
+    import os
+    suffix = hashlib.sha256(
+        f"{os.getpid()}:{now_iso()}:{payload['message']}".encode()
+    ).hexdigest()[:4]
     issue = load_json(run_state_path(base), default={}).get("issue_key", "")
-    event = {"event": "raised", "id": f"S-{next_id:04d}", "task": issue,
+    event = {"event": "raised", "id": f"S-{seq:04d}-{suffix}", "task": issue,
              "at": now_iso(), **payload}
     if args.refs:
         event["refs"] = args.refs

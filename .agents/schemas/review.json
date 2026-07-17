@@ -18,5 +18,8 @@
   },
   "required_skills": {
     "user_facing": ["review-animations"]
+  },
+  "ranges": {
+    "score": [0, 10]
   }
 }

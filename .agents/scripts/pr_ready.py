@@ -35,9 +35,13 @@ root = repo_root()
 run_state = load_json(run_state_path(root), default={})
 # Idempotent rerun: after a ship, task-scoped state is archived AND removed
 # (parallel branches must converge without .factory conflicts), and run.json
-# holds only project fields + the last_shipped marker.
-if run_state and not run_state.get("issue_key") and run_state.get("last_shipped"):
-    print(f"PR_READY (already shipped {run_state['last_shipped']}; nothing active — "
+# is reduced to STABLE project fields — identical across branches, so merges
+# collide on nothing. "Shipped before" is evidenced by the history archive.
+_history_root = root / ".factory" / "history"
+if run_state and not run_state.get("issue_key") and run_state.get("client_signoff") \
+        and _history_root.is_dir() and any(_history_root.iterdir()):
+    shipped = ", ".join(sorted(p.name for p in _history_root.iterdir() if p.is_dir()))
+    print(f"PR_READY (nothing active; shipped so far: {shipped} — "
           "start the next task with intake)")
     raise SystemExit(0)
 decomposition = load_json(decomposition_state_path(root), default={})
@@ -211,12 +215,14 @@ for artifact in (decomposition_state_path(root), verify_state_path(root),
         artifact.unlink()
 if review_dir(root).is_dir():
     shutil.rmtree(review_dir(root))
+# STABLE content only: no per-task fields, no timestamps — two story
+# branches shipping in parallel write byte-identical run.json.
 project_state = {
     k: run_state[k]
     for k in ("project", "client_signoff", "client_signoff_record", "client_signoff_at")
     if k in run_state
 }
-project_state.update({"last_shipped": issue_key, "phase": "shipped", "updated_at": now_iso()})
+project_state["phase"] = "shipped"
 dump_json(run_state_path(root), project_state)
 
 if mark_status(root, issue_key, "done",

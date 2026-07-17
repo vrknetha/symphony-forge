@@ -45,10 +45,13 @@ def cmd_adopt(args: argparse.Namespace) -> None:
         fail("run adopt FROM the harness clone TARGETING the existing repo, not itself")
     if (target / ".agents" / "scripts" / "forge.py").exists():
         fail(f"{target} already carries the harness — use `./forge upgrade --target {target}`")
-    dirty = subprocess.run(
+    status = subprocess.run(
         ["git", "status", "--porcelain"], cwd=target, capture_output=True, text=True
-    ).stdout.strip()
-    if dirty:
+    )
+    if status.returncode != 0:
+        fail(f"`git status` failed in {target} ({status.stderr.strip() or 'unknown error'}) — "
+             "adopt needs a healthy repo so overwrites are recoverable.")
+    if status.stdout.strip():
         fail(
             f"{target} has uncommitted changes. Commit everything first — adopt "
             "overwrites harness-owned paths and the diff must be reviewable."
@@ -58,6 +61,12 @@ def cmd_adopt(args: argparse.Namespace) -> None:
     overwritten: list[str] = []
 
     def vendor_file(src: Path, dst: Path) -> None:
+        # Never write through a symlink escape: a tracked link pointing
+        # outside the repo would receive the write with the user's privileges.
+        if dst.is_symlink() or (dst.parent.exists()
+                                and not dst.parent.resolve().is_relative_to(target.resolve())):
+            fail(f"refusing to vendor through a symlink: {dst.relative_to(target)} — "
+                 "replace the link with a real path first.")
         if dst.exists():
             overwritten.append(str(dst.relative_to(target)))
         dst.parent.mkdir(parents=True, exist_ok=True)
@@ -133,9 +142,17 @@ def cmd_adopt(args: argparse.Namespace) -> None:
                      ".gstack/tmp/\n.gstack/.*\n.gstack/**/brain-cache/\n"
                      ".gstack/**/timeline.jsonl\n.gstack/slug-cache/\n")
         created.append(".gitignore (gstack entries appended)")
-    if not (target / ".envrc").exists():
-        shutil.copy2(harness / ".envrc", target / ".envrc")
+    envrc = target / ".envrc"
+    if not envrc.exists():
+        shutil.copy2(harness / ".envrc", envrc)
         created.append(".envrc (run `direnv allow` in the repo)")
+    elif "GSTACK_HOME" not in envrc.read_text():
+        # Existing repos commonly carry their own .envrc — append, don't skip,
+        # or gstack keeps writing to ~/.gstack despite the documented setup.
+        with envrc.open("a") as fh:
+            fh.write('\n# symphony-forge: project-local gstack store\n'
+                     'export GSTACK_HOME="$PWD/.gstack"\n')
+        created.append(".envrc (GSTACK_HOME appended; re-run `direnv allow`)")
     attrs = target / ".gitattributes"
     if not attrs.exists():
         shutil.copy2(harness / ".gitattributes", attrs)

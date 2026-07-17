@@ -55,24 +55,30 @@ def cmd_next(args: argparse.Namespace) -> None:
         phase("signed off — no active task")
         items = load_items(base)
         pending_items = [i for i in items if i.get("status", "pending") == "pending"]
-        if pending_items:
-            nxt = pending_items[0]
+        ready_items, _ = ready_pending(items)
+        if ready_items:
+            import shlex
+            nxt = ready_items[0]  # suggest only DEPENDENCY-READY work
             owner = f" (assigned: @{nxt['assignee']})" if nxt.get("assignee") else ""
             steps.append(f"[dev] Next on the roadmap: {nxt['key']} — {nxt['title']}{owner}. "
-                         f"Start it: python3 .agents/scripts/intake.py --issue {nxt['key']} "
-                         f"--title \"{nxt['title']}\"")
+                         f"Start it: python3 .agents/scripts/intake.py --issue "
+                         f"{shlex.quote(nxt['key'])} --title {shlex.quote(nxt['title'])}")
             unassigned = sum(1 for i in pending_items if not i.get("assignee"))
             if unassigned and (base / "plans" / "team.json").exists():
                 steps.append(f"[EM] {unassigned} pending item(s) unassigned — distribute: "
                              "./forge roadmap assign <KEY> --to <dev>")
-            ready, _ = ready_pending(items)
-            if len(ready) > 1:
-                steps.append(f"[EM] {len(ready)} stories are independent — PARALLELIZE: "
+            if len(ready_items) > 1:
+                steps.append(f"[EM] {len(ready_items)} stories are independent — PARALLELIZE: "
                              "./forge roadmap parallel (one worktree per story, "
                              "background rescue per story)")
             elif len(pending_items) > 1:
                 steps.append(f"({len(pending_items) - 1} more pending — "
                              "./forge roadmap list --pending)")
+        elif pending_items:
+            steps.append(f"[EM] All {len(pending_items)} pending stor"
+                         f"{'y is' if len(pending_items) == 1 else 'ies are'} BLOCKED on "
+                         "dependencies — ship those first (./forge roadmap parallel shows "
+                         "what each waits on)")
         elif items:
             steps.append("[EM] Roadmap is fully built or in flight (./forge roadmap list) — "
                          "extend it, or start an off-roadmap task: "

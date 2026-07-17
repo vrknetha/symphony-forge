@@ -32,7 +32,7 @@ def main() -> int:
     require_grill(
         root, "signoff",
         ("docs/product/", "docs/decisions/", "prototype/"),
-        ignore_names=("client-signoff",),
+        ignore_names=("client-signoff", "epics-approved"),
     )
     decisions = root / "docs" / "decisions"
     candidates = sorted(decisions.glob("[0-9][0-9][0-9][0-9]-client-signoff.md"))

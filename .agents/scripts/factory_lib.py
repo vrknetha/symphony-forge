@@ -110,6 +110,11 @@ def validate_payload(root: Path, name: str, payload: dict) -> None:
     generated_by value outside the pinned allowlist. Extra keys are allowed."""
     path = schema_path(root, name)
     schema = json.loads(path.read_text())
+    if not isinstance(payload, dict):
+        raise SystemExit(
+            f"REFUSED by .agents/schemas/{path.name}:\n- payload must be a JSON object, "
+            f"got {type(payload).__name__}"
+        )
     problems: list[str] = []
 
     def check(field: str, kind: str, value: Any) -> None:
@@ -127,6 +132,12 @@ def validate_payload(root: Path, name: str, payload: dict) -> None:
     for field, kind in schema.get("optional", {}).items():
         if field in payload:
             check(field, kind, payload[field])
+    for field, bounds in (schema.get("ranges") or {}).items():
+        value = payload.get(field)
+        if isinstance(value, int) and not isinstance(value, bool):
+            low, high = bounds
+            if not (low <= value <= high):
+                problems.append(f"'{field}' must be within {low}..{high} (got {value})")
     allowed = schema.get("generated_by", [])
     generator = payload.get("generated_by")
     if allowed and generator is not None and generator not in allowed:
@@ -171,16 +182,33 @@ def require_skills(root: Path, name: str, payload: dict) -> None:
         )
 
 
+def sha256_of(path: Path) -> str:
+    import hashlib
+
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _grill_exempt(rel: str, ignore_names: tuple[str, ...]) -> bool:
+    # Expected exhaust is DECISION RECORDS only — a product doc whose name
+    # merely contains an ignore token must still stale the grill.
+    return rel.startswith("docs/decisions/") and any(
+        token in Path(rel).name for token in ignore_names
+    )
+
+
 def require_grill(
     root: Path,
     gate: str,
     prefixes: tuple[str, ...],
     ignore_names: tuple[str, ...] = (),
+    expect_digest_of: Path | None = None,
 ) -> None:
     """Handover gates call this: a fresh, passing grill or no passage.
 
-    `ignore_names` filters expected exhaust from the staleness check (e.g.
-    the client-signoff record itself, which is created AFTER the grill)."""
+    `ignore_names` filters expected exhaust (decision records created AFTER
+    the grill) from staleness. `expect_digest_of` binds the grill to the
+    exact artifact being gated: the recorded input_sha256 must match that
+    file, so grilling proposal A never approves proposal B."""
     path = factory_dir(root) / "grills" / f"{gate}.json"
     data = load_json(path, default={})
     if not data:
@@ -198,10 +226,27 @@ def require_grill(
         raise SystemExit(
             f".factory/grills/{gate}.json has no commit stamp — re-record with current tooling."
         )
+    if expect_digest_of is not None:
+        actual = sha256_of(expect_digest_of)
+        if data.get("input_sha256") != actual:
+            raise SystemExit(
+                f"the {gate} grill was not recorded against THIS input "
+                f"({expect_digest_of.name}) — re-grill the current version and record with "
+                f"`record_grill_from_json.py --gate {gate} --input-digest {expect_digest_of}`."
+            )
     stale = [
         f for f in changed_since(root, data.get("commit") or "", prefixes)
-        if not any(token in Path(f).name for token in ignore_names)
+        if not _grill_exempt(f, ignore_names)
     ]
+    # Freshness includes the WORKING TREE: uncommitted edits to guarded docs
+    # must stale the grill just like committed ones.
+    proc = subprocess.run(["git", "status", "--porcelain"], cwd=root,
+                          capture_output=True, text=True)
+    if proc.returncode == 0:
+        for line in proc.stdout.splitlines():
+            rel = line[3:].split(" -> ")[-1].strip().strip('"')
+            if rel.startswith(prefixes) and not _grill_exempt(rel, ignore_names):
+                stale.append(f"{rel} (uncommitted)")
     if stale:
         raise SystemExit(
             f"the {gate} grill is STALE — handover docs changed since it ran: "

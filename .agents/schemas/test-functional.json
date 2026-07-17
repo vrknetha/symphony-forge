@@ -16,5 +16,8 @@
     "residual_risks": "list",
     "recommendation": "str",
     "reviewed_scope": "list"
+  },
+  "ranges": {
+    "score": [0, 10]
   }
 }

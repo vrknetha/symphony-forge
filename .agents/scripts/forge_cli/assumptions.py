@@ -44,18 +44,30 @@ def _clean(text: str) -> str:
 
 
 def load_rows(base: Path) -> list[dict]:
+    """Strict parse: a data row that doesn't match the format, or carries an
+    unknown status, FAILS — a silently-dropped row is an assumption that
+    ships unguided (merge artifacts and hand edits are the realistic cause)."""
     path = ledger_path(base)
     if not path.exists():
         return []
     rows = []
-    for line in path.read_text().splitlines():
+    for lineno, line in enumerate(path.read_text().splitlines(), 1):
+        if not line.startswith("| A-"):
+            continue  # header/prose lines are not data rows
         match = ROW.match(line)
-        if match:
-            rows.append({
-                "id": match.group(1), "date": match.group(2).strip(),
-                "issue": match.group(3).strip(), "assumption": match.group(4).strip(),
-                "status": match.group(5).strip(), "guidance": match.group(6).strip(),
-            })
+        if not match:
+            fail(f"plans/assumptions.md line {lineno} is a malformed data row "
+                 f"(merge artifact or hand edit?): {line[:80]!r} — repair it; "
+                 "rows are managed by forge commands.")
+        row = {
+            "id": match.group(1), "date": match.group(2).strip(),
+            "issue": match.group(3).strip(), "assumption": match.group(4).strip(),
+            "status": match.group(5).strip(), "guidance": match.group(6).strip(),
+        }
+        if row["status"] not in STATUSES:
+            fail(f"plans/assumptions.md line {lineno}: unknown status "
+                 f"{row['status']!r} — allowed: {', '.join(sorted(STATUSES))}.")
+        rows.append(row)
     return rows
 
 
@@ -139,9 +151,19 @@ def cmd_resolve(args: argparse.Namespace) -> None:
     row = next((r for r in rows if r["id"] == args.id), None)
     if row is None:
         fail(f"{args.id} is not in plans/assumptions.md")
+    guidance = _clean(args.notes)
+    if args.status == "promoted":
+        # Promotion MEANS a decision record exists — not a promise to write one.
+        if not getattr(args, "decision", None):
+            fail("--status promoted requires --decision <slug>: promotion means the "
+                 "assumption became a docs/decisions/ record, not that it might.")
+        slug = args.decision.strip().lower().replace(" ", "-")
+        matches = sorted((base / "docs" / "decisions").glob(f"[0-9]*-{slug}.md"))
+        if not matches:
+            fail(f"no decision record matching docs/decisions/NNNN-{slug}.md — "
+                 "create it first (./forge decision new).")
+        guidance = f"{guidance} -> {matches[-1].name}"
     row["status"] = args.status
-    row["guidance"] = _clean(args.notes)
+    row["guidance"] = guidance
     save_rows(base, rows)
     print(f"{args.id}: {args.status} — {row['guidance']}")
-    if args.status == "promoted":
-        print("Promoted assumptions need a record: ./forge decision new <slug>")
