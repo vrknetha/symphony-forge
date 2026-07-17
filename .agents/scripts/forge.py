@@ -85,6 +85,10 @@ def main() -> None:
     p_ra.add_argument("--skill", help="frontend | backend | fullstack")
     p_ra.add_argument("--repo")
     p_ra.set_defaults(func=roadmap.cmd_add)
+    p_rh = rm_sub.add_parser("heal",
+                             help="post-merge convergence: union duplicate items (done-wins), rebuild from merge stages if unparseable")
+    p_rh.add_argument("--repo")
+    p_rh.set_defaults(func=roadmap.cmd_heal)
     p_rp = rm_sub.add_parser("parallel",
                              help="the fan-out view: unblocked stories that can run concurrently (one worktree each)")
     p_rp.add_argument("--repo")

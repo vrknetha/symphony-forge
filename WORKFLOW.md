@@ -181,9 +181,15 @@ command per story. Each worktree is a full checkout on its own branch with
 its own `.factory/` state, so every gate (plan mode lock, plan grill,
 recorders, ship gate) applies per story, concurrently. Implementations run
 as parallel background rescues. Within ONE task, fan out only across leaf
-tasks with disjoint `write_scope` in the recorded decomposition. Roadmap
-flips from parallel branches converge on merge (same-file JSON conflicts are
-possible when adjacent items change — trivial unions, resolve and move on).
+tasks with disjoint `write_scope` in the recorded decomposition. Convergence
+is designed to be conflict-free: `pr_ready.py` DELETES the task-scoped
+`.factory/` state after archiving it (history keeps the record) and reduces
+`run.json` to project fields + `last_shipped`, so merging story branches
+collides on nothing but `plans/roadmap.json` status flips — and
+`./forge roadmap heal` resolves those deterministically (union by key,
+further-along status wins; mid-merge it rebuilds from the merge stages).
+Commit the archive when `pr_ready` tells you to: evidence that isn't
+committed isn't merged.
 
 ## Task Planning
 Per-task planning runs in Claude Code plan mode by default (exploration

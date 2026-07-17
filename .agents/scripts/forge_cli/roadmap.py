@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 from pathlib import Path
 
 from factory_lib import (
@@ -224,6 +225,69 @@ def mark_status_free_update(base: Path, key: str, **fields: str) -> bool:
             save_roadmap(base, items)
             return True
     return False
+
+
+STATUS_RANK = {"done": 3, "active": 2, "pending": 1}
+
+
+def heal_items(items: list[dict]) -> tuple[list[dict], int]:
+    """Union duplicates by key: the further-along status wins (done > active
+    > pending), non-empty fields survive from both copies."""
+    best: dict[str, dict] = {}
+    order: list[str] = []
+    for item in items:
+        key = item.get("key")
+        if key not in best:
+            best[key] = dict(item)
+            order.append(key)
+            continue
+        a, b = best[key], item
+        winner, loser = (a, b) if STATUS_RANK.get(a.get("status", "pending"), 1) \
+            >= STATUS_RANK.get(b.get("status", "pending"), 1) else (b, a)
+        merged = dict(loser)
+        merged.update({k: v for k, v in winner.items() if v not in ("", [], None)})
+        merged["status"] = winner.get("status", "pending")
+        best[key] = merged
+    return [best[k] for k in order], len(items) - len(best)
+
+
+def cmd_heal(args: argparse.Namespace) -> None:
+    """Post-merge convergence: parallel story branches both touch
+    plans/roadmap.json; heal rebuilds the union deterministically instead of
+    a human hand-editing JSON. Works on a parseable file with duplicate keys,
+    and mid-merge on an unparseable (conflict-markered) file by unioning the
+    two merge stages."""
+    base = Path(args.repo).resolve() if args.repo else repo_root()
+    path = roadmap_path(base)
+    if not path.exists():
+        fail("no plans/roadmap.json to heal")
+    try:
+        data = json.loads(path.read_text())
+        items = data.get("items", [])
+        epics = data.get("epics", [])
+    except json.JSONDecodeError:
+        stages = []
+        for stage in ("2", "3"):
+            proc = subprocess.run(
+                ["git", "show", f":{stage}:plans/roadmap.json"],
+                cwd=base, capture_output=True, text=True,
+            )
+            if proc.returncode == 0:
+                stages.append(json.loads(proc.stdout))
+        if len(stages) != 2:
+            fail(
+                "plans/roadmap.json is unparseable and no merge is in progress — "
+                "restore a good copy first (git show <branch>:plans/roadmap.json)."
+            )
+        items = stages[0].get("items", []) + stages[1].get("items", [])
+        epics_by_id = {e["id"]: e for s in stages for e in s.get("epics", [])}
+        epics = list(epics_by_id.values())
+    healed, removed = heal_items(items)
+    save_roadmap(base, healed, epics=epics)
+    done = sum(1 for i in healed if i.get("status") == "done")
+    print(f"Healed plans/roadmap.json: {len(healed)} item(s), "
+          f"{removed} duplicate(s) unioned (status: further-along wins); {done} done.")
+    print("Stage it if you are mid-merge: git add plans/roadmap.json")
 
 
 def cmd_parallel(args: argparse.Namespace) -> None:

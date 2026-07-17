@@ -147,11 +147,21 @@ def test_full_lifecycle_and_archive(repo, tmp_path):
     completed = repo / "plans" / "completed" / "ENG-1-invoices.md"
     assert completed.exists()
     assert not list((repo / "plans" / "active").glob("ENG-1-*.md"))
-    for state in (run_state(repo), json.loads((history / "run.json").read_text())):
-        assert state["plan_file"] == "plans/completed/ENG-1-invoices.md"
+    # the archived run.json carries the full task state...
+    archived_state = json.loads((history / "run.json").read_text())
+    assert archived_state["plan_file"] == "plans/completed/ENG-1-invoices.md"
+    # ...while the working tree is CLEANED for conflict-free branch merges:
+    # task-scoped artifacts removed, run.json reduced to project + last_shipped
+    for name in ("decomposition.json", "verify.json", "tests.json"):
+        assert not (repo / ".factory" / name).exists()
+    assert not (repo / ".factory" / "reviews").exists()
+    assert not (repo / ".factory" / "grills" / "plan.json").exists()
+    live = run_state(repo)
+    assert live["last_shipped"] == "ENG-1" and live["client_signoff"] is True
+    assert "issue_key" not in live
     # Idempotent rerun (autoreview r2)
     code, out = run(repo, "pr_ready.py")
-    assert code == 0, out
+    assert code == 0 and "already shipped ENG-1" in out
 
 
 # ---------------------------------------------------------- sign-off gating
@@ -1385,3 +1395,28 @@ def test_roadmap_parallel_frontier(repo, tmp_path):
     from_json.write_text(json.dumps(data))
     code, out = run(repo, "forge.py", "roadmap", "parallel")
     assert "BLOCKED" not in out and "P-3" in out
+
+
+# ----------------------------------------------------------- roadmap healing
+
+def test_roadmap_heal_unions_duplicates_done_wins(repo, tmp_path):
+    sign_off(repo)
+    import_roadmap(repo, tmp_path)
+    # simulate a bad hand-merge: duplicate keys with diverged statuses
+    p = repo / "plans" / "roadmap.json"
+    data = json.loads(p.read_text())
+    dupe_active = {**data["items"][0], "status": "active"}
+    dupe_done = {**data["items"][0], "status": "done",
+                 "history": ".factory/history/ENG-1/"}
+    data["items"] = [dupe_active, data["items"][1], dupe_done]
+    p.write_text(json.dumps(data))
+    code, out = run(repo, "forge.py", "roadmap", "heal")
+    assert code == 0 and "1 duplicate(s) unioned" in out, out
+    items = roadmap_items(repo)
+    assert items["ENG-1"]["status"] == "done"  # further-along wins
+    assert items["ENG-1"]["history"] == ".factory/history/ENG-1/"
+    assert len(json.loads(p.read_text())["items"]) == 2
+    # unparseable outside a merge -> clear failure, no silent guess
+    p.write_text("{ <<<<<<< garbage")
+    code, out = run(repo, "forge.py", "roadmap", "heal")
+    assert code != 0 and "restore" in out

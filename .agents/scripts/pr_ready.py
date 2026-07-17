@@ -32,6 +32,13 @@ EVIDENCE_FILES = {"forge", "CLAUDE.md", "AGENTS.md", "WORKFLOW.md", "harness.yam
 
 root = repo_root()
 run_state = load_json(run_state_path(root), default={})
+# Idempotent rerun: after a ship, task-scoped state is archived AND removed
+# (parallel branches must converge without .factory conflicts), and run.json
+# holds only project fields + the last_shipped marker.
+if run_state and not run_state.get("issue_key") and run_state.get("last_shipped"):
+    print(f"PR_READY (already shipped {run_state['last_shipped']}; nothing active — "
+          "start the next task with intake)")
+    raise SystemExit(0)
 decomposition = load_json(decomposition_state_path(root), default={})
 verify = load_json(verify_state_path(root), default={})
 tests = load_json(tests_state_path(root), default={})
@@ -180,7 +187,28 @@ for artifact in (run_state_path(root), decomposition_state_path(root),
         shutil.copy2(artifact, history / artifact.name)
 if review_dir(root).is_dir():
     shutil.copytree(review_dir(root), history / "reviews", dirs_exist_ok=True)
+
+# Archived means REMOVED from the working tree: task-scoped state left behind
+# is exactly what conflicts when parallel story branches merge (decision 0002
+# follow-up from the parallel pilot). History keeps the full record.
+for artifact in (decomposition_state_path(root), verify_state_path(root),
+                 tests_state_path(root), root / ".factory" / "grills" / "plan.json"):
+    if artifact.exists():
+        artifact.unlink()
+if review_dir(root).is_dir():
+    shutil.rmtree(review_dir(root))
+project_state = {
+    k: run_state[k]
+    for k in ("project", "client_signoff", "client_signoff_record", "client_signoff_at")
+    if k in run_state
+}
+project_state.update({"last_shipped": issue_key, "phase": "shipped", "updated_at": now_iso()})
+dump_json(run_state_path(root), project_state)
+
 if mark_status(root, issue_key, "done",
                completed_at=now_iso(), history=f".factory/history/{issue_key}/"):
     print(f"Roadmap: {issue_key} marked done")
-print(f"PR_READY (archived to .factory/history/{issue_key}/, plan moved to plans/completed/)")
+print(f"PR_READY (archived to .factory/history/{issue_key}/, plan moved to plans/completed/, "
+      "task-scoped .factory state cleaned)")
+print(f"Now commit the archive — evidence that isn't committed isn't merged:")
+print(f"  git add -A && git commit -m \"chore({issue_key}): ship — evidence archived\"")
