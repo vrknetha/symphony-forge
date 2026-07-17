@@ -101,6 +101,23 @@ GitHub issue whenever unharvested context or unreviewed proposals exist, and
 the SessionStart hook surfaces the same counts at the start of every agent
 session. The `/forge` Claude skill routes all of this.
 
+## Event-Driven Delegation — signals
+
+Delegation is not fire-and-forget. While a background rescue runs, the
+orchestrator WATCHES `.factory/signals.jsonl` (Claude's Monitor tool on the
+file, alongside the companion job status). A delegated worker raises a
+signal the moment it hits a `contradiction` (plan vs decision vs doc),
+genuine `confusion`, a hard `blocked`, or a `scope-change` — via
+`forge.py signal raise --kind <k> --by <agent> -m "<sentence>"` — and PAUSES
+that thread instead of guessing. The orchestrator resolves the event
+(`forge.py signal resolve <id> --notes "<answer>"` — an answer, a decision
+record, or a plan revision) and resumes the worker with the resolution.
+Signals are schema-validated (`.agents/schemas/signal.json`, attested
+`generated_by`), surfaced by `forge next` and the session-start hook, and
+OPEN SIGNALS BLOCK `pr_ready` — an unanswered contradiction cannot ship.
+The channel is task-scoped: archived to `.factory/history/<issue>/` and
+cleaned at ship, like all task evidence.
+
 ## Determinism Contract
 
 The rule that decides deterministic vs non-deterministic, once, so nobody

@@ -50,6 +50,13 @@ if pending:
     context.append(
         f"Unharvested context: {pending} file(s) in docs/context/ — harvest before planning."
     )
+from forge_cli.signal import open_signals  # noqa: E402
+signals = open_signals(root)
+if signals:
+    context.append(
+        f"OPEN WORKER SIGNALS: {len(signals)} — paused worker(s) awaiting resolution "
+        "(forge.py signal list --open; resolve, then resume the rescue)."
+    )
 from forge_cli.assumptions import open_count  # noqa: E402
 assumptions_open = open_count(root)
 if assumptions_open:

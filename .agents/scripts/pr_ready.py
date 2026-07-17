@@ -18,6 +18,7 @@ from factory_lib import (
 )
 from forge_cli.assumptions import blocking_for_issue
 from forge_cli.roadmap import mark_status
+from forge_cli.signal import open_signals, signals_path
 
 # Commits touching only these paths after evidence was recorded do not
 # invalidate it: evidence/plan/doc records, harness machinery and adapters
@@ -91,6 +92,16 @@ for aspect in ("quality", "performance", "security"):
         missing.append(str(path.relative_to(root)))
     elif data.get("score", 0) < 8 or blockers:
         missing.append(f"{aspect} review must be >= 8 with no blockers")
+
+# An unresolved worker signal is an unanswered contradiction — nothing ships
+# over one. The orchestrator resolves (forge signal resolve) and resumes.
+open_sigs = open_signals(root)
+if open_sigs:
+    ids = ", ".join(f"{s['id']} ({s['kind']})" for s in open_sigs)
+    missing.append(
+        f"resolution of {len(open_sigs)} open worker signal(s): {ids} — "
+        "`forge.py signal resolve <id> --notes ...`"
+    )
 
 # Assumptions are guided before shipping: the orchestrator confirms, demands
 # a fix, or promotes each one — an unguided assumption is an unreviewed call.
@@ -191,8 +202,11 @@ if review_dir(root).is_dir():
 # Archived means REMOVED from the working tree: task-scoped state left behind
 # is exactly what conflicts when parallel story branches merge (decision 0002
 # follow-up from the parallel pilot). History keeps the full record.
+if signals_path(root).exists():
+    shutil.copy2(signals_path(root), history / "signals.jsonl")
 for artifact in (decomposition_state_path(root), verify_state_path(root),
-                 tests_state_path(root), root / ".factory" / "grills" / "plan.json"):
+                 tests_state_path(root), root / ".factory" / "grills" / "plan.json",
+                 signals_path(root)):
     if artifact.exists():
         artifact.unlink()
 if review_dir(root).is_dir():

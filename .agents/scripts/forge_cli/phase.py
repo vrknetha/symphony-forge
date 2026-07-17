@@ -8,6 +8,7 @@ from factory_lib import load_json, repo_root, run_state_path
 
 from .context import pending_context
 from .roadmap import load_items, ready_pending
+from .signal import open_signals
 
 
 def cmd_next(args: argparse.Namespace) -> None:
@@ -22,6 +23,12 @@ def cmd_next(args: argparse.Namespace) -> None:
         suffix = f" ({issue} — {state.get('title')})" if issue else ""
         print(f"PHASE: {label}{suffix}")
 
+    open_sigs = open_signals(base)
+    if open_sigs:
+        ids = ", ".join(s["id"] for s in open_sigs[:3])
+        steps.append(f"[orchestrator] {len(open_sigs)} OPEN worker signal(s) ({ids}) — a "
+                     "paused worker is waiting: forge.py signal list --open, then "
+                     "signal resolve <id> --notes \"...\" and resume the rescue")
     if pending_ctx:
         steps.append(
             f"Harvest {pending_ctx} pending docs/context/ file(s) first "

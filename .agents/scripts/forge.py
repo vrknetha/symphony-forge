@@ -14,6 +14,7 @@ from forge_cli import adopt as adopt_mod
 from forge_cli import assumptions as assumptions_mod
 from forge_cli import context as ctx
 from forge_cli import gstack as gstack_mod
+from forge_cli import signal as signal_mod
 from forge_cli import decisions, doctor, phase, plans, roadmap, scaffold, team, upgrade
 
 
@@ -149,6 +150,25 @@ def main() -> None:
                              help="compact resolved rows from finished tasks to assumptions-archive.md")
     p_aa.add_argument("--repo")
     p_aa.set_defaults(func=assumptions_mod.cmd_archive)
+
+    p_sig = sub.add_parser("signal", help="worker→orchestrator event channel (.factory/signals.jsonl)")
+    sig_sub = p_sig.add_subparsers(dest="signal_command", required=True)
+    p_sr = sig_sub.add_parser("raise", help="worker: raise a contradiction/confusion/blocked/scope-change event, then PAUSE")
+    p_sr.add_argument("--kind", required=True, help="contradiction | confusion | blocked | scope-change")
+    p_sr.add_argument("--by", required=True, help="raising agent (schema allowlist)")
+    p_sr.add_argument("-m", "--message", required=True, help="one sentence: what contradicts / what is unclear")
+    p_sr.add_argument("--refs", nargs="*", help="files/records involved")
+    p_sr.add_argument("--repo")
+    p_sr.set_defaults(func=signal_mod.cmd_raise)
+    p_sl = sig_sub.add_parser("list", help="show signals")
+    p_sl.add_argument("--open", action="store_true")
+    p_sl.add_argument("--repo")
+    p_sl.set_defaults(func=signal_mod.cmd_list)
+    p_sv = sig_sub.add_parser("resolve", help="orchestrator: answer an open signal")
+    p_sv.add_argument("id", help="e.g. S-0001")
+    p_sv.add_argument("--notes", required=True, help="the resolution the worker resumes with")
+    p_sv.add_argument("--repo")
+    p_sv.set_defaults(func=signal_mod.cmd_resolve)
 
     p_gs = sub.add_parser("gstack", help="project-local gstack store operations")
     gs_sub = p_gs.add_subparsers(dest="gstack_command", required=True)

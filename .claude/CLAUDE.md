@@ -14,9 +14,12 @@ Read `AGENTS.md` first; it is the contract. Standards live in `constitution/`
 
 ## codex-plugin-cc
 
-- Delegate implementation with `/codex:rescue --background` — it runs
-  `gpt-5.6-sol` at `medium` reasoning (.codex/config.toml); escalate effort
-  to `high` for migrations/cross-domain/concurrency/security-sensitive work.
+- Delegate implementation with `/codex:rescue --background` (gpt-5.6-sol @
+  medium; effort `high` for migrations/cross-domain/security). Then WATCH
+  the event channel: Monitor `.factory/signals.jsonl` alongside the job —
+  workers raise contradiction/confusion/blocked/scope-change signals and
+  PAUSE instead of guessing. On an event: `./forge signal resolve <id>
+  --notes "<answer>"`, then resume the rescue with the resolution.
 - PARALLELIZE whenever separation allows: `./forge roadmap parallel` → one
   worktree + background rescue per unblocked story; within a task fan out
   only across disjoint write_scope (contract: WORKFLOW.md Concurrency).

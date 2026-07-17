@@ -1420,3 +1420,42 @@ def test_roadmap_heal_unions_duplicates_done_wins(repo, tmp_path):
     p.write_text("{ <<<<<<< garbage")
     code, out = run(repo, "forge.py", "roadmap", "heal")
     assert code != 0 and "restore" in out
+
+
+# ------------------------------------------------------- signal event channel
+
+def test_signal_events_block_ship_until_resolved(repo, tmp_path):
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    run(repo, "record_decomposition_from_json.py", stdin=json.dumps(DECOMP))
+    write_passing_artifacts(repo)
+    run(repo, "update_run.py", "--decomposition-status", "recorded")
+    # guardrails on the raise itself
+    code, out = run(repo, "forge.py", "signal", "raise", "--kind", "vibes",
+                    "--by", "implementer", "-m", "x")
+    assert code != 0 and "kind" in out
+    code, out = run(repo, "forge.py", "signal", "raise", "--kind", "confusion",
+                    "--by", "ponytail", "-m", "x")
+    assert code != 0 and "not pinned" in out
+    # worker raises a contradiction mid-implementation and pauses
+    code, out = run(repo, "forge.py", "signal", "raise", "--kind", "contradiction",
+                    "--by", "implementer", "-m",
+                    "plan says soft-delete; decision 0001 says hard-delete")
+    assert code == 0 and "S-0001" in out and "PAUSE" in out
+    # the orchestrator sees it everywhere, and the ship gate refuses
+    code, out = run(repo, "forge.py", "next")
+    assert "OPEN worker signal" in out and "S-0001" in out
+    code, out = run(repo, "pr_ready.py")
+    assert code != 0 and "S-0001" in out
+    # resolution needs substance, then unblocks
+    code, out = run(repo, "forge.py", "signal", "resolve", "S-0001", "--notes", " ")
+    assert code != 0 and "notes" in out
+    code, out = run(repo, "forge.py", "signal", "resolve", "S-0001",
+                    "--notes", "decision 0001 wins: hard-delete; plan revised")
+    assert code == 0 and "resume" in out
+    code, out = run(repo, "pr_ready.py")
+    assert code == 0, out
+    # channel archived with the task, working copy cleaned
+    assert (repo / ".factory" / "history" / "ENG-1" / "signals.jsonl").exists()
+    assert not (repo / ".factory" / "signals.jsonl").exists()

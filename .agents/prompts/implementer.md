@@ -28,9 +28,22 @@ Rules:
   issue, status), where the ORCHESTRATOR reviews open rows and guides —
   confirm, demand a fix, or promote to a decision record. `pr_ready.py`
   refuses to ship while your task has unguided (`open`/`fix-needed`) rows,
-  so record assumptions the moment you make them, not at handoff. An
-  assumption that would *change* the plan's scope or acceptance criteria is
-  not an assumption — stop and report instead.
+  so record assumptions the moment you make them, not at handoff.
+- **Contradictions and confusion are EVENTS, not judgment calls.** The moment
+  the plan contradicts a decision or doc, requirements turn genuinely
+  ambiguous, you are hard-blocked, or the work would change scope or
+  acceptance criteria — RAISE A SIGNAL and PAUSE that thread:
+
+  ```bash
+  python3 .agents/scripts/forge.py signal raise --kind contradiction|confusion|blocked|scope-change --by implementer -m "<one sentence>"
+  ```
+
+  The orchestrator monitors the channel live, resolves the event (answer,
+  decision record, or plan revision), and resumes you with the resolution.
+  Never grind through a contradiction; never widen scope silently — a raised
+  signal costs minutes, a wrong guess costs the review cycle. Open signals
+  block `pr_ready`, so an unraised-but-real contradiction ships nothing
+  either way.
 - **Feature-type skills (pinned in harness.yaml; ENFORCED at record time).**
   Check the recorded decomposition BEFORE writing code:
   - `user_facing: true` → loading `emil-design-eng` AND `frontend-design` is
