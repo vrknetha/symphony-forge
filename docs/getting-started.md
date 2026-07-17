@@ -14,6 +14,31 @@ human-only).
 Lost at any point, in any phase? Say **"what's next?"** — the agent runs
 `./forge next` and walks you through the exact next actions.
 
+## The gates at a glance
+
+You never memorize these — the command you're about to run refuses and tells
+you what's missing. But this is the shape of the whole system:
+
+```text
+grill ▶ SIGN-OFF ▶ grill ▶ EPICS ACCEPTED ▶ roadmap+team ▶ per task:
+  PLAN MODE (hook-forced) ▶ grill ▶ plan saved ▶ decompose ▶ implement
+  (rescue-only, tests + design skills attested) ▶ verify ▶ autoreview ▶
+  functional (if user-facing) ▶ assumptions guided ▶ pr_ready ▶ archive
+```
+
+- Three **grills** (adversarial gaps/contradictions passes): before sign-off,
+  before the epics handoff, before every plan approval (`/grill-me`). Stale
+  or blocked verdicts don't open gates.
+- One **keystroke gate**: unplanned task → product-code edits and writing
+  Codex delegation are denied until the plan is saved. And `/codex:rescue`
+  is the ONLY Codex invocation — raw `codex exec` is always denied.
+- Every artifact is **attested**: `generated_by` on the allowlist,
+  `skills_used` mandatory on user-facing work, commit-stamped and fresh.
+- The **ship gate** additionally demands orchestrator guidance on every
+  recorded assumption and (for user-facing tasks) a functional check.
+- **Hygiene runs continuously**: secrets/oversize refused at the context
+  inbox, repo budgets in CI, decision lifecycle + prototype isolation linted.
+
 ---
 
 ## 1. Get the harness (once per machine)
