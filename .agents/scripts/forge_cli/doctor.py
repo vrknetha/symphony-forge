@@ -315,13 +315,42 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         _direnv_fix_message(),
     ))
 
-    # Codex — the execution plane
+    # Codex — the execution plane. Presence is not enough: the API refuses
+    # the pinned GPT-5.6 models on old CLIs ("requires a newer version of
+    # Codex") and the error only surfaces at delegation time — so the
+    # version floor is checked HERE, at setup.
+    MIN_CODEX = (0, 144, 0)
     if not which("codex") and args.fix and which("npm"):
         print("[fix ] installing @openai/codex ...")
         run_quiet(["npm", "install", "-g", "@openai/codex"])
 
+    def codex_version() -> tuple[int, ...] | None:
+        binary = which("codex")
+        if not binary:
+            return None
+        code, out = run_quiet([binary, "--version"])
+        try:
+            return tuple(int(p) for p in out.split()[-1].split(".")[:3])
+        except (ValueError, IndexError):
+            return None
+
+    version = codex_version()
+    if version is not None and version < MIN_CODEX and args.fix and which("npm"):
+        print(f"[fix ] codex CLI {'.'.join(map(str, version))} is below the "
+              f"{'.'.join(map(str, MIN_CODEX))} floor — upgrading ...")
+        run_quiet(["npm", "install", "-g", "@openai/codex@latest"])
+        version = codex_version()
+
     codex = which("codex")
     if codex:
+        version_ok = version is not None and version >= MIN_CODEX
+        checks.append(_check(
+            f"codex CLI >= {'.'.join(map(str, MIN_CODEX))}",
+            version_ok,
+            ".".join(map(str, version)) if version else "version unreadable",
+            "`npm install -g @openai/codex@latest` — the pinned gpt-5.6 models "
+            "refuse older CLIs at call time — or rerun with --fix",
+        ))
         code, out = run_quiet([codex, "login", "status"])
         logged_in = code == 0 and "not logged in" not in out.lower()
         checks.append(_check(
