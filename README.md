@@ -1,6 +1,6 @@
-# Symphony Forge
+# Symphony
 
-KnackLabs's harness for building client applications with **Claude Code coordination** and **Codex execution** — from discovery and client sign-off through scaffolding, per-feature delivery, and a self-evolving record of every decision.
+KnackLabs's process harness for building applications with **Claude Code coordination** and **Codex execution** — from discovery and client sign-off through scaffolding, per-feature delivery, and a self-evolving record of every decision.
 
 ## Quick Start (devs)
 
