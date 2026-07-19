@@ -7,8 +7,8 @@ KnackLabs's process harness for building applications with **Claude Code coordin
 One-time machine setup, then everything is conversation:
 
 ```bash
-git clone git@github.com:knacklabs-ai/symphony.git
-cd symphony && ./setup
+git clone git@github.com:knacklabs-ai/symphony-forge.git
+cd symphony-forge && ./setup
 ```
 
 Then, in Claude Code:
