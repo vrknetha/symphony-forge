@@ -244,6 +244,11 @@ if signals_path(root).exists():
 stages_file = root / ".factory" / "stages.json"
 if stages_file.exists():
     shutil.copy2(stages_file, history / "stages.json")
+# The compaction scratchpad is session noise, never evidence — a shipped
+# task starts the next one with a clean pad.
+scratchpad_file = root / ".factory" / "scratchpad.md"
+if scratchpad_file.exists():
+    scratchpad_file.unlink()
 for artifact in (decomposition_state_path(root), verify_state_path(root),
                  tests_state_path(root), root / ".factory" / "grills" / "plan.json",
                  signals_path(root), stages_file):

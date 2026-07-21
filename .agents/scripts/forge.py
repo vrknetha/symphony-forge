@@ -16,6 +16,7 @@ from forge_cli import context as ctx
 from forge_cli import deferrals as deferrals_mod
 from forge_cli import findings as findings_mod
 from forge_cli import lessons as lessons_mod
+from forge_cli import scratchpad as scratchpad_mod
 from forge_cli import stages as stages_mod
 from forge_cli import gstack as gstack_mod
 from forge_cli import signal as signal_mod
@@ -156,6 +157,12 @@ def main() -> None:
                              help="compact resolved rows from finished tasks to assumptions-archive.md")
     p_aa.add_argument("--repo")
     p_aa.set_defaults(func=assumptions_mod.cmd_archive)
+
+    p_note = sub.add_parser("note", help="jot a working note on the compaction scratchpad")
+    p_note.add_argument("text", nargs="?", help="one line worth surviving a compaction")
+    p_note.add_argument("--list", action="store_true", help="show current notes")
+    p_note.add_argument("--repo")
+    p_note.set_defaults(func=scratchpad_mod.cmd_note)
 
     p_def = sub.add_parser("defer", help="the deferral ledger (plans/deferrals.md)")
     def_sub = p_def.add_subparsers(dest="defer_command", required=True)

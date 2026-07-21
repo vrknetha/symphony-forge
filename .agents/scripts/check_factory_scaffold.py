@@ -30,6 +30,7 @@ required = [
     root / '.agents' / 'scripts' / 'record_test_from_json.py',
     root / '.agents' / 'scripts' / 'forge.py',
     root / '.agents' / 'scripts' / 'record_signoff.py',
+    root / '.agents' / 'scripts' / 'pre_compact.py',
     root / '.agents' / 'scripts' / 'check_dual_runtime.py',
     root / '.agents' / 'scripts' / 'check_repo_budget.py',
     root / '.agents' / 'skills' / 'rejected' / '.gitkeep',

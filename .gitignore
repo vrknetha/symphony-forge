@@ -42,6 +42,8 @@ pino-*.log
 # Factory runtime outputs
 .factory/tool-history.jsonl
 .factory/*.tmp.json
+# Session noise from the PreCompact hook — snapshot, never evidence
+.factory/scratchpad.md
 .worktrees/
 
 # Project-local gstack store (.envrc pins GSTACK_HOME here): projects/ is

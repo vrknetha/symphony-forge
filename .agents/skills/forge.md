@@ -74,6 +74,7 @@ or route:
 | what did we learn about these files | `./forge lesson relevant --files <paths>` — run BEFORE planning/implementing |
 | that mistake keeps happening, remember it | `./forge lesson add --topic <slug> --lesson "..." --source <sha/review> --applies-to <globs> --severity low\|medium\|high --by <agent>` |
 | this is out of scope for now | `./forge defer add "<item>" --why "..." --trigger "<condition that reopens it>"` — parked scope needs a trigger |
+| worth remembering past a compaction (hypothesis, gotcha, in-flight detour) | `./forge note "<one line>"` → .factory/scratchpad.md working notes; the PreCompact hook snapshots deterministic facts above them and PRESERVES the notes. Durable knowledge goes to a lesson/assumption/decision/deferral instead |
 | did any deferral come due | `./forge defer list --open` — resolve fired ones back onto the roadmap (`./forge defer resolve <id> --notes ...`) |
 | record the test results | `python3 .agents/scripts/record_test_from_json.py --kind automated\|functional --input <json>` |
 | run verify / does it build | `python3 .agents/scripts/verify.py` (never bypass with ad hoc commands) |

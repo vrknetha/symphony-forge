@@ -64,6 +64,13 @@ if assumptions_open:
         f"Assumptions awaiting orchestrator guidance: {assumptions_open} "
         "(plans/assumptions.md — `forge.py assumptions list --open`)."
     )
+scratchpad = root / ".factory" / "scratchpad.md"
+if payload.get("source") == "compact" and scratchpad.exists():
+    context.append(
+        "COMPACTION SCRATCHPAD: .factory/scratchpad.md was snapshotted moments "
+        "before this compaction — read it to re-anchor on recorded state "
+        "(open signals, stages, assumptions) before trusting the summary."
+    )
 lessons_file = root / "plans" / "lessons.jsonl"
 if lessons_file.exists():
     lesson_count = sum(1 for line in lessons_file.read_text().splitlines() if line.strip())

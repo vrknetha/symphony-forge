@@ -1777,3 +1777,59 @@ def test_deferral_ledger_add_list_resolve_strict(repo):
     path.write_text(path.read_text() + "| D-0002 | broken row |\n")
     code, out = run(repo, "forge.py", "defer", "list")
     assert code != 0 and "malformed" in out
+
+
+def test_precompact_scratchpad_snapshots_facts_and_findings(repo, tmp_path):
+    # empty project: hook must not crash, snapshot says uninitialized
+    code, out = run(repo, "pre_compact.py", stdin=json.dumps({"trigger": "auto"}))
+    assert code == 0, out
+    pad = repo / ".factory" / "scratchpad.md"
+    assert "Active task" in pad.read_text()
+    # live task with signals, assumptions, stages, and a recurring class
+    sign_off(repo)
+    intake(repo)
+    save_plan(repo, tmp_path)
+    run(repo, "record_decomposition_from_json.py", stdin=json.dumps(DECOMP))
+    run(repo, "forge.py", "stage", "start", "T1")
+    run(repo, "forge.py", "plan", "assume", "cache TTL is 60s")
+    run(repo, "forge.py", "signal", "raise", "--kind", "blocked",
+        "--by", "implementer", "-m", "migrations dir is missing")
+    hist = repo / ".factory" / "history"
+    for issue in ("ENG-7", "ENG-8", "ENG-9"):
+        d = hist / issue / "reviews"
+        d.mkdir(parents=True)
+        (d / "quality.json").write_text(json.dumps({"blocking_findings": [
+            {"category": "validation-gap", "area": "api", "summary": "s"}]}))
+    code, out = run(repo, "pre_compact.py", stdin=json.dumps({"trigger": "manual"}))
+    assert code == 0, out
+    text = pad.read_text()
+    assert "ENG-1" in text and "0/1 done" in text
+    assert "migrations dir is missing" in text        # open signal survives
+    assert "cache TTL is 60s" in text                 # unguided assumption survives
+    assert "RECURRING x3: validation-gap" in text     # findings survive
+    assert "forge next" in text                       # re-derivation pointer
+    # the post-compaction session start surfaces the scratchpad
+    code, out = run(repo, "session_start.py", stdin=json.dumps({"source": "compact"}))
+    assert code == 0 and "scratchpad" in out.lower()
+    # agent working notes survive snapshot rewrites; facts refresh around them
+    code, out = run(repo, "forge.py", "note", "suspect the retry loop double-fires")
+    assert code == 0, out
+    import re as _re
+    sig_id = _re.search(r"S-0001-[0-9a-f]{4}",
+                        (repo / ".factory" / "signals.jsonl").read_text()).group(0)
+    run(repo, "forge.py", "signal", "resolve", sig_id,
+        "--notes", "created the migrations dir")
+    code, out = run(repo, "pre_compact.py", stdin=json.dumps({"trigger": "auto"}))
+    assert code == 0, out
+    text = pad.read_text()
+    assert "suspect the retry loop double-fires" in text  # note preserved
+    assert "migrations dir is missing" not in text        # resolved fact refreshed away
+    # a shipped task wipes the pad — session noise never crosses tasks
+    run(repo, "forge.py", "stage", "done", "T1")
+    write_passing_artifacts(repo)
+    run(repo, "update_run.py", "--decomposition-status", "recorded")
+    run(repo, "forge.py", "assumptions", "resolve", "A-0001",
+        "--status", "confirmed", "--notes", "60s confirmed with EM")
+    code, out = run(repo, "pr_ready.py")
+    assert code == 0, out
+    assert not pad.exists()
