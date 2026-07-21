@@ -90,8 +90,21 @@ artifact schemas under `.agents/schemas/`), the vendored engineering
 constitution, the phase manifest + skill allowlist (`harness.yaml`), doc
 contracts, and an armed sign-off gate. It fails on a non-empty target.
 
-> Do NOT create client projects with `gh repo create --template` — a template
-> copy drags along the harness's own plans, run state, and history.
+The new repo has ZERO git relation to the harness (the machinery is a
+vendored copy — see "Template, Not Fork" in the README). Give it its own
+home and build the application inside it:
+
+```bash
+gh repo create knacklabs/my-app --private --source . --push
+# or: git remote add origin git@github.com:<org>/my-app.git && git push -u origin main
+```
+
+> Do NOT fork the harness and do NOT use `gh repo create --template` for
+> client projects. A fork makes every future harness upgrade a merge into
+> your app code; a template copy has no upgrade path at all — and both drag
+> along the harness's own plans, run state, and history. `forge init` +
+> `forge upgrade` is the only supported pairing: init creates the repo,
+> upgrade refreshes machinery-only, app code is never touched.
 
 > **Once per machine per repo:** run `direnv allow` inside the project.
 > That activates `.envrc`, which pins `GSTACK_HOME` to the repo's `.gstack/`

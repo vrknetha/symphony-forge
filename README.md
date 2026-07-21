@@ -17,6 +17,44 @@ Then, in Claude Code:
 
 The `knacklabs-new-project` skill updates the harness, runs `doctor --fix` (installs the toolchain; only logins stay manual), scaffolds the repo with `forge init`, and hands you to the project's own `/forge` skill. From then on, **ask "what now?" in any phase** — `/forge` runs the deterministic `./forge next` engine and routes you (same answer for Codex sessions via `AGENTS.md`). Manual equivalents for every step: [Getting Started](docs/getting-started.md).
 
+## Template, Not Fork — how client repos relate to this one
+
+The harness is a **dependency you vendor, not an ancestor you fork**. The
+only thing anyone ever clones is this repo, once per machine, as a tool —
+your application is born as its own repo with its own history:
+
+```text
+this repo (cloned once, per machine)          your app repo (created by init)
+┌─────────────────────────────┐   forge init  ┌─────────────────────────────┐
+│ the generator + upgrader    │ ─────────────▶│ fresh `git init` — ZERO git │
+│ (./forge init / upgrade)    │  copies ONLY  │ relation to the harness     │
+│                             │  machinery    │ app code, plans, decisions, │
+│ improves over time…         │ ─────────────▶│ evidence: all yours         │
+└─────────────────────────────┘ forge upgrade └─────────────────────────────┘
+```
+
+- **Create**: clone the harness → say *"Set up a new KnackLabs project called
+  my-app"* (or `./forge init --name my-app --target ../my-app`) → a new,
+  git-initialized repo appears beside the harness → push it to its OWN
+  GitHub repo (`git remote add origin …`). The app is then built *inside
+  that repo* — the harness clone is never where app code lives.
+- **Upgrade**: when this template improves, nothing is merged or pulled into
+  the app. From the harness clone: *"update my-app to the latest harness"*
+  (`./forge upgrade --target ../my-app`). It rewrites ONLY the machinery
+  paths (`.agents/`, `.claude/`, `.codex/`, `constitution/`, `harness/`,
+  `forge`, `harness.yaml`, `WORKFLOW.md`), refuses a dirty tree, and never
+  touches app code, `plans/`, `docs/`, or `.factory/` — review the diff in
+  the app repo like any PR.
+- **Never**: `git fork` (shared history means every upgrade is a merge into
+  your app code, and the harness's own run state collides with yours) or
+  `gh repo create --template` (clean copy once, but NO upgrade path ever —
+  and it drags this repo's plans, history, and evidence along).
+
+Everything above works as natural language too: clone the harness, open
+Claude Code in it, and say what you want — the skills route to the same
+deterministic commands ([Getting Started](docs/getting-started.md) shows
+both forms for every step).
+
 ## The Lifecycle
 
 ```text
