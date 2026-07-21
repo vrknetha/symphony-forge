@@ -33,27 +33,28 @@ this repo (cloned once, per machine)          your app repo (created by init)
 └─────────────────────────────┘ forge upgrade └─────────────────────────────┘
 ```
 
-- **Create**: clone the harness → say *"Set up a new KnackLabs project called
-  my-app"* (or `./forge init --name my-app --target ../my-app`) → a new,
-  git-initialized repo appears beside the harness → push it to its OWN
-  GitHub repo (`git remote add origin …`). The app is then built *inside
-  that repo* — the harness clone is never where app code lives.
+- **Create**: open Claude Code in the harness clone and say *"Set up a new
+  KnackLabs project called my-app."* The agent checks your machine, scaffolds
+  a fresh git-initialized repo beside the harness, asks which GitHub org/repo
+  should own it, pushes it there, and tells you to open future sessions in
+  the new repo. The app is built *inside that repo* — the harness clone is
+  never where app code lives.
 - **Upgrade**: when this template improves, nothing is merged or pulled into
-  the app. From the harness clone: *"update my-app to the latest harness"*
-  (`./forge upgrade --target ../my-app`). It rewrites ONLY the machinery
-  paths (`.agents/`, `.claude/`, `.codex/`, `constitution/`, `harness/`,
-  `forge`, `harness.yaml`, `WORKFLOW.md`), refuses a dirty tree, and never
-  touches app code, `plans/`, `docs/`, or `.factory/` — review the diff in
-  the app repo like any PR.
-- **Never**: `git fork` (shared history means every upgrade is a merge into
-  your app code, and the harness's own run state collides with yours) or
-  `gh repo create --template` (clean copy once, but NO upgrade path ever —
-  and it drags this repo's plans, history, and evidence along).
+  the app. In the harness clone, say *"Update my-app to the latest harness."*
+  The agent rewrites ONLY the machinery (agent assets, adapters, the
+  constitution, the gates) — it refuses a dirty tree and never touches app
+  code, plans, docs, or evidence. You review the diff in the app repo like
+  any PR.
+- **Never**: don't fork this repo (shared history means every upgrade becomes
+  a merge into your app code, and the harness's own run state collides with
+  yours) and don't use GitHub's template feature (clean copy once, but NO
+  upgrade path ever — and it drags this repo's plans, history, and evidence
+  along). If an agent proposes either, that's a bug — the skills forbid it.
 
-Everything above works as natural language too: clone the harness, open
-Claude Code in it, and say what you want — the skills route to the same
-deterministic commands ([Getting Started](docs/getting-started.md) shows
-both forms for every step).
+Sentences are the whole interface: the skills route what you say to
+deterministic commands, and [Getting Started](docs/getting-started.md) lists
+those commands under every step — as the contract and the fallback, not as
+something you type.
 
 ## The Lifecycle
 
@@ -69,8 +70,8 @@ both forms for every step).
 
 - **Before sign-off**: lightweight on purpose — no ceremony, no time-box. Discovery via gstack `/office-hours`; the prototype that earns sign-off is preserved in `prototype/` as the permanent UX reference.
 - **After sign-off**: deterministic gates. Plans live in `plans/`, decisions in `docs/decisions/`, evidence in `.factory/`; `pr_ready.py` archives every shipped task's plan + proof to `plans/completed/` and `.factory/history/`.
-- **Continuously**: dump raw context (client emails, transcripts, notes) into `docs/context/` — dumping is free, tracking is automatic. Say *"process the context dump"* and an agent scans it into the ledger, harvests it into proposed decisions and BRIEF/architecture updates, and marks each file. You can't miss pending context: it greets every session start, tops every `./forge next`, raises a daily `gardener` issue, and **blocks `plan save`** until harvested or explicitly ignored. Dev corrections get mined into proposed skills (`.agents/skills/proposed/`) that humans promote.
-- **The repo learns from itself**: review findings are structured and clustered across tasks (`./forge findings patterns`) — the same class recurring 3+ times triggers a refactor story + invariant decision, never a fourth patch (decision 0005). Repeated failures become lessons (`plans/lessons.jsonl`) that resurface before anyone touches the same paths again (decision 0006). Scope removed deliberately keeps a revisit trigger (`./forge defer`).
+- **Continuously**: dump raw context (client emails, transcripts, notes) into `docs/context/` — dumping is free, tracking is automatic. Say *"process the context dump"* and an agent scans it into the ledger, harvests it into proposed decisions and BRIEF/architecture updates, and marks each file. You can't miss pending context: it greets every session start, tops every *"what now?"*, raises a daily `gardener` issue, and **blocks plan approval** until harvested or explicitly ignored. Dev corrections get mined into proposed skills that humans promote.
+- **The repo learns from itself**: review findings are structured and clustered across tasks — ask *"are we fixing the same thing again?"* and the agent shows which defect classes recur; the same class recurring 3+ times triggers a refactor story + invariant decision, never a fourth patch (decision 0005). Repeated failures become ledgered lessons that resurface before anyone touches the same paths again (decision 0006). Say *"this is out of scope for now"* and the parked scope keeps an explicit revisit trigger instead of vanishing.
 
 Phase ownership — which tool runs which phase — is declared in [`harness.yaml`](harness.yaml).
 
@@ -97,10 +98,11 @@ a command that refuses. In lifecycle order:
 | 14 | **Ship gate** | approved plan, decomposition, verify OK, tests + 3 reviews ≥ 8 with no blockers, functional when `user_facing`, all evidence commit-stamped, same-commit, fresh | `pr_ready.py` — archives to `.factory/history/`, marks the roadmap item done |
 | 15 | **Hygiene floor** | decision lifecycle intact (supersede links resolve, accepted records have substance), no prototype/ imports, schemas match harness.yaml, repo within size budgets | `check_dual_runtime.py` + `check_repo_budget.py` in CI |
 
-Advisory (surfaced, never blocking): recurring finding classes
-(`forge findings patterns` — 3+ hits of one class ⇒ consolidate via a
-refactor story, decision 0005), matching lessons (`forge lesson relevant`),
-and open deferrals with fired triggers (`forge defer list --open`).
+Advisory (surfaced, never blocking): recurring finding classes — *"are we
+fixing the same thing again?"* (3+ hits of one class ⇒ consolidate via a
+refactor story, decision 0005); ledgered lessons — *"what did we learn about
+these files?"*; and parked scope whose trigger fired — *"did any deferral
+come due?"*.
 
 Human-only, always: `decision accept` (sign-off, epics, promotions) — agents
 relay the command and wait.
@@ -111,6 +113,10 @@ relay the command and wait.
 and recorders refuse evidence from anything else (`generated_by` is checked
 against `.agents/schemas/`). Adopting a new tool = a PR here, never a local
 choice.
+
+**Devs only ever say the "You say" column.** The other columns are what the
+AGENT invokes and records in response — shown so you know what happens on
+your behalf, not for you to type.
 
 | Stage | You say | Skill / agent invoked | Deterministic record |
 |---|---|---|---|
@@ -156,7 +162,7 @@ symphony-forge/
 ├── plans/                          # Task plans + durable ledgers: roadmap, assumptions, lessons, deferrals
 ├── AGENTS.md                       # The agent contract (both runtimes)
 ├── CLAUDE.md                       # Import shim: @AGENTS.md + @.claude/CLAUDE.md
-└── forge                           # Dev entrypoint: ./forge next|init|doctor|decision|plan|context
+└── forge                           # The agents' entrypoint — devs speak; agents run ./forge <cmd>
 ```
 
 ## Why This Shape
