@@ -7,7 +7,7 @@ KnackLabs's harness for building client applications with **Claude Code coordina
 One-time machine setup, then everything is conversation:
 
 ```bash
-git clone git@github.com:knacklabs-ai/knacklabs-symphony-forge.git
+git clone git@github.com:knacklabs/symphony-forge.git
 cd symphony-forge && ./setup
 ```
 

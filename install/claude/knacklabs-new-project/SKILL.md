@@ -20,7 +20,7 @@ runnable by you — the user should only have to answer questions.
    ```bash
    HARNESS="{{HARNESS_PATH}}"
    [ -d "$HARNESS/.git" ] && git -C "$HARNESS" pull --ff-only \
-     || git clone git@github.com:knacklabs-ai/knacklabs-symphony-forge.git "$HARNESS"
+     || git clone git@github.com:knacklabs/symphony-forge.git "$HARNESS"
    ```
 
 2. **Doctor.** Run `python3 "$HARNESS/.agents/scripts/forge.py" doctor`.
