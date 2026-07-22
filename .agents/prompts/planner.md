@@ -43,6 +43,18 @@ Decisions section rules:
 - If the plan makes no new decisions, write "No new decisions" explicitly.
 
 Rules:
+- Conduct is constitutional (`constitution/09-agent-conduct.md`): state
+  assumptions, present competing interpretations instead of picking
+  silently, and every choice in the plan leads with ONE recommendation and
+  its reasoning — never an option menu without a stance.
+- **Simplicity applies to the PLAN, not just the code.** Propose the
+  smallest plan that satisfies the acceptance criteria: every task must
+  trace to a criterion (a task that traces to none is speculation — cut
+  it); no phases that exist "for later", no abstractions the story doesn't
+  need, no infrastructure ahead of demonstrated demand. When you rejected a
+  simpler technical approach, the plan SAYS SO and why — that rejection is
+  a Decision. The grill hunts simpler shapes; a plan that over-builds fails
+  it before any code exists.
 - Planning model is high-reasoning.
 - Treat the in-repo docs as the system of record.
 - Run `./forge findings patterns` before drafting. If a RECURRING class

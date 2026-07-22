@@ -24,12 +24,20 @@ Two gates, two scopes:
   the draft plan against the roadmap item's `acceptance_criteria`, the
   active decision corpus (`forge decision list --active`), and
   `docs/architecture/`. Hunt: acceptance criteria the plan never addresses,
-  scope creep beyond the story, choices missing from the plan's Decisions
-  section, contradictions with accepted decisions, unbounded tasks, a Verify
-  Plan that can't actually falsify the work, a `## Surface Impact` row left
-  implicit (every Deferred / Unchanged-by-design entry needs a reason), and
-  any RECURRING finding class (`./forge findings patterns`) in this story's
-  area the plan neither consolidates nor tripwires. In Claude Code the
+  scope creep beyond the story, a SIMPLER SHAPE the plan ignores — fewer
+  states, fewer components, one less moving part, an existing utility
+  instead of a new abstraction; ask "which acceptance criterion does this
+  task serve?" and flag every task with no answer (conduct §2 applies to
+  plans: over-building fails the grill BEFORE code exists), compatibility
+  work with no named consumer — shims, deprecation paths, migration flows
+  the BRIEF and decisions justify for NOBODY (conduct §5: a breaking
+  replacement deletes the old path unless live users are named), choices missing
+  from the plan's Decisions section, contradictions with accepted
+  decisions, unbounded tasks, a Verify Plan that can't actually falsify the
+  work, a `## Surface Impact` row left implicit (every Deferred /
+  Unchanged-by-design entry needs a reason), and any RECURRING finding
+  class (`./forge findings patterns`) in this story's area the plan neither
+  consolidates nor tripwires. In Claude Code the
   `/grill-me` skill run against the plan satisfies this contract. The payload
   carries `"issue"`; the recorder stamps it against the active task.
 
