@@ -144,10 +144,9 @@ Two rules keep it grounded:
 - **Calendar cadence** for idle repos: the daily `harness-health` workflow
   runs the audit + integrity check and maintains a "Harness health" issue,
   and — when the vendored harness is behind — runs `forge upgrade` on a
-  branch and opens the PR. The harness repo is public, so no secret is
-  needed; a `HARNESS_READ_TOKEN` secret is honored only if it ever goes
-  private (an unreachable harness degrades to audit-only). The ceiling is
-  fixed: automation DETECTS and PROPOSES; merging the upgrade and accepting
+  branch and opens the PR. The harness repo is public: no secret, no setup;
+  an unreachable harness degrades to audit-only. The ceiling is fixed:
+  automation DETECTS and PROPOSES; merging the upgrade and accepting
   decisions stay human. Nothing self-activates.
 - **Frozen gates** (decision `frozen-gate-integrity`): an optimizing loop
   must never tune its own held-out set. `forge init/adopt/upgrade` freeze the

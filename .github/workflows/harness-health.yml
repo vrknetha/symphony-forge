@@ -42,21 +42,16 @@ jobs:
           } >> "$GITHUB_OUTPUT"
       - name: Check whether the vendored harness is behind
         id: staleness
-        env:
-          HARNESS_READ_TOKEN: ${{ secrets.HARNESS_READ_TOKEN }}
         run: |
           # Degrades gracefully: no VENDORED_FROM means this repo IS the
-          # harness (or a pre-manifest vendoring). The harness repo is public,
-          # so the clone is anonymous; HARNESS_READ_TOKEN is only needed if it
-          # ever goes private (clone failure = audit-only mode, never an error).
+          # harness (or a pre-manifest vendoring). The harness repo is public
+          # (anonymous clone); clone failure = audit-only mode, never an error.
           BEHIND=0
           if [ -f constitution/VENDORED_FROM ]; then
             VENDORED=$(head -1 constitution/VENDORED_FROM | awk '{print $3}')
-            HARNESS_URL="https://github.com/knacklabs/symphony-forge.git"
-            if [ -n "$HARNESS_READ_TOKEN" ]; then
-              HARNESS_URL="https://x-access-token:${HARNESS_READ_TOKEN}@github.com/knacklabs/symphony-forge.git"
-            fi
-            git clone --quiet --depth 1 "$HARNESS_URL" "$RUNNER_TEMP/harness" || true
+            git clone --quiet --depth 1 \
+              "https://github.com/knacklabs/symphony-forge.git" \
+              "$RUNNER_TEMP/harness" || true
             if [ -d "$RUNNER_TEMP/harness/.git" ]; then
               UPSTREAM=$(git -C "$RUNNER_TEMP/harness" rev-parse HEAD)
               if [ -n "$VENDORED" ] && [ "$UPSTREAM" != "$VENDORED" ]; then
