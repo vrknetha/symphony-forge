@@ -827,7 +827,10 @@ def test_adopt_vendors_harness_and_preserves_project(tmp_path):
     # machinery is in; project content untouched; their CI survived the merge
     assert (repo / ".agents" / "scripts" / "forge.py").exists()
     assert (repo / "src" / "app.js").read_text() == "console.log('prototype')\n"
-    assert (repo / "README.md").read_text() == "# Legacy prototype\n"
+    # project README preserved, onboarding section appended (never rewritten)
+    readme = (repo / "README.md").read_text()
+    assert readme.startswith("# Legacy prototype\n")
+    assert "Working in this repo — Symphony Forge" in readme
     assert (repo / ".github" / "workflows" / "their-ci.yml").exists()
     # harness factory workflow delivered alongside the preserved project one
     assert (repo / ".github" / "workflows" / "factory-scaffold.yml").exists()
@@ -2065,3 +2068,28 @@ def test_adopt_and_upgrade_refreeze_the_manifest(repo, tmp_path):
     assert proc.returncode == 0, proc.stdout + proc.stderr
     code, out = run(repo, "check_vendor_integrity.py")
     assert code == 0 and "OK" in out, out
+
+
+# --------------------------------------------------- README onboarding section
+
+def test_onboarding_section_created_at_init_and_never_duplicated(repo):
+    # forge init writes the prompt-first onboarding README from birth
+    readme = repo / "README.md"
+    assert readme.exists()
+    assert "Working in this repo — Symphony Forge" in readme.read_text()
+    assert '"what now?"' in readme.read_text()
+    # a project that rewrote its README keeps its content; upgrade appends once
+    readme.write_text("# app\n\nProject-specific orientation.\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "project readme")
+    for i in range(2):  # idempotent: a second upgrade must not duplicate
+        proc = subprocess.run(
+            [sys.executable, str(HARNESS / ".agents" / "scripts" / "forge.py"),
+             "upgrade", "--target", str(repo)],
+            cwd=HARNESS, capture_output=True, text=True)
+        assert proc.returncode == 0, proc.stdout + proc.stderr
+        git(repo, "add", "-A")
+        git(repo, "commit", "-q", "-m", f"upgrade {i}", "--allow-empty")
+    text = readme.read_text()
+    assert text.startswith("# app\n")
+    assert text.count("Working in this repo — Symphony Forge") == 1

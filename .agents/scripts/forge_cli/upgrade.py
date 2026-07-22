@@ -166,6 +166,9 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
         with attrs.open("a") as fh:
             fh.write("\n.gstack/**/*.jsonl merge=jsonl-append\n")
         ensured.append(".gitattributes (jsonl merge rule appended)")
+    from .scaffold import ensure_onboarding
+    if ensure_onboarding(target, target.name):
+        ensured.append("README.md ('Working in this repo' onboarding section appended)")
     gitignore = target / ".gitignore"
     if gitignore.exists() and ".gstack/sessions/" not in gitignore.read_text():
         with gitignore.open("a") as fh:

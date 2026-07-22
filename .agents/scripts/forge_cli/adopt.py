@@ -196,6 +196,11 @@ def cmd_adopt(args: argparse.Namespace) -> None:
         created.append("docs/product/BRIEF.md")
     ensure("docs/product/DISCOVERY.md", DISCOVERY_TEMPLATE.format(name=name))
     ensure("prototype/README.md", PROTOTYPE_README)
+    # Devs land on the README first: tell them the repo is harness-run and
+    # that starting is conversational — append, never rewrite (project-owned).
+    from .scaffold import ensure_onboarding
+    if ensure_onboarding(target, name):
+        created.append("README.md ('Working in this repo — Symphony Forge' section appended)")
     for sub in ("active", "completed", "debt"):
         plan_dir = target / "plans" / sub
         if not plan_dir.exists():

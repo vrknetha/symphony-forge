@@ -61,6 +61,14 @@ confirm it in one breath with the prototype-or-production question below.
    adopt output. If the repo had its own `.gitignore` or CI workflows, merge
    the harness entries instead of losing theirs.
 
+   Adopt also appended a "Working in this repo — Symphony Forge" onboarding
+   section to the README — the first thing a dev who clones the repo reads.
+   Do not leave it as a bolted-on tail: weave it with the repo's existing
+   orientation (project-specific doc links stay on top, the harness section
+   explains HOW work happens here), and delete any old "how to contribute /
+   run" prose the harness flow now supersedes — stale start instructions
+   next to correct ones is how people start wrong.
+
 5b. **Activate the project-local gstack store and pull in personal history.**
    ```bash
    direnv allow

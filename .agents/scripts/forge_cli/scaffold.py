@@ -68,6 +68,53 @@ Rules:
   originally react to, and which decision records came out of it?
 """
 
+# Appended to the target's root README by init/adopt/upgrade (append-if-
+# missing — the README is project-owned). The heading doubles as the
+# idempotency marker. Prompt-first on purpose: devs talk to the agent; they
+# never need to memorize commands.
+ONBOARDING_HEADING = "## Working in this repo — Symphony Forge"
+ONBOARDING_SECTION = f"""
+{ONBOARDING_HEADING}
+
+This repo runs on the [Symphony Forge](https://github.com/knacklabs/symphony-forge)
+engineering harness: agents do the mechanical work, deterministic gates keep
+the evidence honest, and humans make the decisions. Getting started is
+conversational — open an agent session (Claude Code or Codex) in the repo
+root, then:
+
+- **The session checks your machine every time.** If tools are missing it
+  says so on the spot — reply "set up my machine" and approve the installs;
+  only logins stay manual.
+- **Ask "what now?" whenever you are unsure.** The harness answers with the
+  current phase and the exact next step. There is nothing to memorize.
+- **Every feature starts with a plan the agent must defend.** Plan mode is
+  enforced by hooks; work then runs stage by stage with a local review
+  before every commit, and shipping refuses until the evidence gates pass.
+- **The map:** `AGENTS.md` is the contract and read order, `WORKFLOW.md` the
+  doctrine, `docs/product/BRIEF.md` what this product is. Standards that are
+  law live in `docs/architecture/` and `docs/decisions/`.
+- **Humans own** accepting decisions, client sign-off, and merging PRs —
+  agents draft and relay, never run those.
+
+The vendored harness machinery (`.agents/`, `constitution/`, gate scripts)
+is frozen: never edit it here — improvements go to the harness repo and
+arrive by re-vendoring.
+"""
+
+
+def ensure_onboarding(target: Path, name: str) -> bool:
+    """Append the onboarding section to the target README (create if absent).
+    Returns True when something was written — idempotent via the heading."""
+    readme = target / "README.md"
+    if not readme.exists():
+        readme.write_text(f"# {name}\n{ONBOARDING_SECTION}")
+        return True
+    if ONBOARDING_HEADING in readme.read_text():
+        return False
+    with readme.open("a") as fh:
+        fh.write(f"\n{ONBOARDING_SECTION}")
+    return True
+
 
 def cmd_init(args: argparse.Namespace) -> None:
     root = repo_root()
@@ -147,6 +194,7 @@ def cmd_init(args: argparse.Namespace) -> None:
 
     agents_md = (root / "AGENTS.md").read_text().replace("Symphony Forge", args.name, 1)
     (target / "AGENTS.md").write_text(agents_md)
+    ensure_onboarding(target, args.name)
 
     if not (target / ".git").exists():
         subprocess.run(["git", "init", "-q"], cwd=target, check=True)
