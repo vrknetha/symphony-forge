@@ -109,7 +109,9 @@ refactor story, decision 0005); ledgered lessons — *"what did we learn about
 these files?"*; parked scope whose trigger fired — *"did any deferral come
 due?"*; and the loop-health audit — *"are the watchers themselves decaying?"*
 (ignored escalations, stale deferrals, dead lessons: `forge audit`, run at
-every ship and surfaced by `forge next`).
+every ship, surfaced by `forge next`, and run daily in CI by the
+`harness-health` workflow — which also opens an automated `forge upgrade`
+PR when the vendored harness falls behind; merging it stays human).
 
 Human-only, always: **accepting a decision** (sign-off, epics, promotions) —
 the one command a person types themselves. The agent drafts the record,

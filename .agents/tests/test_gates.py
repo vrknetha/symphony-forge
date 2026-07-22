@@ -864,6 +864,7 @@ def test_scaffold_delivers_factory_workflows(repo):
     wf = repo / ".github" / "workflows"
     assert (wf / "factory-scaffold.yml").exists()
     assert (wf / "gardener.yml").exists()
+    assert (wf / "harness-health.yml").exists()
 
 
 def test_scaffold_pins_gstack_into_the_repo(repo):

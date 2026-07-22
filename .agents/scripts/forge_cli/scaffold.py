@@ -18,6 +18,7 @@ COPY_TREES = [".agents", ".claude", "constitution", "harness"]
 COPY_WORKFLOWS = [
     ".github/workflows/factory-scaffold.yml",
     ".github/workflows/gardener.yml",
+    ".github/workflows/harness-health.yml",
 ]
 COPY_CODEX = ["config.toml", "explore.config.toml", "hooks.json"]  # + agents/ and skills/ dirs
 COPY_FILES = ["harness.yaml", ".gitignore", ".gitattributes", ".envrc",
