@@ -27,6 +27,23 @@ if attributes.exists() and "merge=jsonl-append" in attributes.read_text():
             cwd=root, capture_output=True,
         )
 context = []
+# Machine readiness, EVERY session (milliseconds — existence checks only):
+# a teammate who just cloned/pulled learns their machine is not ready at the
+# first session, not at the first mid-task delegation failure.
+from forge_cli.doctor import fast_status  # noqa: E402
+required_missing, advisory_missing = fast_status()
+if required_missing:
+    context.append(
+        f"MACHINE NOT READY: missing {', '.join(required_missing)} — say "
+        "\"set up my machine\" (runs `./forge doctor --fix`; only logins stay "
+        "manual). Delegation, review, and discovery will fail until fixed."
+    )
+elif advisory_missing:
+    context.append(
+        f"Machine: advisory tooling missing ({', '.join(advisory_missing)}) — "
+        "user-facing tasks REQUIRE the design skills (recorders refuse "
+        "unattested artifacts); `./forge doctor` lists the installs."
+    )
 if run_state.get("issue_key"):
     context += [
         f"Active issue: {run_state.get('issue_key')} — {run_state.get('title')}",

@@ -344,7 +344,7 @@ def check_path_parity(root: Path) -> None:
         )
 
 
-ALLOWED_CLAUDE = {"CLAUDE.md", "settings.json", "settings.local.json"}
+ALLOWED_CLAUDE = {"CLAUDE.md", "settings.json", "settings.local.json", "launch.json"}
 
 
 def check_thin_adapter(root: Path) -> None:
@@ -354,17 +354,22 @@ def check_thin_adapter(root: Path) -> None:
             if not f.is_file():
                 continue
             rel = f.relative_to(claude)
-            # .claude/skills/<name>/SKILL.md is Claude's skill registration
-            # format (like .codex/agents/*.toml); duplication checks still
-            # keep skills honest about referencing canon.
-            is_skill = (
-                len(rel.parts) == 3 and rel.parts[0] == "skills" and rel.parts[2] == "SKILL.md"
+            # Standard Claude Code project surfaces are allowed: skills may be
+            # MULTI-FILE (skills/<name>/ plus reference files/scripts — the
+            # documented skill layout), agents/*.md are custom subagents, and
+            # launch.json is run config. The rule guards against CANON living
+            # in the adapter (policy docs, constitution copies), not against
+            # a client repo using Claude Code normally; the duplication checks
+            # still keep skills/agents honest about referencing canon.
+            is_skill_file = len(rel.parts) >= 3 and rel.parts[0] == "skills"
+            is_agent = (
+                len(rel.parts) == 2 and rel.parts[0] == "agents" and f.suffix == ".md"
             )
-            if f.name not in ALLOWED_CLAUDE and not is_skill:
+            if f.name not in ALLOWED_CLAUDE and not is_skill_file and not is_agent:
                 violation(
                     f"{f.relative_to(root)} is not an adapter file. .claude/ may contain only "
-                    f"{sorted(ALLOWED_CLAUDE)} and skills/<name>/SKILL.md; move substance "
-                    "to .agents/ or docs/."
+                    f"{sorted(ALLOWED_CLAUDE)}, skills/<name>/**, and agents/*.md; move "
+                    "substance to .agents/ or docs/."
                 )
         claude_md = claude / "CLAUDE.md"
         if claude_md.exists():

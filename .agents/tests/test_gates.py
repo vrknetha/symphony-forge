@@ -1879,3 +1879,22 @@ def test_repo_budget_refuses_tracked_build_noise(repo):
     git(repo, "commit", "-q", "-m", "sneak bytecode past gitignore")
     code, out = run(repo, "check_repo_budget.py", str(repo))
     assert code != 0 and "build/tool noise" in out and "git rm --cached" in out
+
+
+def test_machine_readiness_checked_every_session(repo, tmp_path):
+    import os
+    bare_home = tmp_path / "bare-home"
+    bare_home.mkdir()
+    env = {**os.environ, "HOME": str(bare_home)}
+    # fast doctor: pure existence checks, nonzero on missing required tools
+    proc = subprocess.run(
+        [sys.executable, str(repo / ".agents" / "scripts" / "forge.py"),
+         "doctor", "--fast"], cwd=repo, env=env, capture_output=True, text=True)
+    out = proc.stdout + proc.stderr
+    assert proc.returncode != 0
+    assert "codex-plugin-cc" in out and "autoreview" in out and "--fix" in out
+    # the session hook banners it on EVERY session in a fresh clone
+    proc = subprocess.run(
+        [sys.executable, str(repo / ".agents" / "scripts" / "session_start.py")],
+        cwd=repo, env=env, capture_output=True, text=True, input="{}")
+    assert proc.returncode == 0 and "MACHINE NOT READY" in proc.stdout
