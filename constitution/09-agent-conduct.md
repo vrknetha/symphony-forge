@@ -43,7 +43,21 @@ before and after" (and the delta ratchet holds). Multi-step work states a
 brief plan with a verify check per step. Strong success criteria let you
 loop independently; weak ones ("make it work") guarantee churn.
 
-## 5. Strong opinions — one recommendation
+## 5. Compatibility is a requirement, never a reflex
+
+Agents default to backward-compatibility moves — shims, aliases, fallback
+branches, deprecation paths, migration flows — even in projects with ZERO
+consumers. Don't. Unless the BRIEF or an accepted decision names live
+users, external API consumers, or production data, a breaking replacement
+DELETES the old path in the same change: no compat layers for state nobody
+has, no versioned migrations for empty tables, no "keep the old endpoint
+just in case". Cleanup is part of replacement — obsolete code, schemas,
+tests, docs, exports, and wiring go in the same PR, or stay with an owner,
+reason, and removal condition. When consumers ARE live, compatibility is
+real work: scope it explicitly in the plan (Surface Impact + a Decision),
+still never open-ended.
+
+## 6. Strong opinions — one recommendation
 
 Always lead with ONE recommendation and its reasoning, with confidence
 stated honestly. Never present an option menu without a stance. When
