@@ -90,6 +90,25 @@ confirm it in one breath with the prototype-or-production question below.
    made. THE HUMAN accepts decisions (`./forge decision accept`) — relay,
    never run. Mark harvested files with `./forge context mark`.
 
+7b. **Rehome the existing standards — replacement is NOT disposal.** The
+   `migrated-*` files usually carry hard-won project standards (component
+   patterns, coding rules, data rules, behavioral guidelines). Triage
+   EVERY rule into exactly one destination, and record the mapping in the
+   context ledger (`context mark --outputs --notes`):
+   - **Project standard** (design systems, component canon, coding
+     conventions, page structure) → `docs/architecture/<topic>-standards.md`
+     — project-owned, upgrade-proof — plus a decision record naming it LAW
+     and pointers from AGENTS.md/README where devs already look.
+   - **Gotcha born from a repeated mistake** → `./forge lesson add` with
+     `applies_to` globs, so it resurfaces before the same paths are touched.
+   - **Covered by vendored canon** (e.g. Karpathy-style conduct →
+     `constitution/09-agent-conduct.md`; logging/migration mandates already
+     captured as decisions) → drop it, citing exactly what supersedes it.
+   A rule left only in `docs/context/` is homeless — agents will never
+   reload it, and the standard silently dies. Also normalize file case:
+   the contract files are `AGENTS.md`/`CLAUDE.md` in CAPS (adopt handles
+   this; verify with `git ls-files`).
+
 8. **If the client already signed off historically**, formalize it now:
    `client-signoff` decision → human accept → `record_signoff.py`. Otherwise
    the repo correctly sits pre-sign-off.

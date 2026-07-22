@@ -1898,3 +1898,25 @@ def test_machine_readiness_checked_every_session(repo, tmp_path):
         [sys.executable, str(repo / ".agents" / "scripts" / "session_start.py")],
         cwd=repo, env=env, capture_output=True, text=True, input="{}")
     assert proc.returncode == 0 and "MACHINE NOT READY" in proc.stdout
+
+
+def test_adopt_normalizes_case_variant_contract_files(repo, tmp_path):
+    target = tmp_path / "legacy"
+    target.mkdir()
+    subprocess.run(["git", "init", "-q"], cwd=target, check=True)
+    (target / "agents.md").write_text("# old lowercase rules\nproject standards here\n")
+    (target / "README.md").write_text("app\n")
+    git(target, "add", "-A")
+    git(target, "commit", "-q", "-m", "pre-harness")
+    proc = subprocess.run(
+        [sys.executable, str(HARNESS / ".agents" / "scripts" / "forge.py"),
+         "adopt", "--target", str(target), "--name", "legacy"],
+        cwd=HARNESS, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    # canonical CAPS name on disk (readdir, not open-by-name: case-insensitive
+    # filesystems would lie to an exists() check)
+    names = {p.name for p in target.iterdir()}
+    assert "AGENTS.md" in names and "agents.md" not in names
+    # the old rules are preserved for rehoming, and the output demands it
+    assert (target / "docs" / "context" / "migrated-AGENTS.md").read_text().startswith("# old lowercase rules")
+    assert "REHOME" in proc.stdout and "not disposal" in proc.stdout.replace("is not", "not")
