@@ -107,6 +107,27 @@ def cmd_adopt(args: argparse.Namespace) -> None:
     context_dir = target / "docs" / "context"
     for rel in MERGE_FILES:
         dst = target / rel
+        # Repos often carry a case-variant (agents.md, claude.md). Normalize
+        # to the canonical name FIRST — writing through the variant leaves
+        # the contract invisible on case-sensitive systems (found on the
+        # knacklabs-ats migration). On case-insensitive filesystems the
+        # rename is the same file changing case; on case-sensitive ones a
+        # coexisting variant is preserved to context and removed.
+        variant = next(
+            (p for p in target.iterdir()
+             if p.is_file() and p.name.lower() == rel.lower() and p.name != rel),
+            None,
+        )
+        if variant is not None:
+            canonical_exists = any(p.name == rel for p in target.iterdir())
+            if canonical_exists:
+                context_dir.mkdir(parents=True, exist_ok=True)
+                keep = context_dir / f"migrated-{variant.name}"
+                shutil.copy2(variant, keep)
+                preserved.append(str(keep.relative_to(target)))
+                variant.unlink()
+            else:
+                variant.rename(dst)
         src_text = (harness / rel).read_text()
         if rel == "AGENTS.md":
             src_text = src_text.replace("Symphony Forge", name, 1)
@@ -193,10 +214,17 @@ def cmd_adopt(args: argparse.Namespace) -> None:
         print(f"Overwrote {len(overwritten)} pre-existing file(s): {head}{more} — review with git diff")
     if preserved:
         print("Preserved for harvest: " + ", ".join(preserved))
+        print("  ^ these carry the project's EXISTING STANDARDS — replacement is not "
+              "disposal. Every rule in them must be REHOMED, not archived: "
+              "project standards -> docs/architecture/<topic>-standards.md (+ a "
+              "decision naming them law), gotchas -> forge lesson add, rules the "
+              "vendored constitution now covers -> dropped WITH a citation. The "
+              "context ledger records where each rule went.")
     if created:
         print("Created (project-owned): " + ", ".join(created))
     print("Next (the knacklabs-migrate-project skill walks all of this):")
     print("  1. git diff — review every overwrite; merge old .gitignore/CI entries if needed")
     print("  2. Sort existing content: prototype work -> prototype/, raw notes -> docs/context/")
     print("  3. ./forge context scan, then harvest into DISCOVERY.md/BRIEF.md and decisions")
-    print("  4. Linters + gate tests, commit, then: ./forge next")
+    print("  4. REHOME the migrated-* standards (see above) — no rule may end up homeless")
+    print("  5. Linters + gate tests, commit, then: ./forge next")
