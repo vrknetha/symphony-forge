@@ -79,10 +79,11 @@ def cmd_init(args: argparse.Namespace) -> None:
             )
     target.mkdir(parents=True, exist_ok=True)
 
+    ignore = shutil.ignore_patterns("__pycache__", "*.pyc")
     for tree in COPY_TREES:
         src = root / tree
         if src.exists():
-            shutil.copytree(src, target / tree, dirs_exist_ok=True)
+            shutil.copytree(src, target / tree, dirs_exist_ok=True, ignore=ignore)
     for rel in COPY_WORKFLOWS:
         src = root / rel
         if src.exists():
@@ -92,9 +93,9 @@ def cmd_init(args: argparse.Namespace) -> None:
     (target / ".codex").mkdir(exist_ok=True)
     for name in COPY_CODEX:
         shutil.copy2(root / ".codex" / name, target / ".codex" / name)
-    shutil.copytree(root / ".codex" / "agents", target / ".codex" / "agents", dirs_exist_ok=True)
+    shutil.copytree(root / ".codex" / "agents", target / ".codex" / "agents", dirs_exist_ok=True, ignore=ignore)
     if (root / ".codex" / "skills").is_dir():
-        shutil.copytree(root / ".codex" / "skills", target / ".codex" / "skills", dirs_exist_ok=True)
+        shutil.copytree(root / ".codex" / "skills", target / ".codex" / "skills", dirs_exist_ok=True, ignore=ignore)
     for name in COPY_FILES:
         src = root / name
         if src.exists():

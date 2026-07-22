@@ -1844,6 +1844,8 @@ def test_upgrade_preserves_client_claude_and_codex_surfaces(repo, tmp_path):
     (repo / ".claude" / "agents" / "gatekeeper.md").write_text("client agent")
     (repo / ".claude" / "launch.json").write_text("{}")
     (repo / ".codex" / "agents" / "client-custom.toml").write_text("client toml")
+    (repo / ".agents" / "skills" / "caveman").mkdir(parents=True)
+    (repo / ".agents" / "skills" / "caveman" / "SKILL.md").write_text("client agents skill")
     # ...and locally drifts a harness-owned file (must be refreshed)
     (repo / ".claude" / "skills" / "forge" / "SKILL.md").write_text("stale local edit")
     git(repo, "add", "-A")
@@ -1861,3 +1863,9 @@ def test_upgrade_preserves_client_claude_and_codex_surfaces(repo, tmp_path):
     # harness-owned paths are refreshed, not left drifted
     assert "stale local edit" not in (repo / ".claude" / "skills" / "forge" / "SKILL.md").read_text()
     assert (repo / ".claude" / "settings.json").exists()
+    # client-installed .agents/skills survive; harness-shipped ones refresh
+    assert (repo / ".agents" / "skills" / "caveman" / "SKILL.md").read_text() == "client agents skill"
+    assert (repo / ".agents" / "skills" / "forge.md").exists()
+    # vendoring never ships build noise
+    assert not list((repo / ".agents").rglob("__pycache__"))
+    assert not list((repo / ".agents").rglob("*.pyc"))

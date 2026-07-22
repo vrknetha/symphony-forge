@@ -38,6 +38,8 @@ PROJECT_OWNED = [
 ]
 # Preserved across the .agents replacement (project evolution state).
 PRESERVE_IN_AGENTS = [".agents/skills/proposed", ".agents/skills/rejected"]
+# Vendoring never ships build noise.
+VENDOR_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc")
 
 
 def _replace_path(src: Path, dst: Path) -> None:
@@ -47,7 +49,7 @@ def _replace_path(src: Path, dst: Path) -> None:
         dst.unlink()
     dst.parent.mkdir(parents=True, exist_ok=True)
     if src.is_dir():
-        shutil.copytree(src, dst)
+        shutil.copytree(src, dst, ignore=VENDOR_IGNORE)
     else:
         shutil.copy2(src, dst)
 
@@ -70,12 +72,28 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
 
     preserved: dict[str, Path] = {}
     keep_root = Path(tempfile.mkdtemp(prefix="forge-upgrade-keep-"))
-    for rel in PRESERVE_IN_AGENTS:
+    # .agents/skills is mixed ownership too: the `skills` CLI installs
+    # project skills there (skills-lock.json repos like knacklabs-ats carry
+    # a dozen). Preserve every child the harness does not ship, plus the
+    # evolution dirs (proposed/rejected — client's version always wins).
+    client_skill_dirs: list[str] = []
+    target_skills = target / ".agents" / "skills"
+    harness_skill_names = {p.name for p in (harness / ".agents" / "skills").iterdir()} \
+        if (harness / ".agents" / "skills").is_dir() else set()
+    if target_skills.is_dir():
+        for child in target_skills.iterdir():
+            rel = f".agents/skills/{child.name}"
+            if child.name not in harness_skill_names and rel not in PRESERVE_IN_AGENTS:
+                client_skill_dirs.append(rel)
+    for rel in PRESERVE_IN_AGENTS + client_skill_dirs:
         src = target / rel
         if src.exists():
             dest = keep_root / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copytree(src, dest)
+            if src.is_dir():
+                shutil.copytree(src, dest)
+            else:
+                shutil.copy2(src, dest)
             preserved[rel] = dest
 
     for tree in UPGRADE_TREES:
@@ -85,7 +103,7 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
         dst = target / tree
         if dst.exists():
             shutil.rmtree(dst)
-        shutil.copytree(src, dst)
+        shutil.copytree(src, dst, ignore=VENDOR_IGNORE)
     # .claude is mixed ownership: replace only harness-shipped paths; the
     # client's own skills/agents/launch.json survive untouched.
     for rel in CLAUDE_HARNESS_OWNED:
@@ -123,10 +141,15 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
 
     for rel, kept in preserved.items():
         dst = target / rel
-        if dst.exists():
+        if dst.is_dir():
             shutil.rmtree(dst)
+        elif dst.exists():
+            dst.unlink()
         dst.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copytree(kept, dst)
+        if kept.is_dir():
+            shutil.copytree(kept, dst)
+        else:
+            shutil.copy2(kept, dst)
     shutil.rmtree(keep_root, ignore_errors=True)
 
     # Newer harness additions that older scaffolds predate: create-if-missing /

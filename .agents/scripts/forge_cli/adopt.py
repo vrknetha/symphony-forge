@@ -77,7 +77,8 @@ def cmd_adopt(args: argparse.Namespace) -> None:
         if not src.exists():
             return
         for path in src.rglob("*"):
-            if path.is_file():
+            if path.is_file() and "__pycache__" not in path.parts \
+                    and path.suffix != ".pyc":
                 vendor_file(path, target / path.relative_to(harness))
 
     # Machinery trees are MERGED per file, not replaced wholesale — an existing
