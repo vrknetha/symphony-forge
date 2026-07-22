@@ -10,6 +10,13 @@ contract — every artifact you record must match its `.agents/schemas/` file,
 including `generated_by`. The one exception is human-only actions
 (`decision accept`): relay the command, never run it.
 
+**Between gates the loop is autonomous (conduct §7).** A clean local review
+or a passing gate IS the permission to continue — never stop to ask
+"proceed?" after a review, between stages, or across phase transitions.
+Report progress and keep driving; stop only for an open signal, a gate
+refusal you cannot resolve within the approved plan, a human-only act, or
+scope the plan does not cover.
+
 `./forge <cmd>` (from repo root) is shorthand for
 `python3 .agents/scripts/forge.py <cmd>` — either form works everywhere below.
 
