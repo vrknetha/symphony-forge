@@ -19,6 +19,7 @@ update by re-vendoring from the harness, never by editing in place.
 | Topic | Read when… | Reference |
 |---|---|---|
 | Agentic development workflow | Setting up / following the AI-assisted dev workflow | `00-agentic-development-workflow.md` |
+| Agent conduct | ALWAYS — how agents think, scope, diff, and recommend | `09-agent-conduct.md` |
 | Monorepo standard | Creating or structuring a repo | `01-monorepo-standard.md` |
 | Shared library best practices | Adding reusable code to `/shared` or `/libs` | `02-shared-library-best-practices.md` |
 | Modular monolith structure | Designing modules / domain boundaries | `03-modular-monolith-structure.md` |

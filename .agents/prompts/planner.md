@@ -43,6 +43,10 @@ Decisions section rules:
 - If the plan makes no new decisions, write "No new decisions" explicitly.
 
 Rules:
+- Conduct is constitutional (`constitution/09-agent-conduct.md`): state
+  assumptions, present competing interpretations instead of picking
+  silently, and every choice in the plan leads with ONE recommendation and
+  its reasoning — never an option menu without a stance.
 - Planning model is high-reasoning.
 - Treat the in-repo docs as the system of record.
 - Run `./forge findings patterns` before drafting. If a RECURRING class
