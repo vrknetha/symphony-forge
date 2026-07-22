@@ -34,6 +34,19 @@ def main() -> int:
     violations: list[str] = []
     warnings: list[str] = []
     dir_totals = {prefix: 0 for prefix in DIR_BUDGETS}
+    # Build/tool noise must never be TRACKED regardless of size — gitignore
+    # only guards untracked files, so anything committed once (e.g. vendored
+    # bytecode before the vendor-ignore fix) silently stays until a check
+    # refuses it.
+    noise = [rel for rel in tracked
+             if "__pycache__/" in rel or rel.endswith((".pyc", ".pyo"))
+             or Path(rel).name == ".DS_Store"]
+    if noise:
+        violations.append(
+            f"{len(noise)} tracked build/tool noise file(s) (e.g. {noise[0]}) — "
+            "bytecode and OS droppings never belong in git: "
+            "`git rm --cached <paths>` and keep __pycache__/, *.pyc, .DS_Store ignored."
+        )
     for rel in tracked:
         path = root / rel
         if not path.is_file():

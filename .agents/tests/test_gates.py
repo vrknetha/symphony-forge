@@ -1869,3 +1869,13 @@ def test_upgrade_preserves_client_claude_and_codex_surfaces(repo, tmp_path):
     # vendoring never ships build noise
     assert not list((repo / ".agents").rglob("__pycache__"))
     assert not list((repo / ".agents").rglob("*.pyc"))
+
+
+def test_repo_budget_refuses_tracked_build_noise(repo):
+    pyc = repo / ".agents" / "scripts" / "__pycache__"
+    pyc.mkdir(parents=True)
+    (pyc / "factory_lib.cpython-312.pyc").write_bytes(b"\x00")
+    git(repo, "add", "-f", "-A")
+    git(repo, "commit", "-q", "-m", "sneak bytecode past gitignore")
+    code, out = run(repo, "check_repo_budget.py", str(repo))
+    assert code != 0 and "build/tool noise" in out and "git rm --cached" in out
