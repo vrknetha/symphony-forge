@@ -95,7 +95,8 @@ confirm it in one breath with the prototype-or-production question below.
 7. **Harvest** (`.agents/prompts/harvester.md`): distill
    `docs/product/DISCOVERY.md` and `BRIEF.md` from the context; propose a
    `./forge decision new <slug>` record for every client decision already
-   made. THE HUMAN accepts decisions (`./forge decision accept`) — relay,
+   made. The HUMAN decides acceptance (`./forge decision accept`) — an explicit
+   chat confirmation lets you run it with their name; otherwise relay,
    never run. Mark harvested files with `./forge context mark`.
 
 7b. **Rehome the existing standards — replacement is NOT disposal.** The

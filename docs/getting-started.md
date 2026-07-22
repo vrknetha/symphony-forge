@@ -137,12 +137,13 @@ the verdict (`record_grill_from_json.py --gate signoff`).
 **`record_signoff.py` refuses without a fresh, passing grill** (fresh =
 product docs unchanged since it ran).
 
-Then say: **"The client signed off."** The agent drafts the record and relays
-the accept command — a HUMAN runs the accept:
+Then say: **"The client signed off."** The agent drafts the record; the accept
+is the human's decision, not their keystroke — an explicit chat confirmation
+("accepted") lets the agent run it with their name:
 
 ```bash
 ./forge decision new client-signoff
-./forge decision accept client-signoff --by "<human name>"   # human-typed
+./forge decision accept client-signoff --by "<human name>"   # human-confirmed
 python3 .agents/scripts/record_signoff.py
 ```
 

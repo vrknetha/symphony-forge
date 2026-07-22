@@ -137,7 +137,7 @@ your behalf, not for you to type.
 | 0a discovery | "Let's run office hours" | gstack `/office-hours` | `docs/product/DISCOVERY.md`, `BRIEF.md`; design docs + decisions in `.gstack/projects/` (in-repo via `.envrc`) |
 | 0b prototype | build freely | ponytail (lite) allowed | preserved under `prototype/` |
 | grills (every gate) | "Grill the handover" / "Grill the epics" / "Grill me on this plan" | `griller` contract; `/grill-me` satisfies the plan gate | `record_grill_from_json.py` → `.factory/grills/`; sign-off, roadmap import, AND plan save refuse without a fresh pass |
-| sign-off | "The client signed off" | none — HUMAN runs `decision accept` | `record_signoff.py` → `run.json` |
+| sign-off | "The client signed off" | none — human confirms `decision accept` (chat confirmation suffices; agent may run it with their name) | `record_signoff.py` → `run.json` |
 | workspace | "Scaffold the workspace" | Codex `/codex:rescue` + `SCAFFOLD_PROMPT.md` | nx workspace |
 | epics (PM) | "Build the project roadmap" | `docs-decomposer` proposes; PM accepts `epics-approved` | epics in `plans/roadmap.json`; import gated on the accept |
 | stories + distribution (EM) | "Record the backlog", "assign ENG-101 to alice" | `./forge roadmap import` / `assign` / `team set` | stories w/ acceptance criteria, `@assignee` (roster-checked) |
