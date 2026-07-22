@@ -17,8 +17,15 @@ from .common import fail
 from .scaffold import COPY_CODEX, COPY_WORKFLOWS, DOC_CONTRACTS
 
 # Harness-owned: replaced wholesale on upgrade.
-UPGRADE_TREES = [".agents", ".claude", "constitution", "harness"]
+UPGRADE_TREES = [".agents", "constitution", "harness"]
 UPGRADE_FILES = ["forge", "CLAUDE.md", "WORKFLOW.md"]
+# .claude is MIXED ownership: client repos legitimately carry their own
+# skills, agents, launch.json, and settings.local.json (standard Claude Code
+# surfaces — see the thin-adapter linter). Upgrade replaces ONLY the paths
+# the harness ships and never deletes client additions; retiring a
+# harness-shipped path is an explicit upgrade note, not an rmtree side
+# effect. Same rule for .codex/agents and .codex/skills below.
+CLAUDE_HARNESS_OWNED = ["CLAUDE.md", "settings.json", "skills/forge"]
 # Project-owned: never touched — listed here as the explicit contract.
 # .github/workflows/ is project-owned EXCEPT the harness's own COPY_WORKFLOWS,
 # which are refreshed file-by-file below — the rest of the tree (deployment,
@@ -27,9 +34,22 @@ PROJECT_OWNED = [
     "harness.yaml", "AGENTS.md", ".factory/", "plans/", "prototype/",
     "docs/product/", "docs/decisions/", "docs/architecture/", "docs/context/",
     ".github/ (except the harness factory workflows)",
+    ".claude/ and .codex/ additions the harness does not ship (project skills, agents, launch.json)",
 ]
 # Preserved across the .agents replacement (project evolution state).
 PRESERVE_IN_AGENTS = [".agents/skills/proposed", ".agents/skills/rejected"]
+
+
+def _replace_path(src: Path, dst: Path) -> None:
+    if dst.is_dir() and not dst.is_symlink():
+        shutil.rmtree(dst)
+    elif dst.exists() or dst.is_symlink():
+        dst.unlink()
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if src.is_dir():
+        shutil.copytree(src, dst)
+    else:
+        shutil.copy2(src, dst)
 
 
 def cmd_upgrade(args: argparse.Namespace) -> None:
@@ -66,6 +86,12 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
         if dst.exists():
             shutil.rmtree(dst)
         shutil.copytree(src, dst)
+    # .claude is mixed ownership: replace only harness-shipped paths; the
+    # client's own skills/agents/launch.json survive untouched.
+    for rel in CLAUDE_HARNESS_OWNED:
+        src = harness / ".claude" / rel
+        if src.exists():
+            _replace_path(src, target / ".claude" / rel)
     # .github/workflows/ is mixed ownership: refresh only the harness's own
     # factory workflows, file-by-file, so the project's other workflows survive.
     for rel in COPY_WORKFLOWS:
@@ -77,13 +103,13 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
     (target / ".codex").mkdir(exist_ok=True)
     for name in COPY_CODEX:
         shutil.copy2(harness / ".codex" / name, target / ".codex" / name)
+    # Same mixed-ownership rule: refresh each harness-shipped agent/skill
+    # entry; leave client-added ones alone.
     for sub in ("agents", "skills"):
         src = harness / ".codex" / sub
         if src.is_dir():
-            dst = target / ".codex" / sub
-            if dst.exists():
-                shutil.rmtree(dst)
-            shutil.copytree(src, dst)
+            for child in src.iterdir():
+                _replace_path(child, target / ".codex" / sub / child.name)
     for name in UPGRADE_FILES:
         src = harness / name
         if src.exists():
