@@ -187,6 +187,11 @@ def cmd_next(args: argparse.Namespace) -> None:
     if open_defers:
         steps.append(f"({open_defers} deferred item(s) with revisit triggers — "
                      "./forge defer list --open; reopen any whose trigger fired)")
+    from .audit import issues as audit_issues
+    loop_health = len(audit_issues(base))
+    if loop_health:
+        steps.append(f"(loop-health audit: {loop_health} issue(s) — a watcher is "
+                     "decaying: ./forge audit)")
     print("NEXT:")
     for i, step in enumerate(steps, 1):
         print(f"  {i}. {step}")

@@ -44,6 +44,17 @@ elif advisory_missing:
         "user-facing tasks REQUIRE the design skills (recorders refuse "
         "unattested artifacts); `./forge doctor` lists the installs."
     )
+# Frozen-gate integrity: surface drift at session start, not at ship time —
+# the fix (re-vendor or upstream) is cheapest before work piles onto it.
+from check_vendor_integrity import integrity_problems  # noqa: E402
+gate_drift = integrity_problems(root)
+if gate_drift:
+    context.append(
+        f"GATE SURFACE DRIFTED: {len(gate_drift)} vendored gate file(s) differ from "
+        "constitution/VENDOR_MANIFEST.json — pr_ready will refuse. Re-vendor via "
+        "`forge upgrade` or upstream the fix; never patch gates in place "
+        "(python3 .agents/scripts/check_vendor_integrity.py)."
+    )
 if run_state.get("issue_key"):
     context += [
         f"Active issue: {run_state.get('issue_key')} — {run_state.get('title')}",

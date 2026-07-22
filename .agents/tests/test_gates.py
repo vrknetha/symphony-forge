@@ -135,6 +135,19 @@ def run_state(repo: Path) -> dict:
     return json.loads((repo / ".factory" / "run.json").read_text())
 
 
+def refresh_manifest(repo: Path) -> None:
+    """What a real forge upgrade does after touching the gate surface."""
+    proc = subprocess.run(
+        [sys.executable, "-c",
+         "import sys; sys.path.insert(0, sys.argv[1]); from pathlib import Path; "
+         "from check_vendor_integrity import write_manifest; "
+         "write_manifest(Path(sys.argv[2]), 'test')",
+         str(repo / ".agents" / "scripts"), str(repo)],
+        capture_output=True, text=True,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
 # ---------------------------------------------------------------- happy path
 
 def test_full_lifecycle_and_archive(repo, tmp_path):
@@ -484,8 +497,10 @@ def test_pr_ready_tolerates_evidence_only_commits(repo, tmp_path):
 def test_pr_ready_tolerates_harness_upgrade_commits(repo, tmp_path):
     # Found by the pilot simulation: a forge upgrade mid-task touches .agents/
     # machinery — that is not product code and must not invalidate evidence.
+    # A real upgrade also re-freezes the vendor manifest; simulate both halves.
     ready_task(repo, tmp_path)
     (repo / ".agents" / "scripts" / "extra_helper.py").write_text("# upgraded\n")
+    refresh_manifest(repo)
     git(repo, "add", "-A")
     git(repo, "commit", "-q", "-m", "chore: forge upgrade")
     code, out = run(repo, "pr_ready.py")
@@ -849,6 +864,7 @@ def test_scaffold_delivers_factory_workflows(repo):
     wf = repo / ".github" / "workflows"
     assert (wf / "factory-scaffold.yml").exists()
     assert (wf / "gardener.yml").exists()
+    assert (wf / "harness-health.yml").exists()
 
 
 def test_scaffold_pins_gstack_into_the_repo(repo):
@@ -1920,3 +1936,132 @@ def test_adopt_normalizes_case_variant_contract_files(repo, tmp_path):
     # the old rules are preserved for rehoming, and the output demands it
     assert (target / "docs" / "context" / "migrated-AGENTS.md").read_text().startswith("# old lowercase rules")
     assert "REHOME" in proc.stdout and "not disposal" in proc.stdout.replace("is not", "not")
+
+
+# -------------------------------------------------- loop-health audit (0008)
+
+def shipped_reviews(repo: Path, task: str, findings: list) -> None:
+    d = repo / ".factory" / "history" / task / "reviews"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "quality.json").write_text(json.dumps(
+        {"score": 9, "blocking_findings": [], "non_blocking_findings": findings}))
+
+
+def test_audit_flags_ignored_escalation_until_routed(repo):
+    # A class goes RECURRING at T-03; T-04 ships past it with no consolidation.
+    finding = {"category": "validation-gap", "area": "api", "summary": "s"}
+    for task in ("T-01", "T-02", "T-03"):
+        shipped_reviews(repo, task, [finding])
+    (repo / ".factory" / "history" / "T-04").mkdir()
+    code, out = run(repo, "forge.py", "audit")
+    assert code == 0 and "IGNORED ESCALATION" in out and "T-03" in out, out
+    # Routing it — a decision naming the class — clears the audit.
+    (repo / "docs" / "decisions" / "0100-validation-invariant.md").write_text(
+        "---\nstatus: proposed\nconfirmed_by: \"\"\ndate: 2026-07-22\n---\n"
+        "# API validation invariant\n\nConsolidates the validation-gap class.\n")
+    code, out = run(repo, "forge.py", "audit")
+    assert code == 0 and "IGNORED ESCALATION" not in out, out
+
+
+def test_audit_flags_stale_deferral_and_next_surfaces_count(repo):
+    code, out = run(repo, "forge.py", "defer", "add", "bulk export",
+                    "--why", "cycle-sized", "--trigger", "second tenant")
+    assert code == 0, out
+    code, out = run(repo, "forge.py", "audit")
+    assert "STALE DEFERRAL" not in out  # fresh deferral is healthy
+    ledger = repo / "plans" / "deferrals.md"
+    row = next(line for line in ledger.read_text().splitlines() if line.startswith("| D-"))
+    ledger.write_text(ledger.read_text().replace(row.split(" | ")[1], "2020-01-01"))
+    code, out = run(repo, "forge.py", "audit")
+    assert code == 0 and "STALE DEFERRAL" in out and "D-0001" in out, out
+    code, out = run(repo, "forge.py", "next")
+    assert code == 0 and "loop-health audit" in out, out
+
+
+def test_audit_flags_decayed_lesson_globs(repo):
+    for topic, lesson, glob in (
+        ("dead-glob", "Renamed away long ago", "src/legacy-api/**"),
+        ("live-glob", "Contract file rules", "AGENTS.md"),
+    ):
+        code, out = run(repo, "forge.py", "lesson", "add", "--topic", topic,
+                        "--lesson", lesson, "--source", "abc1234",
+                        "--applies-to", glob, "--severity", "low", "--by", "implementer")
+        assert code == 0, out
+    code, out = run(repo, "forge.py", "audit")
+    assert code == 0 and "DECAYED LESSON" in out and "dead-glob" in out, out
+    assert "live-glob" not in out
+
+
+def test_audit_flags_review_drift_on_latest_task_only(repo):
+    # Early task predates structured findings — tolerated. Latest one is judged.
+    shipped_reviews(repo, "T-01", ["legacy string finding"])
+    code, out = run(repo, "forge.py", "audit")
+    assert "REVIEW DRIFT" in out and "T-01" in out, out
+    shipped_reviews(repo, "T-02", [{"category": "perf", "area": "db", "summary": "s"}])
+    code, out = run(repo, "forge.py", "audit")
+    assert "REVIEW DRIFT" not in out, out
+
+
+# ----------------------------------------------- frozen-gate integrity (0009)
+
+def test_scaffold_freezes_gate_surface_and_check_verifies(repo):
+    manifest = repo / "constitution" / "VENDOR_MANIFEST.json"
+    assert manifest.exists()  # forge init armed it from birth
+    files = json.loads(manifest.read_text())["files"]
+    assert ".agents/scripts/verify.py" in files and "forge" in files
+    assert not any("__pycache__" in f or f.endswith(".pyc") for f in files)
+    code, out = run(repo, "check_vendor_integrity.py")
+    assert code == 0 and "OK" in out, out
+    # edited gate file -> drift
+    verify = repo / ".agents" / "scripts" / "verify.py"
+    verify.write_text(verify.read_text() + "# weakened\n")
+    code, out = run(repo, "check_vendor_integrity.py")
+    assert code != 0 and "edited: .agents/scripts/verify.py" in out and "upstream" in out, out
+    # unexpected file in the gate surface -> drift too
+    git(repo, "checkout", "--", ".agents/scripts/verify.py")
+    (repo / ".agents" / "prompts" / "rogue.md").write_text("softer review\n")
+    code, out = run(repo, "check_vendor_integrity.py")
+    assert code != 0 and "unexpected: .agents/prompts/rogue.md" in out, out
+    # no manifest -> unarmed, advisory only
+    (repo / ".agents" / "prompts" / "rogue.md").unlink()
+    manifest.unlink()
+    code, out = run(repo, "check_vendor_integrity.py")
+    assert code == 0 and "unarmed" in out, out
+
+
+def test_pr_ready_refuses_drifted_gate_surface(repo, tmp_path):
+    ready_task(repo, tmp_path)
+    prompt = repo / ".agents" / "prompts" / "reviewer.md"
+    prompt.write_text(prompt.read_text() + "\nScore generously.\n")
+    code, out = run(repo, "pr_ready.py")
+    assert code != 0 and "vendor integrity" in out and "reviewer.md" in out, out
+    # the SessionStart hook warns about the same drift at session start
+    code, out = run(repo, "session_start.py", stdin="{}")
+    assert code == 0 and "GATE SURFACE DRIFTED" in out, out
+    git(repo, "checkout", "--", ".agents/prompts/reviewer.md")
+    code, out = run(repo, "pr_ready.py")
+    assert code == 0, out
+
+
+def test_adopt_and_upgrade_refreeze_the_manifest(repo, tmp_path):
+    # adopt arms a migrated repo
+    legacy = existing_repo(tmp_path)
+    code, out = adopt(legacy)
+    assert code == 0, out
+    assert (legacy / "constitution" / "VENDOR_MANIFEST.json").exists()
+    code, out = run(legacy, "check_vendor_integrity.py")
+    assert code == 0 and "OK" in out, out
+    # a drifted client repo comes back clean after re-vendoring
+    verify = repo / ".agents" / "scripts" / "verify.py"
+    verify.write_text(verify.read_text() + "# local patch\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-q", "-m", "drift")
+    code, out = run(repo, "check_vendor_integrity.py")
+    assert code != 0
+    proc = subprocess.run(
+        [sys.executable, str(HARNESS / ".agents" / "scripts" / "forge.py"),
+         "upgrade", "--target", str(repo)],
+        cwd=HARNESS, capture_output=True, text=True)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    code, out = run(repo, "check_vendor_integrity.py")
+    assert code == 0 and "OK" in out, out

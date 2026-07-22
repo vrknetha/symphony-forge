@@ -179,6 +179,9 @@ def cmd_upgrade(args: argparse.Namespace) -> None:
     (target / "constitution" / "VENDORED_FROM").write_text(
         f"symphony-forge @ {commit}\nUpdate by re-vendoring from the harness repo; do not edit in place.\n"
     )
+    # Re-freeze the gate surface at the new vendoring (frozen-gate-integrity).
+    from check_vendor_integrity import write_manifest
+    write_manifest(target, commit)
 
     drift = ""
     if (harness / "harness.yaml").read_text() != (target / "harness.yaml").read_text():

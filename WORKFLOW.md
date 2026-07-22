@@ -126,6 +126,37 @@ findings are a design signal, not a fix queue.
 - Set the tripwire in advance ("if round N still churns X, split it") — in
   the plan or the grill's `open_items` — and HONOR it.
 
+## Loop Health — the watchers are watched
+
+The harness is a graph of improvement loops, and a graph of loops fails in
+its own way: circularly, every advisory green while nothing touches reality.
+Two rules keep it grounded:
+
+- **The audit loop** (decision `loop-health-audit`): `./forge audit` checks
+  the improvement loops themselves — RECURRING classes that keep shipping
+  past their escalation with no consolidating decision or refactor story,
+  open deferrals past 60 days (re-check the trigger), lessons whose
+  `applies_to` globs no longer match any tracked file (a rotted sensor), and
+  reviews that stopped emitting structured findings (a blind clusterer). It
+  runs at ship cadence (`pr_ready` prints the summary; `forge next` surfaces
+  the count) and is ADVISORY: audit output routes work to the roadmap or the
+  ledgers — it never blocks the ship that happened to trip it.
+- **Calendar cadence** for idle repos: the daily `harness-health` workflow
+  runs the audit + integrity check and maintains a "Harness health" issue,
+  and — when the vendored harness is behind (`HARNESS_READ_TOKEN` secret
+  grants read access to the harness repo; without it, audit-only) — runs
+  `forge upgrade` on a branch and opens the PR. The ceiling is fixed:
+  automation DETECTS and PROPOSES; merging the upgrade and accepting
+  decisions stay human. Nothing self-activates.
+- **Frozen gates** (decision `frozen-gate-integrity`): an optimizing loop
+  must never tune its own held-out set. `forge init/adopt/upgrade` freeze the
+  vendored gate surface (`.agents/scripts|schemas|prompts`, `forge`,
+  `.claude/settings.json`) into `constitution/VENDOR_MANIFEST.json`;
+  `check_vendor_integrity.py` compares, the SessionStart hook warns on drift,
+  and `pr_ready` refuses it — a tampered gate invalidates every other gate's
+  evidence. Fix direction is always outward: re-vendor via `forge upgrade`,
+  or upstream the change to the harness. Never patch gate machinery in place.
+
 ## Event-Driven Delegation — signals
 
 Delegation is not fire-and-forget. While a background rescue runs, the

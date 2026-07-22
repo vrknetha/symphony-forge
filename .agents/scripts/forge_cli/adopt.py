@@ -142,6 +142,10 @@ def cmd_adopt(args: argparse.Namespace) -> None:
     (target / "constitution" / "VENDORED_FROM").write_text(
         f"symphony-forge @ {commit}\nUpdate by re-vendoring from the harness repo; do not edit in place.\n"
     )
+    # Freeze the gate surface: the manifest is what check_vendor_integrity.py
+    # (and the pr_ready gate) compare against until the next vendoring.
+    from check_vendor_integrity import write_manifest
+    write_manifest(target, commit)
 
     # Project-owned: created only where missing, never overwritten.
     created: list[str] = []

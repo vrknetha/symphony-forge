@@ -130,6 +130,21 @@ if story and story.get("kind") == "refactor":
                 "(check_refactor_delta.py shows the breakdown)"
             )
 
+# Frozen-gate integrity: a tampered gate invalidates every other gate, so a
+# drifted vendored surface is the one audit finding that DOES block a ship.
+# No manifest (pre-manifest vendoring, or the harness repo itself) = unarmed.
+from check_vendor_integrity import integrity_problems  # noqa: E402
+gate_drift = integrity_problems(root)
+if gate_drift:
+    head_problems = "; ".join(gate_drift[:3])
+    more = f" (+{len(gate_drift) - 3} more)" if len(gate_drift) > 3 else ""
+    missing.append(
+        f"vendor integrity: gate surface drifted from constitution/VENDOR_MANIFEST.json "
+        f"— {head_problems}{more}. Locally edited gates make evidence unverifiable; "
+        "re-vendor via `forge upgrade` or upstream the fix "
+        "(python3 .agents/scripts/check_vendor_integrity.py)"
+    )
+
 # An unresolved worker signal is an unanswered contradiction — nothing ships
 # over one. The orchestrator resolves (forge signal resolve) and resumes.
 open_sigs = open_signals(root)
@@ -279,6 +294,14 @@ if recurring_classes:
           f"(e.g. {worst['category']} x{worst['count']}) — design signal: "
           "./forge findings patterns, then consolidate (refactor story + decision) "
           "instead of patching it a fourth time.")
+# The loop-health audit runs at ship cadence: the natural moment to notice a
+# watcher decaying. Advisory — it routes work, it never blocks this ship.
+from forge_cli.audit import issues as audit_issues  # noqa: E402
+loop_health = audit_issues(root)
+if loop_health:
+    print(f"AUDIT: {len(loop_health)} loop-health issue(s) — the improvement loops "
+          "themselves are decaying (ignored escalations / stale deferrals / dead "
+          "lessons): ./forge audit")
 print(f"PR_READY (archived to .factory/history/{issue_key}/, plan moved to plans/completed/, "
       "task-scoped .factory state cleaned)")
 print(f"Now commit the archive — evidence that isn't committed isn't merged:")

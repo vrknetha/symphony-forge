@@ -99,14 +99,19 @@ column describes that machinery. In lifecycle order:
 | 11 | **Stage loop** | every decomposition stage ran its loop — order-enforced start, LOCAL autoreview until clean, commit, done | `forge stage start/done`; `pr_ready.py` refuses open stages (decision 0007) |
 | 12 | **Assumptions guided** | every `forge plan assume` row for the task is confirmed/promoted by the orchestrator (`fix-needed` keeps blocking) | `pr_ready.py` |
 | 13 | **Refactor ratchet** | a `kind: refactor` story shows non-positive net product-source line delta — refactors shrink or hold the line | `check_refactor_delta.py` in `pr_ready.py` |
-| 14 | **Ship gate** | approved plan, decomposition, verify OK, tests + 3 reviews ≥ 8 with no blockers, functional when `user_facing`, all evidence commit-stamped, same-commit, fresh | `pr_ready.py` — archives to `.factory/history/`, marks the roadmap item done |
-| 15 | **Hygiene floor** | decision lifecycle intact (supersede links resolve, accepted records have substance), no prototype/ imports, schemas match harness.yaml, repo within size budgets | `check_dual_runtime.py` + `check_repo_budget.py` in CI |
+| 14 | **Frozen gates** | the vendored gate surface (scripts, schemas, prompts, hook config) matches `constitution/VENDOR_MANIFEST.json` — locally edited gates make every other gate's evidence unverifiable; re-vendor or upstream, never patch in place | `check_vendor_integrity.py` in `pr_ready.py` (warned at session start) |
+| 15 | **Ship gate** | approved plan, decomposition, verify OK, tests + 3 reviews ≥ 8 with no blockers, functional when `user_facing`, all evidence commit-stamped, same-commit, fresh | `pr_ready.py` — archives to `.factory/history/`, marks the roadmap item done |
+| 16 | **Hygiene floor** | decision lifecycle intact (supersede links resolve, accepted records have substance), no prototype/ imports, schemas match harness.yaml, repo within size budgets | `check_dual_runtime.py` + `check_repo_budget.py` in CI |
 
 Advisory (surfaced, never blocking): recurring finding classes — *"are we
 fixing the same thing again?"* (3+ hits of one class ⇒ consolidate via a
 refactor story, decision 0005); ledgered lessons — *"what did we learn about
-these files?"*; and parked scope whose trigger fired — *"did any deferral
-come due?"*.
+these files?"*; parked scope whose trigger fired — *"did any deferral come
+due?"*; and the loop-health audit — *"are the watchers themselves decaying?"*
+(ignored escalations, stale deferrals, dead lessons: `forge audit`, run at
+every ship, surfaced by `forge next`, and run daily in CI by the
+`harness-health` workflow — which also opens an automated `forge upgrade`
+PR when the vendored harness falls behind; merging it stays human).
 
 Human-only, always: **accepting a decision** (sign-off, epics, promotions) —
 the one command a person types themselves. The agent drafts the record,

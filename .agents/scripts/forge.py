@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 
 from forge_cli import adopt as adopt_mod
+from forge_cli import audit as audit_mod
 from forge_cli import assumptions as assumptions_mod
 from forge_cli import context as ctx
 from forge_cli import deferrals as deferrals_mod
@@ -219,6 +220,11 @@ def main() -> None:
     p_ll = les_sub.add_parser("list", help="show the whole ledger")
     p_ll.add_argument("--repo")
     p_ll.set_defaults(func=lessons_mod.cmd_list)
+
+    p_aud = sub.add_parser("audit",
+                           help="loop-health: audit the improvement loops themselves (advisory)")
+    p_aud.add_argument("--repo")
+    p_aud.set_defaults(func=audit_mod.cmd_audit)
 
     p_find = sub.add_parser("findings", help="review-finding pattern detection across tasks")
     find_sub = p_find.add_subparsers(dest="findings_command", required=True)

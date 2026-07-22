@@ -67,6 +67,10 @@ def clusters(base: Path) -> list[dict]:
             "area": row["area"], "count": 0, "tasks": [], "examples": [],
         })
         cluster["count"] += 1
+        if cluster["count"] == RECURRING_AT:
+            # The task at which the class crossed the line — the audit measures
+            # how many ships have ignored the escalation since this point.
+            cluster["flagged_at"] = row["task"]
         if row["task"] not in cluster["tasks"]:
             cluster["tasks"].append(row["task"])
         if row["summary"] and len(cluster["examples"]) < 3:
