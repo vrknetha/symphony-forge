@@ -19,6 +19,45 @@ def _check(name: str, ok: bool, detail: str, fix: str, required: bool = True) ->
     return {"name": name, "ok": ok, "detail": detail, "fix": fix, "required": required}
 
 
+# Shared install locations — fast_status() and cmd_doctor() must agree on
+# where things live, or the session banner and full doctor drift apart.
+def _codex_plugin_dir(home: Path) -> Path:
+    return home / ".claude" / "plugins" / "cache" / "openai-codex" / "codex"
+
+
+def _gstack_dir(home: Path) -> Path:
+    return home / ".claude" / "skills" / "gstack"
+
+
+def _autoreview_dir(home: Path) -> Path:
+    return home / ".codex" / "skills" / "autoreview"
+
+
+def fast_status(home: Path | None = None) -> tuple[list[str], list[str]]:
+    """Millisecond machine check for the SessionStart hook: PATH lookups and
+    directory existence ONLY — no subprocesses, no versions, no logins.
+    Returns (required_missing, advisory_missing). A fresh clone after
+    `git pull` gets told its machine is not ready at the FIRST session,
+    not at the first mid-task failure."""
+    home = home or Path.home()
+    required = {
+        "git": shutil.which("git") is not None,
+        "node": shutil.which("node") is not None,
+        "direnv + shell hook": shutil.which("direnv") is not None and _has_direnv_hook(home),
+        "codex CLI": shutil.which("codex") is not None,
+        "claude CLI": shutil.which("claude") is not None,
+        "codex-plugin-cc": _codex_plugin_dir(home).is_dir(),
+        "gstack skills": _gstack_dir(home).is_dir(),
+        "autoreview skill": _autoreview_dir(home).is_dir(),
+    }
+    advisory = {
+        "frontend-design skill": (home / ".claude" / "skills" / "frontend-design").is_dir(),
+        "emil-design-eng skill": (home / ".claude" / "skills" / "emil-design-eng").is_dir(),
+    }
+    return ([k for k, ok in required.items() if not ok],
+            [k for k, ok in advisory.items() if not ok])
+
+
 def _platform_name() -> str:
     system = platform.system().lower()
 
@@ -239,6 +278,19 @@ def _direnv_fix_message() -> str:
 
 def cmd_doctor(args: argparse.Namespace) -> None:
     home = Path.home()
+    if getattr(args, "fast", False):
+        required_missing, advisory_missing = fast_status(home)
+        for name in required_missing:
+            print(f"[MISS] {name}")
+        for name in advisory_missing:
+            print(f"[opt ] {name}")
+        if required_missing:
+            print(f"\nforge doctor --fast: {len(required_missing)} required tool(s) "
+                  "missing — run `./forge doctor --fix` (only logins stay manual).")
+            raise SystemExit(1)
+        print("forge doctor --fast: machine ready"
+              + (f" ({len(advisory_missing)} advisory missing)" if advisory_missing else ""))
+        return
     checks: list[dict] = []
 
     def which(binary: str) -> str | None:
@@ -382,7 +434,7 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         run_quiet([claude_bin, "plugin", "marketplace", "add", marketplace_url])
         run_quiet([claude_bin, "plugin", "install", plugin_ref])
 
-    plugin = home / ".claude" / "plugins" / "cache" / "openai-codex" / "codex"
+    plugin = _codex_plugin_dir(home)
     if not plugin.is_dir() and args.fix and claude_bin:
         print("[fix ] installing codex-plugin-cc ...")
         install_claude_plugin(
@@ -400,7 +452,7 @@ def cmd_doctor(args: argparse.Namespace) -> None:
     ))
 
     # Required skills
-    gstack = home / ".claude" / "skills" / "gstack"
+    gstack = _gstack_dir(home)
     if not gstack.is_dir() and args.fix:
         print("[fix ] installing gstack ...")
         code, _ = run_quiet([
@@ -423,17 +475,32 @@ def cmd_doctor(args: argparse.Namespace) -> None:
         "(needed for /office-hours discovery) — or rerun with --fix",
     ))
 
-    # Optional tools are reported but are not installed by the normal
-    # `doctor --fix` path. This keeps machine setup focused on required items.
-    autoreview = home / ".codex" / "skills" / "autoreview"
+    # autoreview is the SOLE reviewer (decision 0001 D6) — the review gate
+    # cannot pass without it, so it is REQUIRED and --fix installs it.
+    autoreview = _autoreview_dir(home)
+    if not autoreview.is_dir() and args.fix:
+        print("[fix ] installing the autoreview skill ...")
+        with tempfile.TemporaryDirectory() as tmp:
+            code, _ = run_quiet([
+                "git", "clone", "--depth", "1",
+                "https://github.com/openclaw/agent-skills.git", tmp,
+            ])
+            src = Path(tmp) / "skills" / "autoreview"
+            if code == 0 and src.is_dir():
+                autoreview.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copytree(src, autoreview, dirs_exist_ok=True)
+
     checks.append(_check(
         "autoreview skill",
         autoreview.is_dir(),
         str(autoreview) if autoreview.is_dir() else "not installed",
         "clone https://github.com/openclaw/agent-skills and copy skills/autoreview "
-        "to ~/.codex/skills/ (escalation-tier review; see harness.yaml)",
-        required=False,
+        "to ~/.codex/skills/ (the ONE reviewer — the review gate needs it) — "
+        "or rerun with --fix",
     ))
+
+    # Optional tools below are reported but not installed by the normal
+    # `doctor --fix` path. This keeps machine setup focused on required items.
 
     skill_packs = [
         (

@@ -30,6 +30,8 @@ def main() -> None:
     p_doc = sub.add_parser("doctor", help="check machine prerequisites for the harness")
     p_doc.add_argument("--fix", action="store_true",
                        help="auto-install everything installable; logins stay manual")
+    p_doc.add_argument("--fast", action="store_true",
+                       help="millisecond existence-only check (what the session hook runs)")
     p_doc.set_defaults(func=doctor.cmd_doctor)
 
     p_next = sub.add_parser("next", help="where am I and what do I do now (deterministic)")
