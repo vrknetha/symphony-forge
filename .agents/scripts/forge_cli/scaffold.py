@@ -35,6 +35,90 @@ DOC_CONTRACTS = [
     ("docs/context/README.md", "docs/context/README.md"),
 ]
 
+GENERATED_FILES = ["AGENTS.md", "docs/product/BRIEF.md", "docs/product/DISCOVERY.md",
+                   "prototype/README.md", ".factory/run.json",
+                   "constitution/VENDORED_FROM", "constitution/VENDOR_MANIFEST.json"]
+
+
+def _would_write(root: Path, target: Path) -> list[Path]:
+    """Every file cmd_init creates or OVERWRITES. Append/touch destinations
+    (README.md, plans/**/.gitkeep) live in APPEND_OR_TOUCH and mkdir-only
+    dirs in ENSURED_DIRS — _collisions preflights those too, just with
+    existence allowed. Keep in sync with the copy loops in cmd_init."""
+    dests: list[Path] = []
+    trees = [*COPY_TREES, ".codex/agents", ".codex/skills"]
+    for tree in trees:
+        src = root / tree
+        if src.exists():
+            for f in src.rglob("*"):
+                if f.is_file() and "__pycache__" not in f.parts and f.suffix != ".pyc":
+                    dests.append(target / f.relative_to(root))
+    for rel in [*COPY_WORKFLOWS, *(f".codex/{n}" for n in COPY_CODEX),
+                *COPY_FILES, *(dst for _, dst in DOC_CONTRACTS), *GENERATED_FILES]:
+        dests.append(target / rel)
+    return dests
+
+
+# init appends/touches these rather than overwriting: an existing regular file
+# is legal, but a symlink (or symlink/file ancestor) would write outside the
+# target or die midway, so they still join the preflight.
+APPEND_OR_TOUCH = ["README.md", "plans/active/.gitkeep",
+                   "plans/completed/.gitkeep", "plans/debt/.gitkeep"]
+# mkdir-only destinations with no enumerated leaf file: an existing dir is
+# fine, but a file or symlink there would abort init midway.
+ENSURED_DIRS = [".factory/reviews"]
+
+
+def _collisions(root: Path, target: Path) -> list[str]:
+    """Paths in target that init would overwrite or write through. A symlink
+    component (copy would escape the target) or a file where a directory is
+    needed (copy would die midway) is a collision too — checked without
+    following symlinks, so dangling links still count."""
+    found: set[str] = set()
+
+    def bad_ancestor(rel: Path) -> bool:
+        node = target
+        for part in rel.parts[:-1]:
+            node = node / part
+            if node.is_symlink() or (node.exists() and not node.is_dir()):
+                found.add(str(node.relative_to(target)))
+                return True
+        return False
+
+    for dest in _would_write(root, target):
+        rel = dest.relative_to(target)
+        if not bad_ancestor(rel) and (dest.is_symlink() or dest.exists()):
+            found.add(str(rel))
+    # Any pre-existing file inside the manifest-covered gate trees would be
+    # hashed into constitution/VENDOR_MANIFEST.json by write_manifest and
+    # blessed as trusted — refuse them all, colliding or not. Other trees
+    # stay per-file: unrelated content there is preserved, never vendored.
+    from check_vendor_integrity import GATE_TREES
+    for tree in GATE_TREES:
+        tdir = target / tree
+        if tdir.is_symlink() or (tdir.exists() and not tdir.is_dir()):
+            found.add(tree)
+        elif tdir.is_dir():
+            for f in tdir.rglob("*"):
+                if f.is_symlink() or not f.is_dir():
+                    found.add(str(f.relative_to(target)))
+    for rel_s in APPEND_OR_TOUCH:
+        rel = Path(rel_s)
+        dest = target / rel
+        if not bad_ancestor(rel) and (
+            dest.is_symlink() or (dest.exists() and not dest.is_file())
+        ):
+            found.add(str(rel))
+    for rel_s in ENSURED_DIRS:
+        rel = Path(rel_s)
+        dest = target / rel
+        if not bad_ancestor(rel) and (
+            dest.is_symlink() or (dest.exists() and not dest.is_dir())
+        ):
+            found.add(str(rel))
+    return sorted(found)
+
+
 DISCOVERY_TEMPLATE = """# Discovery — {name}
 
 Phase 0a. Lightweight on purpose: no .factory ceremony until client sign-off.
@@ -119,11 +203,15 @@ def ensure_onboarding(target: Path, name: str) -> bool:
 def cmd_init(args: argparse.Namespace) -> None:
     root = repo_root()
     target = Path(args.target or args.name).resolve()
-    if target.exists() and any(target.iterdir()):
-        if not args.force:
+    if target.exists() and any(target.iterdir()) and not args.force:
+        collisions = _collisions(root, target)
+        if collisions:
+            listing = "\n  ".join(collisions[:10])
+            more = f"\n  ... and {len(collisions) - 10} more" if len(collisions) > 10 else ""
             fail(
-                f"target {target} is not empty. forge init has no merge mode; "
-                "use --force to overwrite an existing scaffold."
+                f"target {target} already contains {len(collisions)} path(s) forge init "
+                f"would overwrite or write through:\n  {listing}{more}\n"
+                "use --force to overwrite them."
             )
     target.mkdir(parents=True, exist_ok=True)
 

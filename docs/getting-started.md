@@ -88,7 +88,8 @@ This scaffolds a complete, git-initialized repo: dual-runtime adapters
 (`.claude/`, `.codex/`), shared agent assets (`.agents/`, including the
 artifact schemas under `.agents/schemas/`), the vendored engineering
 constitution, the phase manifest + skill allowlist (`harness.yaml`), doc
-contracts, and an armed sign-off gate. It fails on a non-empty target.
+contracts, and an armed sign-off gate. It refuses a target containing files
+it would overwrite (listing them); a non-empty target with no collisions is fine.
 
 The new repo has ZERO git relation to the harness (the machinery is a
 vendored copy — see "Template, Not Fork" in the README). Give it its own

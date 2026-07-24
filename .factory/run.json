@@ -1,0 +1,6 @@
+{
+  "client_signoff": true,
+  "client_signoff_record": "docs/decisions/0010-client-signoff.md",
+  "client_signoff_at": "2026-07-24T12:00:49+00:00",
+  "phase": "shipped"
+}
