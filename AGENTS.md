@@ -104,7 +104,10 @@ A task is not PR-ready until all of these exist:
 - Do not bypass `verify.py` with ad hoc validation commands.
 - Evidence enters `.factory/` only via `record_*` scripts validating
   `.agents/schemas/` (incl. a pinned `generated_by`) — never hand-written.
-- Review runs as ONE autoreview pass in Codex — never inline in the
-  coordinating session, never nested reviewers.
+- Review runs as ONE autoreview pass, executed by the orchestrating session
+  directly with the autoreview skill — never delegated to a Codex review job
+  (which re-triggers the same skill one level deeper), never nested reviewers.
+- Durable project knowledge is recorded in-repo (`docs/context/`, decision
+  records, `.gstack/`), never in a personal memory store (decision 0012).
 - Keep the template repo independent of any client-specific source repo.
 - Do not keep long policy blocks in `AGENTS.md`; move them into docs.

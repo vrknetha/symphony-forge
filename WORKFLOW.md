@@ -278,7 +278,9 @@ through the loop:
 4. that stage's assumption rows are validated (`forge assumptions list --open`)
 5. smallest relevant checks run
 6. **local autoreview on the UNCOMMITTED diff until clean** (`autoreview
-   --mode local`, run as a Codex handoff) — a stage commits only clean
+   --mode local`, run DIRECTLY by the orchestrator with the autoreview
+   skill — never as a Codex handoff, which re-triggers the same skill one
+   indirection deeper) — a stage commits only clean
 7. commit, then `forge stage done <id>`
 
 Per-stage local reviews are pre-commit hygiene and record nothing; the ONE
