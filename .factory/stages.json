@@ -1,0 +1,10 @@
+{
+  "issue": "FORGE-INIT-1",
+  "stages": [
+    {
+      "id": "FORGE-INIT-1",
+      "title": "forge init: per-file collision check for non-empty targets",
+      "status": "pending"
+    }
+  ]
+}

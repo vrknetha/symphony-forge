@@ -2093,3 +2093,103 @@ def test_onboarding_section_created_at_init_and_never_duplicated(repo):
     text = readme.read_text()
     assert text.startswith("# app\n")
     assert text.count("Working in this repo — Symphony Forge") == 1
+
+
+def _init(target: Path):
+    return subprocess.run(
+        [sys.executable, str(HARNESS / ".agents" / "scripts" / "forge.py"),
+         "init", "--name", "app", "--target", str(target)],
+        capture_output=True, text=True,
+    )
+
+
+def test_init_into_nonempty_noncolliding_target(tmp_path: Path):
+    # A new repo with a commit of its own docs must not trip the guard
+    target = tmp_path / "app"
+    spec = target / "docs" / "notes" / "spec.md"
+    spec.parent.mkdir(parents=True)
+    spec.write_text("# pre-existing spec\n")
+    custom = target / ".codex" / "custom.toml"
+    custom.parent.mkdir(parents=True)
+    custom.write_text("local = true\n")  # non-gate .codex content is legal
+    subprocess.run(["git", "init", "-q", str(target)], check=True)
+    proc = _init(target)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert spec.read_text() == "# pre-existing spec\n"
+    assert custom.read_text() == "local = true\n"
+
+
+def test_init_refuses_colliding_target(tmp_path: Path):
+    target = tmp_path / "app"
+    target.mkdir()
+    (target / "WORKFLOW.md").write_text("mine\n")
+    proc = _init(target)
+    assert proc.returncode == 1
+    assert "WORKFLOW.md" in proc.stdout + proc.stderr
+    assert (target / "WORKFLOW.md").read_text() == "mine\n"
+
+
+def test_init_refuses_symlink_and_blocking_ancestor(tmp_path: Path):
+    # symlinked destination component: copy would escape the target
+    target = tmp_path / "sym"
+    target.mkdir()
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (target / "docs").symlink_to(outside)
+    proc = _init(target)
+    assert proc.returncode == 1
+    assert "docs" in proc.stdout + proc.stderr
+    assert not any(outside.iterdir())
+    # regular file where init needs a directory: no leaf exists, still refused
+    target2 = tmp_path / "blk"
+    target2.mkdir()
+    (target2 / ".codex").write_text("not a dir\n")
+    proc = _init(target2)
+    assert proc.returncode == 1
+    assert ".codex" in proc.stdout + proc.stderr
+    assert (target2 / ".codex").read_text() == "not a dir\n"
+
+
+def test_init_refuses_symlinked_readme(tmp_path: Path):
+    # README is append-only so a regular one is legal, but a symlink would
+    # write outside the target
+    target = tmp_path / "app"
+    target.mkdir()
+    outside = tmp_path / "elsewhere.md"
+    outside.write_text("external\n")
+    (target / "README.md").symlink_to(outside)
+    proc = _init(target)
+    assert proc.returncode == 1
+    assert "README.md" in proc.stdout + proc.stderr
+    assert outside.read_text() == "external\n"
+
+
+def test_init_refuses_blocking_ensured_dir(tmp_path: Path):
+    # .factory/reviews is mkdir-only; a regular file there must be a collision
+    target = tmp_path / "app"
+    (target / ".factory").mkdir(parents=True)
+    (target / ".factory" / "reviews").write_text("not a dir\n")
+    proc = _init(target)
+    assert proc.returncode == 1
+    assert ".factory/reviews" in proc.stdout + proc.stderr
+
+
+def test_init_refuses_rogue_file_in_owned_tree(tmp_path: Path):
+    # a pre-existing file under .agents/ would be blessed into the vendor
+    # manifest as trusted — must be refused even though it collides with nothing
+    target = tmp_path / "app"
+    (target / ".agents" / "scripts").mkdir(parents=True)
+    (target / ".agents" / "scripts" / "rogue.py").write_text("print('hi')\n")
+    proc = _init(target)
+    assert proc.returncode == 1
+    assert ".agents/scripts/rogue.py" in proc.stdout + proc.stderr
+
+
+def test_init_refuses_directory_at_append_path(tmp_path: Path):
+    # README.md is append-only for regular files; a directory there would
+    # crash init midway
+    target = tmp_path / "app"
+    (target / "README.md").mkdir(parents=True)
+    proc = _init(target)
+    assert proc.returncode == 1
+    assert "README.md" in proc.stdout + proc.stderr

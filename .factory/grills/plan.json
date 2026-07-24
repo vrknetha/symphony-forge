@@ -1,0 +1,23 @@
+{
+  "generated_by": "griller",
+  "gate": "plan",
+  "verdict": "pass",
+  "issue": "FORGE-INIT-1",
+  "questions_asked": 0,
+  "summary": "Adversarial pass on the FORGE-INIT-1 plan (forge init per-file collision check). Plan was reviewed, edited, and approved by the maintainer immediately before this grill; remaining questions would only re-confirm the approved text. No recurring finding classes exist (.factory/history reviews empty). No contradiction with active decisions: edits the canonical harness source, not a vendored copy (0009); one bounded task on one branch (0002); plan-mode honored (0004).",
+  "gaps": [
+    "Plan lacks an explicit '## Surface Impact' section naming user-visible changes",
+    "Maintenance coupling: _would_write/GENERATED_FILES must stay in sync with cmd_init's copy loops; drift would silently weaken the collision check",
+    "Simpler-shape check: could reuse adopt.py vendor_file instead of a new helper?"
+  ],
+  "contradictions": [],
+  "resolutions": [
+    "Surface impact is enumerated inside the plan's Change and Docs sections: the init error message text changes (now lists collisions) and docs/getting-started.md:91 is updated in the same task \u2014 nothing user-visible is left implicit",
+    "Sync coupling is mitigated in the plan itself: the helper docstring carries the keep-in-sync warning and the collision test pins a COPY_FILES member (WORKFLOW.md), so removing it from the enumeration breaks the test",
+    "Reusing adopt's vendor_file was evaluated and rejected in the plan: vendor_file records overwrites after the fact (adopt's clean-tree model), while init needs a pre-flight refusal; extracting a shared helper is a larger diff for no behavior gain \u2014 the smaller local helper wins"
+  ],
+  "open_items": [],
+  "input_sha256": "3694b0effd27195de8379f6a839ee902fe728c293888730c201e3e6faa789de9",
+  "recorded_at": "2026-07-24T12:01:57+00:00",
+  "commit": "15cb1e41e63cd07026b25c46b895eb79f9c54b68"
+}
