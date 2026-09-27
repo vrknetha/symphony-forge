@@ -1,0 +1,14 @@
+{
+  "base": "c38a337dfa804a9485afbda8fa31dc8dd6e882be",
+  "branch": "fix/forge-ask-always-uses-the-models-in-forg",
+  "done_when": "forge ask accepts --model and --effort, falls back to [models.lite] without them, stays read-only, and runs as an ephemeral Codex conversation that is never saved to the Codex chat list; an end-to-end test through forge ask with a throwaway Codex home proves each",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-09-27T16:12:40+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "forge ask always uses the models in forge.toml's [models.lite], so the coordinator can't run a read-only audit on a stronger model or effort, and each ask leaves a chat in the owner's Codex list"
+}
