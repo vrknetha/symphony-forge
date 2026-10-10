@@ -1,6 +1,13 @@
 {
   "base": "c38a337dfa804a9485afbda8fa31dc8dd6e882be",
   "branch": "fix/forge-ask-always-uses-the-models-in-forg",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a0e3a3-f91a-7261-b4fe-e906d59f0ae3",
+    "head": "5fee1249eda509803d177ef6faebcc8d4e075852",
+    "start": "5fee1249eda509803d177ef6faebcc8d4e075852"
+  },
   "done_when": "forge ask accepts --model and --effort, falls back to [models.lite] without them, stays read-only, and runs as an ephemeral Codex conversation that is never saved to the Codex chat list; an end-to-end test through forge ask with a throwaway Codex home proves each",
   "kind": "fix",
   "status": "working",
