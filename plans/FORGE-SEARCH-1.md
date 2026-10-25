@@ -12,17 +12,18 @@
 - Chips at the top of the panel choose All or one module. On a module's own page, the panel
   starts on that module.
 - The search starts at two characters, and runs when the person stops typing for a moment
-  (150 ms). It shows at most five records for each module, only from the person's own
-  organisation, and only from the modules that the person can view.
+  (150 ms). With All it shows at most five records for each module, and with a module's chip at
+  most 20 records of that module. It shows records only from the person's own organisation,
+  and only from the modules that the person can view.
 - The best matches come first: a name that looks like the typed text, and records whose text
   has the typed words.
-- Each create, change and delete of a record updates the search at once. One command refills
-  the search from every module, for example after a data import.
+- Each create, change, delete and restore of a record updates the search at once. One command
+  refills the search from every module, for example after a data import.
 - Each new feature that the feature step builds is in the search at once, by its name and its
-  text fields, with its status under the name. Projects are the first example.
+  other text fields, with its status under the name. Projects are the first example.
 - The app has no cache server. The search reads one table through its indexes.
 - Existing apps keep their code. On upgrade they get only the guide text.
-Design: docs/design/FORGE-SEARCH-1/ (TREE)
+Design: docs/design/FORGE-SEARCH-1/ (22df188fc174245f0a65842ce7ba5a7afdd110e4)
 
 ## Why
 
@@ -30,14 +31,14 @@ Each list in a client app has its own search, and nothing searches the whole app
 Ctrl K panel lists only pages and actions today. A person who looks for one record must first
 know its module. On 25 October 2026 the owner chose one search table that a search module
 owns, filled by the in-process events that the module rules already allow, one query for each
-search with five results for each module, and search for each new feature from the feature
+search with five results for each module (20 with a module's chip), and search for each new feature from the feature
 step.
 
 ## Done when
 
 1. **In a new app, the top bar search opens the Ctrl K panel with pages and actions first, then results grouped by module with All and per-module chips; on a module's page it starts on that module, and each result shows its title and status and opens its detail screen.**
-2. **One search runs one query from two characters, 150 ms after typing stops, and returns at most five results for each module, only from the person's organisation and the modules they can view, ranked by title likeness plus word match.**
-3. **A create, change or delete of a project changes its search result at once, and no module reads another module's tables.**
+2. **One search runs one query from two characters, 150 ms after typing stops, and returns at most five results for each module with All and at most 20 with a module chip, only from the person's organisation and the modules they can view, ranked by title likeness plus word match.**
+3. **A create, change, delete or restore of a project changes its search result at once, and no module reads another module's tables.**
 4. **One rebuild command refills the search from every module through each module's public service.**
 5. **Each feature that the feature command builds is in the search by its name and text fields, with its status as the subtitle.**
 6. **Both starters' tests pass, and an existing app's code is unchanged after upgrade; it gets the guide text.**
@@ -49,16 +50,16 @@ step.
 Risks: none one-way. Each part reverts with its pull request. The new migration adds one table
 in the starters only, which a new app copies at set-up; no existing app gets it.
 
-Trade-off: the record and its search row are two writes, not one transaction. If the second
-write fails, the record stays and its search row is old or missing until the rebuild command
+Trade-off: the record and its Change history row share one transaction, but its search row is
+a separate write after it. If the search write fails, the record stays and its search row is old or missing until the rebuild command
 runs. The failure goes to the logs.
 
 Trade-off: the search matches part of a name (`desig` finds `Design review`), but only whole
 words in the other text fields. It does not match other forms of a word (`designs` does not
 find `design`).
 
-Trade-off: the panel shows at most five records for each module. To see more, the person
-chooses that module's chip, or opens the module's list.
+Trade-off: with All the panel shows at most five records for each module, and with a module's
+chip at most 20. To see more, the person opens the module's list.
 
 ## For the builders
 
@@ -120,13 +121,16 @@ The part named first owns each name; later parts use it and list that part under
     `sources()`. A handler takes `(db: Session, record)`; `list` takes `(db: Session)` and
     returns `list[RecordSummary]`. A handler error is rolled back on `db` and logged with the
     same line.
-  - A `ponytail:` comment at `changed` (and `record_changed`) says: the record write and its
-    event are not one transaction; `search:rebuild` repairs a missed event.
+  - The sender calls `changed` or `deleted` after its transaction (the record and its Change
+    history row, as FORGE-FEATURE-1 writes them) commits. A `ponytail:` comment at `changed`
+    (and `record_changed`) says: the search write is not in that transaction; `search:rebuild`
+    repairs a missed event.
 - **The search table (SEARCHTS; SEARCHPY for Python).** TypeScript model `SearchEntry` in
   `apps/api/prisma/schema/search.prisma`, migration
   `apps/api/prisma/migrations/20261027000000_search/migration.sql`; Python model `SearchEntry`
   with table `search_entry` in `app/search/models.py`, revision
-  `migrations/versions/0009_search.py` (down revision `0008_columns`). Columns (TypeScript
+  `migrations/versions/<next>_search.py`, whose down revision is the Alembic head on main at build
+  time (after FORGE-DATABASE-1's `0008_columns` and FORGE-FEATURE-1's history subjects revision). Columns (TypeScript
   names; Python in snake case):
   - `organisationId uuid NOT NULL`, `recordType text NOT NULL`, `recordId uuid NOT NULL`,
     primary key `("organisationId", "recordType", "recordId")`; that key is the owner's unique
@@ -160,7 +164,7 @@ The part named first owns each name; later parts use it and list that part under
     end cut off (`permissionsFor(role)` in TypeScript, `permissions_for(role)` in Python). A
     `type` that is not one of them gives no results.
   - One SQL query (`prisma.$queryRaw`; SQLAlchemy `text()`), with `$limit` 5 without `type`
-    and 20 with it (the module chip in the design):
+    and 20 with it (the module chip; the owner settled both limits on 25 October 2026):
 
     ```sql
     WITH input AS (SELECT websearch_to_tsquery('simple', $q) AS words)
@@ -195,17 +199,18 @@ The part named first owns each name; later parts use it and list that part under
   exports `toProjectRecord(project): RecordSummary`. Python `app/projects/search.py` has
   `to_project_record(project) -> RecordSummary`. The three field lines sit between a new pair of
   marks, `// forge:search` and `// forge:end-search` (`# forge:search` in Python):
-  `title` (the search field: the first field whose kind has `search = true`, or the id when
-  there is none), `subtitle` (the first field whose kind has `subtitle = true`, else `null`)
-  and `text` (every field whose kind has `search_text = true`, joined with a space, empty ones
-  left out). For projects: `title: project.name`, `subtitle: project.status`,
+  `title` (the first `text` field, the name that FORGE-FEATURE-1 requires every feature to
+  have, and its list search), `subtitle` (the first field whose kind has `subtitle = true`, else `null`)
+  and `text` (the title field and every other field whose kind has `search_text = true`,
+  joined with a space, empty ones left out). For projects: `title: project.name`, `subtitle: project.status`,
   `text: project.name`.
 - **The feature service's calls (RECORDSTS; RECORDSPY).** `ProjectsService` calls
-  `this.records.changed(toProjectRecord(project))` after create and after a replace, and
-  `this.records.deleted({ type: 'projects', organisationId, id })` after the soft delete, next to
-  the Change history call. In `onModuleInit` it calls
+  `this.records.changed(toProjectRecord(project))` after create, after a replace and after a
+  restore, and `this.records.deleted({ type: 'projects', organisationId, id })` after the soft
+  delete, each after the transaction that holds the write and its Change history row. In `onModuleInit` it calls
   `this.records.addSource('projects', () => this.searchRecords())`, where `searchRecords()`
-  returns `toProjectRecord` of every project that is not deleted, in every organisation. Python:
+  returns `toProjectRecord` of every project that is not deleted, in every organisation (keyset
+  pages through the projects table's own index, not one large read). Python:
   the same calls in `ProjectService`, and `add_source("projects", ...)` at import of
   `app/projects/search.py`. These lines have no field names, so the feature command copies
   them as plain renamed lines.
@@ -215,8 +220,8 @@ The part named first owns each name; later parts use it and list that part under
   FORGE-FEATURE-1 requires.
 - **The rebuild (RECORDSTS; RECORDSPY).** `SearchService.rebuild(): Promise<Record<string, number>>`
   deletes every row and inserts every source's records in one transaction, and returns the count
-  for each type. A `ponytail:` comment names its ceiling: it holds every record in memory; page
-  each source by id when a table passes about 100,000 rows. Entry
+  for each type. A `ponytail:` comment names its ceiling: it holds every record in memory and
+  writes them in one transaction; write in batches when the app passes about 100,000 records. Entry
   `apps/api/src/search-rebuild.ts` (`NestFactory.createApplicationContext(AppModule)`, so every
   module's `onModuleInit` registers its source first) and the root `package.json` script
   `"search:rebuild": "node apps/api/dist/search-rebuild.js"`, run as
@@ -247,11 +252,13 @@ The part named first owns each name; later parts use it and list that part under
      detail screen` (sign up, create a project; type its name in the top bar box; the
      `Pages and actions` group is above the `Projects` group; the result shows the name and
      `Active`; Enter opens `/projects/<id>` with the name as its heading; axe finds no serious
-     problem in the open panel) and `search on a module page starts on that module` (on
+     problem in the open panel), `a module chip shows up to 20 of that module` (with 22 projects
+     added through the API, All shows five in the `Projects` group and the `Projects` chip shows
+     20) and `search on a module page starts on that module` (on
      `/projects` the `Projects` chip has `aria-pressed="true"` and no pages show; `All` brings
      back the pages; on `/settings` the panel starts on `All`).
    - Test `tests/test_search_panel.py::test_1_the_top_bar_search_opens_one_panel_for_the_whole_app`,
-     parameters `typescript` and `python`, live: requires both flows from the run. The
+     parameters `typescript` and `python`, live: requires the three flows from the run. The
      existing-repo side is test_6.
 2. One query (SEARCHTS and SEARCHPY for the API, PANEL for the web side).
    - API cases in `apps/api/test/search.e2e-spec.ts`, with rows added through the `psql` helper
@@ -275,9 +282,9 @@ The part named first owns each name; later parts use it and list that part under
      prints an empty migration (`alembic check` passes). The existing-repo side is test_6.
 3. Kept in step, no cross-module reads (RECORDSTS, RECORDSPY).
    - API case in `apps/api/test/projects.e2e-spec.ts`: `a project's search result follows its
-     create, change and delete` (create: `/search?q=<name>` has it with subtitle `active`;
+     create, change, delete and restore` (create: `/search?q=<name>` has it with subtitle `active`;
      replace with a new name and `archived`: the new name finds it with `archived`, and the old
-     name does not; delete: the name finds nothing). The search term is the title field's value,
+     name does not; delete: the name finds nothing; restore as the admin: the name finds it again). The search term is the title field's value,
      read in the case from one line between `// forge:search` marks, so the feature command's
      copy reads its own title field. Python: the same case in `apps/api/tests/test_projects.py`.
    - Not live, in the test: no file under `libs/search/src` (Python `app/search/`) names a model
@@ -303,13 +310,13 @@ The part named first owns each name; later parts use it and list that part under
    - Test `tests/test_search_feature.py::test_5_each_new_feature_is_searchable_by_its_name_and_text`,
      parameters `typescript` and `python`. In a new starter app,
      `forge task feature customers --one customer --field name:text` and
-     `forge task feature invoices --one invoice --field title:text --field notes?:long-text
-     --field contact?:email --field state:status(draft|sent|void)`: the invoices search file has
-     the title from `title`, the subtitle from `state`, and text from `title` and `notes` but not
-     `contact`; the customers file has `subtitle: null` (Python `None`); the service has the
-     `changed`, `deleted` and `addSource('invoices', ...)` calls. Live (one cached run with the
+     `forge task feature invoices --one invoice --field title:text --field code:text --field
+     notes?:long-text --field contact?:email --field state:status(draft|sent|void)`: the invoices
+     search file has the title from `title` only, the subtitle from `state`, and text from
+     `title`, `code` and `notes` but not `contact`; the customers file has `subtitle: null` (Python `None`); the service has the
+     `changed` (create, replace, restore), `deleted` and `addSource('invoices', ...)` calls. Live (one cached run with the
      FORGE-FEATURE-1 feature tests): the generated case `an invoice's search result follows its
-     create, change and delete` passes. Adopted case: in the adopted starter app, the same lines
+     create, change, delete and restore` passes. Adopted case: in the adopted starter app, the same lines
      write the same search files with the same text.
 6. Both starters pass, existing apps unchanged (every part keeps the starters' tests passing;
    GUIDE for the texts).
@@ -365,10 +372,10 @@ queue, background job or abstraction layer, with the Done-when item that needs i
 
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
-| SEARCHTS | Search table and query in the TypeScript API | The record events in core, the search module with its table, indexes, handlers and one ranked query, and the shared search schema. | 2 | `starter/libs/core/src/common/record.event.ts` (new), `starter/libs/core/src/common/common.module.ts`, `starter/libs/core/src/index.ts`, `starter/libs/search/**` (new), `starter/apps/api/prisma/schema/search.prisma` (new), `starter/apps/api/prisma/migrations/20261027000000_search/` (new), `starter/libs/shared/src/index.ts`, `starter/apps/api/src/app.module.ts`, `starter/apps/api/package.json`, `starter/apps/api/tsconfig.json`, `starter/pnpm-lock.yaml`, `starter/scripts/test-build.mjs`, `starter/apps/api/test/search.e2e-spec.ts` (new), `tests/test_starter_tree.py` (libs list, schema set), `.github/workflows/starter-smoke.yml` | `tests/test_search_query.py` (`test_2`, `typescript`, new); the API cases of item 2 | FORGE-DATABASE-1/IDS, FORGE-FEATURE-1/ACCESS | no | |
-| SEARCHPY | Search table and query in the Python API | The same HTTP contract as SEARCHTS in the Python starter: the record events in core, the search module, its table and indexes, and the query. | 2 | `starter-python/apps/api/app/core/records.py` (new), `starter-python/apps/api/app/core/__init__.py`, `starter-python/apps/api/app/search/**` (new), `starter-python/apps/api/app/main.py`, `starter-python/apps/api/migrations/env.py` (model import only), `starter-python/apps/api/migrations/versions/0009_search.py` (new), `starter-python/apps/api/pyproject.toml` (`search internals` contract), `starter-python/apps/api/tests/test_search.py` (new), `starter-python/libs/shared/src/index.ts`, `starter-python/libs/shared/openapi.json` and `starter-python/libs/shared/src/api-types.ts` (regenerated), `tests/test_python_starter.py` (module and contract lists) | `tests/test_search_query.py` (`test_2`, `python`); the Python HTTP cases of item 2 | SEARCHTS, FORGE-DATABASE-1/COLUMNSPY, FORGE-FEATURE-1/SOURCEPY | no | |
-| RECORDSTS | Projects and new features in search, TypeScript | The projects search file and its marks, the record event calls and the source in the projects service, the rebuild and its command, the two kind table keys, and the feature command's search rendering and starter check line. | 3, 4, 5 | `starter/libs/projects/src/projects.search.ts` (new), `starter/libs/projects/src/projects.service.ts`, `starter/libs/search/src/search.service.ts` (rebuild only), `starter/apps/api/src/search-rebuild.ts` (new), `starter/package.json` (one script), `starter/apps/api/test/projects.e2e-spec.ts`, `starter/apps/api/test/search.e2e-spec.ts` (rebuild case), `src/forge/feature.py` (search marks and the starter check line), `src/forge/templates/feature/kinds.toml` (two keys) | `tests/test_search_records.py` (`test_3`, `test_4`, `typescript`, new); `tests/test_search_feature.py` (`test_5`, `typescript`, new) | SEARCHTS, FORGE-FEATURE-1/PY, FORGE-DATABASE-1/KINDS | no | |
-| RECORDSPY | Projects and new features in search, Python | The same as RECORDSTS in the Python starter and the feature command's Python copy. | 3, 4, 5 | `starter-python/apps/api/app/projects/search.py` (new), `starter-python/apps/api/app/projects/service.py`, `starter-python/apps/api/app/search/service.py` (rebuild only), `starter-python/apps/api/app/search/rebuild.py` (new), `starter-python/apps/api/tests/test_projects.py`, `starter-python/apps/api/tests/test_search.py` (rebuild case), `src/forge/feature.py` (the Python search marks and starter check line only) | `tests/test_search_records.py` (`test_3`, `test_4`, `python`); `tests/test_search_feature.py` (`test_5`, `python`) | RECORDSTS, SEARCHPY | no | |
+| SEARCHTS | Search table and query in the TypeScript API | The record events in core, the search module with its table, indexes, handlers and one ranked query, and the shared search schema. | 2 | `starter/libs/core/src/common/record.event.ts` (new), `starter/libs/core/src/common/common.module.ts`, `starter/libs/core/src/index.ts`, `starter/libs/search/**` (new), `starter/apps/api/prisma/schema/search.prisma` (new), `starter/apps/api/prisma/migrations/20261027000000_search/` (new), `starter/libs/shared/src/index.ts`, `starter/apps/api/src/app.module.ts`, `starter/apps/api/package.json`, `starter/apps/api/tsconfig.json`, `starter/pnpm-lock.yaml`, `starter/scripts/test-build.mjs`, `starter/apps/api/test/search.e2e-spec.ts` (new), `tests/test_starter_tree.py` (libs list, schema set), `.github/workflows/starter-smoke.yml` | `tests/test_search_query.py` (`test_2`, `typescript`, new); the API cases of item 2 | FORGE-DATABASE-1/IDS, FORGE-DATABASE-1/COLUMNS, FORGE-FEATURE-1/ACCESS | no | |
+| SEARCHPY | Search table and query in the Python API | The same HTTP contract as SEARCHTS in the Python starter: the record events in core, the search module, its table and indexes, and the query. | 2 | `starter-python/apps/api/app/core/records.py` (new), `starter-python/apps/api/app/core/__init__.py`, `starter-python/apps/api/app/search/**` (new), `starter-python/apps/api/app/main.py`, `starter-python/apps/api/migrations/env.py` (model import only), `starter-python/apps/api/migrations/versions/<next>_search.py` (new), `starter-python/apps/api/pyproject.toml` (`search internals` contract), `starter-python/apps/api/tests/test_search.py` (new), `starter-python/libs/shared/src/index.ts`, `starter-python/libs/shared/openapi.json` and `starter-python/libs/shared/src/api-types.ts` (regenerated), `tests/test_python_starter.py` (module and contract lists) | `tests/test_search_query.py` (`test_2`, `python`); the Python HTTP cases of item 2 | SEARCHTS, FORGE-DATABASE-1/COLUMNSPY, FORGE-FEATURE-1/ACCESS | no | |
+| RECORDSTS | Projects and new features in search, TypeScript | The projects search file and its marks, the record event calls and the source in the projects service, the rebuild and its command, the two kind table keys, and the feature command's search rendering and starter check line. | 3, 4, 5 | `starter/libs/projects/src/projects.search.ts` (new), `starter/libs/projects/src/projects.service.ts`, `starter/libs/search/src/search.service.ts` (rebuild only), `starter/apps/api/src/search-rebuild.ts` (new), `starter/package.json` (one script), `starter/apps/api/test/projects.e2e-spec.ts`, `starter/apps/api/test/search.e2e-spec.ts` (rebuild case), `src/forge/feature.py` (search marks and the starter check line), `src/forge/templates/feature/kinds.toml` (two keys) | `tests/test_search_records.py` (`test_3`, `test_4`, `typescript`, new); `tests/test_search_feature.py` (`test_5`, `typescript`, new) | SEARCHTS, FORGE-FEATURE-1/WEB, FORGE-DATABASE-1/KINDS | no | |
+| RECORDSPY | Projects and new features in search, Python | The same as RECORDSTS in the Python starter and the feature command's Python copy. | 3, 4, 5 | `starter-python/apps/api/app/projects/search.py` (new), `starter-python/apps/api/app/projects/service.py`, `starter-python/apps/api/app/search/service.py` (rebuild only), `starter-python/apps/api/app/search/rebuild.py` (new), `starter-python/apps/api/tests/test_projects.py`, `starter-python/apps/api/tests/test_search.py` (rebuild case), `src/forge/feature.py` (the Python search marks and starter check line only) | `tests/test_search_records.py` (`test_3`, `test_4`, `python`); `tests/test_search_feature.py` (`test_5`, `python`) | RECORDSTS, SEARCHPY, FORGE-FEATURE-1/PY | no | |
 | PANEL | The top bar search and panel | The top bar box, the panel with pages and actions, module groups, chips and the four states, the debounced search hook, and the flows, as SCREENS.md shows them. | 1, 2 | `starter/apps/web/src/components/app-shell.tsx`, `starter/apps/web/src/components/ui/command.tsx` (`shouldFilter` pass-through only), `starter/apps/web/src/features/search/**` (new), `starter/apps/web/e2e/search.spec.ts` (new), `starter-python/libs/shared/src/index.ts` (only a shared name the panel imports that SEARCHPY did not copy) | `tests/test_search_panel.py` (`test_1`, new); `tests/test_search_query.py` (`test_2`, the flow name); the flows pass in both live runs | RECORDSTS, RECORDSPY, FORGE-FEATURE-1/WEB | yes | |
 | GUIDE | Brief and convention pages | The brief paragraph, the convention pages, the guide sentence and the starter README, on new and existing repos. | 6 | `src/forge/templates/brief.md`, `src/forge/templates/conventions/backend.md`, `python.md`, `frontend.md`, `stack.md`, `docs/guide.md`, `starter/README.md` | `tests/test_search_guide.py` (`test_6`, new) | FORGE-FEATURE-1/GUIDE, FORGE-DATABASE-1/SKILL | no | |
 
@@ -401,17 +408,18 @@ New moving parts: the record events (`RecordEvents` in TypeScript core, `app.cor
   then results by module, All and per-module chips, the module's own chip first on its page,
   title and status, and the detail screen on a click. The feature command registers each new
   feature's name and text fields and its status; projects first. No cache server. Existing
-  client apps are not changed.
+  client apps are not changed. Later the same day: a module chip shows up to 20 results and All
+  shows five for each module, as the design says; the record and its Change history row share
+  one transaction (FORGE-FEATURE-1), and this story's search writes stay separate.
 - **Planner choices the owner did not make.** (1) The record events are a plain list of
   handlers in core, not a package, and a handler error is logged, not thrown. (2) The event
   carries the title, subtitle and text, so the search module never reads the feature's table.
-  (3) The searchable text is the name field and every `text` and `long-text` field; an `email`
-  field is not in it. (4) The `'simple'` text search configuration, with no stemming. (5) The
+  (3) The searchable text is the name field and every other `text` and `long-text` field; an
+  `email` field is not in it. (4) The `'simple'` text search configuration, with no stemming. (5) The
   rank adds the two scores with equal weight. (6) The modules a person can view come from their
   `.view` permissions, in the API and in the web. (7) The table's key is its unique
-  organisation, type and id, with no other id column. (8) The design shows up to 20 results
-  with a module chip, so the endpoint takes an optional `type` with a limit of 20; without it,
-  the owner's five for each module. (9) The rebuild empties and refills the whole table in one
+  organisation, type and id, with no other id column. (8) The endpoint takes an optional `type` for
+  the module chip. (9) The rebuild empties and refills the whole table in one
   transaction.
 - **Not in this story.** A "see all results" link; search in Members or Change history, which
   have no `.view` permission; typo matches beyond trigram likeness; highlights of the matched
