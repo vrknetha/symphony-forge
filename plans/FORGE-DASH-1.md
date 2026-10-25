@@ -4,34 +4,21 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact; on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id and a new plan approval.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- The FDE picks dashboard cards (a count, a money sum, a trend by day or week, a top-five list, or a status breakdown) over a feature's fields, and the feature command writes each card's query, scoped to the organisation.
+- A card that is slow gets a summary table that background jobs keep up to date, and heavy reports use a materialized view refreshed on a schedule, shown with an Updated N minutes ago line.
+- The dashboard is a fixed screen type built with shadcn charts, and the browser keeps each card's result for 30 to 60 seconds.
 
 ## Why
 
-Client apps get fast dashboards without hand-written queries
-
-
+Client apps need dashboards built fast, but each one is hand-written with queries, and slow cards have no standard fix.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **An FDE adds a dashboard with any of the five card types to a feature in one step, and each card's query is scoped to the organisation.**
+2. **A card that takes about 200 ms or more gets a summary table that background jobs keep current.**
+3. **A heavy report shows its data from a scheduled materialized view with an Updated N minutes ago line.**
+4. **The dashboard renders with shadcn charts, and the browser reuses each card's result for 30 to 60 seconds.**
+5. **Both starter apps build a dashboard with the same steps, after the feature command, database rules and job queue ship first.**
 
 ## Risks
 
