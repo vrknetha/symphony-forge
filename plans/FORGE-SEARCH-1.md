@@ -4,34 +4,19 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact; on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id and a new plan approval.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- From the top bar, a person searches every page, action and record they can view in one box, with the best results from each module.
+- On a module's own page, the top-bar search starts on that module's results.
+- Each new feature's name and text fields become searchable, with its status shown under each result.
 
 ## Why
 
-One search across the whole app
-
-
+Each list has its own search and nothing searches the whole app at once; the Ctrl+K panel only lists pages and actions today. This needs the feature command and the database rules to come first.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **Typing two or more characters in the top bar opens the Ctrl+K panel with pages and actions first, then up to five results for each module the person can view, with All and per-module chips.**
+2. **On a module's page the panel starts on that module, and results appear 150 ms after typing stops.**
+3. **Creating, changing or deleting a record updates its search entry, and a rebuild command refills search from every module.**
 
 ## Risks
 
