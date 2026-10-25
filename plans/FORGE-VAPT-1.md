@@ -4,34 +4,24 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact; on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id and a new plan approval.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- Sign-up, sign-in and password reset no longer reveal whether an email has an account, by message or by response time.
+- Repeated failed sign-ins lock that account for a while, and new passwords are checked against a leaked-password list.
+- Sessions get a new id at sign-in and end after an idle timeout, a maximum age, a password change or sign-out; cookies are HttpOnly, Secure and SameSite.
+- Admins must set up an authenticator-app code with recovery codes, and members may; failed sign-ins, role changes and invites are logged as security events.
+- New client repos get all of it from init; existing client repos get it on upgrade to the new release.
 
 ## Why
 
-Client apps pass a VAPT test without per-client security work
-
-
+Client apps would fail a VAPT test today: sign-up says an account already exists, the TypeScript sign-in answers faster for unknown emails, there is no lockout, authenticator code, leaked-password check or security log, the TypeScript starter's sessions last 30 days with no idle timeout, and the nightly full run only runs tests.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **Sign-up, sign-in and password reset give the same reply and similar timing for known and unknown emails, shown by a test in both starters.**
+2. **An account refuses sign-in after repeated failures, shown by a test in both starters.**
+3. **Each session ends on idle, maximum age, password change or sign-out, shown by a test in both starters.**
+4. **Both web apps send the listed security headers with no version header, and the Python starter has the same rate limits and CSRF guard as the TypeScript one.**
+5. **Admins must set up an authenticator-app code with recovery codes, and members may, shown by a test in both starters.**
+6. **Each night the full run reports audit, secret, code and web-scan findings, and each finding opens a fix.**
 
 ## Risks
 
