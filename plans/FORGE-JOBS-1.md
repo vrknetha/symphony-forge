@@ -4,34 +4,25 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact; on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id and a new plan approval.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- Client apps get a background job queue that runs on their existing Postgres database, so no Redis is needed.
+- Both starters ship it from day one: pg-boss in the NestJS starter and Procrastinate in the Python starter.
+- A separate worker process runs the jobs from the same codebase, started by Docker Compose.
+- Invite emails and the CSV export run as jobs instead of inside the web request.
+- Jobs retry with back-off, can run on a schedule, are safe to run twice, have a time limit and never hold a long transaction.
+- Admins get a Jobs screen that lists failed jobs with a Retry button.
+- The API and the worker get liveness and readiness endpoints that check the database.
 
 ## Why
 
-Background jobs for client apps, with no Redis
-
-
+Client apps need background work such as invite emails and CSV exports, with retries and schedules, but the starters have no worker and send invites and build CSV files inside the web request. Adding Redis or a second queue service to every app adds one more thing to run.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **A new client app from either starter has a worker container in Docker Compose that runs an invite email job and a CSV export job from Postgres, with no Redis.**
+2. **A job added in the same transaction as its data leaves no job behind when that transaction rolls back.**
+3. **A failed job shows on the admin-only Jobs screen, and Retry runs it again.**
+4. **The API and the worker each answer liveness and readiness checks, and readiness fails when the database is down.**
+5. **The database skill lists the job rules: same-transaction enqueue, keyed idempotent jobs, time limits and no long transactions.**
 
 ## Risks
 
