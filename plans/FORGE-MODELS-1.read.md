@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-17T18:59:40.304843+00:00
-seconds: 652.655
-read_hash: 54cc2dedbb08e074152799e84b37a5494aa29260
-round: 1
+read_at: 2026-11-17T19:16:33.298796+00:00
+seconds: 481.303
+read_hash: 050811e8f3dbe6d3587964e4f63485bdb0a1993d
+round: 2
 passed: no
-doc_seen: 54cc2dedbb08e074152799e84b37a5494aa29260
+doc_seen: 050811e8f3dbe6d3587964e4f63485bdb0a1993d
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: b64104c165ea0ffb3e4b71533803d656c5c9b1d8
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a1ead7-3a12-77c3-a88d-2804564d95aa
 session:
@@ -92,3 +92,35 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - Claude reads a plan through its SDK with `sonnet` configured. [story.py](/src/forge/story.py:314) does not pass the SDK run’s recorded model to the note writer, and the proposed Claude test covers a worker and review but no cold read. Those tests could pass while the notes still say `sonnet`.  
     Gain 3, Work 2, Harm 3
     Disposition: cut - _sdk_read returns the run's recorded model and story.read passes it to read_result; test_2 adds a Claude cold read whose notes must name claude (claude-sonnet-5-5).
+
+## Round 2
+
+11. **Blocking: Not done: A native reader from before the upgrade can keep and misreport its old model.**  
+    Raise: Not done  
+    Case: normal use - A Codex session stays open through a Forge upgrade, and its owner changes the reader to `terra`. Existing native records contain no model ([native.py](/src/forge/native.py:238)), so the new rule in [the plan](/plans/FORGE-MODELS-1.md:70) continues that reader even if `terra` now resolves to a newer model. Its next record can then name the newer model while the old reader continues.  
+    Gain 4, Work 2, Harm 3
+    Disposition: cut - a native reader or worker record with no saved model now starts a fresh reader or worker and never continues (For the builders, item 2, Session subagents that continue).
+
+12. **Advisory: Plan gap: The missing-model check follows a lock and possible merge.**  
+    Raise: Plan gap  
+    Case: normal use - The default branch has advanced before a worker starts. [worker.py](/src/forge/worker.py:141) takes a lock and merges that branch before the location where [the plan](/plans/FORGE-MODELS-1.md:57) resolves the model. A missing model can therefore be reported after the lock and after `HEAD` changes.  
+    Gain 3, Work 3, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+13. **Advisory: Not done: A continued Claude subagent can keep an older model.**  
+    Raise: Not done  
+    Case: normal use - A newer Sonnet becomes available between two native Claude rounds. The [planned comparison](/plans/FORGE-MODELS-1.md:70) sees `sonnet` in both rounds and continues the existing subagent, which the plan says keeps its model. Accepting a short name in the record does not establish that the next round uses the newest model.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+14. **Advisory: Scale: A normal Codex kit round reads the model list more than once.**  
+    Raise: Scale  
+    Case: normal use - A new repo builds with `sol`. [The plan](/plans/FORGE-MODELS-1.md:57) calls the resolver before the round and again when constructing the Codex request. Its cost statement describes one call of about one second, but the repeated calls add that delay on each such round.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+15. **Advisory: Plan gap: An existing test cache can retain the old Codex stub.**  
+    Raise: Plan gap  
+    Case: normal use - A developer runs the tests, changes the stub as planned, and runs them again. [test_codex_worker.py](/tests/test_codex_worker.py:79) reuses the cached SDK without rewriting `PROGRAM`, so the cached stub ignores `STUB_BUNDLED_CODEX` and the new two-program test cannot exercise its intended setup.  
+    Gain 3, Work 2, Harm 2
+   Disposition: cut - the Stubs decision now has the sdk_data fixture write codex_cli_bin.py again when it reuses the cached SDK.
