@@ -435,8 +435,8 @@ def merge_hook(args: argparse.Namespace) -> int:
 def merge_record(base: str, ours: str, theirs: str) -> int:
     """Keep concurrent observations and the state from the furthest worker round.
 
-    A review is one snapshot: its finding numbers and dismissals must stay together.
-    Git retains both machines' earlier review snapshots in the merged history.
+    Git retains earlier review snapshots. The active result combines concurrent
+    findings and remaps their dismissal numbers so every open finding still holds.
     """
     try:
         old, mine, other = (json.loads(Path(path).read_text(encoding="utf-8") or "{}")
@@ -463,7 +463,29 @@ def merge_record(base: str, ours: str, theirs: str) -> int:
         reviews = merge_review_snapshots([side["review"] for side in (merged, mine, other)
                                           if side.get("review")])
         if reviews:
-            merged["review"] = next((result for result in reviews if blocking(result)), reviews[0])
+            current = next((result for result in reviews if blocking(result)), reviews[0])
+            merged["review"] = current
+            current.setdefault("findings", [])
+            current.setdefault("dismissals", [])
+            for result in reviews:
+                if result is current:
+                    continue
+                numbers = {}
+                for number, finding in enumerate(result.get("findings", []), 1):
+                    if finding not in current["findings"]:
+                        current["findings"].append(finding)
+                    numbers[number] = current["findings"].index(finding) + 1
+                for dismissal in result.get("dismissals", []):
+                    remapped = {**dismissal, "finding": numbers[dismissal["finding"]]}
+                    if remapped not in current["dismissals"]:
+                        current["dismissals"].append(remapped)
+                if result.get("blocking_level") != "P0":
+                    current["blocking_level"] = "P1"
+                # Different reviewed inputs require a review of the combined code.
+                for name in ("changed", "branch_diff"):
+                    if current.get(name) != result.get(name):
+                        current.pop(name, None)
+            current["status"] = "blocked" if blocking(current) else "clean"
         if "rounds" in mine or "rounds" in other:
             merged["rounds"] = merge_review_snapshots(mine.get("rounds", []) + other.get("rounds", []))
         if "steps" in mine or "steps" in other:

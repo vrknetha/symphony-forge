@@ -549,11 +549,15 @@ def _stories(top: Path, history: dict[str, Any] | None = None,
     for key, state in states.items():
         found[key] = (None, state, (history["docs"].get(f"{ref}:plans/{key}.md", "") if history is not None
                                     else story.show(top, ref, f"plans/{key}.md") or ""))
-    for key, path in story.stories_here(top).items():
+    local_stories = story.stories_here(top)
+    unusable_local = set()
+    for key, path in local_stories.items():
         if history is not None and repo.state_path(key) in history["expired"]:
             continue
         state, doc = nextstate.read_state(key, path, refusals), path / "plans" / f"{key}.md"
-        if (state is not None and state.get("status") != "unusable"
+        if state is not None and state.get("status") == "unusable":
+            unusable_local.add(key)
+        elif (state is not None
                 and found.get(key, (None, {}, ""))[1].get("status") != "done"):
             found[key] = (path, state, doc.read_text(encoding="utf-8") if doc.is_file() else "")
     for branch in [ref.removeprefix("refs/remotes/origin/") for ref in branch_tips(top)
@@ -572,7 +576,8 @@ def _stories(top: Path, history: dict[str, Any] | None = None,
                 continue
             state = history["ref_states"].get(full, {}).get(repo.state_path(key), {})
         if state:
-            found[key] = (story.stories_here(top).get(key), state, story._plan(top, key, history=history))
+            path = None if key in unusable_local else local_stories.get(key)
+            found[key] = (path, state, story._plan(top, key, history=history))
     return {key: item for key, item in found.items() if item[1].get("status") != "dropped"}
 
 

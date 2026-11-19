@@ -124,26 +124,40 @@ def test_6_next_names_unusable_record_on_a_remote_only_branch_and_continues(
 @pytest.mark.parametrize("relationship", ["scope", "cross-story dependency"])
 def test_7_next_names_unusable_committed_task_blockers_and_continues(repo, gh, relationship):
     setup(repo)
-    shop = DOC
-    blocker_scope = "src/basket.py" if relationship == "scope" else "docs/other.md"
-    if relationship == "cross-story dependency":
-        shop = shop.replace(
+    if relationship == "scope":
+        # Keep the blocker and the part it stops in the same story.
+        shop = _plan_with_lock().replace(
+            "| SHOW | Show the saved time | The page shows the time | 2 | `src/page.py` | `tests/test_page.py` | LOCK | yes |",
+            "| SHOW | Show the saved time | The page shows the time | 2 | `src/basket.py` | `tests/test_page.py` | none | yes |",
+        )
+        blocker_branch = "task/SHOP-LOCK"
+        record_path = ".factory/stories/SHOP/tasks/LOCK.json"
+        blocked_start = "Next: forge task start SHOP/SHOW"
+        other = None
+    else:
+        shop = DOC.replace(
             "| SAVE | Save baskets | Baskets are stored | 1 | `src/basket.py` | `tests/test_basket.py` | none | no |",
             "| SAVE | Save baskets | Baskets are stored | 1 | `src/basket.py` | `tests/test_basket.py` | OTHER/LOCK | no |",
         )
+        blocker_branch = "task/OTHER-LOCK"
+        record_path = ".factory/stories/OTHER/tasks/LOCK.json"
+        blocked_start = "Next: forge task start SHOP/SAVE"
+        other = _plan_with_lock("docs/other.md")
+
     repo.write("plans/SHOP.md", shop)
-    repo.write("plans/OTHER.md", _plan_with_lock(blocker_scope))
     repo.write(".factory/stories/SHOP/story.json", json.dumps({
         "status": "approved", "title": "Shoppers can save a basket"}))
-    repo.write(".factory/stories/OTHER/story.json", json.dumps({
-        "status": "approved", "title": "Shoppers can save a basket"}))
-    repo.git("add", "plans/SHOP.md", "plans/OTHER.md", ".factory/stories/SHOP/story.json",
-             ".factory/stories/OTHER/story.json")
+    paths = ["plans/SHOP.md", ".factory/stories/SHOP/story.json"]
+    if other is not None:
+        repo.write("plans/OTHER.md", other)
+        repo.write(".factory/stories/OTHER/story.json", json.dumps({
+            "status": "approved", "title": "Shoppers can save a basket"}))
+        paths.extend(["plans/OTHER.md", ".factory/stories/OTHER/story.json"])
+    repo.git("add", *paths)
     repo.git("commit", "-q", "-m", "Approve basket stories")
     repo.git("push", "-q", "origin", "main")
 
-    record_path = ".factory/stories/OTHER/tasks/LOCK.json"
-    _push_record(repo, "task/OTHER-LOCK", record_path, "{")
+    _push_record(repo, blocker_branch, record_path, "{")
     _push_record(repo, "fix/healthy", ".factory/fixes/healthy.json", json.dumps({
         "branch": "fix/healthy", "status": "started", "why": "Reads clearly",
         "done_when": "The next report stays clear"}))
@@ -154,7 +168,7 @@ def test_7_next_names_unusable_committed_task_blockers_and_continues(repo, gh, r
     assert result.returncode == 0, result.stdout + result.stderr
     assert "Traceback" not in result.stderr
     assert f"{record_path} is not usable" in result.stdout
-    assert "Next: forge task start SHOP/SAVE" not in result.stdout
+    assert blocked_start not in result.stdout
     assert "Next: forge work healthy" in result.stdout
 
 
@@ -181,6 +195,35 @@ def test_8_next_names_a_changed_non_utf8_local_record_and_continues(repo, gh):
     repo.git("add", record_path, cwd=where)
     repo.git("commit", "-q", "-m", "Start a fix", cwd=where)
     record.write_bytes(b"\xff\xfe")
+
+    result = repo.forge("next", cwd=where)
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Traceback" not in result.stderr
+    assert f"{record_path} is not usable" in result.stdout
+    assert "Next: forge work healthy" in result.stdout
+
+
+def test_11_next_names_a_changed_non_utf8_local_story_record_and_continues(repo, gh):
+    setup(repo)
+    repo.write("plans/SHOP.md", DOC)
+    repo.write(".factory/stories/SHOP/story.json", json.dumps({
+        "status": "approved", "title": "Shoppers can save a basket"}))
+    repo.git("add", "plans/SHOP.md", ".factory/stories/SHOP/story.json")
+    repo.git("commit", "-q", "-m", "Approve basket story")
+    repo.git("push", "-q", "origin", "main")
+
+    record_path = ".factory/stories/SHOP/story.json"
+    _push_record(repo, "story/SHOP", record_path, json.dumps({
+        "branch": "story/SHOP", "status": "approved", "title": "Shoppers can save a basket"}))
+    _push_record(repo, "fix/healthy", ".factory/fixes/healthy.json", json.dumps({
+        "branch": "fix/healthy", "status": "started", "why": "Reads clearly",
+        "done_when": "The next report stays clear"}))
+    gh.respond("pr", "list", "--state", "open", stdout="[]")
+
+    where = repo.path.parent / "repo local unusable story record"
+    repo.git("worktree", "add", "-q", str(where), "story/SHOP")
+    (where / record_path).write_bytes(b"\xff\xfe")
 
     result = repo.forge("next", cwd=where)
 

@@ -64,10 +64,6 @@ def test_1_close_merges_records_with_the_higher_round_and_both_histories(env, lo
     assert f"Ready: {item}" in closed.stdout
     assert repo.git("diff", "--name-only", "--diff-filter=U", cwd=where) == ""
     repo.git("merge-base", "--is-ancestor", remote_head, "HEAD", cwd=where)
-    merged = json.loads((where / rel).read_text("utf-8"))
-    # Steps are the append-only Git record promised by the merge driver. The
-    # worker command below proves which build round Forge actually resumes.
-    assert all(step in merged["steps"] for step in local["steps"] + remote["steps"])
     assert "Remote machine observation" in env.prompt()
     assert "Local machine observation" in env.prompt()
     assert repo.git("status", "--porcelain", cwd=where) == ""
@@ -75,3 +71,13 @@ def test_1_close_merges_records_with_the_higher_round_and_both_histories(env, lo
     resumed = repo.forge("work", item)
     assert resumed.returncode == 0, resumed.stdout + resumed.stderr
     assert "Fix round 4 on " in calls(log)[-1]["brief"]
+    # `forge next` reports the review round from the two machines' merged review steps.
+    merged = json.loads((where / rel).read_text("utf-8"))
+    merged.update(status="fixing", review={
+        "blocking_level": "P1", "dismissals": [], "findings": [{
+            "priority": "P1", "title": "A preserved review finding", "file": "app.py", "line": 1,
+            "body": "Gain 5, Work 2, Harm 4\nCase: normal use - the worker needs another round."}]})
+    env.commit(where, rel, json.dumps(merged), "Show the merged review round")
+    next_step = repo.forge("next", cwd=where)
+    assert next_step.returncode == 0, next_step.stdout + next_step.stderr
+    assert "Review round 3: 1 problems found (A preserved review finding)." in next_step.stdout

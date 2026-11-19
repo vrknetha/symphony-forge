@@ -7,6 +7,7 @@ with live runs or no-run install skips. Use the real command, with no production
 import os
 import re
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -23,8 +24,8 @@ pytestmark = pytest.mark.platform
 
 
 @pytest.mark.parametrize("adopted", [False, True], ids=["new", "earlier-adoption"])
-def test_1_upgrade_to_installed_release_continues_during_runs(unsynced_up, tmp_path, adopted, request):
-    upgrade = unsynced_up if adopted else request.getfixturevalue("up")
+def test_1_upgrade_to_installed_release_continues_during_runs(tmp_path, adopted, request):
+    upgrade = request.getfixturevalue("unsynced_up" if adopted else "up")
     if adopted:
         upgrade.repo.git("switch", "-q", "-c", "adoption")
         shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", upgrade.repo.path,
@@ -33,6 +34,26 @@ def test_1_upgrade_to_installed_release_continues_during_runs(unsynced_up, tmp_p
         upgrade.repo.git("commit", "-qm", "Use the earlier adoption")
         upgrade.repo.git("switch", "-q", "main")
         upgrade.repo.git("merge", "-q", "--ff-only", "adoption")
+    # Restore the previous release's local merge rules, even when the fixture synced current Forge.
+    common = Path(upgrade.repo.git("rev-parse", "--git-common-dir", cwd=upgrade.repo.path))
+    if not common.is_absolute():
+        common = upgrade.repo.path / common
+    attributes = common / "info" / "attributes"
+    attributes.parent.mkdir(parents=True, exist_ok=True)
+    attributes.write_text("plans/roadmap.json merge=forge-roadmap\n"
+                          "plans/spotted.json merge=forge-roadmap\n", encoding="utf-8")
+    unset_record_driver = subprocess.run(
+        ["git", "config", "--unset-all", "merge.forge-record.driver"], cwd=upgrade.repo.path,
+        capture_output=True, text=True, encoding="utf-8")
+    assert unset_record_driver.returncode in (0, 5), unset_record_driver.stderr
+    upgrade.repo.git("config", "merge.forge-roadmap.driver", "forge hook merge-roadmap %O %A %B",
+                     cwd=upgrade.repo.path)
+    assert upgrade.repo.git("check-attr", "merge", "--", ".factory/fixes/upgrade-proof.json",
+                            cwd=upgrade.repo.path) == ".factory/fixes/upgrade-proof.json: merge: unspecified"
+    assert upgrade.repo.git("check-attr", "merge", "--", "plans/roadmap.json",
+                            cwd=upgrade.repo.path) == "plans/roadmap.json: merge: forge-roadmap"
+    assert upgrade.repo.git("check-attr", "merge", "--", "plans/spotted.json",
+                            cwd=upgrade.repo.path) == "plans/spotted.json: merge: forge-roadmap"
     release = upgrade.repo.forge("--version").stdout.split()[-1]
     # Both a new repo and an earlier-adopted repo can pin an older release.
     upgrade.on_main("forge.toml", re.sub(r'^version = ".*"', 'version = "v1.0.0"',
