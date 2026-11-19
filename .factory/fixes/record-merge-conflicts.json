@@ -193,7 +193,7 @@
     "id": "b588a4c0-b7c1-4117-88ac-a817b164cb13",
     "status": "blocked"
   },
-  "round": 4,
+  "round": 5,
   "status": "fixing",
   "steps": [
     {
@@ -210,13 +210,12 @@
     }
   ],
   "stuck": {
-    "close": "59ecb4c7-9f98-4a48-a28f-dedcb0d83b63",
-    "head": "d3389a784b186783aaaa28545931cd0a786b7256",
+    "close": "6de2d0e2-fea8-4ccf-a7a8-a44be44dbb79",
+    "head": "ecf922df5c326a8c7dea2326d02255815b3de189",
     "keys": {
-      "the open P0 disputed keep local state on equal rounds: story approvals are lost in src/forge/sync.py": 1,
-      "the open P0 not done: preserve concurrent review histories and their dispositions in src/forge/review.py": 1
+      "the open P0 retain both concurrent blocking reviews in the active result in src/forge/sync.py": 1
     },
-    "round": 2
+    "round": 4
   },
   "why": "When one fix is built on two machines, close merges the branch's remote and the fix's own record .factory/fixes/<fix>.json conflicts as text, leaving the checkout mid-merge; then forge next refuses for every item with '.factory/fixes/<fix>.json is not usable' (seen twice at a client on 18 Nov 2026)",
   "worker": "codex"
