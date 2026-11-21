@@ -72,7 +72,7 @@ def test_3_failed_checks_end_waits_and_retries_keep_waiting(land, fake_clock, mo
     owns that command contract and a retry after ten minutes. Only gh and the
     existing clock are faked; elapsed command time distinguishes the two paths.
     """
-    from test_close_reruns_cancelled_ci import _workflow
+    from test_close_reruns_cancelled_ci import _cancelled_jobs, _workflow
 
     env = land
     monkeypatch.delenv("FORGE_CHECKS_WAIT", raising=False)
@@ -89,6 +89,7 @@ def test_3_failed_checks_end_waits_and_retries_keep_waiting(land, fake_clock, mo
         _queue(env, RUNS, *_runs(running, running, cancelled, running, GREEN))
         _queue(env, ["api", "--paginate", "--jq", ".workflow_runs[]"], _workflow(5, 77))
         env.gh.respond("run", "rerun")
+        _cancelled_jobs(env)
     else:
         from datetime import datetime, timedelta, timezone
         start = datetime(2026, 11, 18, tzinfo=timezone.utc)

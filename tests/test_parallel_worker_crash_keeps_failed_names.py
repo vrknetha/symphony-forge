@@ -133,7 +133,7 @@ def pytest_unconfigure(config):
 
 
 @pytest.mark.parametrize("failing, restart", [(True, True), (False, True), (False, False)],
-                         ids=["other-failure", "all-recovered", "rerun-not-executed"])
+                         ids=["other-failure", "all-recovered", "xdist-restart-disabled"])
 def test_3_worker_reruns_report_only_the_final_result(repo, gh, tmp_path, monkeypatch, failing, restart):
     client = _client(repo, gh, tmp_path)
     client.write("tests/test_result.py", "import os\nfrom pathlib import Path\n"
@@ -157,13 +157,12 @@ def test_3_worker_reruns_report_only_the_final_result(repo, gh, tmp_path, monkey
     run = client.forge("test", "--change")
 
     output = run.stdout + run.stderr
-    assert (run.returncode != 0) == (failing or not restart), output
+    assert (run.returncode != 0) == failing, output
     assert "rerun" in output, output
-    if restart:
-        assert "1 passed" in output, output
+    assert "1 passed" in output, output
     failures = output.split("Failed tests:\n", 1)[-1]
     if failing:
         assert "- tests/test_result.py::test_failure\n" in failures, output
-    elif restart:
+    else:
         assert "Failed tests:" not in output, output
-    assert ("- tests/test_result.py::test_worker_dies_once\n" in failures) == (not restart), output
+    assert "- tests/test_result.py::test_worker_dies_once\n" not in failures, output

@@ -215,7 +215,7 @@ def test_3_pytest_repos_keep_six_groups_and_new_repos_start_with_one(
     assert sum(result.returncode != 0 for result in failed_groups) == 1
     failure = next(result for result in failed_groups if result.returncode != 0)
     assert "tests/test_b.py::test_b" in failure.stdout + failure.stderr
-    assert len(_recorded_group(receipts, "b")) - len(before_b) == 2
+    assert len(_recorded_group(receipts, "b")) - len(before_b) == 1
     assert len(_recorded_group(receipts, "a")) - len(before_a) == 1
     assert all("This group got no tests to run." not in result.stdout + result.stderr
                for result in failed_groups)
@@ -265,7 +265,7 @@ def test_5_always_tests_pass_in_their_owning_group(
 
     results = {group: _group(repo, client, monkeypatch, group, 2) for group in (1, 2)}
     required_runs = _recorded_group(receipts, "b")
-    assert len(required_runs) == (2 if persistent else 1)
+    assert len(required_runs) == 1
     owner = int(required_runs[0].rsplit(":", 1)[1])
     assert {int(line.rsplit(":", 1)[1]) for line in required_runs} == {owner}
     assert [group for group, result in results.items() if result.returncode != 0] == (
