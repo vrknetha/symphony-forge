@@ -1,0 +1,15 @@
+{
+  "base": "615ce7264dc312ead143de5cbbc29f88de19c9ef",
+  "branch": "fix/review-temp-tree-paths",
+  "done_when": "A review finding that cites a file through Forge's temporary review tree path is matched to the same repo file and kept, so close does not reject it or need a retry; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-21T18:39:19.288250+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Close rejects a review finding that cites a path inside Forge's temporary review tree, and the person must retry close"
+}
