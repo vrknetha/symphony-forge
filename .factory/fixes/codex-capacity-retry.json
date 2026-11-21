@@ -1,0 +1,15 @@
+{
+  "base": "c8a997b2d72c2d9761ff22ce1012e7cbe4706633",
+  "branch": "fix/codex-capacity-retry",
+  "done_when": "When Codex reports that the model is at capacity, forge work and close wait and retry the same turn a few times before they fail, and say in one line that they wait for capacity; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-21T18:10:11.325048+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "A Codex worker or review turn fails at once when the model reports that it is at capacity, and the whole forge work or close run stops"
+}
