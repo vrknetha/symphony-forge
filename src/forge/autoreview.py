@@ -7,6 +7,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -139,6 +140,26 @@ def spent(folder: Path) -> dict[str, Any]:
 def attempt(argv: list[str], cwd: Path, out: Path,
             selected: dict[str, str], top: Path, item: str, run_id: str,
             strict: bool = False) -> tuple[list[dict[str, Any]], str]:
+    """Retry temporary Codex capacity failures before counting an unfinished review."""
+    for retry in range(4):
+        findings, reason = _attempt(argv, cwd, out, selected, top, item, run_id, strict)
+        if not reason or retry == 3 or "codex" not in argv:
+            break
+        # A long failure trailer can truncate the capacity event from its last line.
+        detail = (repo.forge_dir(top) / f"review-{run_id}.log").read_text(
+            encoding="utf-8", errors="replace")
+        if not re.search(r"at capacity|overloaded", reason + "\n" + detail, re.I):
+            break
+        delay = 30 * 2 ** retry
+        print(f"Codex is at capacity. Waiting {delay} seconds before trying the review again.",
+              file=sys.stderr)
+        time.sleep(delay)
+    return findings, reason
+
+
+def _attempt(argv: list[str], cwd: Path, out: Path,
+             selected: dict[str, str], top: Path, item: str, run_id: str,
+             strict: bool = False) -> tuple[list[dict[str, Any]], str]:
     """Run Autoreview once: its findings, or the reason the run doesn't count."""
     from forge import codex  # importing it here avoids sync's hook-import cycle
     out.unlink(missing_ok=True)

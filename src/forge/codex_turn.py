@@ -216,7 +216,19 @@ def main() -> int:
                 if client.received_tier != tier:
                     client.received_tier = None
                 params = {**params, "serviceTier": tier, "serviceTierForTurn": tier}
-            response = request_raw(method, params)
+            for attempt in range(RETRIES + 1):
+                try:
+                    response = request_raw(method, params)
+                    break
+                except JsonRpcError as error:
+                    # A rejected start has no turn stream or completion to drive the retry below.
+                    if (method != "turn/start" or attempt == RETRIES
+                            or not overloaded({"message": error.message})):
+                        raise
+                    wait = RETRY_WAIT * 2 ** attempt
+                    emit(retry=wait, attempt=attempt + 2, of=RETRIES + 1)
+                    RECORDED.acquire()
+                    time.sleep(wait)
             if method in ("thread/start", "thread/resume"):
                 effort, cursor = response.get("reasoningEffort"), None
                 while effort is None or request.get("fast"):

@@ -221,6 +221,10 @@ Forge stops and gives `forge merge <item>` as the next step.
 
 If another program holds the earlier Codex conversation, Forge retries once. If it is still
 held, work starts a new conversation with the whole brief and says why in one line.
+When Codex reports that its model is at capacity, work and close wait and retry the same
+input. Each turn start or review attempt gets three retries, after 30, 60 and 120 seconds.
+Each wait prints one line. Close keeps its usual limit on failed review attempts.
+This applies to new repos at init and existing repos on upgrade.
 When `codex_fast` is off or absent, Codex workers use the app server to request normal speed,
 including from a Codex coordinator that uses Fast. The coordinator keeps its own speed.
 
