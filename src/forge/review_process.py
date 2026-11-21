@@ -1,4 +1,4 @@
-"""Adapt the pinned Autoreview process for Windows and concurrent sign-off parts."""
+"""Adapt the pinned Autoreview process for checkout paths, Windows and sign-off parts."""
 from __future__ import annotations
 
 import runpy
@@ -43,7 +43,8 @@ sys.exit(engine.returncode)
 
 
 def main() -> None:
-    launcher, mode, helper, *args = sys.argv[1:]
+    tree, launcher, mode, helper, *args = sys.argv[1:]
+    roots = (Path(tree), Path(tree).resolve())
     class EngineProcess(subprocess.Popen):
         def __init__(self, command, *positional, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] == launcher:
@@ -53,14 +54,30 @@ def main() -> None:
     subprocess.Popen = EngineProcess
     sys.argv = [helper, *args]
     sys.path[0] = str(Path(helper).resolve().parent)
-    if mode == "serial":
-        runpy.run_path(helper, run_name="__main__")
-        return
     namespace = runpy.run_path(helper, run_name="forge_autoreview")
     entry = namespace.get("sanitized_main")
     if entry is None:  # Executable helpers can also finish at module scope.
         return
     implementation = entry.__globals__
+    validate = implementation["validate_report"]
+
+    def validate_paths(report: Any, repo: Path, *args: Any) -> None:
+        # Translate our disposable checkout paths before the helper rejects absolute paths.
+        if isinstance(report, dict) and isinstance(report.get("findings"), list):
+            for finding in report["findings"]:
+                location = finding.get("code_location") if isinstance(finding, dict) else None
+                file = location.get("file_path") if isinstance(location, dict) else None
+                if isinstance(file, str):
+                    for root in roots:
+                        prefix = root.as_posix().rstrip("/") + "/"
+                        if file.replace("\\", "/").startswith(prefix):
+                            location["file_path"] = file.replace("\\", "/")[len(prefix):]
+                            break
+        validate(report, repo, *args)
+
+    implementation["validate_report"] = validate_paths
+    if mode == "serial":
+        raise SystemExit(entry())
 
     def parallel_parts(args: Any, reviewers: list[Any], repo: Path, prompts: list[Any],
                        changed_paths: Any, evidence: Any = None) -> list[tuple[str, Any]]:
