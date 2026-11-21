@@ -1,0 +1,15 @@
+{
+  "base": "3618ce820595d49f726c77b4d459d4ce310410c0",
+  "branch": "fix/custom-command-one-group",
+  "done_when": "In a repo whose test command is custom, a change whose related tests are under a quarter of all tests runs one CI test group, as it does with the standard command, and a change Forge still cannot judge runs all groups; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-21T20:28:56.329440+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "In a repo with a custom test command, Forge cannot judge a change's selected tests, so every small change runs all configured CI test groups instead of one"
+}
