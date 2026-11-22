@@ -1,0 +1,15 @@
+{
+  "base": "0cffb81e8ef9616407cd9bf50ea8232a10997d47",
+  "branch": "fix/windows-timeout-retry-cases",
+  "done_when": "tests/test_grouped_full_run_retries_failed_files.py::test_1[False-timeout] and tests/test_grouped_change_run_retries_failed_files.py::test_2[timeout] pass on Windows, a timed-out test file is still retried once on every platform, and forge-next.yml's Windows jobs pass on the fix branch",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T11:43:30.199256+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The v1.2.46 release check fails on Windows in two timeout cases of the grouped retry tests: when the fake timed-out pytest worker ends, pytest-xdist on Windows stops with INTERNALERROR 'Unexpectedly no active workers available' and exit status 3, so the retry path the test expects does not happen"
+}
