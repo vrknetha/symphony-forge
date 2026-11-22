@@ -1,16 +1,17 @@
 # Tell clients what each Forge release changed
 
-2 parts · Risks: none one-way; five accepted limits · New moving parts: none
+2 parts · Risks: none one-way; four accepted limits · New moving parts: none
 
 ## What changes for you
 
-- Each Forge release ships its notes as a file inside Forge. The notes install with Forge and need no network. Forge's release test fails when the release has no notes file, so the release cannot be cut. (Source: the owner's decision, 22 Nov 2026)
+- Each Forge release ships its notes as a file inside Forge. The notes install with Forge and need no network. The version change of a release is the last change merged before the release is cut, and its notes cover everything merged since the previous release. The release check fails when the release has no notes file, or when Forge code merged after its notes. Then the release cannot be cut. (Source: the owner's decision, 22 Nov 2026)
 - The notes have fixed parts: the changes for client repos, the known issues, and the earlier known issues that this release fixes. Each change says what the agent or the owner must now do differently. Each known issue says what happens and what to do about it. (Source: the owner's decision, 22 Nov 2026)
 - `forge upgrade` prints the changes of each release between the old version and the new version, then the known issues that are still open. (Source: the owner's decision, 22 Nov 2026)
-- After an upgrade, the first `forge next` on that computer shows the same list once to the agent. The agent tells you what changed and works the new way. Later runs of `forge next` do not show it again. (Source: the owner's decision, 22 Nov 2026)
+- After an upgrade, the first `forge next` shows the same list once to the agent, also in the checkout where the upgrade started while the upgrade waits for its merge. The agent tells you what changed and works the new way. Later runs of `forge next` do not show it again. Each computer of the team shows the list once, when Forge on that computer moves to the newer release. (Source: the owner's decision, 22 Nov 2026)
+- If Forge cannot read its notes, `forge next` prints one line that says so and continues as before.
 - `forge sync` writes a "Known Forge issues" part at the end of the Forge guide that the agents read. It lists each open issue with its workaround. When a later release fixes an issue, the issue goes out of the list after the upgrade to that release. (Source: the owner's decision, 22 Nov 2026)
 - The notes of v1.2.40 to v1.2.46 come from the GitHub release pages, so a repo on an older release also sees the recent changes when it upgrades.
-- What each repo gets: a new repo gets the known-issues part of the guide at setup. It gets no change list, because nothing changed for it. An existing repo gets all of this on its upgrade to the release that has this story: the upgrade prints the changes since its old release (from v1.2.40), `forge next` shows them once, and the upgrade's fix adds the known-issues part to the guide. No setting changes, and no command is added.
+- What each repo gets: a new repo gets the known-issues part of the guide at setup. It gets no change list, because nothing changed for it. An existing repo gets all of this on its upgrade to the release that has this story: the upgrade prints the changes since its old release (from v1.2.40), `forge next` shows them once on each computer, and the upgrade's fix adds the known-issues part to the guide. No setting changes, and no command is added.
 - Not in this story: release notes on the board, notes for releases before v1.2.40, and known issues that are found after a release is published (they reach clients with the next release).
 
 Design: none (no screen changes)
@@ -46,10 +47,6 @@ Accepted limits:
 - The change list prints from the new release's sync, because the upgrade command runs the old
   release's code. So the list also prints again if someone runs `forge sync` again on the
   upgrade's branch. This is harmless.
-- `forge next` remembers on each computer which release it showed last. A teammate's computer
-  that never ran `forge next` with this release shows nothing for the first upgrade. From the
-  next upgrade, it shows the changes once when that teammate's checkout moves to the newer
-  release. The guide's known-issues part reaches every teammate through the committed guide.
 - Releases before v1.2.40 have no notes. An upgrade from an older release lists only the changes
   from v1.2.40.
 - The GitHub pages of v1.2.40 to v1.2.46 give no workarounds and do not say which known issues
@@ -78,17 +75,19 @@ tested on a new repo only (Review rules); the upgrade case uses the existing upg
 - Before the sync, upgrade has already fetched the default branch (`repo.default_config`,
   `upgrade.py:116`) and set the fix's `forge.toml` to the new version (`upgrade.py:213-219`). So in
   the fix's folder, the folder's pin is the new release and `origin/<default>:forge.toml` still
-  pins the old one.
+  pins the old one. The starting checkout keeps the old pin until the merge.
+- `forge next` has `changes_state: False` (`src/forge/nextstep.py:27`), so `cli.py:150` never runs
+  `repo.check_pin` for it: `next` runs the installed release whatever the checkout pins. It reads
+  settings through `repo.config` and catches a refusal so the report goes on (`nextstep.py:148`;
+  `tests/test_fix_one_worktree_with_settings_the_installed.py:44` requires this).
+- `forge next` prints `upgrade.release_notice(top)` and `fullrun.notices(top)` as its `notice`
+  lines (`nextstep.py:154`). The daily release check keeps a per-clone cache in
+  `repo.forge_dir(top)` (`.git/forge/`, shared by every worktree, never committed; `repo.py:449`).
+  Nothing runs `forge next` by itself: no hook, pane or board path calls `next_step`.
+- `repo._pin(text)` (`repo.py:1052`) reads only the `version` of a forge.toml text, without the
+  rest of the settings; `repo.check_pin` uses it for every worktree (`repo.py:960`).
 - Sync already prints a one-off upgrade message: the gpt-6.2-sol line (`src/forge/sync.py:726-732`).
-  It prints on every sync while the condition holds. That is the kind of message release notes now
-  carry (Notes, open question 4).
-- `forge next` (`src/forge/nextstep.py:144`) prints `upgrade.release_notice(top)` and
-  `fullrun.notices(top)` as its `notice` lines (`nextstep.py:154`). The daily release check keeps a
-  per-clone cache in `repo.forge_dir(top)` (`.git/forge/`, shared by every worktree, never
-  committed; `repo.py:449`). Nothing runs `forge next` by itself: no hook, pane or board path
-  calls `next_step` (only the CLI table in `cli.py:27`).
-- While the upgrade fix waits for its merge, commands on the default branch run the newly
-  installed release, not the old pin (`repo.check_pin`, `repo.py:966-975`).
+  That is the kind of message release notes now carry (Notes, open question 3).
 - The Forge guide copies `.claude/skills/forge/SKILL.md` and `.codex/skills/forge/SKILL.md` are
   shipped by `story.ships` (`src/forge/story.py:88-108`) as the bytes of
   `src/forge/templates/skill.md`. `sync.files` (`sync.py:434`) imports every module that defines a
@@ -100,13 +99,17 @@ tested on a new repo only (Review rules); the upgrade case uses the existing upg
   already means kept review findings on the board. Hence the names below.
 - `pyproject.toml:23` builds the wheel from `packages = ["src/forge"]`, which takes every file in
   that folder, as it does for `src/forge/templates/*.md`.
-- The release bump is a fix that changes about 20 version references
-  (`git show 882433996 --stat`). It always changes `tests/test_release_version.py`, whose
-  versions are written out, so related-test selection (`fasttest.related`, changed test files are
-  picked) always runs that file on a bump.
-- Two tests compare the guide copies byte for byte with the template:
-  `tests/test_generated_skill_round_rule.py:18-34` and the `skills/forge/SKILL.md` entry of
-  `SOURCES` in `tests/test_split_ships.py:20` (compared at about line 75).
+- Release process (`docs/guide.md:685-705`, "Releasing Forge"): the bump fix sets `__version__`
+  and merges before the nightly runs; the cut is "the newest main commit whose Linux full run and
+  Windows run passed", which can be later than the bump. The tag push runs
+  `.github/workflows/forge-next.yml` (`on.push.tags: ['v*']`). The bump always changes
+  `tests/test_release_version.py`, whose versions are written out, so related-test selection
+  (changed test files are picked) always runs that file on a bump.
+- Five tests expect the guide copies to equal the template (or the template plus the fake
+  release's marker): `tests/test_generated_skill_round_rule.py:18-34`, `tests/test_split_ships.py:20`
+  (`SOURCES`, compared at about line 75, and its package-copy case from about line 81),
+  `tests/test_trim_skills.py:20-21`, `tests/test_upgrade_to_installed_release.py:65-69` and
+  `tests/test_workers_leave_settings_to_coordinator.py:218`.
 
 **Words this story pins.** NOTES commits these; SHOW uses them.
 
@@ -143,8 +146,8 @@ tested on a new repo only (Review rules); the upgrade case uses the existing upg
   - `ships(top, cfg) -> dict[str, str]`: the two guide copies (moved out of `story.ships`).
   - SHOW adds `changes(old, new) -> list[str]`, `upgrade_notice(top, cfg) -> None` and
     `once(top) -> list[str]`.
-- Per-clone marker (SHOW): `repo.forge_dir(top) / "release-notes-shown"`, one line with the last
-  version whose changes `forge next` showed.
+- Per-clone marker (SHOW): `repo.forge_dir(top) / "release-notes-shown"`, one line with the newest
+  version whose changes `forge next` showed on this clone.
 
 ### Done-when details
 
@@ -161,32 +164,54 @@ tested on a new repo only (Review rules); the upgrade case uses the existing upg
        fixes it, list its title under that release's `## Fixed known issues`. When the fix cannot
        be confirmed, keep it open. v1.2.42's "first upgrade runs the previous release's upgrade
        code" is no longer true for an upgrade from v1.2.42 or later; mark it fixed in v1.2.43.
+   - The bump is the last merge before the cut. In `docs/guide.md` "Releasing Forge", step 1
+     becomes: `In a fix, set __version__ in src/forge/__init__.py to the new version (without the
+     v) and add src/forge/release-notes/v<version>.md for everything merged since the previous
+     release. Merge it last: the cut commit is this fix's merge commit. A fix that must join the
+     release after it (a fix without which the release is unsafe) also updates that notes file.`
+     Step 2's "the version-bump commit or a later main commit" and "the newest main commit whose
+     Linux full run and Windows run passed" become the bump's merge commit (or the last joining
+     fix's). Publish the GitHub release only after the tag's forge-next run passes, with
+     `gh release create v<version> --notes-file src/forge/release-notes/v<version>.md`.
+   - The tag gate: `.github/release-notes-check.py <tag>` (new, stdlib, in the style of
+     `.github/reuse-test-proof.py`), run by a new step of `forge-next.yml`'s `selection` job with
+     `if: github.event_name == 'push'` and `run: python .github/release-notes-check.py "$GITHUB_REF_NAME"`.
+     It exits 1 with one line when `src/forge/release-notes/<tag>.md` is missing at the tagged
+     commit (`Release <tag> has no notes file src/forge/release-notes/<tag>.md.`), or when the
+     newest commit that changes `src/forge` (`git log -1 --format=%H -- src/forge`) is not a commit
+     that changes that notes file (`Forge code merged after the notes of <tag>: <short sha>
+     <subject>. Add it to the notes, then tag again.`).
    - Add to this repo's `AGENTS.md`, in "Building Forge (this repo only)" (Forge's own release
      process, not a client rule), this bullet: `Each release bump adds
-     src/forge/release-notes/v<version>.md, and the GitHub release uses that file as its notes
-     (gh release create v<version> --notes-file src/forge/release-notes/v<version>.md). Write each
-     line for an agent that must act on it: what changed, and what the agent or owner now does
-     differently. Each known issue starts with a short bold title, says what happens, and ends
-     with Workaround: <what to do>, or Workaround: none; <what to expect>. When a release fixes an
-     earlier known issue, list that issue's bold title, unchanged, under Fixed known issues. Leave
-     out Forge's own tests and work, and name no client. The release test fails without the file.`
+     src/forge/release-notes/v<version>.md for everything merged since the previous release, and
+     merges last before the cut. Write each line for an agent that must act on it: what changed,
+     and what the agent or owner now does differently. Each known issue starts with a short bold
+     title, says what happens, and ends with Workaround: <what to do>, or Workaround: none; <what
+     to expect>. When a release fixes an earlier known issue, list that issue's bold title,
+     unchanged, under Fixed known issues. Leave out Forge's own tests and work, and name no
+     client. The release test and the tag check fail without the file.`
    - Test (Forge's own files): `tests/test_release_version.py::test_3_the_release_ships_notes_an_agent_can_act_on`.
      It lives in the release test because every bump changes that file, so CI always runs it on a
      bump; it takes the next free number under that file's `STORY`. It reads the version from
      `forge --version` (no version written in the test), so later bumps do not edit it. It checks:
-     `src/forge/release-notes/<version>.md` exists; every notes file's first line is
-     `# Forge <its file name's version>`; only the three headings, in order; at least one bullet
-     under `## What changes for client repos`; every known-issue bullet matches `TITLE` and holds
-     `Workaround:`; known-issue titles are unique; every fixed title is a known-issue title of an
-     earlier file. The proof list also names one check: `uv build --wheel` lists
+     - `src/forge/release-notes/<version>.md` exists; every notes file's first line is
+       `# Forge <its file name's version>`; only the three headings, in order; at least one bullet
+       under `## What changes for client repos`; every known-issue bullet matches `TITLE` and
+       holds `Workaround:`; known-issue titles are unique; every fixed title is a known-issue
+       title of an earlier file.
+     - The tag check, run with `sys.executable` in a temporary git repo with a `src/forge` folder:
+       a tag on the commit that adds `src/forge/__init__.py` and `src/forge/release-notes/v9.9.9.md`
+       passes; a tag on a later commit that changes `src/forge/app.py` fails with the "merged
+       after the notes" line; a tag with no notes file fails with the "has no notes file" line.
+     The proof list also names one check: `uv build --wheel` lists
      `forge/release-notes/v1.2.46.md` in the wheel.
 2. The upgrade prints the changes between the old and the new release (SHOW).
    - `release_notes.upgrade_notice(top, cfg)`, called once at the end of `sync.sync` (after its
-     `Wrote` lines): `old` is the pin in `repo.read_blob(top, f"origin/{repo.default_branch(top)}:forge.toml")`
-     (no fetch; `repo._pin`), `new` is `cfg["version"]`. Only when both read and `new` is newer
-     than `old`: print `changes(old, new)`, and write `old` to the marker when the marker is
-     missing (so `forge next` shows the list after the merge). Anything unreadable: print
-     nothing. Nothing in `upgrade.py` changes.
+     `Wrote` lines): `old` is `repo._pin` of
+     `repo.read_blob(top, f"origin/{repo.default_branch(top)}:forge.toml")` (no fetch), `new` is
+     `cfg["version"]`. Only when both read and `new` is newer than `old`, print
+     `changes(old, new)`. It writes nothing. Anything unreadable: print nothing. Nothing in
+     `upgrade.py` changes.
    - `changes(old, new)`, `[]` when no notes file is newer than `old` and not newer than `new`:
 
      ```
@@ -201,51 +226,88 @@ tested on a new repo only (Review rules); the upgrade case uses the existing upg
      ```
 
      The last part is left out when no issue is open.
+   - Test harness: the fake uv in `tests/test_upgrade_command.py` copies the files of
+     `<bin>/extra-notes/` (when that folder exists) into the fake release's
+     `src/forge/release-notes/` after its copy (two lines in the `UV` text).
    - Test (new repo): `tests/test_release_notes.py::test_2_upgrade_lists_the_changes_of_every_release_between`.
-     The `up` fixture of `tests/test_upgrade_command.py` (fake uv, release `v9.9.9`, whose copy of
-     `src/forge` includes the real notes files). `up.on_main("forge.toml", ...)` pins `v1.2.44`,
-     as `tests/test_upgrade_to_installed_release.py` pins `v1.0.0`. `up.run(RELEASE)` exits 0;
-     its output has `Forge changed from v1.2.44 to v9.9.9.`, `Forge v1.2.45:` and `Forge v1.2.46:`,
-     and no `Forge v1.2.44:`.
-3. `forge next` shows the same list once (SHOW).
+     The `up` fixture (fake uv, release `v9.9.9`). `extra-notes/v9.9.8.md` has the change
+     `- Test change eight.` and the known issue `- **Test issue one.** It fails. Workaround: run it again.`;
+     `extra-notes/v9.9.9.md` has `- Test change nine.`, lists `**Test issue one.**` as fixed and
+     has `- **Test issue two.** It waits. Workaround: none; it ends in a minute.`.
+     `up.on_main("forge.toml", ...)` pins `v1.2.44`, as `tests/test_upgrade_to_installed_release.py`
+     pins `v1.0.0`. `up.run(RELEASE)` exits 0, and its output has, in order:
+     - `Forge changed from v1.2.44 to v9.9.9. ...`;
+     - `Forge v1.2.45:` followed by each `## What changes for client repos` bullet of the real
+       `src/forge/release-notes/v1.2.45.md`, read by the test;
+     - `Forge v9.9.8:`, `- Test change eight.`, `Forge v9.9.9:`, `- Test change nine.`,
+       `- Fixed known issue: Test issue one`;
+     - the open-issues line and `- **Test issue two.** It waits. Workaround: none; it ends in a minute. (Since v9.9.9.)`;
+     and no `Forge v1.2.44:` and no open-issues line with `Test issue one`.
+3. `forge next` shows the same list once on each clone (SHOW).
    - `release_notes.once(top)`, added to `nextstep.next_step`'s `notice` (`nextstep.py:154`, one
-     line): `[]` when the checkout has no `forge.toml`. `pin` is `repo.config(top)["version"]`.
-     When the marker is missing: write `pin`, return `[]` (a new repo or a new clone shows
-     nothing). When `pin` is newer than the marker: return `changes(marker, pin)` and write `pin`.
-     Otherwise `[]`. A marker read or write error returns `[]`, as `release_notice` does.
+     line). It reads pins only with `repo._pin` of the forge.toml texts, never `repo.config`, so
+     settings the installed release cannot read do not matter:
+     - `target`: the newest pin among this checkout and every worktree of the clone
+       (`story.worktrees(top)`; the upgrade's fix folder pins the new release while it waits),
+       but not newer than `forge.__version__` (the running release has no newer notes). A clone
+       whose installed release is older than its pin waits, and shows the list when that release
+       is installed.
+     - `base`: the marker's version. When there is no marker, the newest pin older than `target`
+       among this checkout's `forge.toml` and its versions in
+       `git log -n 200 --format=%H -- forge.toml` (each read with `repo.read_blob`). A new repo has
+       none: write `target` and show nothing. A new clone of an upgraded repo finds the pin before
+       the upgrade, so it shows the list once.
+     - When `target` is newer than `base`: return `changes(base, target)` and write `target` to the
+       marker. Otherwise `[]`.
+     - Any error (OS, git, value): return the one line `Forge could not read its release notes
+       (<first line of the error>).` and write nothing; `forge next` goes on as before.
    - Text: one sentence in `src/forge/templates/skill.md` "Upgrade Forge" (`:1573`): `After an
      upgrade, forge upgrade and then forge next (once on each computer) list what changed in each
      release and the open known Forge issues. Tell the owner the changes that affect them in plain
      words, follow each line's instruction, and read the "Known Forge issues" part at the end of
      this guide.` Copy over both repo copies of the guide with `forge sync`.
    - Test (new repo): `tests/test_release_notes.py::test_3_next_shows_the_changes_once_after_an_upgrade`,
-     parametrized:
-     - `after-upgrade`: the test 2 setup, then `forge next` in `up.folder` twice. The first output
-       has `Forge changed from v1.2.44 to v9.9.9.` once; the second has none.
+     on the test 2 setup. "The list" below is the v9.9.8 and v9.9.9 lines that test 2 checks.
+     `forge next` "as the installed release" runs `tmp/uvbin/forge`, the launcher the fake install
+     put on PATH (the v9.9.9 copy). Parametrized:
+     - `starting-checkout`: `forge next` as the installed release in `up.repo.path` (still pinned
+       `v1.2.44`, the upgrade not merged) prints the list; a second run prints none of it.
+     - `older-release-first`: `repo.forge("next", cwd=up.folder)` (this checkout's release, older
+       than the folder's `v9.9.9` pin) prints none of the v9.9.x lines; then `forge next` as the
+       installed release in `up.folder` prints the list, and a second run prints none of it.
+     - `new-clone`: after `up.on_main("forge.toml", <pin v9.9.9>)`, a `git clone` of the origin;
+       `forge next` as the installed release in the clone prints the list once, and not on a
+       second run.
      - `new-repo`: a new repo (`_fresh_client` of `tests/test_setup.py`); `forge next` twice; no
        output has `Forge changed from`.
+     - `unreadable-notes`: `extra-notes/v9.9.9.md` is not valid UTF-8; `forge next` as the
+       installed release in `up.folder` exits 0, prints `Forge could not read its release notes`
+       once, and still prints its usual next step.
 4. The guide's known-issues part (NOTES).
    - `release_notes.ships(top, cfg)` returns `.claude/skills/forge/SKILL.md` and
      `.codex/skills/forge/SKILL.md` as the template's text plus this part at its end
-     (`skill.rstrip("\n") + "\n\n" + part + "\n"`):
+     (`skill.rstrip("\n") + "\n\n" + part + "\n"`). The part names no version, so it is the same
+     text for every release that has the same open issues:
 
      ```
      ## Known Forge issues
 
-     Open known issues in Forge v1.2.46, from its release notes. When one affects the work, tell the owner and use its workaround. An upgrade to a release that fixes an issue removes it from this list.
+     Open known issues in this Forge release, from its release notes. When one affects the work, tell the owner and use its workaround. An upgrade to a release that fixes an issue removes it from this list.
 
      - <each open_issues(forge.__version__) bullet>
      ```
 
-     With no open issue, the list is the one line `Forge v1.2.46 has no open known issues.`
+     With no open issue, the list is the one line `This Forge release has no open known issues.`
    - `story.ships` loses its `skill` line and the two guide entries (three lines out of
      `story.py`).
    - Run `forge sync` and commit this repo's regenerated guide copies
      (`tests/test_release_version.py::test_2_release_checkout_generated_files_match_sync` checks
      them).
-   - Change the two byte-for-byte tests to compare the guide copies with this repo's committed
-     `.claude/skills/forge/SKILL.md` (sync output) in place of the template; nothing else in them
-     changes. Before close, also run every test file that names `templates/skill.md`
+   - Change the five guide tests listed in "What the code does today" to expect the template text
+     plus the part: the part is the text that follows the template in this repo's committed
+     `.claude/skills/forge/SKILL.md`. In `tests/test_upgrade_to_installed_release.py`, the
+     expected text is the template with the fake release's marker, then the part. Nothing else in
+     those tests changes. Before close, also run every test file that names `templates/skill.md`
      (`grep -l "templates/skill.md" tests/test_*.py`).
    - Test (new repo): `tests/test_release_notes.py::test_4_the_guide_lists_open_issues_and_drops_fixed_ones`.
      As `tests/test_codex_model_upgrade_notice.py:33-39` does, copy `src/forge` to a temporary
@@ -265,10 +327,12 @@ tested on a new repo only (Review rules); the upgrade case uses the existing upg
   writes its marker on its first run and shows no change list.
 - **Existing repos** (on upgrade to the release with this story): the old release's upgrade code
   runs the new release's sync, which prints the change list from the old pin (notes start at
-  v1.2.40) and writes the marker; `forge next` shows the list once; the upgrade's fix commits the
-  guide copies with the new part. No record changes form, so
-  `tests/test_upgrade_to_installed_release.py` does not change.
-- **Forge's own repo:** each release bump adds its notes file; the release test fails without it.
+  v1.2.40); `forge next` shows the list once on each clone, in the starting checkout while the
+  upgrade waits and on teammates' clones when their Forge moves to the release; the upgrade's fix
+  commits the guide copies with the new part. No record changes form;
+  `tests/test_upgrade_to_installed_release.py` changes only its expected guide text.
+- **Forge's own repo:** each release bump adds its notes file and merges last; the release test
+  and the tag check fail without it.
 
 ## Tasks
 
@@ -295,8 +359,8 @@ queue, background job or abstraction layer, with the Done-when item that needs i
 
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
-| NOTES | Release notes files and the guide's known issues | The notes file form; notes for v1.2.40 to v1.2.46 from the GitHub release pages, with workarounds and fixed marks; the release test that fails without the current release's notes; the reader of the notes files; the "Known Forge issues" part at the end of both guide copies, which drops an issue once a release fixes it; the release-notes rule in this repo's AGENTS.md | 1, 4 | `src/forge/release-notes/` (new), `src/forge/release_notes.py` (new), `src/forge/story.py` (`ships` only), `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md`, `AGENTS.md` ("Building Forge (this repo only)" only), `tests/test_generated_skill_round_rule.py` and `tests/test_split_ships.py` (the guide's expected source only) | `tests/test_release_version.py::test_3_the_release_ships_notes_an_agent_can_act_on`, `tests/test_release_notes.py::test_4_the_guide_lists_open_issues_and_drops_fixed_ones` (new) | | no | |
-| SHOW | Show the changes after an upgrade | The new release's sync prints the changes of every release between the default branch's pin and the new pin, then the open known issues, which `forge upgrade` streams; `forge next` shows the same list once per computer through a marker in `.git/forge/`; one sentence in the guide's Upgrade Forge part | 2, 3 | `src/forge/release_notes.py`, `src/forge/sync.py` (one call at the end of `sync`), `src/forge/nextstep.py` (the `notice` line only), `src/forge/templates/skill.md` (Upgrade Forge only), `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_release_notes.py::test_2_upgrade_lists_the_changes_of_every_release_between`, `tests/test_release_notes.py::test_3_next_shows_the_changes_once_after_an_upgrade` (new) | NOTES | no | |
+| NOTES | Release notes files, the release gate and the guide's known issues | The notes file form; notes for v1.2.40 to v1.2.46 from the GitHub release pages, with workarounds and fixed marks; the release test that fails without the current release's notes; the tag check that fails when the notes file is missing or Forge code merged after it; the bump-merges-last release step; the reader of the notes files; the "Known Forge issues" part at the end of both guide copies, which drops an issue once a release fixes it; the release-notes rule in this repo's AGENTS.md | 1, 4 | `src/forge/release-notes/` (new), `src/forge/release_notes.py` (new), `src/forge/story.py` (`ships` only), `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md`, `.github/release-notes-check.py` (new), `.github/workflows/forge-next.yml` (one step in `selection`), `docs/guide.md` ("Releasing Forge" only), `AGENTS.md` ("Building Forge (this repo only)" only), `tests/test_generated_skill_round_rule.py`, `tests/test_split_ships.py`, `tests/test_trim_skills.py`, `tests/test_upgrade_to_installed_release.py`, `tests/test_workers_leave_settings_to_coordinator.py` (the expected guide text only) | `tests/test_release_version.py::test_3_the_release_ships_notes_an_agent_can_act_on`, `tests/test_release_notes.py::test_4_the_guide_lists_open_issues_and_drops_fixed_ones` (new) | | no | |
+| SHOW | Show the changes after an upgrade | The new release's sync prints the changes of every release between the default branch's pin and the new pin, then the open known issues, which `forge upgrade` streams; `forge next` shows the same list once on each clone (starting checkout during the upgrade, teammates' clones, new clones) through a marker in `.git/forge/` and the pin history of forge.toml, and prints one line and goes on when it cannot read the notes; one sentence in the guide's Upgrade Forge part | 2, 3 | `src/forge/release_notes.py`, `src/forge/sync.py` (one call at the end of `sync`), `src/forge/nextstep.py` (the `notice` line only), `src/forge/templates/skill.md` (Upgrade Forge only), `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md`, `tests/test_upgrade_command.py` (the `extra-notes` lines of `UV` only) | `tests/test_release_notes.py::test_2_upgrade_lists_the_changes_of_every_release_between`, `tests/test_release_notes.py::test_3_next_shows_the_changes_once_after_an_upgrade` (new) | NOTES | no | |
 
 New moving parts: none
 
@@ -304,35 +368,36 @@ New moving parts: none
 
 - **Order.** NOTES first: it pins the file form, `release_notes.py` and its reader. SHOW waits for
   NOTES (same module and the same guide copies).
-- **Size.** NOTES is about 60 changed lines of code outside tests and Markdown (the notes files are
-  Markdown). SHOW is about 45. `story.py` goes from 1,200 to 1,197 lines and `nextstep.py` from
-  1,184 to 1,185.
+- **Size.** NOTES is about 85 changed lines of code outside tests and Markdown (the notes files are
+  Markdown; the tag check is about 25 of them). SHOW is about 60. `story.py` goes from 1,200 to
+  1,197 lines and `nextstep.py` from 1,184 to 1,185.
 - **Why sync prints the list, not upgrade.** See "What the code does today": the upgrade command
   runs the old release's code, and only the new release's sync and close run new code. Printing
   from the new sync works on the first upgrade into this release and on every later one, with no
   change to `upgrade.py`.
-- **Why a version marker, not a "shown" flag file.** A file that sync writes and next deletes would
-  reach only the computer that ran the upgrade. The version marker also shows the list on a
-  teammate's computer when the teammate's checkout moves to a newer release (from the second
-  release with this story; Accepted limits).
+- **Why the marker and the pin history.** The marker keeps the list to once per clone. The newest
+  pin across the clone's worktrees shows it in the starting checkout while the upgrade waits. The
+  cap at the running release keeps a clone with an older Forge from skipping notes it cannot see.
+  The forge.toml pin history gives a clone with no marker (a teammate, a new clone) the pin before
+  the upgrade, so no clone misses the list.
 - **Choices made for the owner to confirm.**
   1. The upgrade output and `forge next` also list the open known issues, not only the changes. The
      owner's decision names the changes; the agent needs the open issues to adjust too.
   2. The guide part is called "Known Forge issues", because the board already uses "known issues"
      for kept review findings (`src/forge/known_issues.py`).
+  3. The bump merges last and the cut is its merge commit, in place of "the newest main commit
+     whose runs passed" (cold read 1, note 3).
 - **Open questions for the owner.**
-  1. A teammate's computer shows nothing for the first upgrade with this story (Accepted limits).
-     Accept, or have `forge next` find the previous pin from git history (more code)?
-  2. Backfill: older known issues whose fix the builder cannot confirm stay listed as open. Accept,
+  1. Backfill: older known issues whose fix the builder cannot confirm stay listed as open. Accept,
      or carry only the known issues of v1.2.46's page?
-  3. Should the GitHub release page be the notes file (`gh release create --notes-file`), so the
-     file is the one home of the notes? The AGENTS.md rule above assumes yes.
-  4. The gpt-6.2-sol message in sync (`sync.py:726-732`) is a release note. Move it into the next
+  2. The GitHub release page is made from the notes file (`gh release create --notes-file`), so the
+     file is the one home of the notes. Accept?
+  3. The gpt-6.2-sol message in sync (`sync.py:726-732`) is a release note. Move it into the next
      release's notes and delete it from sync, in a separate fix after this story?
 - **Open questions for the builders.**
   1. Confirm that `uv build --wheel` puts `forge/release-notes/*.md` in the wheel (it takes every
      file under `src/forge`).
-  2. `tests/test_split_ships.py`'s package-copy case (from about line 81) may also compare the guide
-     with the template; change it the same way if it does.
+  2. Run the tests that read `.github/workflows/forge-next.yml` (`grep -l forge-next.yml tests/test_*.py`)
+     after adding the tag step.
 - **Changes no setting and adds no command.** The guide carries the new step.
 - No client repo is named anywhere in this story's code, tests, notes files or commits.
