@@ -169,7 +169,7 @@ def test_28_sync(repo, tmp_path, monkeypatch):
     shims = {shim: (hooks / shim).read_bytes() for shim in ("pre-commit", "pre-push")}
     second = repo.forge("sync")
     assert second.returncode == 0, second.stderr
-    assert second.stdout.startswith("Nothing to change")
+    assert "Nothing to change" in second.stdout
     assert before == {rel: (repo.path / rel).read_bytes() for rel in LISTED}
     assert shims == {shim: (hooks / shim).read_bytes() for shim in ("pre-commit", "pre-push")}
 

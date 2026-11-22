@@ -33,7 +33,7 @@ def test_sdk(sdk_data):
                             "-o", f"cache_dir={cache.as_posix()}"], env=environment,
                            capture_output=True, text=True, timeout=120)
     assert built.returncode == 0, built.stdout + built.stderr
-    python = cache / "d" / f"codex-sdk-{PIN}" / "forge" / "codex-sdk" / f"openai-codex-{PIN}" / (
+    python = cache / "d" / f"codex-sdk-{PIN}-sync" / "forge" / "codex-sdk" / f"openai-codex-{PIN}" / (
         "Scripts/python.exe" if os.name == "nt" else "bin/python")
     if client.exists():
         patient(lambda: shutil.rmtree(client))

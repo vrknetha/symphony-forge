@@ -37,7 +37,6 @@ def test_1_empty_handback_preserves_round_for_message_retry(repo, gh, monkeypatc
         _install(repo.bin, "codex-app-server", (ROOT / "tests/stubs/codex-app-server").read_text("utf-8"))
         monkeypatch.setenv("CODEX_BIN", str(repo.bin / (
             "codex-app-server.cmd" if os.name == "nt" else "codex-app-server")))
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "without-sdk"))
     version = repo.forge("--version").stdout.split()[-1]
     repo.git("switch", "-qc", "fix/settings")
     # This test needs a native handoff; normal-speed workers use the app server.
@@ -49,6 +48,9 @@ def test_1_empty_handback_preserves_round_for_message_retry(repo, gh, monkeypatc
         "kind": "fix", "branch": "fix/settings", "status": "working",
         "why": "Choose tools", "done_when": "forge.toml names the tools"}))
     assert repo.forge("sync").returncode == 0
+    # Sync now prepares SDKs. Model a machine that loses its SDK after sync,
+    # so work still exercises the native session handoff and its message retry.
+    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "without-sdk"))
     repo.git("add", "-A")
     repo.git("commit", "-qm", "Choose tools")
     repo.git("switch", "-q", "main")

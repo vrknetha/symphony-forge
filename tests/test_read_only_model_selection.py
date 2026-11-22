@@ -60,10 +60,10 @@ def test_1_init_gives_read_only_work_explore_defaults(repo, gh, tmp_path):
     assert models["explore"]["claude"] == {"model": "claude-haiku-5-5", "effort": "high"}
     # Low implementation defaults do not change the fixed explore effort or helpers.
     assert models["explore"]["codex"] == {
-        "model": "gpt-6.1-sol", "effort": "medium",
+        "model": "gpt-6.2-sol", "effort": "medium",
         "subagents": "gpt-6-luna", "subagent_effort": "max"}
     assert _settings(client, "explorer") == (
-        ("gpt-6.1-sol", "medium"), ("claude-haiku-5-5", "high"))
+        ("gpt-6.2-sol", "medium"), ("claude-haiku-5-5", "high"))
 
 
 def test_2_sync_writes_explorer_from_explore_for_both_hosts(repo):

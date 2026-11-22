@@ -10,8 +10,16 @@ from test_story import DOC, approved_constitution, claude_plan
 STORY = "FIX-DROP-APPROVED-UNSTARTED-STORY"
 
 
-def test_1_approved_unstarted_story_can_drop(intake, claude_payload):
+def test_1_approved_unstarted_story_can_drop(intake, claude_payload, monkeypatch, tmp_path):
     repo, top, owner, *_ = intake
+    # The ready SDK lets the plan reader use Codex, whose real trust check
+    # needs this test's own project approval and isolated configuration.
+    home = tmp_path / "codex-home"
+    home.mkdir()
+    (home / "config.toml").write_text(
+        f'[projects.{json.dumps(str(top))}]\ntrust_level = "trusted"\n', encoding="utf-8")
+    monkeypatch.setenv("CODEX_HOME", str(home))
+    monkeypatch.setenv("STUB_CODEX_TEXT", "No findings.")
     _signed_off(intake)
     approved_constitution(repo, where=top)
     roadmap = top / "plans/roadmap.json"

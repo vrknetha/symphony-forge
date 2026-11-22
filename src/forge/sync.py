@@ -711,10 +711,25 @@ def install_merge_rules(top: Path) -> bool:
 
 
 def sync(args: argparse.Namespace) -> None:
-    from forge import codex, quicktest
+    from forge import claude_sdk, codex, quicktest
     top = repo.root()
     cfg = repo.config(top)
     raw_config = tomllib.loads((top / "forge.toml").read_text(encoding="utf-8"))
+    if (cfg["tools"] == "both" or cfg["tools"] == "codex"
+            and (cfg["codex_fast"] == "off" or shutil.which("claude"))):
+        if codex.sdk_problem():
+            codex.install()
+    if cfg["tools"] == "both" or cfg["tools"] == "claude" and shutil.which("codex"):
+        if claude_sdk.sdk_problem():
+            claude_sdk.install()
+    uses_codex_default = raw_config.get("tools", repo.DEFAULTS["tools"]) != "claude" and any(
+        not repo.models(raw_config, kind, "codex")
+        for kind in ("build", "fix", "lite", "explore", "design"))
+    if uses_codex_default or any(repo.models(raw_config, kind, "codex").get("model") == "gpt-6.1-sol"
+           for kind in raw_config.get("models", {})):
+        print("New repos use gpt-6.2-sol for Codex work. Your model settings stay the same. "
+              "To switch, ask your agent to set your Sol entries in forge.toml to gpt-6.2-sol. "
+              "Use this Forge release or newer: older SDKs reject gpt-6.2-sol.", flush=True)
     first = "`R-<n>:`" not in read(top / ".claude/skills/forge/SKILL.md")
     changed = write(top, cfg)
     if cfg.get("repo") == "forge-source":

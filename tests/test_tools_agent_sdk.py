@@ -23,7 +23,7 @@ from test_worker import calls, install_claude
 
 STORY = "FORGE-TOOLS-1"
 ITEM = "keep-claude-worker-context"
-PIN = "0.2.161"
+PIN = "0.2.187"
 
 
 @pytest.mark.platform

@@ -191,7 +191,7 @@ def _cached_sdk(env: Path, pin: str):
                     fcntl.flock(lock, fcntl.LOCK_UN)
 
 
-def _claude_sdk_env(data: Path, pin: str = "0.2.161") -> None:
+def _claude_sdk_env(data: Path, pin: str = "0.2.187") -> None:
     """The Claude Agent SDK's separate Python environment under this XDG_DATA_HOME."""
     env = data / "forge" / "claude-sdk" / f"claude-agent-sdk-{pin}"
     with _cached_sdk(env, pin) as build:
@@ -202,7 +202,7 @@ def _claude_sdk_env(data: Path, pin: str = "0.2.161") -> None:
 
 def _install_claude_sdk(bin_dir: Path, data: Path) -> None:
     """A separate Python environment, with only the SDK's external edge replaced."""
-    pin = "0.2.161"
+    pin = "0.2.187"
     _claude_sdk_env(data, pin)
     package = bin_dir / "claude_agent_sdk"
     package.mkdir(exist_ok=True)
@@ -211,6 +211,49 @@ def _install_claude_sdk(bin_dir: Path, data: Path) -> None:
     metadata.mkdir(exist_ok=True)
     (metadata / "METADATA").write_text(
         f"Metadata-Version: 2.1\nName: claude-agent-sdk\nVersion: {pin}\n", encoding="utf-8")
+
+
+PROGRAM = """import os
+import shutil
+from pathlib import Path
+
+
+def bundled_codex_path():
+    return Path(os.environ.get("CODEX_BIN") or shutil.which("codex-app-server"))
+"""
+
+
+@pytest.fixture(scope="session")
+def sdk_data(pytestconfig: pytest.Config) -> Path:
+    """An XDG_DATA_HOME holding Forge's SDK environment: the pinned SDK and the libraries its
+    METADATA requires, but not its Codex program. Built once, then kept in pytest's cache."""
+    PIN = "0.171.0"
+    uv = REAL_UV
+    if uv is None:
+        pytest.skip("uv is missing, so the Codex SDK test environment can't be built")
+    data = pytestconfig.cache.mkdir(f"codex-sdk-{PIN}-sync")
+    # Forge checks both SDKs under one XDG_DATA_HOME, and many tests point it here directly.
+    _claude_sdk_env(data)
+    env = data / "forge" / "codex-sdk" / f"openai-codex-{PIN}"
+    with _cached_sdk(env, PIN) as build:
+        if build is None:
+            return data
+        python = build / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        # The cache outlives repo fixtures and their private uv Python install homes.
+        subprocess.run([uv, "venv", "-q", "--python", sys.executable, str(build)], check=True)
+        subprocess.run([uv, "pip", "install", "-q", "--python", str(python), "--no-deps",
+                        f"openai-codex=={PIN}"], check=True)
+        site = Path(subprocess.run([python, "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
+                                   capture_output=True, text=True, check=True).stdout.strip())
+        metadata = (next(site.glob("openai_codex-*.dist-info")) / "METADATA").read_text(encoding="utf-8")
+        needs = [line.split(":", 1)[1].strip() for line in metadata.splitlines()
+                 if line.startswith("Requires-Dist:") and "openai-codex-cli-bin" not in line]
+        subprocess.run([uv, "pip", "install", "-q", "--python", str(python), *needs], check=True)
+        (site / "codex_cli_bin.py").write_text(PROGRAM, encoding="utf-8")
+        info = site / f"openai_codex_cli_bin-{PIN}.dist-info"
+        info.mkdir()
+        (info / "METADATA").write_text(f"Name: openai-codex-cli-bin\nVersion: {PIN}\n", encoding="utf-8")
+    return data
 
 
 T = TypeVar("T")
@@ -560,7 +603,7 @@ time.monotonic = monotonic
 
 @pytest.fixture
 def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, seed_repo: Path,
-         empty_claude_sdk: Path) -> Repo:
+         empty_claude_sdk: Path, sdk_data: Path) -> Repo:
     # A launcher's marker and test budget, again: a module fixture may set them as a launcher would.
     monkeypatch.delenv("FORGE_WORKER", raising=False)
     monkeypatch.delenv("FORGE_TEST_CPUS", raising=False)
@@ -601,6 +644,12 @@ elif args == ["plugin", "list", "--json"]:
     # Preserve the venv's interpreter links, but copy all writable SDK files.
     # Direct SDK setup/recovery callers still use _claude_sdk_env's fresh-build path.
     shutil.copytree(empty_claude_sdk, data, symlinks=True)
+    # Copy only the published environment. Other pytest workers can still have
+    # temporary builds beside it, which disappear when their publisher finishes.
+    codex_relative = Path("forge/codex-sdk/openai-codex-0.171.0")
+    shutil.copytree(sdk_data / codex_relative, data / codex_relative, symlinks=True)
+    _install(bin_dir, "codex-app-server",
+             (ROOT / "tests/stubs/codex-app-server").read_text(encoding="utf-8"))
     _install_claude_sdk(bin_dir, data)
     monkeypatch.setenv("PYTHONPATH", str(bin_dir) + os.pathsep + os.environ.get("PYTHONPATH", ""))
     # Host hooks find forge through uv's tool folders, so those name this one too.
