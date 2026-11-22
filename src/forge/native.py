@@ -213,6 +213,12 @@ def handback(args: Any) -> int:
         pending = codex._json(path).get("pending")
         held = codex._json(lock)
         if not pending or args.round != pending["result"]["round"]:
+            root = machine.main_checkout(top).as_posix()
+            for entry in machine.entries():
+                if (entry.get("native") and entry.get("session") == owner["id"]
+                        and entry.get("repo_root") == root and entry.get("item") == args.item
+                        and entry.get("round") == args.round):
+                    machine.leave(entry)
             raise repo.Refused("That round was stopped or replaced, so Forge recorded nothing.", "")
         if pending["session"] != owner["id"] or any(
                 held.get(key) != owner["process"][key] for key in ("pid", "started")):

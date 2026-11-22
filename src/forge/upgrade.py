@@ -42,6 +42,8 @@ REFUSALS = {
     "running": ("Forge runs are still in progress on this machine:\n{runs}\n"
                 "An install during a run can mix two releases.",
                 "Wait until no Forge runs are in progress, then {again}"),
+    "wait_end": ("Forge could not end the {command} CI wait for {item} in {repo}.",
+                 "Wait for that command to finish, then {again}"),
     "bad_release": ("{release!r} is not a Forge release; a release is v and three numbers, such "
                     "as v1.3.0.", "forge upgrade <release>"),
     "not_newer": ("{default} already pins Forge {pinned}, so {release} would not be an upgrade.",
@@ -93,25 +95,28 @@ def upgrade(args: argparse.Namespace) -> int:
     runs = machine.entries() if needs_install else []
     waits = []
     if needs_install:
-        # A CI-only close can release the installed environment before replacement.
-        # Keep active model and local test runs protected, including outside lanes.
+        # Only lane entries have ids that forge stop can end. CI-only waits release
+        # the installed environment here instead of appearing in that stop list.
         for root in dict.fromkeys([top, *machine.remembered()]):
             activity = event_log.read(root)
             ended = {event.get("run_id") for event in activity if event.get("event") == "run end"}
             for event in activity:
-                if (event.get("event") == "run start" and event.get("id") not in ended
+                if (event.get("event") == "run start" and event.get("kind") == "ci"
+                        and event.get("id") not in ended
                         and machine._running(event.get("process"))
                         and not any(run.get("process") == event["process"] for run in runs)):
-                    run = {**event, "repo_name": root.name}
-                    if (event.get("kind") == "ci" and "started" in event["process"]
-                            and codex._alive(event["process"]) is True):
-                        if not any(wait["process"] == run["process"] for wait in waits):
-                            waits.append(run)
-                    else:
-                        runs.append(run)
+                    if not any(wait["process"] == event["process"] for wait in waits):
+                        waits.append({**event, "repo_name": root.name})
     if runs:
+        for run in runs:
+            if run.get("legacy") and not run.get("item"):
+                checkout = Path(run["repo"])
+                found = task.branch_item(repo.current_branch(checkout), checkout)
+                run["item"] = found[0] if found else None
         repo.refuse(REFUSALS["running"], runs="\n".join(
-            f"- {run['repo_name']}: {run['item'] or 'test command'} ({run['kind']})"
+            f"- {run['repo_name']}: {run['item'] or ('test command' if run['kind'] == 'test' else 'item not recorded')} "
+            f"({run['kind']}), id {run['id']}\n"
+            f"  To end this run: forge stop --id {run['id']}"
             for run in runs), again=again)
     pinned = repo.default_config(top)["version"]  # fetches the default branch first
     if _numbers(release) <= _numbers(pinned):
@@ -225,14 +230,16 @@ def upgrade(args: argparse.Namespace) -> int:
     else:
         for wait in waits:
             process = wait["process"]
+            command = wait.get("command", "close")
             live = codex._alive(process)
             if live is False:
                 continue
             if live is None or not codex._stop(process, False):
-                repo.refuse(REFUSALS["running"], again=again, runs=
-                            f"- {wait['repo_name']}: {wait['item']} (CI wait could not be ended)")
-            print(f"Ended close for {wait['item']} to install Forge. "
-                  f"Run forge close {wait['item']} to resume the CI wait.", flush=True)
+                repo.refuse(REFUSALS["wait_end"], again=again, command=command,
+                            item=wait["item"], repo=wait["repo_name"])
+            resume = "forge land --all" if command == "merge train" else f"forge {command} {wait['item']}"
+            print(f"Ended {command} for {wait['item']} to install Forge. "
+                  f"Run {resume} to resume the CI wait.", flush=True)
         install = INSTALL.format(release=release)
         installed = repo.run(*install.split())
         if installed.returncode:

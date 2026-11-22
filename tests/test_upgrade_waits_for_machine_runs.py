@@ -59,14 +59,18 @@ def test_1_upgrade_names_runs_in_both_machine_lanes_before_install(unsynced_up, 
         # If upgrade reaches uv, stop at that external edge instead of starting its own close.
         (up.repo.bin / "uv-install-fails").touch()
         before = up.snapshot()
+        lanes = other.forge("lanes", "--json")
+        assert lanes.returncode == 0, lanes.stderr
+        view = json.loads(lanes.stdout)
+        runs = [*view["agents"]["entries"], *view["tests"]["entries"]]
 
         result = up.run(RELEASE)
 
         assert result.returncode == 1, result.stdout + result.stderr
         assert result.stderr == (
             "Forge runs are still in progress on this machine:\n"
-            "- other: SHOP (read)\n"
-            "- other: main (test)\n"
+            + "".join(f"- other: {run['item']} ({run['kind']}), id {run['id']}\n"
+                      f"  To end this run: forge stop --id {run['id']}\n" for run in runs) +
             "An install during a run can mix two releases.\n"
             f"Next: Wait until no Forge runs are in progress, then forge upgrade {RELEASE}\n")
         assert up.snapshot() == before

@@ -167,7 +167,7 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
                         config["test_place"] == "ci" and (not retested or overlap or ci_retest)):
                     checks.wait(worktree, item, head, config["checks"],
                                 branch=branch, progress=getattr(args, "wait_for_progress", False),
-                                slot=getattr(args, "check_slot", None))
+                                slot=getattr(args, "check_slot", None), command="merge")
             except repo.Refused as error:
                 if error.entry is not checks.REFUSALS["conflict"] or refreshed:
                     raise

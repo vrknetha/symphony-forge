@@ -1607,13 +1607,15 @@ also stay in place; only recognized cache directories may be discarded.
 
 1. Ask which release to move to, recommending the newest.
 2. If the target release differs from the release on PATH, wait for work rounds, reviews and
-   local tests anywhere on the machine. Run the upgrade when a close only waits for CI.
-   Upgrade ends its verified process tree before the install and names each close it ends.
-   CI continues on GitHub. The next `forge close` resumes the wait and reads the result.
+   local tests anywhere on the machine. A close, merge or merge train that only waits for CI
+   does not block an upgrade. Upgrade ends its verified process tree before the install.
+   It names the command it ends and the command to resume it. CI continues on GitHub.
    A run whose recorded process ended
    no longer blocks the install, even without an end record. A reused process number does
    not keep that run alive. New and existing repos get this check on upgrade.
-   `forge upgrade` names those runs and asks you to wait. If the target release is already on
+   `forge upgrade` lists each blocking lane run's id, kind, item and repo, with its exact
+   `forge stop --id <id>` command. Only a person can stop a run, after confirmation in the host.
+   Wait for the runs to finish or let the person stop them. If the target release is already on
    PATH, upgrade skips the install and continues while other runs remain in progress.
 3. Run `forge upgrade <release>` in the main checkout, on the default branch. It installs the
    release, has that release refresh Forge's files in the fix, commits them and closes the fix.

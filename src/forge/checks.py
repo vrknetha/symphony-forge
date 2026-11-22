@@ -123,7 +123,8 @@ def required(top: Path, default: str, head: str = "HEAD") -> list[str] | None:
 
 
 def wait(top: Path, item: str, sha: str, names: list[str], *, branch: str,
-         progress: bool = False, slot: Callable[[bool], None] | None = None, train: bool = False) -> None:
+         progress: bool = False, slot: Callable[[bool], None] | None = None, train: bool = False,
+         command: str = "close") -> None:
     """Wait for green checks on sha; land renews its deadline on observed check progress. A merge
     train's draft pull request stays red on Forge's own review on purpose, so that check never counts."""
     shared = required(top, repo.default_branch(top), sha)
@@ -135,7 +136,7 @@ def wait(top: Path, item: str, sha: str, names: list[str], *, branch: str,
 
     from forge import codex  # codex imports what imports checks
     # The waiting process: forge land --all leaves out a change only while that process runs.
-    with repo.record_run(top, item, "ci", process=codex.identity(os.getpid())) as result:
+    with repo.record_run(top, item, "ci", process=codex.identity(os.getpid()), command=command) as result:
         result.update(outcome="unknown", state="unknown")
         try:
             from forge import github
