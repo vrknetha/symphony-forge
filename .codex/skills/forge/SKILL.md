@@ -41,7 +41,10 @@ Start with the largest measured cost:
 5. Small changes use one group only when the change command has an explicit `{groups}` count
    and neither test command has a fixed shard count. Automatic pytest-split without these
    placeholders keeps all groups. The small-change limit is five code files, with no lockfile,
-   shared settings, workflow or Forge selection-script change. Larger changes use all groups. Set
+   shared settings, workflow or Forge selection-script change. Larger changes use all groups.
+   A `fast_test` with `--testNamePattern`, `--grep`, `-t` or `-g` keeps all groups. Forge does not
+   see Vitest's `--test-name-pattern` spelling or a name filter set in the Vitest config: the change
+   can run one group while the filter skips changed tests, so use `--testNamePattern`. Set
    `groups` to the number of fast runner slots reserved for tests. Give each self-hosted slot its
    own CPU set, memory share and enough cores for the job's worker limit. Use memory-backed
    temporary storage only when that slot has room.
@@ -1913,6 +1916,7 @@ The comparison includes the old and new paths of a renamed file. It skips branch
 the default branch contains, and fixes whose records are already on the default branch.
 `forge next` prints all overlap advice on separate lines after its next state. Its next command and step stay the same.
 `forge next` lists a part only when `forge task start` would accept it, and names the reason when it would not.
+No command retires a started part: to replace one, close its pull request and delete its branch locally and on origin, then start the replacement.
 
 ## Cold read findings
 
@@ -1968,7 +1972,12 @@ this automatically, with no setting to change.
 When one sentence would help a worker finish its next round, give it with
 `forge work <item> --note "<text>"`. The note appears under "From the coordinator" in that
 round's brief and is recorded with the turn. Give it again if a later round needs it; a note
-does not change the item's Scope. Read a close finding and the code it cites before deciding
+does not change the item's Scope. One round with a note clears every answered question. `forge fix allow-large` or `forge fix amend`
+clears every question in a paragraph that names that command, even a second question there that it
+does not answer. Another machine sees a question cut to 300 characters: the command clears
+it only when its name comes before the cut. When it comes after the cut, you cannot see it, so ask
+the worker to repeat the question shorter. A question that asks for other commands clears only with
+a `--note` round. Read a close finding and the code it cites before deciding
 whether the worker needs a note or the finding should be dismissed with evidence.
 
 If a worker ends with a `Question:` paragraph, answer with
@@ -2478,7 +2487,11 @@ and opens or updates the pull request with the final review block. Ready still n
 review and green checks on the final pushed head. After `forge fix amend`, close also updates
 the pull request's Done when line. Use `--append "<text>"` to add text with a space between
 the old and new text. `--done "<done when>"` replaces the whole Done-when. Both options show
-the old and new text before writing, and need `--because "<why>"`.
+the old and new text before writing, and need `--because "<why>"`. Close reads the amended
+Done-when, but after an earlier review it reviews only changes made since that review. An amend
+with no new commit does not recheck existing code against the new text, and an earlier finding
+that quotes the old Done-when can still block: dismiss it with `--dismiss <n> --because "<why>"`
+when the owner agreed the change.
 If another machine moves the remote branch during review, close stops before publication.
 Run close again to reconcile that work, review and test it before Ready.
 A follow-up replay also waits until the saved review for its one leased push. An interrupted
@@ -2550,6 +2563,11 @@ Queued or running checks keep the command alive until they finish. Progress prin
 Any failed check ends the wait at once, even while other checks are queued or running.
 At the no-progress limit, no decision is needed.
 Run `forge land <item>` again to resume without restarting checks.
+Known limits: land leaves out a teammate's Ready item that was closed on another laptop, so run
+`git fetch origin` first and close both items on one laptop. The `forge land` line that close
+prints after Ready can also leave out such an item. If the main checkout pins an older
+Forge, land refuses each member after the combined test run: update the main checkout to the
+default branch before you run land.
 `FORGE_CHECKS_WAIT` keeps its explicit no-progress wait for running or missing checks.
 Close, merge and land poll CI checks every 60 seconds. `FORGE_CHECKS_POLL` sets another interval
 in seconds. New and existing repos get this behavior on upgrade.
@@ -2624,7 +2642,7 @@ works in a repo at a time. When two closes in the run collide on git's ref lock 
 the run starts that change again once and says so. A failed CI check gets one fix round on
 that change's builder thread, then close runs again. Other worker or owner stops affect only
 that change, and the others go on. The run ends with `Merged (n): ... · Ready to merge (n): ... · Needs
-you (n): ...`, then each stopped change with its reason and next step: `forge land <item>` for
+you (n): ...` (it reports Merged only when the pull request merged), then each stopped change with its reason and next step: `forge land <item>` for
 its next run, or, for a stopped change, close's own question and next step, which only the owner
 answers. Close waits for the owner's recorded choice. A failed
 CI job gets one retry before the fix round only for runner loss, cancellation or timeout.

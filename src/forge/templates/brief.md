@@ -330,6 +330,8 @@ $delegation
   coordinator answers with `forge work <item> --note "<answer>"`.
   A recorded size allowance or fix amendment answers the question block that asks for
   `forge fix allow-large` or `forge fix amend`. Other question blocks stay open.
+  Put one question in each paragraph, keep it under 300 characters and ask for no other
+  commands. A recorded allowance or amendment also clears a second question in the same paragraph.
   Close and next read shared answers from the pull request. An unbuilt fix resumes with
   `forge work <item>` after its allowance.
 
@@ -438,7 +440,8 @@ skill whenever you write or change a test. Before you stop, $test_step
 JavaScript and TypeScript test-only changes use one CI group when fast_test selects the
 changed tests with Vitest --changed or Playwright --only-changed and {base}. Forge ignores
 its record files for this choice. Selection reads paths and settings without loading tests.
-A missing change command or a test-name filter keeps all groups. New repos get this at
+A missing change command or a test-name filter (`--testNamePattern`, `--grep`, `-t`, `-g`) keeps all
+groups; the `--test-name-pattern` spelling is not seen, so use `--testNamePattern`. New repos get this at
 init; existing repos get it on upgrade and sync.
 In CI-test repos, `forge test --change` selects the pull request's own source changes
 (`base...HEAD`) plus test files that merges from main added or changed. The one-group rule
