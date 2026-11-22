@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-22T12:07:11.629806+00:00
-seconds: 540.645
-read_hash: 7be6b6c41660a4ed4870f03db52d8ed3eecd657d
-round: 3
+read_at: 2026-11-22T12:30:58.288346+00:00
+seconds: 678.869
+read_hash: 41540ef604d3952555d2f0ceb9d4d63e92769370
+round: 4
 passed: no
-doc_seen: 7be6b6c41660a4ed4870f03db52d8ed3eecd657d
+doc_seen: 41540ef604d3952555d2f0ceb9d4d63e92769370
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: c4dd5af64a54577e1454fa96853ffe269a4c2858
+notes_seen: 0ac256f77b169fdad1ab10bca7521c6fed793ecc
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a202fd-91c8-79c1-b860-c6669f741926
 session:
-loop_choice: split
-loop_reason: Owner chose on 22 Nov 2026: split full JavaScript run proof (Vitest and Playwright report reading, notes 27 to 30) into its own item; this story proves Python tests fully and only checks that JavaScript Done-when tests are named on the branch
+loop_choice: accept
+loop_reason: Owner accepted on 22 Nov 2026: the one blocking note (git status checked after tests) is fixed in the builders' section by checking before the tests; advisory notes 36 to 40 are kept for the builders
 ---
 # Cold read notes
 
@@ -234,3 +234,36 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Not done. [The plan](/plans/FORGE-TESTQUAL-1.md:254) says a test in an unaffected project cannot reach the change. The starter’s [browser test calls the API](/src/forge/templates/starter/apps/web/e2e/served-app.spec.ts:13), while an [API-only change does not select the browser tests](/tests/test_affected_ts_starter.py:105). Naming that existing browser test can therefore make close refuse valid proof as not run.
     Gain 3, Work 2, Harm 2
    Disposition: cut - JavaScript run proof is removed by the owner's split; the case is listed under Split out.
+
+## Round 4
+
+35. Blocking: A passing local test run can make close refuse a clean checkout.
+   Raise: Functional. [The plan](/plans/FORGE-TESTQUAL-1.md:184) checks Git status after the test command and refuses any uncommitted file. The prescribed [local-test fixture](/tests/test_testplace_settings.py:24) does not ignore Python bytecode; the [retry fixture](/tests/test_close_retries_failed_files.py:64) explicitly does.
+   Case: normal use - a clean Python repo does not ignore `__pycache__`. Pytest creates it while passing, and close refuses the resulting untracked files.
+   Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted on 22 Nov 2026: the one blocking note (git status checked after tests) is fixed in the builders' section by checking before the tests; advisory notes 36 to 40 are kept for the builders
+
+36. Advisory: A passing test in another Python app can satisfy the named proof.
+   Raise: Not done. The [results hook](/src/forge/fasttest.py:634) records paths relative to each pytest process, and the retained [suffix matcher](/src/forge/review.py:731) accepts a shorter reported path. If two apps each have `tests/test_health.py::test_health` and only the second app runs, its result matches a proof naming the first app’s test.
+   Gain 4, Work 3, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+37. Advisory: Replay can test the old fixture instead of the fix’s fixture.
+   Raise: Not done. [Replay](/plans/FORGE-TESTQUAL-1.md:324) keeps code at the fix base and copies changed test files using the test paths. A root-level `conftest.py` is outside [those paths](/src/forge/repo.py:32), although Forge recognizes it as a [shared pytest input](/src/forge/fasttest.py:411). If the fix updates that fixture, the old fixture can make the new test fail even when it would pass against the old application code with the new fixture.
+   Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+38. Advisory: Replay can import new code from an editable installation.
+   Raise: Functional. [The plan](/plans/FORGE-TESTQUAL-1.md:335) prefixes the temporary copy to `PYTHONPATH`, but the [test environment](/src/forge/review.py:425) inherits the active Python environment. If a newly added top-level module is absent from the old copy, Python can find it through an editable installation pointing at the item’s checkout. Replay then refuses a valid fix because the test passed on the new code.
+   Gain 4, Work 3, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+39. Advisory: The pull request can label a recovered retry as failed.
+   Raise: Functional. The plan accepts the [last attempt](/plans/FORGE-TESTQUAL-1.md:222), but leaves [proof-list rendering](/plans/FORGE-TESTQUAL-1.md:120) unchanged. That renderer takes the [worst result across the saved run](/src/forge/review.py:753), including the first attempt. Close can therefore be Ready while the pull request says its named proof failed.
+   Gain 3, Work 2, Harm 1
+   Disposition: keep - below the bar (follow-up)
+
+40. Advisory: The split-out follow-up is not recorded as an item.
+   Raise: Plan gap. [The plan](/plans/FORGE-TESTQUAL-1.md:417) calls the JavaScript proof a new item, but it has no entry in the [roadmap](/plans/roadmap.json:694). Recording the split in [Forge](/src/forge/story.py:175) records the choice but does not create that item.
+   Gain 3, Work 1, Harm 2
+   Disposition: keep - below the bar (follow-up)
