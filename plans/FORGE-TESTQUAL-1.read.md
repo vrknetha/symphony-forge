@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-22T11:34:16.264774+00:00
-seconds: 754.028
-read_hash: f6335d4d359ee48d2dc2efa9fda21d28144fdc6c
-round: 1
+read_at: 2026-11-22T11:54:18.278506+00:00
+seconds: 599.633
+read_hash: 93b8a7f75f87fdc72f9931cf875fb75271fde40a
+round: 2
 passed: no
-doc_seen: f6335d4d359ee48d2dc2efa9fda21d28144fdc6c
+doc_seen: 93b8a7f75f87fdc72f9931cf875fb75271fde40a
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 8e83e34b5f9a06c365c1ad1fe1d36a9b6729b5af
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a202fd-91c8-79c1-b860-c6669f741926
 session:
-loop_choice:
-loop_reason:
+loop_choice: more
+loop_reason: Owner chose on 22 Nov 2026: one more round to fix the 5 open plan mistakes
 ---
 # Cold read notes
 
@@ -141,3 +141,45 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - PROOF changes the shipped brief and guide, and the existing suite fails on their former text.
     Gain 4, Work 2, Harm 2
    Disposition: cut - PROOF's Scope and item 1 details now update `WORKER_RULE` and `NAMES_RULE` in tests/test_reviews_receive_done_when_proof.py.
+
+## Round 2
+
+19. Blocking: Replay copies tests from the old commit.
+    Raise: Not done. [The plan](/plans/FORGE-TESTQUAL-1.md:316) creates the temporary worktree at the fix base, then runs `git checkout HEAD -- <test files>` inside it. There, `HEAD` is still the fix base: an added test cannot be checked out, and a changed test is restored to its old contents.
+    Case: normal use - a fix adds a regression test, so replay cannot run that test against the old code.
+    Gain 5, Work 2, Harm 3
+
+20. Blocking: The new CI name check has no pull-request head to inspect.
+    Raise: Plan gap. [The pinned `proof.check` interface](/plans/FORGE-TESTQUAL-1.md:121) receives no head commit. [The CI workflow](/src/forge/prcheck.py:149) checks out the base and supplies the pull-request head separately; the current [proof reader](/src/forge/review.py:703) defaults to the checkout’s `HEAD`. The planned own-CI test covers only a missing proof list.
+    Case: normal use - a pull request adds a test and names it in its proof list; the planned check has no specified way to read either from the pull-request head.
+    Gain 5, Work 2, Harm 3
+
+21. Blocking: The new report filenames break starter smoke CI.
+    Raise: Plan gap. [The plan](/plans/FORGE-TESTQUAL-1.md:224) replaces `formats.xml` with a process-specific filename, but existing [live starter tests](/tests/test_database_money.py:45) still require `formats.xml`. Changing the starter config selects those tests in [smoke CI](/scripts/smoke_select.py:38).
+    Case: normal use - PROOF changes the starter config and its pull request runs the required starter smoke job; the test report it expects is missing.
+    Gain 5, Work 3, Harm 3
+
+22. Blocking: The Python starter still omits reused Vitest tests.
+    Raise: Not done. The fix for finding 7 says [starter scripts run every test in an affected project](/plans/FORGE-TESTQUAL-1.md:228), but the [Python starter](/src/forge/templates/starter-python/scripts/test.mjs:68) still runs Vitest with `--changed`. Its `fast_test` uses that script, so the added selection in `fasttest.close_tests` does not cover it.
+    Case: normal use - an unchanged web test proves a change without importing the changed file; other web tests run, but close refuses the omitted proof as not run.
+    Gain 4, Work 2, Harm 2
+
+23. Blocking: The extra Vitest run can overwrite proof from the first run.
+    Raise: Not done. [The new selection rule](/plans/FORGE-TESTQUAL-1.md:231) runs missed proof files in a second Vitest invocation, but reads JUnit only after the command. A normal Vitest configuration writes both invocations to one report, as the [starter API config](/src/forge/templates/starter/apps/api/vitest.config.ts:10) does.
+    Case: normal use - one proof test runs in the changed selection and another in the added run; the second report replaces the first, so close refuses the first as not run.
+    Gain 5, Work 2, Harm 3
+
+24. Advisory: CI reuse cannot identify the active proof behind record commits.
+    Raise: Plan gap. [The new comparison](/plans/FORGE-TESTQUAL-1.md:185) reads only each head commit’s message, while [Forge’s proof reader](/src/forge/review.py:703) searches past bookkeeping commits. Two record-commit tips have no proof paragraph whether the effective proof stayed the same or changed in a proof-only commit between them, so the prescribed comparison cannot distinguish those cases.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+25. Advisory: An unrelated JUnit report turns the promised JavaScript warning into a refusal.
+    Raise: Not done. [The plan](/plans/FORGE-TESTQUAL-1.md:207) treats any fresh JUnit file as evidence that a missing JavaScript result did not run. In a mixed repo, pytest can write [its own JUnit report](/src/forge/templates/starter-python/package.json:14) while Vitest writes none; close then refuses the Vitest proof instead of giving the promised warning.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+26. Advisory: The review prompt claims run checks happened when they were skipped.
+    Raise: Not done. [The prescribed prompt](/plans/FORGE-TESTQUAL-1.md:155) tells the reviewer that close has refused tests that did not run, failed or were skipped. The same plan [excludes those checks](/plans/FORGE-TESTQUAL-1.md:57) for repos with their own CI test check and warns when JavaScript reports are unavailable.
+    Gain 3, Work 1, Harm 2
+   Disposition: keep - below the bar (follow-up)
