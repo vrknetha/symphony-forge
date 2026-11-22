@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\t.forge/review-tests.py\tThe generated file differs from current sync output.",
+      "kind": "bug",
+      "path": ".forge/review-tests.py",
+      "line": 1,
+      "text": "The generated file differs from current sync output.",
+      "from": "worker",
+      "item": "release-v1-2-46",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
