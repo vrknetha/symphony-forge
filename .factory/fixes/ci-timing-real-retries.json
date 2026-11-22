@@ -1,0 +1,15 @@
+{
+  "base": "3618ce820595d49f726c77b4d459d4ce310410c0",
+  "branch": "fix/ci-timing-real-retries",
+  "done_when": "Close's CI timing reports retry time only for test jobs or test files that really ran again after a failure, and reports no retry time for an attempt that was cancelled or replaced; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T02:55:08.829557+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Close's CI timing line reports many minutes of retries when no test ran again (issue 1751)"
+}
