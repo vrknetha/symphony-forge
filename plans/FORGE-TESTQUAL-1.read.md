@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-22T12:30:58.288346+00:00
-seconds: 678.869
-read_hash: 41540ef604d3952555d2f0ceb9d4d63e92769370
-round: 4
+read_at: 2026-11-22T13:23:37.125293+00:00
+seconds: 526.207
+read_hash: 904ef731aa893b8bd3c0841e332e9b24c998c977
+round: 5
 passed: no
-doc_seen: 41540ef604d3952555d2f0ceb9d4d63e92769370
+doc_seen: 904ef731aa893b8bd3c0841e332e9b24c998c977
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 0ac256f77b169fdad1ab10bca7521c6fed793ecc
+notes_seen: 5c3c9d4ffd6f61956d77e9e086ee1ba176fc8d4e
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a202fd-91c8-79c1-b860-c6669f741926
 session:
 loop_choice: accept
-loop_reason: Owner accepted on 22 Nov 2026: the one blocking note (git status checked after tests) is fixed in the builders' section by checking before the tests; advisory notes 36 to 40 are kept for the builders
+loop_reason: Owner accepted on 22 Nov 2026: notes 41 to 46 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
 ---
 # Cold read notes
 
@@ -265,5 +265,40 @@ Only a genuine trade-off goes to the human, as a question with options.
 
 40. Advisory: The split-out follow-up is not recorded as an item.
    Raise: Plan gap. [The plan](/plans/FORGE-TESTQUAL-1.md:417) calls the JavaScript proof a new item, but it has no entry in the [roadmap](/plans/roadmap.json:694). Recording the split in [Forge](/src/forge/story.py:175) records the choice but does not create that item.
+   Gain 3, Work 1, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+## Round 5
+
+41. Blocking: Disputed keep 35: A second close refuses files left by the first test run.
+   Raise: Functional. [The plan](/plans/FORGE-TESTQUAL-1.md:195) checks for untracked files before each local run. A first pytest run can leave `__pycache__` untracked; [close commits only its record files](/src/forge/close.py:890), so that cache remains for the next close.
+   Case: normal use - a clean repo without a bytecode ignore runs close, then runs close again after review. The second close refuses the cache created by the first.
+   Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 46 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+42. Blocking: The new clean-check contradicts an existing close regression.
+   Raise: Plan gap. [The plan](/plans/FORGE-TESTQUAL-1.md:196) refuses an untracked file, but [the existing test](/tests/test_fix_close_reruns_the_full_test_command_even.py:129) requires close to succeed with one. The test is outside PROOF’s listed scope.
+   Case: normal use - PROOF runs the required close tests before merging; this test fails under the planned rule.
+   Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 46 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+43. Blocking: The commit check breaks an existing merge test’s fixture.
+   Raise: Plan gap. The new [commit check](/plans/FORGE-TESTQUAL-1.md:301) refuses `assert True`. The [merge-selection test](/tests/test_merge_selects_incoming_tests.py:17) first sets up a client with [Forge’s hooks installed](/tests/test_merge_refreshes_behind_base.py:50), then commits test files containing that assertion. LINT’s scope does not include this fixture.
+   Case: normal use - Forge runs its full suite after LINT; the fixture commit is refused before the merge test runs.
+   Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 46 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+44. Advisory: The CI test case requires a name check that the plan removes from that command.
+   Raise: Plan gap. [The CI design](/plans/FORGE-TESTQUAL-1.md:189) puts the name check in `forge-pr-check` and says the tests job does not repeat it. The [CI case](/plans/FORGE-TESTQUAL-1.md:285) nevertheless requires `forge test --change` alone to fail with “names no test.”
+   Gain 3, Work 1, Harm 1
+   Disposition: keep - below the bar (follow-up)
+
+45. Advisory: A self-comparison of Python names is not always true.
+   Raise: Functional. [The planned hook](/plans/FORGE-TESTQUAL-1.md:308) refuses `assert value == value`. That assertion fails when `value` is a not-a-number float, and an object’s equality method can also return false. It can therefore test a real outcome despite the plan’s promise to refuse only checks it can prove are always true.
+   Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+46. Advisory: Joining a replay test lane does not by itself make it reusable.
+   Raise: Plan gap. [The plan](/plans/FORGE-TESTQUAL-1.md:370) says joining a lane and passing its ID lets the nested picker reuse it. But [joining](/src/forge/machine.py:256) leaves `started_at` empty, while [the picker](/src/forge/fasttest.py:379) requires it. Without marking the lane started, a one-place machine can wait for the place replay already holds.
    Gain 3, Work 1, Harm 2
    Disposition: keep - below the bar (follow-up)
