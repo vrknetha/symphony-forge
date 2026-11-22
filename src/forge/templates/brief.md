@@ -112,6 +112,9 @@ A repeated `forge land <item> <item> ...` skips names already merged on the defa
 says that they already merged, and continues with the remaining names. New and existing repos get this behaviour.
 While land waits, commands share each pull request head's status snapshot across worktrees for 60 seconds.
 Close, merge and land wait until queued or running checks finish, even through long runner queues.
+An upgrade ends a close that only waits for CI before it installs the release.
+CI continues on GitHub. The next `forge close` resumes the check wait.
+Work rounds, reviews and local tests still hold upgrades.
 Any failed check ends the wait at once, even while other checks are queued or running.
 They print progress at most once every five minutes. Missing checks keep the no-progress limit.
 `FORGE_CHECKS_WAIT` keeps its explicit no-progress wait for running or missing checks.

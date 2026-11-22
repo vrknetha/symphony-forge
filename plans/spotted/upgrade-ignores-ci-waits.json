@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/templates/brief.md\tUpdate the coordinator's shipped upgrade instructions\tupgrade-ignores-ci-waits",
+      "kind": "bug",
+      "path": "src/forge/templates/brief.md",
+      "line": 115,
+      "text": "Update the coordinator's shipped upgrade instructions",
+      "from": "blocking",
+      "item": "upgrade-ignores-ci-waits",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/upgrade.py\tNot done: forge upgrade does not count a close that is only waiting for CI as a run in progress, and that close carries on after the upgrade\tupgrade-ignores-ci-waits",
+      "kind": "bug",
+      "path": "src/forge/upgrade.py",
+      "line": 101,
+      "text": "Not done: forge upgrade does not count a close that is only waiting for CI as a run in progress, and that close carries on after the upgrade",
+      "from": "blocking",
+      "item": "upgrade-ignores-ci-waits",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\ttests/test_upgrade_during_ci_wait.py\tGate: test_1_upgrade_allows_ci_wait_and_keeps_review_protected\tupgrade-ignores-ci-waits",
+      "kind": "bug",
+      "path": "tests/test_upgrade_during_ci_wait.py",
+      "line": 48,
+      "text": "Gate: test_1_upgrade_allows_ci_wait_and_keeps_review_protected",
+      "from": "blocking",
+      "item": "upgrade-ignores-ci-waits",
+      "status": "done",
+      "closed_by": "dismissed"
+    }
+  ]
+}

@@ -14,7 +14,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from forge import close, event_log, machine, quicktest, repo, story, task
+from forge import close, codex, event_log, machine, quicktest, repo, story, task
 
 COMMANDS = [{
     "words": "upgrade", "run": "upgrade", "changes_state": False,
@@ -91,9 +91,10 @@ def upgrade(args: argparse.Namespace) -> int:
         repo.refuse(REFUSALS["bad_release"], release=release)
     needs_install = _on_path()[0] != release
     runs = machine.entries() if needs_install else []
+    waits = []
     if needs_install:
-        # Close can wait for CI after leaving both lanes. Unfinished history alone
-        # is not a live run: use the lanes' process identity check for these too.
+        # A CI-only close can release the installed environment before replacement.
+        # Keep active model and local test runs protected, including outside lanes.
         for root in dict.fromkeys([top, *machine.remembered()]):
             activity = event_log.read(root)
             ended = {event.get("run_id") for event in activity if event.get("event") == "run end"}
@@ -101,7 +102,13 @@ def upgrade(args: argparse.Namespace) -> int:
                 if (event.get("event") == "run start" and event.get("id") not in ended
                         and machine._running(event.get("process"))
                         and not any(run.get("process") == event["process"] for run in runs)):
-                    runs.append({**event, "repo_name": root.name})
+                    run = {**event, "repo_name": root.name}
+                    if (event.get("kind") == "ci" and "started" in event["process"]
+                            and codex._alive(event["process"]) is True):
+                        if not any(wait["process"] == run["process"] for wait in waits):
+                            waits.append(run)
+                    else:
+                        runs.append(run)
     if runs:
         repo.refuse(REFUSALS["running"], runs="\n".join(
             f"- {run['repo_name']}: {run['item'] or 'test command'} ({run['kind']})"
@@ -216,6 +223,16 @@ def upgrade(args: argparse.Namespace) -> int:
     if not needs_install:
         print(f"Forge {release} is already installed, so the install was skipped.", flush=True)
     else:
+        for wait in waits:
+            process = wait["process"]
+            live = codex._alive(process)
+            if live is False:
+                continue
+            if live is None or not codex._stop(process, False):
+                repo.refuse(REFUSALS["running"], again=again, runs=
+                            f"- {wait['repo_name']}: {wait['item']} (CI wait could not be ended)")
+            print(f"Ended close for {wait['item']} to install Forge. "
+                  f"Run forge close {wait['item']} to resume the CI wait.", flush=True)
         install = INSTALL.format(release=release)
         installed = repo.run(*install.split())
         if installed.returncode:

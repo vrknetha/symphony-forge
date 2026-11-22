@@ -1,0 +1,153 @@
+{
+  "base": "ef7663995c9f7c99f1d471811b26e5ed9406cb4a",
+  "branch": "fix/upgrade-ignores-ci-waits",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a203ac-3286-7e50-8a66-56811dd27bb6",
+    "head": null,
+    "start": "b7df81388b1a0647796835c32facac84a7709938"
+  },
+  "done_when": "forge upgrade does not count a close that is only waiting for CI as a run in progress, and that close carries on after the upgrade; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "upgrade() in src/forge/upgrade.py",
+      "file": "src/forge/upgrade.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 101,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as a known issue: on Windows, a close that waits for CI before it saves its review records is not seen as waiting, so the install can fail and the person runs the upgrade again",
+      "round": 1,
+      "security": false,
+      "title": "Not done: forge upgrade does not count a close that is only waiting for CI as a run in progress, and that close carries on after the upgrade",
+      "work": 3
+    },
+    {
+      "area": "src/forge/templates/brief.md",
+      "file": "src/forge/templates/brief.md",
+      "gain": 4,
+      "harm": 2,
+      "line": 115,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Update the coordinator's shipped upgrade instructions",
+      "work": 1
+    },
+    {
+      "area": "test_1_upgrade_allows_ci_wait_and_keeps_review_protected() in tests/test_upgrade_during_ci_wait.py",
+      "file": "tests/test_upgrade_during_ci_wait.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 48,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as a known issue: on Windows, a close that waits for CI before it saves its review records is not seen as waiting, so the install can fail and the person runs the upgrade again",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_upgrade_allows_ci_wait_and_keeps_review_protected",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "9fba47cc135a6a7df01c0f4579d72cc837cc961bbb0d3e48ebcb24239421ce32",
+    "changed": "38daf8e0e0cdd6635eab639f1cc7448a78e11df83f3c920b23682b50b31f9bf8",
+    "commit": "0124008044ef112cf0925074d851e13e757a99d9",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as a known issue: on Windows, a close that waits for CI before it saves its review records is not seen as waiting, so the install can fail and the person runs the upgrade again",
+        "finding": 1
+      },
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as a known issue: on Windows, a close that waits for CI before it saves its review records is not seen as waiting, so the install can fail and the person runs the upgrade again",
+        "finding": 2
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 4, Work 3, Harm 3\nRaise: Not done\nCase: normal use - on Windows, a close on an existing pull request waits for the code's CI while another checkout upgrades.\nAfter review, `close.py:442` can wait in `checks.let_finish` before pushing review records. That wait does not create the CI run-start record that this scan needs (`checks.py:138,165-175,247-262`), so upgrade leaves the close alive and attempts to replace its environment. The install can still fail even if upgrade was started separately through uvx. Also, a normal `forge upgrade` started from the installed tool keeps its own environment in use while invoking the installer. The [documented Windows limitation](https://github.github.com/spec-kit/upgrade.html) applies to both active environment users.",
+        "file": "src/forge/upgrade.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 102,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: forge upgrade does not count a close that is only waiting for CI as a run in progress, and that close carries on after the upgrade",
+        "work": 3
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a Windows user upgrades the installed Forge while a close waits for CI.\nThe fake installer checks only `closing.pid` and then writes a separate launcher; both commands are started with the test interpreter (`tests/test_lanes_agents.py:97-102`), so it cannot detect the upgrade process holding the installed environment open. The fixture also starts without an existing pull request (`tests/test_close.py:235-239,292`), bypassing the unrecorded pre-push CI wait described above. This test can therefore pass while those Windows upgrade cases remain broken.",
+        "file": "tests/test_upgrade_during_ci_wait.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 34,
+        "priority": "P1",
+        "title": "Gate: test_1_upgrade_allows_ci_wait_and_keeps_review_protected",
+        "work": 2
+      }
+    ],
+    "id": "8c8813cc-8e2e-445f-8f1d-963253e1c5ef",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T14:29:10.738261+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T14:32:24.312747+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T14:43:43.858259+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T14:44:36.877138+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T15:06:37.724388+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T15:06:37.761316+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T15:45:17.496193+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 2,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-22T15:06:37.761316+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/upgrade.py",
+    "reason": "Owner accepted on 22 Nov 2026 as a known issue: on Windows, a close that waits for CI before it saves its review records is not seen as waiting, so the install can fail and the person runs the upgrade again",
+    "wait_id": "e40c4bb1-252f-4003-9a25-25c2d5bf57d6",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "c73167c4-a643-427a-bd51-14cc033496df",
+    "head": "ffbb043ac45ab014f7299836dbed7120bb9aa2a0",
+    "keys": {},
+    "round": 1
+  },
+  "why": "forge upgrade refuses while a close is only waiting for CI checks, so the person must kill closes before every upgrade",
+  "worker": "codex"
+}
