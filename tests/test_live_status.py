@@ -315,6 +315,9 @@ def test_7_live_status_in_both_machine_views(env, monkeypatch, request, case):
                 json.dumps(f'"{sys.executable}" -m pytest -vv{parallel} test_progress.py')))
             repo.git("push", "-q", "origin", "main")
             repo.git("merge", "--no-edit", "origin/main", cwd=folder)
+            repo.git("add", "test_progress.py", cwd=folder)
+            repo.git("commit", "-q", "-m", "Add the live progress cases", "-m",
+                     "Proof list:\n- Done when: check: The readme opens with a greeting", cwd=folder)
         process = subprocess.Popen([sys.executable, str(repo.bin / "forge"),
                                    "read" if case.startswith("read") else "close" if case.startswith(("progress", "ci", "review")) else "work", item], cwd=repo.path,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

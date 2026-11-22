@@ -104,6 +104,9 @@ def test_2_each_round_records_worker_tests_review_and_ci_times(env, monkeypatch,
         worked = repo.forge('work', item)
         assert worked.returncode == 0, worked.stderr
         assert 'asks it once' in worked.stdout
+        proof_key = 'Done when' if family == 'claude' else '1'
+        repo.git('commit', '--allow-empty', '-q', '-m', 'Record the worker timing proof', '-m',
+                 f'Proof list:\n- {proof_key}: check: synthetic worker timing fixture', cwd=where)
         closed = repo.forge('close', item)
         assert closed.returncode == 0, closed.stderr
     timings = records(repo, 'timings.jsonl')

@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from forge.close_remote import push_replay, reconcile, replay_baseline, save_replay, squash_replay
-from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, repo, review, review_skip, score, spotted, story, sync, task, time_records
+from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
 
 REFUSALS = {
     "not_started": ("Forge has not started {item} in any worktree of this repo.", "forge next"),
@@ -337,7 +337,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     evidence = ("\n\n".join(part for part in (
                     review.before_coding(top, base, head),
                     review.commit_paragraph(top, review_ref, "Functional check:")) if part),
-                review.proof_list(top, review_ref))
+                done_when_proof.proof_list(top, review_ref))
     repo.record_event(top, item, "close result")  # a stuck worker counts failures once per close
     failed = 0
     if not fresh:
@@ -382,7 +382,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
                 if testing is not None:
                     failed, tested = testing.result()
                     print(tested, flush=True)
-                    evidence = (evidence[0], review.proof_list(top, review_ref, tested))
+                    evidence = (evidence[0], done_when_proof.proof_list(top, review_ref, tested))
                     if failed:
                         state["tests"] = tested
                         if outcome == "failed":
@@ -395,7 +395,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         command = review.close_test(top, review_ref)
         failed, tested = review.test_run(top, command, review_ref, always=switch)
         print(tested, flush=True)
-        evidence = (evidence[0], review.proof_list(top, review_ref, tested))
+        evidence = (evidence[0], done_when_proof.proof_list(top, review_ref, tested))
         if failed:
             state["tests"] = tested
         else:

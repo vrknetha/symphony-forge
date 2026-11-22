@@ -2238,11 +2238,8 @@ reviews show them only as counts of changed lines.
 They count towards neither a part's size warning nor a fix's code-file limit.
 
 Read the worker's final handoff and resolve its stated blockers before `forge close`.
-Before close, the worker puts a `Proof list:` paragraph in its last commit message: each Done-when
-item you cover and every detail next to the test or check that proves it, or marked `missing`.
-Name each test by its pytest node ID or file and write no test results: close checks each named
-test against its own run and writes the list with only the tests it ran and their results, and marks every line it cannot match to its run's per-test results `not checked`. Name any other
-check with its result. Forge copies the list into the pull request and the review prompt. The first review checks the whole list, not a sample: Check every
+Before close, the worker puts a `Proof list:` paragraph in its last commit message: each covered item has a numbered line `- <n>: <test> (<decision>)` (a fix uses `- Done when:`, and `- 1, 3:` covers two items), naming a pytest node ID or file, or a Vitest or Playwright file with an optional title in backticks, such as `path.test.ts::title` or `path.spec.ts::suite > title`; the decision is `reuse`, `extend <closest test>`, or `new; closest <test or none>; proves <outcome>`, and `check:` replaces the test only for an item that changes only settings, docs or tests.
+Write no test results: close refuses an item with no test, a named test that is not on the branch, and a named pytest test that did not run, failed or was skipped. Name any other check with its result. Forge copies the list into the pull request and the review prompt. The first review checks the whole list, not a sample: Check every
 entry against the code and its named proof, including every Done-when detail. Compare it with the
 covered items so omitted entries cannot hide gaps; report every missing case in that one round,
 even when a finding already blocks. Keep the whole list current; later reviews check repairs and

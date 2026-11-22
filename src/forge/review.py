@@ -8,7 +8,6 @@ line carries the reviewer's Gain, Work and Harm scores (see score.py).
 from __future__ import annotations
 
 import ast
-import collections
 import contextlib
 import hashlib
 import json
@@ -25,7 +24,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
-from forge import autoreview, docskip, machine, noise, repo, score, spotted
+from forge import autoreview, docskip, machine, noise, proof, repo, score, spotted
 from forge.task import branch_item, sections
 
 # The helper Forge runs: the upstream commit its installer stamps in the skill's .upstream-sha.
@@ -303,7 +302,19 @@ def instructions(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any
               "accepted": _accepted(top, item, history),
               "test_run": tested,
               "before_coding": before_coding(top, base) or "missing",
-              "proof_list": proof_list(top, base) or "missing"}
+              "proof_list": proof.proof_list(top, base) or "missing",
+              "proof_checked": (
+                  proof.CI_DOCS_ONLY + " No test result is claimed for these names."
+                  if repo.test_place(cfg) == "ci" and "tests" in cfg["checks"] and docs_only(top, base) else
+                  "When its test run finishes, close refuses a Done-when line with no test, a named "
+                  "test that is not on the branch, and a named pytest test that did not run, failed "
+                  "or was skipped; that run may still be going while you read. For Vitest and "
+                  "Playwright names close checks only that the test is on the branch, so judge "
+                  "from the pull request's checks whether they ran and passed."
+                  if repo.test_place(cfg) == "local" or "tests" in cfg["checks"] else
+                  "Close checks only that each Done-when line names a test on the branch. Forge "
+                  "sees no test results here, so judge from the pull request's checks whether each "
+                  "named test ran and passed.")}
     if "/" in item:
         doc_text, doc, row = task(top, item)
         design_text = doc_text
@@ -381,15 +392,26 @@ def close_test(top: Path, base: str, *, closing: bool = True, head: str = "HEAD"
 
 # Close shows these fasttest lines, which a later runner's output can push out of the tail.
 GAP = "No local test names "
-RENDERED = ("Rendered problem: ", "Rendered check: ")  # close never cuts these; the dot reporter's marks can come before one
+RENDERED = ("Rendered problem: ", "Rendered check: ", "Done-when proof:")  # close never cuts these
+
+
+def pull_request_branch(top: Path) -> str:
+    """The checked-out branch; a detached CI checkout has the pull request's own branch. A name only
+    the environment holds, as in a test that runs inside CI, names no item of this repo and is not used."""
+    ref = os.environ.get("GITHUB_HEAD_REF", "")
+    return repo.current_branch(top) or (ref if branch_item(ref, top) else "")
 
 
 def test_run(top: Path, command: str, base: str, *, always: bool = False,
              closing: bool = True) -> tuple[int, str]:
     """Run or skip tests; report a bounded tail, all failed tests and the full log path."""
     command = repo.grouped(top, command)
-    branch = repo.current_branch(top) or "HEAD"  # Pull-request CI checks out a detached HEAD.
+    branch = pull_request_branch(top) or "HEAD"
     item = (branch_item(branch, top) or (branch, {}))[0]
+    proof_base = base
+    if closing:
+        _, recorded_base = proof._proof(top, item, "HEAD")
+        proof_base = recorded_base or base
     start, clock = repo.now(), time.monotonic()
     outcome = "skipped"
     results = results_path(top)
@@ -400,25 +422,51 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
     # Close empties the results once, before the command; each pytest in it only appends.
     results.unlink(missing_ok=True)
     try:
+        if closing and repo.test_place(repo.config(top)) == "local":
+            passed, lines = proof.check(top, item, proof_base, "", ran=False)
+            if not passed:
+                return 1, "\n".join(lines)
+            if lines:
+                print("\n".join(lines), flush=True)
         if not command:
-            return 0, ("Sample-data mode skips tests and CI." if repo.sample_data(top)
-                       else "forge.toml names no test command, so close ran none.")
+            valid, lines = proof.check(top, item, proof_base, "") if closing else (True, [])
+            return int(not valid), "\n".join([
+                "Sample-data mode skips tests and CI." if repo.sample_data(top)
+                else "forge.toml names no test command, so close ran none.", *lines])
         # Worker tests always run; close skips documentation before it enters the test lane.
         if not always and docs_only(top, base):
             said = DOCS_ONLY.format(command=command)
-            return 0, said
+            valid, lines = (proof.check(top, item, proof_base, "")
+                            if closing and repo.test_place(repo.config(top)) == "local" else (True, []))
+            return int(not valid), "\n".join([said, *lines])
         from forge import records  # imports review indirectly
 
-        passed = None if always else passed_record(top, command)
+        dirty = (proof.uncommitted(top) if closing and branch_item(branch, top) and not repo.sample_data(top)
+                 and repo.test_place(repo.config(top)) == "local" else [])
+        if dirty:
+            return 1, "\n".join([
+                "Done-when proof: The checkout has uncommitted changes, so this run did not test the "
+                "committed code.", *(f"Done-when proof: {path} is not committed." for path in dirty),
+                "Done-when proof: Commit it, delete it, or add it to .gitignore if it is test output, "
+                "then close again."])
+        passed = None if always else passed_record(top, command, base=proof_base)
         skipped = SKIPPED.format(command=command)
         if passed and passed.exists():
             results.write_text(passed.read_text("utf-8"), "utf-8")
+            if closing:
+                valid, lines = proof.check(top, item, proof_base, results.read_text("utf-8"))
+                if not valid:
+                    return 1, "\n".join(lines)
             return 0, skipped
         entry = machine.join("test", top, item, None, None)
         preload_folder = tempfile.TemporaryDirectory(prefix="forge-node-")
         try:
             if passed and passed.exists():  # the close this one waited for passed the same files
                 results.write_text(passed.read_text("utf-8"), "utf-8")
+                if closing:
+                    valid, lines = proof.check(top, item, proof_base, results.read_text("utf-8"))
+                    if not valid:
+                        return 1, "\n".join(lines)
                 return 0, skipped
             from forge import fasttest
 
@@ -430,6 +478,8 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
             hook.mkdir(exist_ok=True)
             (hook / "_forge_test_results.py").write_text(fasttest.RESULTS, "utf-8")
             env.update(FORGE_TEST_RESULTS=str(results),
+                       FORGE_TEST_REPO=str(top),
+                       PYTHONDONTWRITEBYTECODE="1",
                        PYTHONPATH=os.pathsep.join([str(hook), os.environ.get("PYTHONPATH", "")]),
                        PYTEST_PLUGINS=",".join(filter(None, [os.environ.get("PYTEST_PLUGINS"),
                                                              "_forge_test_results"])))
@@ -484,6 +534,11 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
                     history.append("Flaky test files: " + ", ".join(flaky) +
                                    ". They passed on the one retry.\n")
                 done = subprocess.CompletedProcess(command, done.returncode, "".join(history))
+                if closing:
+                    valid, lines = proof.check(top, item, proof_base,
+                                              results.read_text("utf-8") if results.is_file() else "")
+                    done = subprocess.CompletedProcess(command, done.returncode or int(not valid),
+                                                       done.stdout + "\n" + "\n".join(lines))
                 outcome = ran["outcome"] = "passed" if done.returncode == 0 else "failed"
             if product and product == records.tested_product(top):
                 evidence = results.read_text("utf-8") if results.is_file() else done.stdout
@@ -500,7 +555,7 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
         shown = {n for n, line in enumerate(out) if any(mark in line for mark in RENDERED)}
         picked = sorted(({i for n, line in enumerate(out) if "skip" in line.lower()
                           for i in (n - 1, n) if i >= 0} | set(range(max(0, len(out) - 30), len(out)))
-                         | {n for n, line in enumerate(out) if line.startswith(GAP)}) - shown)
+                         | {n for n, line in enumerate(out) if line.startswith((GAP, "Done-when proof:"))}) - shown)
         lines = [out[i] for i in picked]
         if len(lines) > 80:  # the tail is the last 30 picked; the earliest skip lines fill the rest
             lines = [*lines[:50], f"({len(lines) - 80} skip lines cut here)", *lines[-30:]]
@@ -535,16 +590,20 @@ SKIPPED = ("`{command}` already passed on this machine on these same committed f
            "not run it again.")
 
 
-def passed_record(top: Path, command: str) -> Path | None:
+def passed_record(top: Path, command: str, *, base: str | None = None) -> Path | None:
     """Where this machine records that `command` passed on HEAD's committed files, Forge's own
     records aside (a review commit changes nothing the tests read). None when an uncommitted edit or
     untracked file could change the result, so such a run is never recorded or skipped."""
-    if repo.git("status", "--porcelain", cwd=top):
+    if proof.uncommitted(top):
         return None
     listing = repo.git("ls-tree", "-r", "-z", "--full-tree", "HEAD", cwd=top).split("\0")
     files = [entry for entry in listing if not entry.partition("\t")[2].startswith(".factory/")]
+    if base is None:
+        base = repo.git("merge-base", "HEAD", f"origin/{repo.default_branch(top)}", cwd=top)
     key = hashlib.sha256("\0".join([command, os.environ.get("FORGE_GROUP", "1"),
-                                   os.environ.get("FORGE_GROUPS", "1"), *files]).encode("utf-8")).hexdigest()
+                                   os.environ.get("FORGE_GROUPS", "1"),
+                                   commit_paragraph(top, base, "Proof list:"),
+                                   *files]).encode("utf-8")).hexdigest()
     return machine._repos_file().parent / "passed-tests" / key
 
 
@@ -712,86 +771,11 @@ def commit_paragraph(top: Path, base: str, label: str, head: str = "HEAD") -> st
     return ""
 
 
-# A test file a proof list names, with an optional pytest node after it.
-# A parameter id runs to its closing bracket, commas and all.
-TEST_NAME = re.compile(r"(?<![\w/.-])(?:[\w.-]+/)*(?:test_[\w-]*|[\w-]+_test)\.py"
-                       r"(?:::(?:[^\s,;`\[]+|\[[^\]]*\])+)?")
-
-
-RESULT_WORDS = ("passed", "failed", "error", "skipped", "xfail", "xpass")
-
-
 def results_path(top: Path) -> Path:
     """Where Forge's pytest hook writes this branch's last test run's per-test results."""
-    branch = repo.current_branch(top)
+    branch = pull_request_branch(top)
     item = (branch_item(branch, top) or (branch, {}))[0]
     return repo.forge_dir(top) / f"test-results-{item.replace('/', '-')}.txt"
-
-
-def _ran(name: str, node: str) -> bool:
-    """A reported pytest node is the named test, or inside the named file or class. A name with a
-    parameter id matches only that case. Node IDs can be relative to a test folder, so a name may
-    end with the node."""
-    parts = (node if "[" in name else re.sub(r"\[.*", "", node)).split("::")
-    return any(name == part or name.endswith("/" + part)
-               for part in ("::".join(parts[:i]) for i in range(1, len(parts) + 1)))
-
-
-def proof_list(top: Path, base: str, report: str | None = None) -> str:
-    """The proof list close writes from the worker's mapping of Done-when items to tests. It keeps
-    the worker's words and puts each named test's result from close's run (`report`) next to it;
-    a test the run did not run becomes `not run`. Before the run it names only the tests the
-    branch has. A line or test close cannot match to its run's pytest results is `not checked`."""
-    from forge import fasttest  # fasttest imports review in forge test
-
-    command = close_test(top, base)
-    passed, results = passed_record(top, command) if command else None, results_path(top)
-    if passed and passed.is_file():  # a cached passing run's per-test results, if pytest ran
-        report = passed.read_text("utf-8")
-    elif report is not None:
-        report = results.read_text("utf-8") if results.is_file() else ""
-    worst = {}  # one result per test: the worst of its phases, so a failed teardown is an error
-    for outcome, node in re.findall(r"^(\w+) (.+)$", report or "", re.M):
-        worst[node] = max(worst.get(node, outcome), outcome,
-                          key=lambda word: {"error": 2, "failed": 1}.get(word, 0))
-    ran = [(outcome, node) for node, outcome in worst.items()]
-
-    proof = commit_paragraph(top, base, "Proof list:")
-    # Classifying the diff cannot change a proof list that names no tests.
-    ran_none = bool(TEST_NAME.search(proof)) and (not command or docs_only(top, base))
-
-    def result(found: re.Match) -> str:  # the worker's words stay; a name gains its result
-        name = found[0].rstrip(".:)")
-        path, _, test = name.partition("::")
-        case = re.sub(r"\[.*", "", test.rsplit("::", 1)[-1])
-        source = (top / path).read_text("utf-8", "replace") if (top / path).is_file() else ""
-        matches = [(outcome, node) for outcome, node in ran if _ran(name, node)]
-        if not source or case and not re.search(rf"\b{re.escape(case)}\b", source):
-            said = "not run"
-        elif ran_none and fasttest.RESULTS_HEADER not in (report or ""):
-            said = "not run (close ran no tests for this change)"
-        elif report is None:
-            said = f"{name} (in the branch; close's test run gives its result)"
-        elif fasttest.RESULTS_HEADER not in report:  # another runner, or no run
-            said = f"{name} (not checked)"
-        elif len(matches) == 1 and matches[0][1].rsplit("::", 1)[-1] == name.rsplit("::", 1)[-1]:
-            # the named test itself; a name without its parameter id counts its cases
-            said = f"{name} ({matches[0][0]} in close's run)"
-        elif matches:  # a file, class or parametrized test: count the cases that ran
-            counts = collections.Counter(outcome for outcome, _ in matches)
-            said = f"{name} ({', '.join(f'{counts[word]} {word}' for word in RESULT_WORDS if counts[word])}" \
-                   " in close's run)"
-        else:
-            said = "not run"  # a list never names a test close did not run
-        return said + found[0][len(name):]
-
-    lines = []
-    for number, line in enumerate(proof.splitlines()):
-        if not TEST_NAME.search(line):  # close cannot match a line without pytest names to its run
-            lines.append(line if number == 0 or not line.strip() else f"{line} (not checked)")
-            continue
-        lines.append(TEST_NAME.sub(result, line))
-    return "\n".join(lines)
 
 
 def _bullets(items: Any) -> str:

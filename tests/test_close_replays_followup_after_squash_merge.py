@@ -21,7 +21,9 @@ def stacked(env, previous=False):
     env.commit(parent_folder, "src/parent_only.py", "PARENT_ONLY = True\n")
     fix, where = started(repo, "Repair the follow-up", cwd=parent_folder)
     own = "FOLLOWUP = True\n" + "# stable\n" * 20
-    env.commit(where, "src/shared.py", own, "Repair the follow-up")
+    env.commit(where, "src/shared.py", own,
+               "Repair the follow-up\n\nProof list:\n"
+               "- Done when: check: The follow-up's changes were checked by its worker.")
     return repo, parent, parent_head, fix, where, own
 
 
@@ -162,7 +164,7 @@ def test_5_fix_started_on_default_keeps_its_commits_without_merging_unrelated_de
 
 def test_6_replay_preserves_own_changes_committed_in_a_default_merge(env):
     repo, parent, parent_head, fix, where, own = stacked(env)
-    proof = "The follow-up's changes were checked by its worker."
+    proof = "- Done when: check: The follow-up's changes were checked by its worker."
     # Merge bookkeeping is not worker evidence; keep the proof on the actual worker commit.
     repo.git("commit", "--amend", "-qm", "Repair the follow-up\n\nProof list:\n" + proof, cwd=where)
     land_on_default(repo)

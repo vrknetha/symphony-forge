@@ -28,9 +28,11 @@ SOURCES = {
 # The FDE labels recognize both the TypeScript and Python starter organisation folders.
 # The approved guide uses INR, defers unbuilt parts and names Mainline error-log alerts.
 # Current-source equality alone would miss a shared change across all three installs.
+# The approved closest-test authoring gate is part of this source pin.
 PRE_TRIM_SHA256 = {
     ".codex/skills/forge/fde.md": "304d2a1cf91f5e40c289af47c566f9a9d055bb609c2e0528f4288818fd4e2fcf",
-    ".codex/skills/test-audit/SKILL.md": "7684c6c1d5e43fd06365feb5d50d69c9591f03163de457b8dd811a334b2590bc",
+    # The approved proof-choice wording extends this skill; test_done_when_tests owns its text.
+    ".codex/skills/test-audit/SKILL.md": "7f4c2ed5572f6cae606e8814e3e4f5b4945c08e316207e1572f326d4cb5a3285",
     ".codex/skills/test-audit/NOTICE.md": "05713febd8aeaca480afdc78074c66544635517e1868d3a59d7fe1cb54d70149",
     ".claude/skills/remote-approval/SKILL.md": "f3d334b989b73b65f6255d874592c052db96089df476dd1f0c9efa1d95ce8e01",
 }

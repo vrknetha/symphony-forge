@@ -53,10 +53,15 @@ def test_1_close_reviews_only_conflict_repairs_and_unreviewed_edits(env, previou
     env.repo.git("push", "-q", "origin", "main")
     item, where = (env.start_fix(changes={"app.py": own}) if case == "fix-contract"
                    else env.start_task(changes={"app.py": own}))
+    # These cases fake review and exercise replay behavior; check entries are
+    # synthetic fixture evidence, not named tests for production behavior.
+    proof_line = ("- Done when: check: The fixture checks the updated greeting.\n"
+                  if case == "fix-contract" else
+                  "- 1: check: The fixture checks the task greeting.\n")
     evidence = ("Before coding:\nNeed: Preserve this task's greeting\n"
                 "Simplest option: Keep the existing greeting\nExisting code reused: app.py\n\n"
                 "Functional check: This task keeps its greeting.\n\n"
-                "Proof list:\n- This task's greeting: tests/test_app.py\n")
+                "Proof list:\n" + proof_line)
     env.commit(where, "worker-proof.py", "proof_version = 1\n", "Record task evidence\n\n" + evidence)
     env.reviews(blocked(finding("P1", "Greeting is missing")) if case == "open-finding" else CLEAN)
     first = (env.close(item, "--no-review", "--by", "A Person", "--reason", "Owner chose to skip")
@@ -72,7 +77,8 @@ def test_1_close_reviews_only_conflict_repairs_and_unreviewed_edits(env, previou
         assert amended.returncode == 0, amended.stdout + amended.stderr
     elif case == "own-evidence":
         env.commit(where, "worker-proof.py", "proof_version = 2\n",
-                   "Update task evidence\n\n" + evidence.replace("This task's greeting", "Updated task proof"))
+                   "Update task evidence\n\n" + evidence.replace(
+                       "The fixture checks the task greeting", "Updated fixture evidence"))
     incoming = original.replace("line_25 = 25\n", "incoming_line = 25\n")
     incoming_message = ("Other task merged\n\n" + evidence.replace("this task", "the other task")
                         .replace("This task", "The other task"))

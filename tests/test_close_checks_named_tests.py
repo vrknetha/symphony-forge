@@ -10,20 +10,18 @@ from conftest import ROOT
 from test_close import env  # noqa: F401
 
 STORY = "forge-writes-proof-list"
-PROOF = ("Proof list:\n- Returning readers are greeted: tests/test_greeting.py::test_returning "
+PROOF = ("Proof list:\n- Done when: tests/test_greeting.py::test_returning "
          "(including empty names)\n"
-         "- Staff can sign in: tests/test_greeting.py::test_role[staff,active]\n"
-         "- Later readers wait: tests/test_greeting.py::test_later\n"
-         "- Empty names are refused: tests/test_greeting.py::test_empty\n"
-         "- Old readers stay greeted: tests/test_other.py::test_other\n"
-         "- New readers by name: tests/test_greeting.py::test_case[new]\n"
-         "- Readers coming back by name: tests/test_greeting.py::test_case[back]\n"
-         "- The page greets readers: src/greet.test.ts\n"
-         "- The page greets readers again: __tests__/greeting.js\n"
-         "- Every greeting: tests/test_greeting.py\n"
-         "- Code spans name tests: `tests/test_greeting.py::test_returning`\n"
-         "- Cleanup runs: tests/test_greeting.py::test_cleanup\n"
-         "- Readers by name: tests/test_greeting.py::test_case")
+         "- Done when: tests/test_greeting.py::test_role[staff,active]\n"
+         "- Done when: tests/test_greeting.py::test_later\n"
+         "- Done when: tests/test_other.py::test_other\n"
+         "- Done when: tests/test_greeting.py::test_case[new]\n"
+         "- Done when: tests/test_greeting.py::test_case[back]\n"
+         "- Done when: `src/greet.test.ts`\n"
+         "- Done when: `__tests__/greeting.js`\n"
+         "- Done when: tests/test_greeting.py\n"
+         "- Done when: `tests/test_greeting.py::test_returning`\n"
+         "- Done when: tests/test_greeting.py::test_case")
 # A test whose call passes and whose teardown fails.
 TEARDOWN = ("\n\n@pytest.fixture\ndef broken():\n    yield\n    raise RuntimeError(\"teardown\")\n\n\n"
             "def test_cleanup(broken):\n    pass\n")
@@ -35,7 +33,7 @@ GREETING = ("import pytest\n\n\ndef test_returning():\n    assert True\n\n\n"
             "@pytest.mark.skip(reason=\"later\")\ndef test_later():\n    pass\n")
 
 
-def _close(env, adopted, command, red=False, greeting=GREETING, docs_only=False):
+def _close(env, adopted, command, red=True, greeting=GREETING, docs_only=False, proof=PROOF):
     repo = env.repo
     if adopted:
         shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", repo.path, dirs_exist_ok=True)
@@ -47,21 +45,24 @@ def _close(env, adopted, command, red=False, greeting=GREETING, docs_only=False)
     env.commit(repo.path, "forge.toml", f"test = {json.dumps(command)}\ntest_place = \"local\"\n"
                f"checks = [\"forge-pr-check\"]\n"
                + "\n".join(kept) + "\n", "Run the tests")
-    # The worker maps items to a test that runs, one that does not exist, one close does not run
-    # and one in another language, and writes no results.
+    # Named skipped, missing-run and failing tests now refuse close, while its published list
+    # still reports each result. Missing branch names have their own Done-when refusal cases.
     files = {".gitignore": "__pycache__/\n", "tests/test_greeting.py": greeting,
              "tests/test_other.py": "def test_other():\n    assert True\n",
-             "src/greet.test.ts": "test('greets', () => {});\n"}
+             "src/greet.test.ts": "test('greets', () => {});\n",
+             "__tests__/greeting.js": "test('greets', () => {});\n"}
     if docs_only:  # the tests are already on the default branch; the fix changes only a readme
         for path, text in files.items():
             env.commit(repo.path, path, text, "Add the tests")
         files = {"README.md": "Hello, readers.\n"}
     repo.git("push", "-q", "origin", "main")
     item, where = env.start_fix(files)
-    repo.git("commit", "--allow-empty", "-q", "-m", "List the proof", "-m", PROOF, cwd=where)
+    repo.git("commit", "--allow-empty", "-q", "-m", "List the proof", "-m", proof, cwd=where)
     for _ in range(1 if red else 2):  # a second close reuses the passing run on the same files
         closed = env.close(item)
         assert (closed.returncode != 0) == red, closed.stdout + closed.stderr
+        if red:
+            assert "Done-when proof:" in closed.stdout + closed.stderr
     # The body as gh received it on the last publish, before any later rewrite of its file.
     sent = (env.repo.bin / "gh-bodies.jsonl").read_text("utf-8").splitlines()
     assert env.gh_calls("pr", "edit"), "close never refreshed the pull request after its run"
@@ -78,59 +79,59 @@ def test_1_close_writes_the_proof_list_from_the_tests_it_ran(env, adopted, red, 
     # The client's own report options, such as -ra, cannot hide close's per-test results, and a
     # second pytest in the command keeps the first one's results.
     command = f'{run} tests/test_greeting.py' + ("" if red else ' -k "not back"')
-    prompt, published = _close(env, adopted, command + options.format(run=run), red,
-                               GREETING + TEARDOWN if teardown else GREETING)
+    proof = PROOF + ("\n- Done when: tests/test_greeting.py::test_cleanup" if teardown else "")
+    prompt, published = _close(env, adopted, command + options.format(run=run), True,
+                               GREETING + TEARDOWN if teardown else GREETING, proof=proof)
+    # The second pytest has no name filter, so it also runs the named returning-reader case.
+    failed_case = red or "test_other" in options
     # A name in a code span matches without its backtick.
     assert "`tests/test_greeting.py::test_returning (passed in close's run)`" in published
     # A test has one result, the worst of its phases: a failed teardown is an error.
-    assert ("- Cleanup runs: tests/test_greeting.py::test_cleanup (error in close's run)"
-            if teardown else "- Cleanup runs: not run") in published
+    if teardown:
+        assert "- Done when: tests/test_greeting.py::test_cleanup (error in close's run)" in published
     # Close keeps the worker's words and adds each named test's result next to it.
-    assert ("- Returning readers are greeted: tests/test_greeting.py::test_returning "
+    assert ("- Done when: tests/test_greeting.py::test_returning "
             "(passed in close's run) (including empty names)") in published
     # A parameter id runs to its closing bracket, commas and all.
-    assert ("- Staff can sign in: tests/test_greeting.py::test_role[staff,active] "
+    assert ("- Done when: tests/test_greeting.py::test_role[staff,active] "
             "(passed in close's run)") in published
-    assert "- Empty names are refused: not run" in published
-    assert ("- Old readers stay greeted: tests/test_other.py::test_other (passed in close's run)"
-            if "test_other" in options else "- Old readers stay greeted: not run") in published
-    assert "test_empty" not in published
+    assert ("- Done when: tests/test_other.py::test_other (passed in close's run)"
+            if red or "test_other" in options else "- Done when: not run") in published
     # A name that matches several cases counts the cases that ran.
-    assert ("- Every greeting: tests/test_greeting.py (3 passed, 1 failed, 1 error, 1 skipped in close's run)"
+    assert ("- Done when: tests/test_greeting.py (3 passed, 1 failed, 1 error, 1 skipped in close's run)"
             if teardown else
-            "- Every greeting: tests/test_greeting.py (3 passed, 1 failed, 1 skipped in close's run)"
-            if red else "- Every greeting: tests/test_greeting.py (3 passed, 1 skipped in close's run)"
+            "- Done when: tests/test_greeting.py (3 passed, 1 failed, 1 skipped in close's run)"
+            if failed_case else "- Done when: tests/test_greeting.py (3 passed, 1 skipped in close's run)"
             ) in published
     # A test name without its parameter id counts the cases that ran.
-    assert ("- Readers by name: tests/test_greeting.py::test_case (1 passed, 1 failed in close's run)"
-            if red else "- Readers by name: tests/test_greeting.py::test_case (1 passed in close's run)"
+    assert ("- Done when: tests/test_greeting.py::test_case (1 passed, 1 failed in close's run)"
+            if failed_case else "- Done when: tests/test_greeting.py::test_case (1 passed in close's run)"
             ) in published
     # A named case matches only itself; a case that failed shows as failed.
-    assert "- New readers by name: tests/test_greeting.py::test_case[new] (passed in close's run)" in published
-    assert ("- Readers coming back by name: tests/test_greeting.py::test_case[back] (failed in close's run)"
-            if red else "- Readers coming back by name: not run") in published
-    assert "- Later readers wait: tests/test_greeting.py::test_later (skipped in close's run)" in published
+    assert "- Done when: tests/test_greeting.py::test_case[new] (passed in close's run)" in published
+    assert ("- Done when: tests/test_greeting.py::test_case[back] (failed in close's run)"
+            if failed_case else "- Done when: not run") in published
+    assert "- Done when: tests/test_greeting.py::test_later (skipped in close's run)" in published
     # A test close cannot match to its run's results is never copied as proof.
-    assert "- The page greets readers: src/greet.test.ts (not checked)" in published
-    assert "- The page greets readers again: __tests__/greeting.js (not checked)" in published
+    assert "`src/greet.test.ts (not checked)`" in published
+    assert "`__tests__/greeting.js (not checked)`" in published
     # The review runs alongside the tests, so its list names only the tests the branch has.
-    assert "- Empty names are refused: not run" in prompt
-    assert "test_empty" not in prompt
+    assert "tests/test_greeting.py::test_returning (in the branch; close's test run gives its result)" in prompt
 
 
 def test_2_a_runner_without_test_results_shows_named_tests_as_not_checked(env):
     python = Path(sys.executable).as_posix()
     _, published = _close(env, False, f'"{python}" -c "print(1)"')
-    assert ("- Returning readers are greeted: tests/test_greeting.py::test_returning (not checked) "
+    assert ("- Done when: tests/test_greeting.py::test_returning (not checked) "
             "(including empty names)") in published
-    assert "test_empty" not in published
+    assert "not checked" in published
 
 
 def test_3_a_change_close_runs_no_tests_for_shows_named_tests_as_not_run(env):
     python = Path(sys.executable).as_posix()
     _, published = _close(env, False, f'"{python}" -m pytest -q -p no:cacheprovider tests',
                           docs_only=True)
-    assert ("- Returning readers are greeted: not run (close ran no tests for this change) "
+    assert ("- Done when: not run (close ran no tests for this change) "
             "(including empty names)") in published
     assert "test_returning" not in published
 
@@ -148,6 +149,8 @@ NESTED = ("import os, pathlib, subprocess, sys\n\n\ndef test_returning(tmp_path)
                          ids=["new-client", "xdist"])
 def test_4_a_test_that_starts_its_own_pytest_passes_under_close(env, adopted, options):
     run = f'"{Path(sys.executable).as_posix()}" -m pytest -q -p no:cacheprovider'
-    _, published = _close(env, adopted, f"{run} tests/test_greeting.py{options}", greeting=NESTED)
-    assert ("- Returning readers are greeted: tests/test_greeting.py::test_returning "
+    proof = "Proof list:\n- Done when: tests/test_greeting.py::test_returning (including empty names)"
+    _, published = _close(env, adopted, f"{run} tests/test_greeting.py{options}", red=False,
+                          greeting=NESTED, proof=proof)
+    assert ("- Done when: tests/test_greeting.py::test_returning "
             "(passed in close's run) (including empty names)") in published

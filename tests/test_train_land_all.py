@@ -257,7 +257,8 @@ def _ready(env, monkeypatch, slugs, first=1, files=None) -> dict[str, str]:
     heads = {}
     for day, slug in enumerate(slugs, first):
         changed = (files or {}).get(slug, {f"{slug}.py": f"print('{slug}')\n"})
-        where = _fix(env, monkeypatch, slug, day, changed, status="working")
+        where = _fix(env, monkeypatch, slug, day, changed, status="working",
+                     message=f"Worker round\n\nProof list:\n- Done when: check: {slug} is changed")
         if "forge.toml" in changed:  # close accepts a settings change only when the fix says so
             amended = env.repo.forge("fix", "amend", slug, "--done", "forge.toml sets cold_read_rounds",
                                      "--because", "The fix changes a setting", cwd=where)
@@ -416,11 +417,13 @@ def _on_main(env, path: str, text: str) -> None:
 def _stacked(env, monkeypatch, base_merged: bool) -> None:
     """A fix built on another fix, closed ready. The base's pull request merges before the run (the
     fix is then closed ready again) or stays open."""
-    base = _fix(env, monkeypatch, "jb", 7, {"jb.py": "print('jb')\n"}, status="working")
+    base = _fix(env, monkeypatch, "jb", 7, {"jb.py": "print('jb')\n"}, status="working",
+                message="Worker round\n\nProof list:\n- Done when: check: jb is changed")
     assert env.repo.forge("close", "jb").returncode == 0
     main, env.repo.path = env.repo.path, base
     try:
-        _fix(env, monkeypatch, "jj", 8, {"jj.py": "print('jj')\n"}, status="working")
+        _fix(env, monkeypatch, "jj", 8, {"jj.py": "print('jj')\n"}, status="working",
+             message="Worker round\n\nProof list:\n- Done when: check: jj is changed")
     finally:
         env.repo.path = main
     assert env.repo.forge("close", "jj").returncode == 0

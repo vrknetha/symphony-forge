@@ -136,6 +136,9 @@ def test_7_a_ci_repo_can_switch_to_laptop_tests(env):
     synced = env.repo.forge("sync", cwd=where)
     assert synced.returncode == 0, synced.stdout + synced.stderr
     assert "Forge runs change tests" not in synced.stdout
+    if env.repo.git("status", "--porcelain", cwd=where):
+        env.repo.git("add", "-A", cwd=where)
+        env.repo.git("commit", "-q", "-m", "Commit refreshed Forge files", cwd=where)
     env.open_pr("")
     closed = env.close(item)
 

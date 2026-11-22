@@ -191,6 +191,9 @@ def test_5_a_sample_data_prototype_runs_no_rendered_check_before_signoff(env, tm
             _settings(where / "forge.toml", **settings)
         for rel, text in files.items():
             env.commit(where, rel, text, "Add a screen")
+        if name == "First tests":
+            repo.git("commit", "--allow-empty", "-q", "-m", "Record the browser test proof", "-m",
+                     f"Proof list:\n- Done when: check: {done}", cwd=where)
         env.reviews(CLEAN)
         env.open_pr("")
         env.checks(GREEN)

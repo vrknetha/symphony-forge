@@ -211,6 +211,8 @@ def test_3_pytest_repos_keep_six_groups_and_new_repos_start_with_one(
         "        log.write('b:' + __import__('os').environ['FORGE_GROUP'] + '\\n')\n"
         "    assert False, 'failed test b'\n",
         encoding="utf-8")
+    _git(repo, client, "add", "tests/test_b.py")
+    _git(repo, client, "commit", "-qm", "Fail the selected test")
     failed_groups = [_group(repo, client, monkeypatch, group, 2) for group in (1, 2)]
     assert sum(result.returncode != 0 for result in failed_groups) == 1
     failure = next(result for result in failed_groups if result.returncode != 0)
@@ -228,6 +230,8 @@ def test_3_pytest_repos_keep_six_groups_and_new_repos_start_with_one(
     (mocha_dir / "mocha.cmd").write_text("@exit /b 5\n", encoding="utf-8")
     monkeypatch.setenv("PATH", str(mocha_dir) + os.pathsep + os.environ["PATH"])
     _settings(client, test="mocha", groups=2)
+    _git(repo, client, "add", "forge.toml")
+    _git(repo, client, "commit", "-qm", "Use the non-pytest command")
     non_pytest = _group(repo, client, monkeypatch, 1, 2)
     assert non_pytest.returncode == 5
     assert "This group got no tests to run." not in non_pytest.stdout + non_pytest.stderr

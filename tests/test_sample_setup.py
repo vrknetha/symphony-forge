@@ -232,7 +232,8 @@ def test_2_a_sample_data_repo_runs_no_tests_or_ci_until_its_first_build_step(
     reminder = calls(log)[-1]["brief"]
     assert "run the change's related tests through `forge test`" in reminder
     assert "## Sample-data proof" not in reminder
-    env.commit(where, "app.py", "print('prototype')\n", "Keep the prototype working")
+    env.commit(where, "app.py", "print('prototype')\n", "Keep the prototype working\n\n"
+               "Proof list:\n- Done when: check: The app is tidy")
     env.reviews(CLEAN)
     env.open_pr("")
     env.checks(GREEN)
@@ -338,6 +339,8 @@ def test_7_turning_sample_data_off_needs_a_settled_personal_data_answer(
     (where / "app.py").write_text("print('real data starts here')\n", encoding="utf-8")
     repo.git("add", "-A", cwd=where)
     repo.git("commit", "--allow-empty", "-q", "-m", "Turn off sample data", cwd=where)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Record the sample setting proof", "-m",
+             "Proof list:\n- Done when: check: forge.toml turns sample_data off", cwd=where)
     env.reviews(CLEAN)
     env.open_pr("")
     env.checks(GREEN)

@@ -123,7 +123,8 @@ def _fix(env, status: str = "started", worked: bool = False, changes: dict | Non
     env.commit(where, f".factory/fixes/{ITEM}.json", json.dumps(lines),
                f"{ITEM} is working" if worked else f"Start the fix: {lines['why']}")
     for path, text in (changes or ({"app.py": "print('hello')\n"} if worked else {})).items():
-        env.commit(where, path, text, "Worker round")
+        env.commit(where, path, text, "Worker round\n\nProof list:\n"
+                   f"- Done when: check: {lines['done_when']}")
     return where
 
 

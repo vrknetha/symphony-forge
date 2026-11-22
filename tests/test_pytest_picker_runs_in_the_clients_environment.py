@@ -216,7 +216,10 @@ def test_5_new_pytest_client_runs_the_proposed_picker_through_close(env, tmp_pat
                          "--kind", "mechanical", cwd=client)
     assert started.returncode == 0, started.stdout + started.stderr
     folder = client.parent / "client-fix-change-prices"
-    env.commit(folder, "prices.py", "PRICE = 2\n")
+    env.commit(folder, "prices.py", "PRICE = 2\n",
+               "Work\n\nProof list:\n- Done when: tests/test_prices.py::test_client "
+               "(reuse; closest tests/test_prices.py::test_client; proves client tests run "
+               "without the Forge package)")
     closed = repo.forge("close", "change-prices", cwd=client)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     assert "Ready:" in closed.stdout
@@ -290,7 +293,8 @@ def test_6_previously_adopted_client_preserves_legacy_setting_until_owner_replac
         json.dumps(legacy), '"forge test --pytest {base}"')
     env = up.env
     up.on_main("forge.toml", replacement, "Use the proposed picker")
-    env.commit(up.folder, "prices.py", "PRICE = 2\n")
+    env.commit(up.folder, "prices.py", "PRICE = 2\n",
+               "Work\n\nProof list:\n- Done when: check: the upgrade pins this Forge and uses the client's test command")
     closed = subprocess.run([str(installed), "close", NAME], cwd=up.folder,
                             capture_output=True, text=True, timeout=60)
     # Close now refuses the stale merge settings instead of restoring main's copy.
