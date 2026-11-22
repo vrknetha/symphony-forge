@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-RELNOTES-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-22T17:15:14.046077+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Tell clients what each Forge release changed",
+  "touches": 0
+}
