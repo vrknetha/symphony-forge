@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-22T11:25:05.158723+00:00
-seconds: 897.27
-read_hash: 09ab4da67a31f871a56a3ac3266c94d5ef771f06
-round: 1
+read_at: 2026-11-22T12:01:53.374297+00:00
+seconds: 1159.293
+read_hash: 5ca925a351fc30fafe71e6920978bc989e42fb31
+round: 2
 passed: no
-doc_seen: 09ab4da67a31f871a56a3ac3266c94d5ef771f06
+doc_seen: 5ca925a351fc30fafe71e6920978bc989e42fb31
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 5ffc6a080a51bb8ae7198861245a47f063d37686
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a202f2-fbec-7e52-97bc-9060b98f67be
 session:
-loop_choice:
-loop_reason:
+loop_choice: more
+loop_reason: Owner chose on 22 Nov 2026: one more round to fix the 8 open notes, mostly review-engine safety
 ---
 # Cold read notes
 
@@ -157,3 +157,103 @@ Only a genuine trade-off goes to the human, as a question with options.
     The [task estimate](/plans/FORGE-ANTIGRAVITY-1.md:172) is already about 340 production lines, excluding the new protocol stub, command-level tests, live tests and three guide copies. Its Scope therefore suggests well over the approximately 400 changed-line task limit.
     Gain 4, Work 2, Harm 2
    Disposition: cut: BUILD is split into RUNTIME (1, 2) and GUARD (4); READS covers 3, 5, 6.
+
+## Round 2
+
+18. Blocking: Antigravity reviews send credential files that the existing reviewer excludes.
+    Raise: Data loss  
+    Case: normal use - A change accidentally includes a tracked `.env.production` or private key.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:117) sends the raw diff to Antigravity. The pinned [review helper](/Users/ravikiranvemula/.codex/skills/autoreview/scripts/autoreview:2383) removes sensitive paths from that diff; [Forge’s generated-file filter](/src/forge/autoreview.py:59) does not replace that protection.  
+    Adds work: preserve the existing sensitive-file exclusion; F 2 x H 3 = 6; 2 x C = 4  
+    Gain 5, Work 3, Harm 5
+
+19. Blocking: Not done: item 3: Git can run a change’s hook before review isolation.
+    Raise: Security  
+    Case: normal use - A developer has a relative `core.hooksPath` in their Git configuration, and the change adds a `post-checkout` hook there.  
+    [review.py](/src/forge/review.py:891) clones the branch before the planned isolation runs. Git runs `post-checkout` after a clone and resolves a relative hooks path in the checkout, so the change’s script can execute with the developer’s permissions. [Git hooks](https://git-scm.com/docs/githooks), [Git configuration](https://git-scm.com/docs/git-config).  
+    Gain 5, Work 2, Harm 5
+
+20. Blocking: Not done: item 3: Preparing the review diff can execute a script from the change.
+    Raise: Security  
+    Case: normal use - A developer’s Git configuration names a repository script as a text-conversion driver, and the change edits that script and a matching file.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:117) runs `git diff --no-ext-diff` before isolation. Git still runs text-conversion drivers unless `--no-textconv` is given; the pinned [review helper](/Users/ravikiranvemula/.codex/skills/autoreview/scripts/autoreview:52) uses that flag. [Git diff documentation](https://git-scm.com/docs/git-diff).  
+    Gain 5, Work 2, Harm 5
+
+21. Blocking: Not done: item 3: A reviewed `AGENTS.md` becomes instructions for its reviewer.
+    Raise: Security  
+    Case: normal use - A change edits `AGENTS.md` to tell the reviewer to suppress a finding.  
+    The [isolation rule](/plans/FORGE-ANTIGRAVITY-1.md:113) leaves that file in the review checkout as “text.” [Google’s rules documentation](https://antigravity.google/docs/rules) says Antigravity automatically loads it as an always-active rule. The existing [review helper](/Users/ravikiranvemula/.codex/skills/autoreview/scripts/autoreview:3897) instead tells reviewers that source files are evidence, not instructions.  
+    Gain 5, Work 3, Harm 5
+
+22. Blocking: Not done: item 3: A reader can change the original checkout from its throwaway copy.
+    Raise: Security  
+    Case: normal use - A developer has an Antigravity allow rule for writing files outside the active workspace.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:113) changes the working directory and removes the copy’s remote, but does not restrict writes to that directory. [Google’s permissions](https://antigravity.google/docs/permissions?tab=cli) permit rules such as `write_file(*)` without a request. The [snapshot check](/src/forge/story.py:369) does not undo a write; an ignored file can escape its snapshot altogether. The planned test writes only inside the copy.  
+    Gain 5, Work 4, Harm 5
+
+23. Blocking: Not done: item 3: A later cold read opens the old committed plan.
+    Raise: Functional  
+    Case: normal use - The coordinator amends a plan after a blocking read and runs the next read before committing it.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:114) clones only `HEAD`. On later rounds, [story.py](/src/forge/story.py:269) sends the diff and asks the reader to reopen the whole document, so the reader opens the old file while Forge records the read against the amended one.  
+    Gain 5, Work 3, Harm 3
+
+24. Blocking: Not done: item 4: The planned guard commands use incompatible quoting on Windows.
+    Raise: Functional  
+    Case: normal use - A Windows user runs a build or review with Antigravity 1.5.12 or newer.  
+    The build guard uses the single-quoted shell command in [sync.py](/src/forge/sync.py:65); the review guard uses `shlex.quote` in the [plan](/plans/FORGE-ANTIGRAVITY-1.md:113). [Google’s changelog](https://github.com/google-antigravity/antigravity-cli/blob/main/CHANGELOG.md) says Windows passes hook commands to `cmd.exe`, whose [quoting rules](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/cmd) differ. The file-presence check cannot establish that either command returns Forge’s decision.  
+    Gain 5, Work 3, Harm 3
+
+25. Blocking: The cold-read retry still names a target that `forge read` cannot accept.
+    Raise: Functional  
+    Case: normal use - An Antigravity cold read fails because the account is signed out.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:114) supplies `forge read {doc}`, but `doc` is a file path in [story.py](/src/forge/story.py:165). `forge read` accepts a story key or slug, not that path. This leaves the earlier retry-command finding unresolved.  
+    Gain 3, Work 2, Harm 3
+
+26. Advisory: The planned test names make the required test check fail.
+    Raise: Gate  
+    Case: normal use - RUNTIME finishes and runs the required cheap checks.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:54) gives every new file the same `STORY` and repeats numbers across the build, live, and review tests. [test_rules.py](/tests/test_rules.py:26) requires each number to be unique across that story, including skipped live tests.  
+    Gain 4, Work 3, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+27. Advisory: REVIEW can start before the guard implementation it tests.
+    Raise: Plan gap  
+    Case: normal use - READS finishes while GUARD is still in progress.  
+    [REVIEW](/plans/FORGE-ANTIGRAVITY-1.md:152) waits only for READS, but its test requires the Antigravity deny response that GUARD adds. The current [deny hook](/src/forge/deny.py:41) does not read Antigravity’s payload.  
+    Gain 3, Work 1, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+28. Advisory: Unproven: item 3: An Antigravity cold read works without the Claude SDK.
+    Raise: Test  
+    Case: normal use - A Codex user selects Antigravity for reads without installing the Claude SDK.  
+    [story.py](/src/forge/story.py:241) currently sends every non-Codex reader through [Claude’s readiness check](/src/forge/worker.py:463). The planned test can pass with that check unchanged because the [repo fixture](/tests/conftest.py:599) installs a Claude SDK stand-in.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+29. Advisory: Unproven: item 3: An incomplete report cannot be recorded as a clean review.
+    Raise: Test  
+    Case: normal use - The model returns a JSON object with an empty findings list but omits its completion status.  
+    The [planned parser](/plans/FORGE-ANTIGRAVITY-1.md:120) lists the old attempt’s failure reasons, while the existing [helper](/Users/ravikiranvemula/.codex/skills/autoreview/scripts/autoreview:7469) separately validates completion and required fields. The new test supplies only a complete finding and a clean report, so it can pass if the incomplete object is accepted.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+30. Advisory: Unproven: item 1: Usage can omit the cached-token count.
+    Raise: Test  
+    Case: normal use - A prompt response reports input and output tokens without a cached-read count.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:101) adds `cachedReadTokens` directly, but the [protocol type](https://agentclientprotocol.github.io/typescript-sdk/types/Usage.html) permits it to be absent or null. The stub always supplies it, so the test can pass while such a completed round fails during accounting.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+31. Advisory: Not done: item 1: The default run does not name its actual model in `forge work`.
+    Raise: Not done  
+    Case: normal use - A repo uses its Google plan’s default model without an override.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:98) prints the building line before the session reveals its model, so that line names `default`. The default-model test checks the run record, not what `forge work` prints.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+32. Advisory: Not done: item 2: A user-facing repair can keep a low effort after failure.
+    Raise: Not done  
+    Case: normal use - A client repo sets its Antigravity design effort to `low`, and a user-facing task needs a repair.  
+    [worker.py](/src/forge/worker.py:222) applies the effort ladder only when the task is not design work. The [planned repair test](/plans/FORGE-ANTIGRAVITY-1.md:105) covers a non-design round, so it can pass while this repair stays at `low`.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
