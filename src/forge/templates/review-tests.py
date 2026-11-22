@@ -95,10 +95,10 @@ def small_change(base: str, excludes: list[str], tests_only: bool) -> bool:
 
         cfg = tomllib.loads(Path("forge.toml").read_text("utf-8"))
         # Direct fast commands and mixed runners do more work than related() counts.
-        if cfg.get("fast_test") and cfg["fast_test"].strip() != "forge test --pytest {base}":
+        if cfg.get("fast_test") and not re.fullmatch(
+                r"(?:uv run(?: --frozen| --python [\d.]+)* )?forge test --pytest \{base\}",
+                cfg["fast_test"].strip()):
             return False
-        if tests_only:
-            return True
         parts = test_parts(Path.cwd(), cfg["test"])
         if len(parts) != 1 or parts[0][0] != "python" or not repo.pytest_split(Path.cwd(), cfg["test"]):
             return False
@@ -106,11 +106,17 @@ def small_change(base: str, excludes: list[str], tests_only: bool) -> bool:
         runner = next(i for i, word in enumerate(words) if Path(word).name in {"pytest", "pytest.exe"})
         if pytest_options(words).strip():
             return False
-        # Only explicit suite roots with understood options can supply a safe denominator.
+        # Only explicit suite roots with understood options supply a safe count.
+        # Unknown options, including the command's own sharding, keep all groups.
         roots, arguments = [], iter(words[runner + 1:])
         for word in arguments:
-            if word in {"--splits", "--group", "--splitting-algorithm", "-n"}:
+            if word == "-n":
                 next(arguments)
+            elif word == "-o":
+                if not next(arguments).startswith("faulthandler_timeout="):
+                    return False
+            elif re.fullmatch(r"--timeout=\d+|--timeout-method=(?:thread|signal)", word):
+                continue
             elif word in {"-q", "-v", "-x", "--disable-warnings", "--strict-markers", "--strict-config"}:
                 continue
             elif not word.startswith("-") and Path(word.split("::", 1)[0]).exists():
@@ -119,6 +125,8 @@ def small_change(base: str, excludes: list[str], tests_only: bool) -> bool:
                 return False
         if not roots:
             return False
+        if tests_only:
+            return True
         picked, tests, shared, _ = related(base)
         suite = {name for name in tests if any(Path(name) == root or Path(name).is_relative_to(root)
                                              for root in roots)}

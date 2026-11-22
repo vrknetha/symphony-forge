@@ -1,8 +1,10 @@
-"""Test-only CI selects one Linux group and only changed Windows platform files.
+"""Test-only CI preserves own shards and selects changed Windows platform files.
 
 Test-audit: This protects CI's executable classification contract. Static matrices
 previously allocated every group. Picker tests cover execution, but do not cover
 the CI outputs that choose runners. No production seam or fake decides selection.
+The custom-command rule now keeps every configured group for commands with their
+own sharding flags, including test-only changes; earlier it collapsed these to one.
 """
 import json
 import os
@@ -91,7 +93,8 @@ def test_1_test_only_pull_requests_select_changed_files(repo, gh, tmp_path, adop
             assert "strategy:" not in pr_job
             assert "FORGE_GROUP: '1'" in pr_job and "FORGE_GROUPS: '1'" in pr_job
             selected_groups = [1]
-        assert selected_groups == (list(range(1, 7)) if adopted and shared else [1])
+        # This command owns its sharding flags, so CI keeps all configured groups.
+        assert selected_groups == (list(range(1, 7)) if adopted else [1])
         windows = (ROOT / ".github/workflows/forge-next.yml").read_text("utf-8")
         matrix = re.search(r"include: >-\n(.+?)\n    runs-on:", windows, re.S)[1]
         rows = expression(" ".join(matrix.splitlines()), test_only=values["test-only"])

@@ -205,6 +205,10 @@ for that commit's CI, even when the changed files do not overlap. This uses the 
 pytest picker, with no new test collection. Other runners and custom fast commands keep
 their local retest. Repos whose tests run only on the laptop keep their local runs.
 The nightly full run on the default branch covers the rest.
+For a custom pytest-only command, including `uv run`, CI uses one group when the
+related-test picker runs under a quarter of the suite's test files. Commands with
+their own shards, mixed runners or unknown runners keep all configured groups.
+New repos get this at init; existing repos get it on upgrade and sync.
 No test run starts automatically on the default branch after a merge. Full runs started by hand
 for releases stay available. A scheduled full run tests its checked-out commit even if the
 default branch moved while it waited for a runner. If the newest nightly run fails, merge and
