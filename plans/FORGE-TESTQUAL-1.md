@@ -189,10 +189,24 @@ tested on a new repo only (Review rules).
        commit, only when `checks` has no `tests` entry (a repo whose CI runs its own test check).
        This is all such a repo gets.
    - Results come only from a run of the committed code for the current commit and Proof list:
-     - On close's local run, when `git status --porcelain` in the item's checkout lists any file
-       (Forge's ignored `.forge/` folder does not show), the check fails with `Done-when proof: The
-       checkout has uncommitted changes, so this run did not test the committed code. Commit or
-       remove them, then close again.` CI checkouts are clean.
+     - On close's local run, `review.test_run` reads `git status --porcelain` in the item's checkout
+       once, before it starts the test command (Forge's ignored `.forge/` folder does not show). When
+       it lists any file, the check fails with `Done-when proof: The checkout has uncommitted
+       changes, so this run did not test the committed code. Commit or remove them, then close
+       again.` Files the test run itself creates, such as `__pycache__` in a repo that does not
+       ignore it, are never read and never cause a refusal. CI checkouts are clean. The
+       `uncommitted-edit` case also covers a clean repo without a `__pycache__` ignore line, where
+       close is Ready.
+   - Advisory notes from cold read 4, for the builders to weigh (none blocks):
+     - Note 36: a shorter reported pytest path can match a longer named one in another app
+       (`_ran`'s suffix match); prefer an exact repo-relative match when the hook's root allows it.
+     - Note 37: replay copies only `repo.TEST_PATHS` files, so a changed root `conftest.py` stays
+       old in the copy; consider copying changed `conftest.py` files too.
+     - Note 38: an editable install of the item's checkout can still supply a module the fix adds;
+       a pass on old code then wrongly refuses. Watch for it in the `import-error` case.
+     - Note 39: `proof_list` shows the worst result across attempts, so a recovered retry can show
+       as failed in the pull request; use the same last-attempt rule there.
+     - Note 40: the Split out follow-up is not yet a roadmap item; the coordinator records it.
      - `review.passed_record`'s key adds the Proof list text (`review.commit_paragraph(top, base,
        "Proof list:")`), so a proof-only commit runs the tests again and a cached pass is a run of
        the same files and the same list. The cached path restores that run's results file and runs

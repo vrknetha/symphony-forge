@@ -241,7 +241,7 @@ Only a genuine trade-off goes to the human, as a question with options.
    Raise: Functional. [The plan](/plans/FORGE-TESTQUAL-1.md:184) checks Git status after the test command and refuses any uncommitted file. The prescribed [local-test fixture](/tests/test_testplace_settings.py:24) does not ignore Python bytecode; the [retry fixture](/tests/test_close_retries_failed_files.py:64) explicitly does.
    Case: normal use - a clean Python repo does not ignore `__pycache__`. Pytest creates it while passing, and close refuses the resulting untracked files.
    Gain 5, Work 2, Harm 3
-   Disposition: keep - Owner accepted on 22 Nov 2026: the one blocking note (git status checked after tests) is fixed in the builders' section by checking before the tests; advisory notes 36 to 40 are kept for the builders
+   Disposition: keep - Owner accepted on 22 Nov 2026; fixed in the builders' section: close now reads git status once before it starts the test command, so files the run creates, such as __pycache__, never cause a refusal; advisory notes 36 to 40 are listed there for the builders
 
 36. Advisory: A passing test in another Python app can satisfy the named proof.
    Raise: Not done. The [results hook](/src/forge/fasttest.py:634) records paths relative to each pytest process, and the retained [suffix matcher](/src/forge/review.py:731) accepts a shorter reported path. If two apps each have `tests/test_health.py::test_health` and only the second app runs, its result matches a proof naming the first app’s test.
