@@ -1,12 +1,45 @@
 {
+  "approval": {
+    "at": "2026-11-22T13:37:41.129665+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01QuxCokVYUpyNJG8DAVR4Wi",
+    "hash": "10c7b46e0abf7e63454fbb0e2020c765bb28c10070ac9fdb1fbf7c1dfaf05663",
+    "round": 5,
+    "runtime": "claude",
+    "session": "c01a489d-c76f-41c1-8371-d6f0052b027c"
+  },
   "doc": "plans/FORGE-TESTQUAL-1.md",
-  "status": "planning",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-22T10:52:54.266523+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-22T11:34:16.367691+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-22T11:54:18.307802+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-22T12:07:11.653910+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-22T12:30:58.310522+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-22T13:23:37.151181+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-22T13:37:41.130102+00:00",
+      "step": "approved"
     }
   ],
   "title": "Make agent-written tests prove real behaviour",
-  "touches": 0
+  "touches": 1
 }
