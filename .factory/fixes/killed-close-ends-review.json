@@ -1,0 +1,15 @@
+{
+  "base": "c10935c6643bec99aa3f0cd97c9ec51192210abf",
+  "branch": "fix/killed-close-ends-review",
+  "done_when": "Killing a close, by forge stop or by ending its process, also ends its review subprocess tree, so no review run stays alive afterwards; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T17:10:31.306847+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "When a close is killed, its review subprocess (the Autoreview helper and its Codex or Claude child) keeps running, so a review run stays alive and blocks forge upgrade"
+}
