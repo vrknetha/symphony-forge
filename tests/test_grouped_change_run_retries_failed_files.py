@@ -46,8 +46,9 @@ def test_2_grouped_change_run_retries_only_failed_files_after_fixture_change(
                            if failure == "timeout" else
                            "    if not earlier:\n        import os\n        os._exit(1)\n")
                 if failure == "timeout":
+                    # The default uses signals on Unix and a worker-ending thread on Windows.
                     source = "import pytest\n" + source.replace(
-                        "def test_failed():", "@pytest.mark.timeout(0.2, method='signal')\ndef test_failed():")
+                        "def test_failed():", "@pytest.mark.timeout(0.2)\ndef test_failed():")
         repo.write(f"client tests/test_{name}.py", source)
     repo.git("add", "-A")
     repo.git("commit", "-qm", "Configure grouped change tests")
