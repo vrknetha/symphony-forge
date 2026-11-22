@@ -1,0 +1,15 @@
+{
+  "base": "d76c106bc310c8ddf40cbc3251bc9025a6942c5d",
+  "branch": "fix/forge-ask",
+  "done_when": "forge ask \"<question>\" [--model <model>] runs one read-only Codex turn on the same app-server path builders use, waits for a place in the agent lane, prints the answer and records the run; the guide line matches the command; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T19:23:46.938849+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The guide lists forge ask for asking Codex a question, but no such command exists, so advisor questions (for example to Astra) run outside Forge through a bare codex exec that skips the agent lanes, the pinned SDK and run records"
+}
