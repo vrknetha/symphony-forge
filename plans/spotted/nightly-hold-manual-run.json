@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/merge.py\tA page of unrelated workflow runs can hide the failed full run\tnightly-hold-manual-run",
+      "kind": "bug",
+      "path": "src/forge/merge.py",
+      "line": 429,
+      "text": "A page of unrelated workflow runs can hide the failed full run",
+      "from": "blocking",
+      "item": "nightly-hold-manual-run",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/merge.py\tNot done: Merge reads the newest finished full run on the default branch, scheduled or started by hand\tnightly-hold-manual-run",
+      "kind": "bug",
+      "path": "src/forge/merge.py",
+      "line": 428,
+      "text": "Not done: Merge reads the newest finished full run on the default branch, scheduled or started by hand",
+      "from": "blocking",
+      "item": "nightly-hold-manual-run",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_manual_full_run_controls_merges.py\tGate: complete the full-run merge and human handoff proof\tnightly-hold-manual-run",
+      "kind": "bug",
+      "path": "tests/test_manual_full_run_controls_merges.py",
+      "line": 24,
+      "text": "Gate: complete the full-run merge and human handoff proof",
+      "from": "blocking",
+      "item": "nightly-hold-manual-run",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

@@ -6,7 +6,7 @@ import os
 import re
 import tomllib
 from pathlib import Path
-from forge import checks, close, codex, github, githooks, prcheck, repo, review, story, task, time_records
+from forge import board_facts, checks, close, codex, github, githooks, prcheck, repo, review, story, task, time_records
 
 COMMANDS = [{
     "words": "merge", "run": "merge", "changes_state": False,
@@ -18,8 +18,8 @@ COMMANDS = [{
 ENABLE = "let-the-agent-merge"
 
 REFUSALS = {
-    "red_default": ("The nightly run {run} failed. Hold this task.",
-                    "start a fix for it and merge that fix"),
+    "red_default": ("The full run {run} failed. Hold this task.",
+                    "start a fix for it and merge that fix. After the repair, start a full run by hand on the default branch to clear the hold."),
     "disabled": ("forge merge is disabled by merge = \"human\" in the default branch's forge.toml.",
                  "the repo owner runs forge merge enable in their own terminal"),
     "owner_only": ("Only the repo owner switches on agent merges, on {default}, from a terminal outside Claude Code or Codex.", "the repo owner runs forge merge enable on {default} in a terminal outside Claude Code or Codex"),
@@ -416,7 +416,7 @@ def _save_ready(path: Path, receipt: dict) -> None:
 
 
 def red(top: Path, *, item: str = "") -> str:
-    """Name the failed newest nightly run; fixes remain free to repair it."""
+    """Name the failed newest finished full run; fixes remain free to repair it."""
     if item and "/" not in item:
         return ""
     default = repo.default_branch(top)
@@ -425,21 +425,28 @@ def red(top: Path, *, item: str = "") -> str:
     if not workflow and repo.test_place(config) != "ci":
         return ""
     endpoint = f"repos/{{owner}}/{{repo}}/actions/workflows/{workflow or 'forge.yml'}/runs"
-    done = repo.run("gh", "api", endpoint, "--method", "GET", "--raw-field", "event=schedule",
-                    "--raw-field", f"branch={default}", "--raw-field", "per_page=1", cwd=top, timeout=60)
-    try:
-        runs = json.loads(done.stdout)["workflow_runs"]
-        if done.returncode or not isinstance(runs, list) or any(not isinstance(run, dict) for run in runs):
-            raise ValueError
-    except (ValueError, KeyError, TypeError):
-        repo.refuse(checks.REFUSALS["not_green"], item=item,
-                    reason="GitHub did not answer: " + (done.stderr.strip() or done.stdout.strip()
-                                                       or "no readable answer").rstrip("."))
-    if not runs or runs[0].get("conclusion") != "failure":
-        return ""
-    run = runs[0]
-    name = run.get("display_title") or run.get("name") or "Full test suite"
-    return name + (f" ({run['html_url']})" if run.get("html_url") else "")
+    runs = []
+    for event in ("schedule", "workflow_dispatch"):
+        done = repo.run("gh", "api", endpoint, "--method", "GET", "--raw-field", f"event={event}",
+                        "--raw-field", f"branch={default}", "--raw-field", "per_page=20", cwd=top, timeout=60)
+        try:
+            found = json.loads(done.stdout)["workflow_runs"]
+            if done.returncode or not isinstance(found, list) or any(not isinstance(run, dict) for run in found):
+                raise ValueError
+        except (ValueError, KeyError, TypeError):
+            repo.refuse(checks.REFUSALS["not_green"], item=item,
+                        reason="GitHub did not answer: " + (done.stderr.strip() or done.stdout.strip()
+                                                           or "no readable answer").rstrip("."))
+        runs.extend(found)
+    runs.sort(key=lambda run: run.get("created_at", ""), reverse=True)
+    for run in runs:
+        if (run := board_facts.finished_full_run(top, run)) is None:
+            continue
+        if run.get("conclusion") != "failure":
+            return ""
+        name = run.get("display_title") or run.get("name") or "Full test suite"
+        return name + (f" ({run['html_url']})" if run.get("html_url") else "")
+    return ""
 
 
 def _conversations(top: Path, item: str) -> set[str]:

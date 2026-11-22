@@ -23,17 +23,19 @@ NIGHTLY_RUNS = "repos/{{owner}}/{{repo}}/actions/workflows/{workflow}/runs"
 NIGHTLY_URL = "https://github.com/acme/shop/actions/runs/44"
 
 
-def _nightly(env, result: str | None, workflow: str = "forge.yml") -> None:
+def _nightly(env, result: str | None, workflow: str = "forge.yml", event: str = "schedule") -> None:
     runs = [] if result is None else [{
-        "display_title": "Main branch suite",
+        "display_title": "Main branch suite" if event == "schedule" else "Manual repair suite",
         "name": "Full test suite",
         "head_branch": "main",
-        "event": "schedule",
+        "event": event,
         "conclusion": result,
         "html_url": NIGHTLY_URL,
     }]
-    env.gh.respond("api", NIGHTLY_RUNS.format(workflow=workflow),
-                   stdout=json.dumps({"workflow_runs": runs}))
+    for way in ("schedule", "workflow_dispatch"):
+        env.gh.respond("api", NIGHTLY_RUNS.format(workflow=workflow),
+                       "--method", "GET", "--raw-field", f"event={way}",
+                       stdout=json.dumps({"workflow_runs": runs if way == event else []}))
 
 
 def _ready_task(env, workflow: str = "forge.yml", merger: str = "agent") -> str:
@@ -60,11 +62,13 @@ def _ready_task(env, workflow: str = "forge.yml", merger: str = "agent") -> str:
 
 
 def _assert_nightly_query(env, workflow: str = "forge.yml") -> None:
-    [call] = env.gh_calls("api", path=NIGHTLY_RUNS.format(workflow=workflow))
-    assert call[call.index("--raw-field") + 1] == "event=schedule"
-    fields = [call[i + 1] for i, value in enumerate(call[:-1]) if value == "--raw-field"]
-    assert "branch=main" in fields
-    assert "per_page=1" in fields
+    calls = env.gh_calls("api", path=NIGHTLY_RUNS.format(workflow=workflow))
+    assert len(calls) == 2
+    for call, event in zip(calls, ("schedule", "workflow_dispatch")):
+        fields = [call[i + 1] for i, value in enumerate(call[:-1]) if value == "--raw-field"]
+        assert f"event={event}" in fields
+        assert "branch=main" in fields
+        assert not any(field.startswith("status=") for field in fields)
 
 
 @pytest.mark.platform
@@ -78,8 +82,8 @@ def test_2_failed_nightly_run_blocks_a_story_task_with_repair_details(env, workf
 
     assert merged.returncode != 0
     assert merged.stderr == (
-        f"The nightly run Main branch suite ({NIGHTLY_URL}) failed. Hold this task.\n"
-        "Next: start a fix for it and merge that fix\n")
+        f"The full run Main branch suite ({NIGHTLY_URL}) failed. Hold this task.\n"
+        "Next: start a fix for it and merge that fix. After the repair, start a full run by hand on the default branch to clear the hold.\n")
     assert not env.gh_calls("pr", "merge")
     _assert_nightly_query(env, workflow)
 
@@ -132,7 +136,7 @@ def test_5_human_merge_advice_names_the_failed_nightly_and_repair(env, queued):
     # must hold the task, and the queue must not classify it as ready to merge.
     # Existing coverage checked the old, incorrect ready handoff. No new seam.
     item = _ready_task(env, merger="human")
-    _nightly(env, "failure")
+    _nightly(env, "failure", event="workflow_dispatch")
     url = "https://github.com/acme/shop/pull/7"
     env.gh.respond("pr", "view", "task/SHOP-T1", "--json", "url",
                    stdout=json.dumps({"url": url}))
@@ -141,14 +145,16 @@ def test_5_human_merge_advice_names_the_failed_nightly_and_repair(env, queued):
 
     output = ready.stdout + ready.stderr
     assert ready.returncode != 0, output
-    assert f"The nightly run Main branch suite ({NIGHTLY_URL}) failed. Hold this task." in output
-    assert "Next: start a fix for it and merge that fix" in output
+    assert f"The full run Manual repair suite ({NIGHTLY_URL}) failed. Hold this task." in output
+    advice = ("Next: start a fix for it and merge that fix. After the repair, "
+              "start a full run by hand on the default branch to clear the hold.")
+    assert advice in output
     assert f"{item} is ready; a human merges" not in output
     if queued:
         summary = next(line for line in ready.stdout.splitlines() if line.startswith("Merged ("))
         assert "Ready to merge (0): none" in summary
         assert f"Needs you (1): {item}" in summary
         assert "Hold this task" in ready.stdout.split(summary)[1]
-        assert "Next: start a fix for it and merge that fix" in ready.stdout.split(summary)[1]
+        assert advice in ready.stdout.split(summary)[1]
     assert not env.gh_calls("pr", "merge")
     _assert_nightly_query(env)

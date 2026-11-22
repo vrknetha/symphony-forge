@@ -334,11 +334,13 @@ and the nightly full run covers the default branch. A full run started by hand f
 sign-off stays available. A scheduled run tests its checked-out commit even if the default branch
 moved while it waited for a runner. Laptop-test repos keep their full runs. New repos get this
 workflow at setup; existing repos get it on upgrade or `forge sync`.
-The newest nightly run of `full_suite_workflow`, or `forge.yml` when unset, decides whether
+The newest finished full run on the default branch, scheduled or started by hand, of
+`full_suite_workflow`, or `forge.yml` when unset, decides whether
 merges stop. If its conclusion is failure, `forge merge` refuses a story part, says to hold it,
 and names the run and the repair step on a `Next:` line. Start a fix for that failure and merge
-the fix. Fixes can still merge
-so the repair can reach the default branch. A green result, no nightly run, or another conclusion
+the fix. After the repair, start a full run by hand on the default branch. A green full run
+clears the hold without a wait for the next scheduled run. Fixes can still merge
+so the repair can reach the default branch. A green result or no finished full run
 does not stop merges. When a person merges, land holds the story part with the same repair advice.
 `forge land --all` lists the held part under Needs you.
 Forge cannot stop a merge on GitHub. No saved records change on upgrade.

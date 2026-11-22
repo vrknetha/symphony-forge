@@ -410,6 +410,21 @@ def full_workflow(cfg: Item) -> str | None:
     return cfg.get("full_suite_workflow") or ("forge.yml" if repo.test_place(cfg) == "ci" else None)
 
 
+def finished_full_run(top: Path, run: Item) -> Item | None:
+    """The run, or for a rerun in progress or cancelled the latest attempt that finished."""
+    if run.get("conclusion") in ("success", "failure"):
+        return run
+    for attempt in range(run["run_attempt"] - 1 if type(run.get("run_attempt")) is int else 0, 0, -1):
+        got = repo.run("gh", "api", f"repos/{{owner}}/{{repo}}/actions/runs/{run.get('id')}/attempts/{attempt}", cwd=top)
+        try:
+            conclusion = json.loads(got.stdout).get("conclusion") if got.returncode == 0 else None
+        except (ValueError, AttributeError):
+            conclusion = None
+        if conclusion in ("success", "failure"):
+            return {**run, "conclusion": conclusion, "run_attempt": attempt, "earlier": True}
+    return None
+
+
 def failed_schedules(top: Path) -> list[Item]:
     """Failed scheduled workflows and manual full runs on the default branch.
     Read each run list once and one log per failed workflow, kept ten minutes.
@@ -454,25 +469,12 @@ def failed_schedules(top: Path) -> list[Item]:
         runs = list({run.get("id", id(run)): run for run in runs}.values())
         runs.sort(key=lambda run: run.get("created_at", ""), reverse=True)
 
-        def finished(run: Item) -> Item | None:
-            """The run, or for a rerun in progress or cancelled the latest attempt that finished."""
-            if run.get("conclusion") in ("success", "failure"):
-                return run
-            for attempt in range(run["run_attempt"] - 1 if type(run.get("run_attempt")) is int else 0, 0, -1):
-                got = repo.run("gh", "api", f"repos/{{owner}}/{{repo}}/actions/runs/{run.get('id')}/attempts/{attempt}", cwd=top)
-                try:
-                    conclusion = json.loads(got.stdout).get("conclusion") if got.returncode == 0 else None
-                except (ValueError, AttributeError):
-                    conclusion = None
-                if conclusion in ("success", "failure"):
-                    return {**run, "conclusion": conclusion, "run_attempt": attempt, "earlier": True}
-            return None
         latest: dict[Any, Item] = {}
         for run in runs:  # newest first
             if run.get("workflow_id") in latest:  # a newer run decided it: read no attempts for this one
                 continue
             if full and file_of(run) == full:  # only scheduled and manual runs count, and only finished ones
-                run = finished(run) if run.get("event", "schedule") in ways else None
+                run = finished_full_run(top, run) if run.get("event", "schedule") in ways else None
                 if run is None:
                     continue
             latest.setdefault(run.get("workflow_id"), run)
