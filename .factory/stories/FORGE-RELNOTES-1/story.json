@@ -1,12 +1,37 @@
 {
+  "approval": {
+    "at": "2026-11-22T18:44:38.302147+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01XfZCsB5ZECgW8ZM3jg5z9E",
+    "hash": "d47b03a81f97853be8482d3339bb53c9fa08e57d59e43ed9fc9b3b718ab9df96",
+    "round": 3,
+    "runtime": "claude",
+    "session": "c01a489d-c76f-41c1-8371-d6f0052b027c"
+  },
   "doc": "plans/FORGE-RELNOTES-1.md",
-  "status": "planning",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-22T17:15:14.046077+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-22T17:59:08.951686+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-22T18:28:13.693737+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-22T18:38:52.837447+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-22T18:44:38.304026+00:00",
+      "step": "approved"
     }
   ],
   "title": "Tell clients what each Forge release changed",
-  "touches": 0
+  "touches": 1
 }
