@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-22T12:48:00.909318+00:00
-seconds: 777.217
-read_hash: d14778be4180c489dac112e4c062c7f03b992716
-round: 4
+read_at: 2026-11-22T13:24:50.318805+00:00
+seconds: 599.231
+read_hash: 9bbcec22d5e1831a4af0e82214693eef9939beaf
+round: 5
 passed: no
-doc_seen: d14778be4180c489dac112e4c062c7f03b992716
+doc_seen: 9bbcec22d5e1831a4af0e82214693eef9939beaf
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 96718861630258e7861fc785a3ec418d30bb3808
+notes_seen: 6822235c77310ea97d44721c3e5d3a145beae7d3
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a202f2-fbec-7e52-97bc-9060b98f67be
 session:
 loop_choice: accept
-loop_reason: Owner accepted on 22 Nov 2026: notes 41 to 45 are fixed in the builders' section (extra folder names, isolated guard start with fixed PATH, refuse reads without a location, encrypted-file care); advisory 46 and 47 stay for the builders; Astra validates the design before approval
+loop_reason: Owner accepted on 22 Nov 2026: notes 48 to 54 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
 ---
 # Cold read notes
 
@@ -382,3 +382,54 @@ Only a genuine trade-off goes to the human, as a question with options.
     [Doctor’s planned check](/plans/FORGE-ANTIGRAVITY-1.md:140) starts one session, while [builds and reads use separate profiles](/plans/FORGE-ANTIGRAVITY-1.md:99). The plan says their sign-ins are not shared over SSH, so one successful check cannot establish that both kinds of run can sign in.  
     Gain 3, Work 2, Harm 3
    Disposition: cut: with SSH_CONNECTION set, doctor checks the sign-in of both profiles and names the one that is not signed in.
+
+## Round 5
+
+48. Blocking: A linked hook file can enter the review copy.
+    Raise: Security  
+    Case: normal use - A reviewed change contains `_agents/hooks.json` as a symbolic link to a regular file named `hook-data.json` in the repository root.  
+    The [copy rule](/plans/FORGE-ANTIGRAVITY-1.md:127) checks whether the **resolved** path is allowed. The target `hook-data.json` passes that check, so the copy can recreate the file under the excluded `_agents/hooks.json` name. [Python’s copy operation](https://docs.python.org/3/library/shutil.html#shutil.copy2) preserves a symbolic link when `follow_symlinks=False`; Antigravity recognizes `_agents` and can run a [SessionStart hook](https://antigravity.google/docs/hooks). The test covers a regular `_agents` hook, not this link.  
+    Gain 5, Work 2, Harm 5
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 48 to 54 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+49. Blocking: The review copy can still be inside the checkout it is meant to isolate.
+    Raise: Security  
+    Case: normal use - A developer sets `XDG_DATA_HOME` to a folder inside the task checkout, and the change contains an Antigravity startup hook.  
+    The [new copy location](/plans/FORGE-ANTIGRAVITY-1.md:98) uses `XDG_DATA_HOME` without checking that it is outside the checkout. Antigravity [loads customizations from parent folders up to the repository root](https://antigravity.google/docs/customization-discovery/), so it can load the checkout’s hook even though the copy itself was filtered.  
+    Gain 5, Work 2, Harm 5
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 48 to 54 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+50. Blocking: The guard can still load its own code from the worker’s checkout.
+    Raise: Security  
+    Case: normal use - Forge is run from a worktree of its own source repository, and the worker changes `src/forge/deny.py`.  
+    The [new guard](/plans/FORGE-ANTIGRAVITY-1.md:101) explicitly inserts Forge’s source folder into Python’s import path before importing `forge.deny`. Forge [runs a source worktree’s own code](/src/forge/cli.py:117), so that folder can be the checkout the worker is editing. On the next command, the guard imports the edited code; `-I` does not undo the explicit insertion.  
+    Gain 5, Work 3, Harm 5
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 48 to 54 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+51. Advisory: The first live check requires a model some owners cannot select.
+    Raise: Gate  
+    Case: normal use - The owner runs the live contract check with a Free or Plus account.  
+    The [first-step check](/plans/FORGE-ANTIGRAVITY-1.md:110) must check the values offered by Gemini 4 Neon before the other parts start, but the [plan says Neon is unavailable](/plans/FORGE-ANTIGRAVITY-1.md:9) on those plans. The account can use its default model, but cannot supply the required Neon values.  
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 48 to 54 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+52. Advisory: Each new worktree can need a separate SSH sign-in.
+    Raise: Functional  
+    Case: normal use - An SSH user signs in to the profiles checked by doctor, then starts a task from the main checkout.  
+    The [revised plan](/plans/FORGE-ANTIGRAVITY-1.md:100) gives each worktree a different full profile, while [doctor checks only the current checkout’s full profile](/plans/FORGE-ANTIGRAVITY-1.md:142). Forge [selects the task’s worktree](/src/forge/worker.py:100) for the build, so doctor can report ready while that task’s new profile is signed out.  
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 48 to 54 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+53. Advisory: Findings with paths in the new review copy can be rejected.
+    Raise: Functional  
+    Case: normal use - Antigravity returns a finding with an absolute path to a file it read.  
+    The [new engine](/plans/FORGE-ANTIGRAVITY-1.md:131) returns its text to the helper without translating paths from the separate review copy. The existing [path adapter](/src/forge/review_process.py:64) strips only the original review-clone path, and the [helper rejects absolute paths](/Users/ravikiranvemula/.codex/skills/autoreview/scripts/autoreview:6811). A valid finding can therefore make the review fail.  
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted on 22 Nov 2026: notes 48 to 54 of round 5 stay in the read file, and each builder must fix the ones in their part, with a test, before close; no further plan edits
+
+54. Advisory: Read copies remain after the read finishes.
+    Raise: Functional  
+    Case: normal use - A cold read copies an uncommitted plan, and the user later removes that plan from the checkout.  
+    The [revised read](/plans/FORGE-ANTIGRAVITY-1.md:129) leaves the copy under the machine’s data folder; [copying](/plans/FORGE-ANTIGRAVITY-1.md:127) removes it only before a later read of the same target. The working-tree contents can remain there indefinitely, despite the promised throwaway copy.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
