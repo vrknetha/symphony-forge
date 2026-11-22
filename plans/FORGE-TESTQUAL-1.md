@@ -6,7 +6,7 @@
 
 - Before a builder adds a test, the builder names the closest test that already exists. The builder then reuses that test, extends it, or adds a new test. A new test says which outcome no existing test proves. The review reports a new test that does not say this. (Source: the owner's decision, 22 Nov 2026)
 - Each Done-when line names the test that proves it, in the proof list that the builder writes in the last commit. For a pytest test, close checks that the test is on the branch, ran, passed and was not skipped. For a Vitest or Playwright test, close checks only that the test is on the branch; proof that it ran comes in a later item. The review checks that the test's assertion proves the line. A line that changes only settings, docs or tests can name a check in place of a test. (Source: the owner's decision, 22 Nov 2026)
-- Git refuses a commit when a test it adds has a check that is always true, such as `assert True` or `expect(x).toBe(x)`, in pytest, Vitest and Playwright tests. (Source: the owner's decision, 22 Nov 2026)
+- Git refuses a commit when a test it adds has a check that is always true, such as `assert True` or `expect(x).toBe(x)`, in pytest, Vitest and Playwright tests. Forge refuses only checks it can prove are always true: a true value, or a plain name or value compared with itself. A comparison such as `a.client is a.client` is allowed, because a property can give a new value each time. (Source: the owner's decision, 22 Nov 2026)
 - A new pytest test with no assertion gets a warning at commit, because many good tests check the result in a helper. In a new starter app, lint fails on a Vitest or Playwright test with no assertion. (Source: the owner's decision, 22 Nov 2026)
 - For a fix, close also runs the fix's new or changed pytest test on the code before the fix, in a separate temporary copy of the repo. There the test must fail, and on the new code it must pass. When the test cannot start on the old code, for example because it imports a function that the fix adds, close gives a warning and the review judges the test. Your own files and uncommitted work are never touched. The same check for Vitest and Playwright tests comes in a later item. (Source: the owner's decision, 22 Nov 2026)
 - What each repo gets: a new repo gets all of this at setup. An existing repo gets it when it upgrades Forge and runs sync. In an existing repo whose CI runs its own test check in place of Forge's, Forge sees no test results, so it checks only that each Done-when line names a test that is on the branch; the run check and the old-code check need Forge's test check. An item that is open during the upgrade must write its proof list in the new form at its next close.
@@ -36,7 +36,7 @@ and 90 (5%) check their result only in a helper.
 
 1. **The worker instructions tell each builder to name the closest existing test and to choose reuse, extend or new, and the review reports a new test that does not say which outcome no existing test proves.**
 2. **Close refuses a task or fix when one of its Done-when lines names no test or names a test that is not on the branch, or when a named pytest test did not run, failed or was skipped.**
-3. **A commit that adds an always-true check to a pytest test, or an always-true check written on one line to a Vitest or Playwright test, is refused.**
+3. **A commit that adds a check that is always true, a true value or a plain name or value compared with itself, to a pytest test, or such a check written on one line to a Vitest or Playwright test, is refused.**
 4. **A new pytest test with no assertion gets a warning at commit, and a Vitest or Playwright test with no assertion fails lint in a new starter app.**
 5. **Close refuses a fix whose new or changed pytest test passes on the code before the fix, and gives only a warning when that test cannot run on that code.**
 
@@ -180,14 +180,18 @@ tested on a new repo only (Review rules).
      (`calls(log)[-1]["brief"]`) with the Authoring gate sentences and the brief's line form; after
      `forge close` the review prompt (`env.prompt()`) has the review text.
 2. Close checks each Done-when line's test (PROOF).
-   - Where:
-     - `review.test_run`'s closing path (close's run in a local-test repo, and CI's
-       `forge test --change`), after the command's last attempt. Worker runs (`closing=False`) skip
-       it. Docs-only changes, sample-data mode and a repo with no test command skip it, because
-       `test_run` returns before the run.
-     - `prcheck.pr_check` (`forge-pr-check`), with `ran=False` and `head` set to its `--head`
-       commit, only when `checks` has no `tests` entry (a repo whose CI runs its own test check).
-       This is all such a repo gets.
+   - Two separate checks, so that the names are checked even when no test runs:
+     - The name check (`check(..., ran=False)`): every covered item has a line, and each named test
+       is on the branch. It does not depend on a test command or on which tests run.
+       - At local close: `review.test_run`'s closing path runs it first, before its early returns
+         for a repo with no test command and for a docs-only change (a docs-only item names a
+         `check:` line). Sample-data mode skips it: its proof list holds browser walks, not tests.
+       - In CI: `prcheck.pr_check` (`forge-pr-check`) runs it for every CI-test repo, with `head`
+         set to its `--head` commit. For a repo whose CI runs its own test check, this is all it
+         gets. The CI tests job does not repeat it.
+     - The outcome check (`check(..., ran=True)`): only the outcomes of named pytest tests that the
+       test command ran, in `review.test_run`'s closing path after the command's last attempt
+       (close's local run and CI's `forge test --change`). Worker runs (`closing=False`) skip both.
    - Results come only from a run of the committed code for the current commit and Proof list:
      - On close's local run, `review.test_run` reads `git status --porcelain` in the item's checkout
        once, before it starts the test command (Forge's ignored `.forge/` folder does not show). When
@@ -197,6 +201,49 @@ tested on a new repo only (Review rules).
        ignore it, are never read and never cause a refusal. CI checkouts are clean. The
        `uncommitted-edit` case also covers a clean repo without a `__pycache__` ignore line, where
        close is Ready.
+     - `review.passed_record`'s key adds the Proof list text (`review.commit_paragraph(top, base,
+       "Proof list:")`), so a proof-only commit runs the tests again and a cached pass is a run of
+       the same files and the same list. The cached path restores that run's results file and runs
+       the outcome check on it.
+     - `templates/review-tests.py` (and this repo's generated `.forge/review-tests.py`) reuses an
+       earlier CI run only when the effective Proof list is the same for both heads: the newest
+       `Proof list:` paragraph in each head's history after the base, skipping commits that change
+       only paths under `review.BOOKKEEPING` (`.factory/` and `plans/`), the same rule
+       `review.commit_paragraph` uses. Existing repos get this on sync.
+   - Both checks skip a change whose only files other than Forge's records and plans are
+     `forge.toml` and files exactly as `forge sync` writes them (use `repo.generated_files` and
+     `sync.synced`, as `githooks._promote` does), and say `Done-when proof: Forge's own settings or
+     generated files only; no Done-when test needed.` This keeps the merge switch, upgrade and doctor
+     fixes working (their proof lines name no test; `close.generated_fix_proof` does not change).
+   - The item: `review.branch_item` of the branch, or of `GITHUB_HEAD_REF` on a detached HEAD
+     (`pr_check` already has it). Covered keys: a task's Covers numbers (`review.task`), a fix's one
+     `Done when`. Only the test named on a line counts as proof; the closest test named in its
+     decision does not. Selection, both checks and `proof_list` use one parser in `proof.py`.
+   - The name check fails, with one line each:
+     - `Done-when proof: Done-when <n> names no test in the Proof list.` (a fix: `The fix's Done-when
+       line names no test in the Proof list.`), plus once: `Add a line "<n>: <test>" to the Proof
+       list in your last commit message.`
+     - `Done-when proof: <name> is not on this branch.` The file is missing, or the case is not in
+       it: for pytest, the last `::` part as a whole word, as `proof_list` checks today; for a
+       JavaScript title, its last ` > ` part as plain text, since nested suites write each title
+       separately. A reused, unchanged test passes this check. This is the only check on a
+       Vitest or Playwright name.
+     - A `check:` line passes.
+   - The outcome check, for pytest names only, from the results of the last attempt of each test
+     (for a file that close retried, the lines after the last `fasttest.RETRY_HEADER`), so a test
+     that failed and then passed on the retry counts as passed, fails with:
+     - `Done-when proof: <name> failed in this test run.` (any matching result `failed` or `error`).
+     - `Done-when proof: <name> was skipped in this test run. Name the case that proves the line.`
+       (any matching result `skipped`, `xfail` or `xpass`, also when other cases passed).
+     - `Done-when proof: <name> did not run in this test run.` when no result matches, and only when
+       `FORGE_GROUPS` is 1. Forge's pytest hook loads into every pytest the command starts, so a
+       command that started no pytest ran none of them. In grouped CI each group checks only the
+       names it ran.
+   - So that a reused pytest test runs: `fasttest.pytest_tests` (`:803`), when it is not a worker
+     run, adds the Proof list's pytest names to `named`, which the selection plugin already runs.
+   - Failure in close: `test_run` returns non-zero, so close refuses with its `tests_failed` message
+     and prints the `Done-when proof:` lines above it. In CI the tests check or `forge-pr-check` goes
+     red and close's check wait refuses.
    - Advisory notes from cold read 4, for the builders to weigh (none blocks):
      - Note 36: a shorter reported pytest path can match a longer named one in another app
        (`_ran`'s suffix match); prefer an exact repo-relative match when the hook's root allows it.
@@ -207,53 +254,13 @@ tested on a new repo only (Review rules).
      - Note 39: `proof_list` shows the worst result across attempts, so a recovered retry can show
        as failed in the pull request; use the same last-attempt rule there.
      - Note 40: the Split out follow-up is not yet a roadmap item; the coordinator records it.
-     - `review.passed_record`'s key adds the Proof list text (`review.commit_paragraph(top, base,
-       "Proof list:")`), so a proof-only commit runs the tests again and a cached pass is a run of
-       the same files and the same list. The cached path restores that run's results file and runs
-       `check` on it.
-     - `templates/review-tests.py` (and this repo's generated `.forge/review-tests.py`) reuses an
-       earlier CI run only when the effective Proof list is the same for both heads: the newest
-       `Proof list:` paragraph in each head's history after the base, skipping commits that change
-       only paths under `review.BOOKKEEPING` (`.factory/` and `plans/`), the same rule
-       `review.commit_paragraph` uses. Existing repos get this on sync.
-   - It skips a change whose only files other than Forge's records and plans are `forge.toml` and
-     files exactly as `forge sync` writes them (use `repo.generated_files` and `sync.synced`, as
-     `githooks._promote` does), and says `Done-when proof: Forge's own settings or generated files
-     only; no Done-when test needed.` This keeps the merge switch, upgrade and doctor fixes working
-     (their proof lines name no test; `close.generated_fix_proof` does not change).
-   - The item: `review.branch_item` of the branch, or of `GITHUB_HEAD_REF` on a detached HEAD
-     (`pr_check` already has it). Covered keys: a task's Covers numbers (`review.task`), a fix's one
-     `Done when`.
-   - The check fails, with one line each:
-     - `Done-when proof: Done-when <n> names no test in the Proof list.` (a fix: `The fix's Done-when
-       line names no test in the Proof list.`), plus once: `Add a line "<n>: <test>" to the Proof
-       list in your last commit message.`
-     - `Done-when proof: <name> is not on this branch.` The file is missing, or the case is not in
-       it: for pytest, the last `::` part as a whole word, as `proof_list` checks today; for a
-       JavaScript title, its last ` > ` part as plain text, since nested suites write each title
-       separately. A reused, unchanged test passes this check. This is the only check on a
-       Vitest or Playwright name.
-     - For pytest names only, from the results of the last attempt of each test (for a file that
-       close retried, the lines after the last `fasttest.RETRY_HEADER`), so a test that failed and
-       then passed on the retry counts as passed:
-       - `Done-when proof: <name> failed in this test run.` (any matching result `failed` or `error`).
-       - `Done-when proof: <name> was skipped in this test run. Name the case that proves the line.`
-         (any matching result `skipped`, `xfail` or `xpass`, also when other cases passed).
-       - `Done-when proof: <name> did not run in this test run.` when no result matches, and only
-         when `FORGE_GROUPS` is 1. Forge's pytest hook loads into every pytest the command starts,
-         so a command that started no pytest ran none of them.
-     - A `check:` line passes with no run.
-   - In grouped CI (`FORGE_GROUPS` > 1): the "names no test" and "not on this branch" lines only in
-     group 1 (`FORGE_GROUP` 1); "failed" and "skipped" in every group for the names it ran; no "did
-     not run".
-   - So that a reused pytest test runs: `fasttest.pytest_tests` (`:803`), when it is not a worker
-     run, adds the Proof list's pytest names to `named`, which the selection plugin already runs.
-   - Failure in close: `test_run` returns non-zero, so close refuses with its `tests_failed` message
-     and prints the `Done-when proof:` lines above it. In CI the tests check (or `forge-pr-check`)
-     goes red and close's check wait refuses.
    - Shared fixture: `tests/test_close.py::Forge.start` commits its worker change with a Proof list
      (`- Done when: check: <done_when>` for a fix, `- <n>: check: ...` for each covered task item), so
      existing local-test close cases keep passing. Cases that test the refusal write their own.
+     `tests/test_close_checks_named_tests.py` commits its own old-format Proof list that names
+     skipped, missing and teardown-failing tests and expects Ready: change its lists to the numbered
+     form, expect the new refusal where a named test is skipped, missing or failing, and keep its
+     pull-request rendering assertions (`passed in close's run`, `not run`, `not checked`).
      Before the PROOF pull request merges, run the close and review test files and
      `tests/test_release_version.py` (guard rule for close and review changes).
    - Test (new repo): `tests/test_done_when_tests.py::test_2_close_refuses_a_done_when_line_without_a_passing_test`,
@@ -277,7 +284,8 @@ tested on a new repo only (Review rules).
        "not on this branch" line.
      - `ci`: `forge test --change` in the fix's checkout on a detached HEAD with `GITHUB_HEAD_REF`
        set and no Proof list exits 1 with the "names no test" line.
-     - `own-ci-check`: a CI-test repo whose `checks` are `["build", "forge-pr-check"]`;
+     - `own-ci-check`: a CI-test repo whose `checks` are `["build", "forge-pr-check"]` (the same
+       name check runs for a repo whose checks name `tests`);
        `forge hook pr-check --base <base> --head <head> --branch fix/<slug>` run from the base
        checkout: a head with no Proof list line exits 1 with the "names no test" line, and a head
        that adds `tests/test_greeting.py` and names it passes the name check, although the base
@@ -286,6 +294,10 @@ tested on a new repo only (Review rules).
        "Close checks only that each Done-when line names a test on the branch" sentence and not the
        "When its test run finishes" one; in a local-test repo, the other way round.
      - `settings-only`: a fix that changes only `forge.toml`; close does not ask for a test.
+     - `no-test-command` and `docs-only`: a runtime fix in a repo with no test command, and a
+       docs-only fix, each with no Proof list line; close exits 1 with the "names no test" line.
+     - `closest-is-not-proof`: the only test on the line is inside its decision
+       (`new; closest tests/test_other.py::test_1; ...`); close names the item as having no test.
 3. A commit with an always-true check is refused (LINT).
    - `githooks.pre_commit` (`:122`), after the branch checks and not while `MERGE_HEAD` exists
      (Accepted limits), calls `testlint.check(top)`. It reads staged added or changed files
@@ -293,14 +305,17 @@ tested on a new repo only (Review rules).
      `.py`, or in `.js`, `.jsx`, `.ts`, `.tsx`, `.mjs`, `.cjs`, `.mts` or `.cts`. This includes the
      starter's `apps/api/test/*.e2e-spec.ts` (`**/test*/**`). It reports only lines this commit adds
      or changes (from `git diff --cached -U0` hunks).
+   - Only checks Forge can prove are always true block. `A` below is a plain name (`ast.Name`) or a
+     literal (`ast.Constant`), never an attribute, subscript or call: `service.client is
+     service.client` can catch a property that makes a new client on each read, and two calls can
+     return different values, so those commit.
    - Python, with `ast` (a file that does not parse is skipped): `assert` of a true constant (`True`,
      a non-zero number, a non-empty string; `assert False` is fine); `assert A == A` or `assert A is
-     A`; `self.assertTrue(<true constant>)`, `self.assertEqual(A, A)`, `self.assertIs(A, A)`. Two
-     sides are "the same" when `ast.dump` matches and neither contains a call, since two calls can
-     return different values.
-   - JavaScript, one line at a time (Accepted limits): `expect(<A>).toBe|toEqual|toStrictEqual(<A>)`
-     with the same text `A` that has no `(`; `expect(true).toBeTruthy()`; `assert(true)`;
-     `assert.ok(true)`. No multi-line parsing.
+     A`; `self.assertTrue(<true constant>)`, `self.assertEqual(A, A)`, `self.assertIs(A, A)`.
+   - JavaScript, one line at a time (Accepted limits): `expect(A).toBe|toEqual|toStrictEqual(A)`
+     where both `A` are the same identifier (`[A-Za-z_$][\w$]*`) or the same literal;
+     `expect(true).toBeTruthy()`; `assert(true)`; `assert.ok(true)`. No property access, index or
+     call, and no multi-line parsing.
    - Refusal, one line per finding, then the fix: `<path>:<line>: this check is always true, so the
      test proves nothing. Assert the outcome the test is for, then commit again.`
    - `brief.md` "Tests first": one sentence that the commit refuses an always-true check and warns
@@ -311,8 +326,9 @@ tested on a new repo only (Review rules).
      `self.assertEqual(x, x)` in a pytest file, `expect(total).toBe(total)` in `a.test.ts`,
      `expect(page).toBe(page)` in `a.spec.ts`, `expect(env).toBe(env)` in
      `apps/api/test/env.e2e-spec.ts`: `git commit` exits non-zero and names the file and line.
-     `assert make() == make()`, and an old always-true line in a file whose other lines change,
-     commit.
+     `assert make() == make()`, `assert service.client is service.client`, `assert row[0] ==
+     row[0]`, `expect(user.name).toBe(user.name)`, and an old always-true line in a file whose other
+     lines change, commit.
 4. A test with no assertion (LINT).
    - Python, warning only (5% of Forge's own tests check in a helper): a changed `def test*` whose
      body has no `assert`, no `with pytest.raises` or `pytest.warns`, and no call whose name starts
@@ -351,14 +367,31 @@ tested on a new repo only (Review rules).
        `PYTHONPATH` starting with `<copy>` and `<copy>/src` (when it exists), so an editable install
        of the checkout cannot supply the new code, and with its own results file. Its exit status
        is not used.
+     - The test place: `review.test_run` calls `replay` only after it has left its own test lane
+       entry (`machine.leave(entry)`), so replay never waits for a place its caller holds. Replay
+       joins one entry for the copy (`machine.join("test", <copy>, item, None, None)`) and sets
+       `FORGE_TEST_LANE` to it, so a `forge test --pytest` started in the copy (Forge's own
+       `fast_test`) finds a parent entry with its own checkout path (`fasttest.py:379-381`) and
+       reuses it. It leaves that entry in `finally`.
      - In `finally`: `git worktree remove --force <temp>`. Uncommitted work in the item's checkout
        is never read or written.
-   - Each named test, from the old-code run's pytest results (last attempt, as in item 2): any
-     `failed` is what the fix needs. All `passed` fails the close run with `Done-when proof: <name>
-     passed on the code before the fix, so it does not prove the fix. Make it fail there for the
-     reported problem.` `error`, `skipped` or no result gives the warning `Done-when proof: <name>
-     could not run on the code before the fix (<its first error line, or "it did not run">). The
-     review judges it.`
+   - Each named test, from the old-code run's pytest results (last attempt, as in item 2), judged
+     on the cases the name matches:
+     - Every matched case `failed`, and none of them a timeout: what the fix needs.
+     - Every matched case `passed`: the close run fails with `Done-when proof: <name> passed on the
+       code before the fix, so it does not prove the fix. Make it fail there for the reported
+       problem.`
+     - Some matched cases passed and some failed (a file or a parametrized name): the close run
+       fails with `Done-when proof: <name> has passing and failing cases on the code before the fix.
+       Name the case that proves the fix.`, since an unrelated case could fail while the regression
+       case passes.
+     - A timeout, `error`, `skipped` or no result: the warning `Done-when proof: <name> could not
+       run on the code before the fix (<"it timed out", its first error line, or "it did not
+       run">). The review judges it.`
+     - Timeouts: Forge's pytest hook (`fasttest.RESULTS`, `:613-628`) already tells a pytest-timeout
+       failure apart for retries. It also writes a line `# timeout <node>` for such a failure,
+       after the `failed <node>` line. The `#` line matches none of the existing `<outcome> <node>`
+       readers, so retries and `proof_list` do not change.
    - A cached pass (same files and Proof list) reuses the saved old-code result lines.
    - `brief.md` (fix section) and the test-audit skill's sentence on bug regression tests: close
      checks this for a fix's pytest tests. `skill.md` Closing section: one sentence. Copy both
@@ -374,6 +407,13 @@ tested on a new repo only (Review rules).
      - `deletes-a-file`: the fix deletes `old.py` and changes `app.py`; the old-code run sees
        `old.py`, and the checkout still has no `old.py` after close.
      - `test-only`: the fix changes only a test; no old-code run.
+     - `mixed-file`: the fix names a whole test file; on the old code its new case passes and an
+       old case fails; close exits 1 with the "name the case" line.
+     - `timeout`: the named case times out on the old code; close is Ready and prints the "timed
+       out" warning.
+     - `forge-command`: the repo's `fast_test` is `forge test --pytest {base}` (Forge's own form),
+       with one test place on the machine (`machine_cores` in `tests/conftest.py`); close finishes
+       within the test's time limit, and its old-code run gives a result.
      In every case, `git worktree list` shows no extra worktree after close.
 
 ### New and existing repos
@@ -422,8 +462,8 @@ queue, background job or abstraction layer, with the Done-when item that needs i
 
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
-| PROOF | Each Done-when line's test, checked at close | The builder's reuse choice in the test-audit gate, the brief and the review; the numbered Proof list; close's and CI's check that each covered Done-when line names a test on the branch, and that a named pytest test ran, passed and was not skipped, read only from a run of the committed code for the current commit and list; the name check in `forge-pr-check` for repos with their own CI test check; named pytest tests joined to the selection | 1, 2 | `src/forge/proof.py` (new), `src/forge/review.py` (move `proof_list` out; `passed_record`'s key; `instructions`' `$proof_checked`; call `proof.check` in `test_run`), `src/forge/fasttest.py` (`pytest_tests` only), `src/forge/prcheck.py` (`pr_check` only), `src/forge/close.py` (the three `review.proof_list` calls and the import line only), `src/forge/templates/review-tests.py`, `.forge/review-tests.py`, `src/forge/templates/brief.md`, `src/forge/templates/review.md`, `src/forge/templates/skill.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md`, `.codex/skills/test-audit/SKILL.md`, `.claude/skills/test-audit/SKILL.md`, `tests/test_close.py` (`Forge.start`'s worker commit only), `tests/test_reviews_receive_done_when_proof.py` (`WORKER_RULE` and `NAMES_RULE` only) | `tests/test_done_when_tests.py::test_1_the_brief_asks_for_the_closest_test_and_the_review_checks_the_choice`, `tests/test_done_when_tests.py::test_2_close_refuses_a_done_when_line_without_a_passing_test` (new) | | no | |
-| REPLAY | A fix's pytest test fails on the old code | Close's and CI's run of a fix's new or changed pytest Done-when test on the code before the fix, in a temporary worktree: refuse when it passes there, warn when it cannot run there; the item's checkout is never touched | 5 | `src/forge/proof.py`, `src/forge/review.py` (the `replay` call in `test_run` only), `src/forge/templates/brief.md`, `src/forge/templates/skill.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md`, `.codex/skills/test-audit/SKILL.md`, `.claude/skills/test-audit/SKILL.md` | `tests/test_fix_tests_fail_before_the_fix.py::test_5_close_refuses_a_fix_whose_test_passes_before_the_fix` (new) | PROOF | no | |
+| PROOF | Each Done-when line's test, checked at close | The builder's reuse choice in the test-audit gate, the brief and the review; the numbered Proof list; close's and CI's check that each covered Done-when line names a test on the branch, and that a named pytest test ran, passed and was not skipped, read only from a run of the committed code for the current commit and list; the name check at local close and in `forge-pr-check`, run whether or not tests run; named pytest tests joined to the selection | 1, 2 | `src/forge/proof.py` (new), `src/forge/review.py` (move `proof_list` out; `passed_record`'s key; `instructions`' `$proof_checked`; call `proof.check` in `test_run`), `src/forge/fasttest.py` (`pytest_tests` only), `src/forge/prcheck.py` (`pr_check` only), `src/forge/close.py` (the three `review.proof_list` calls and the import line only), `src/forge/templates/review-tests.py`, `.forge/review-tests.py`, `src/forge/templates/brief.md`, `src/forge/templates/review.md`, `src/forge/templates/skill.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md`, `.codex/skills/test-audit/SKILL.md`, `.claude/skills/test-audit/SKILL.md`, `tests/test_close.py` (`Forge.start`'s worker commit only), `tests/test_reviews_receive_done_when_proof.py` (`WORKER_RULE` and `NAMES_RULE` only), `tests/test_close_checks_named_tests.py` (its proof lists and expected results) | `tests/test_done_when_tests.py::test_1_the_brief_asks_for_the_closest_test_and_the_review_checks_the_choice`, `tests/test_done_when_tests.py::test_2_close_refuses_a_done_when_line_without_a_passing_test` (new) | | no | |
+| REPLAY | A fix's pytest test fails on the old code | Close's and CI's run of a fix's new or changed pytest Done-when test on the code before the fix, in a temporary worktree: refuse when it passes there, warn when it cannot run there; the item's checkout is never touched | 5 | `src/forge/proof.py`, `src/forge/review.py` (the `replay` call in `test_run` only), `src/forge/fasttest.py` (the `# timeout` line in `RESULTS` only), `src/forge/templates/brief.md`, `src/forge/templates/skill.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md`, `.codex/skills/test-audit/SKILL.md`, `.claude/skills/test-audit/SKILL.md` | `tests/test_fix_tests_fail_before_the_fix.py::test_5_close_refuses_a_fix_whose_test_passes_before_the_fix` (new) | PROOF | no | |
 | LINT | Always-true checks and tests with no assertion | The commit check that refuses always-true checks in pytest tests and one-line always-true checks in Vitest and Playwright tests, and warns about pytest tests with no assertion; the proof that new starters' lint fails a Vitest or Playwright test with no assertion | 3, 4 | `src/forge/testlint.py` (new), `src/forge/githooks.py` (`pre_commit` only), `src/forge/templates/brief.md`, `src/forge/templates/skill.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md`, `src/forge/templates/starter/.oxlintrc.json` and `src/forge/templates/starter-python/.oxlintrc.json` (one e2e override each, only if builder question 1 needs it) | `tests/test_commits_refuse_always_true_checks.py::test_3_a_commit_with_an_always_true_check_is_refused`, `tests/test_commits_refuse_always_true_checks.py::test_4_a_test_with_no_assertion_gets_a_warning` (new); cases `no-assertion-vitest` and `no-assertion-playwright` in `tests/test_starter_lint_settings.py::test_2_a_module_mock_in_a_test_fails_lint` | REPLAY, FORGE-FASTCI-1/OXLINT | no | |
 
 New moving parts: none
