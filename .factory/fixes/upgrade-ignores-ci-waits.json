@@ -1,0 +1,15 @@
+{
+  "base": "ef7663995c9f7c99f1d471811b26e5ed9406cb4a",
+  "branch": "fix/upgrade-ignores-ci-waits",
+  "done_when": "forge upgrade does not count a close that is only waiting for CI as a run in progress, and that close carries on after the upgrade; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T14:29:10.738261+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "forge upgrade refuses while a close is only waiting for CI checks, so the person must kill closes before every upgrade"
+}
