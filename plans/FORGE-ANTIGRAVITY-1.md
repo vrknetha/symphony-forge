@@ -4,40 +4,25 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon. End each
-item with its source in plain words, such as (Source: the client's note on late orders, 12 Oct),
-or with the sourced item that needs it, such as (Needed by: the Customers screen). A source is a
-client note, a brief answer, a decision, a screen marked Build now at sign-off, a fixed rule of
-the app, or the owner's own request with its date. Name each screen, field, endpoint, tool and
-setting that the plan adds in one of these items.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact made with the client's design system (link in
-docs/design/design-system.md); on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id and a new plan approval.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- Owners can pick Google Antigravity (Gemini 4 Neon) as a third coding agent next to Claude Code and Codex.
+- Each job (build, fix, review, cold read) can run on any of the three agents, set in forge.toml with a model and effort per job type, with the same effort ladder, shared agent lanes, run records, cost and skills as the other two.
+- A repair round continues the same Antigravity session, as it does for Claude and Codex.
+- Forge refuses a review done by the same agent family that built the change. Current defaults stay the same.
+- Antigravity connects through Google's official agent over the Agent Client Protocol (a standard way for a tool to talk to a coding agent). It needs Antigravity 1.5 or newer.
+- Any Google sign-in works, a personal Google account by default. Doctor warns that Google's terms for outside tools are unclear and names an API key and Vertex AI (Google's cloud AI service) as other options.
 
 ## Why
 
-Google Antigravity as a third coding agent
-
-
+Forge runs only Claude and Codex today, so a team that wants Google's agent cannot use Forge's build, review and merge flow with it.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **A repo whose forge.toml names Antigravity for building runs its builds on Antigravity, and close shows the run as Antigravity with its model, effort and cost.**
+2. **A repair round on an Antigravity build continues the same Antigravity session instead of starting a fresh one.**
+3. **A review or cold read set to Antigravity runs on it, and a review by the builder's own family is refused with a plain message.**
+4. **Antigravity runs wait for a place in the shared agent lanes like Claude and Codex runs.**
+5. **Doctor says whether Antigravity is installed, signed in and at version 1.5 or newer, and shows the terms warning.**
+6. **A new repo can choose Antigravity at init, and an existing repo keeps its Claude and Codex settings unchanged after upgrade.**
 
 ## Risks
 
