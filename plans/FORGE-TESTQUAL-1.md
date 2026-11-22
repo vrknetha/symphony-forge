@@ -140,7 +140,6 @@ tested on a new repo only (Review rules).
   as it keeps the `RENDERED` lines (`review.py:384`).
 
 ### Done-when details
-
 1. The builder's reuse choice (PROOF).
    - `.codex/skills/test-audit/SKILL.md` (and the `.claude` copy), Authoring gate question 3: keep
      its text and add, as its first sentences: `Name the closest existing test; the brief lists the
@@ -179,6 +178,7 @@ tested on a new repo only (Review rules).
      A task of an approved story (`start_approved_task`): `forge work` gives a brief
      (`calls(log)[-1]["brief"]`) with the Authoring gate sentences and the brief's line form; after
      `forge close` the review prompt (`env.prompt()`) has the review text.
+   Owner's narrow choice for PROOF: Owner chose on 22 Nov 2026: narrow. When CI skips the tests for a change it treats as docs only, the check says so plainly and checks only that the named test is on the branch; it never claims the test ran. Accepted limit.
 2. Close checks each Done-when line's test (PROOF).
    - Two separate checks, so that the names are checked even when no test runs:
      - The name check (`check(..., ran=False)`): every covered item has a line, and each named test
@@ -298,6 +298,7 @@ tested on a new repo only (Review rules).
        docs-only fix, each with no Proof list line; close exits 1 with the "names no test" line.
      - `closest-is-not-proof`: the only test on the line is inside its decision
        (`new; closest tests/test_other.py::test_1; ...`); close names the item as having no test.
+   Owner's narrow choice for PROOF: Owner chose on 22 Nov 2026: narrow. When CI skips the tests for a change it treats as docs only, the check says so plainly and checks only that the named test is on the branch; it never claims the test ran. Accepted limit.
 3. A commit with an always-true check is refused (LINT).
    - `githooks.pre_commit` (`:122`), after the branch checks and not while `MERGE_HEAD` exists
      (Accepted limits), calls `testlint.check(top)`. It reads staged added or changed files
