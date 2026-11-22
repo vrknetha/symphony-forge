@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-22T17:59:08.929413+00:00
-seconds: 574.586
-read_hash: a705ef4a8ee31fe4d716a28efb3247db94591a71
-round: 1
+read_at: 2026-11-22T18:28:13.675559+00:00
+seconds: 544.223
+read_hash: 7e1eff1ee4859b0429b4ab02f25f5cd6919f8908
+round: 2
 passed: no
-doc_seen: a705ef4a8ee31fe4d716a28efb3247db94591a71
+doc_seen: 7e1eff1ee4859b0429b4ab02f25f5cd6919f8908
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: abd585cc19f0167ee669ae6dafdc9266328c73b2
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a20460-af65-7c02-b859-7b2618e0c7a4
 session:
@@ -75,3 +75,38 @@ Only a genuine trade-off goes to the human, as a question with options.
    The upgrade test checks version headings, and the `next` test checks only the introductory line ([plan](/plans/FORGE-RELNOTES-1.md:204)). Both would pass if the commands omitted every change, fixed issue, and open issue.  
    Gain 3, Work 2, Harm 3
    Disposition: cut - test 2 checks each printed change, fixed issue and open issue from controlled notes files and the real v1.2.45 bullets, and test 3 checks the same lines once.
+
+## Round 2
+
+7. Blocking: The release check runs after the release tag is public.
+   Raise: Functional  
+   Case: normal use - A release-blocking fix changes Forge after the notes were written, and its notes update was missed.  
+   The new check runs only after the tag is pushed ([plan](/plans/FORGE-RELNOTES-1.md:176)). Forge’s releases are the public Git tags themselves ([decision](/docs/decisions/0093-lean-forge-rebuild.md:73)); delaying the GitHub release page does not prevent installation from the tag. The existing pre-push gate checks the full test run and tag commit, but does not run the new check ([githooks.py](/src/forge/githooks.py:149)).  
+   Gain 5, Work 3, Harm 3
+   Disposition: cut - the tag-push step is dropped; the bump pull request's CI proves the notes file exists, and docs/guide.md runs .github/release-notes-check.py on the cut commit before git tag and before gh release create (Done-when 1 details).
+
+8. Advisory: The new tag check ignores shipped Forge files outside `src/forge`.
+   Raise: Functional  
+   The check looks only for commits changing `src/forge` ([plan](/plans/FORGE-RELNOTES-1.md:179)). A later change to the Mac installer or to an agent skill included in the package can therefore be omitted from the notes while the check passes. The package includes several such skills from outside that folder ([pyproject.toml](/pyproject.toml:24)).  
+   Gain 3, Work 3, Harm 3
+   Disposition: cut - the release check now covers src/forge and every force-include source path in pyproject.toml (Done-when 1 details and test case).
+
+9. Advisory: Pin history can skip releases a teammate has not seen.
+   Raise: Functional  
+   Case: normal use - A teammate has not used their clone while the repo moves through several daily Forge releases.  
+   With no marker, the plan chooses the newest older pin in the repo’s history ([plan](/plans/FORGE-RELNOTES-1.md:255)). If the teammate last used v1.2.44 and the repo subsequently moved through v1.2.45 and v1.2.46 before reaching the new release, it chooses v1.2.46 and omits the earlier changes. The shared Git history does not say which releases that computer saw.  
+   Gain 4, Work 3, Harm 2
+   Disposition: keep - a clone with no marker has no record of which releases it saw, so it shows the last upgrade's list; the committed guide's Known Forge issues part still lists every open issue, and walking the whole pin history costs more than a missed old change list is worth.
+
+10. Advisory: A failed first report can mark unseen notes as shown.
+    Raise: Functional  
+    Case: normal use - The network is unavailable when the agent runs `forge next` while the upgrade waits to merge.  
+    The planned helper writes the marker before returning its lines ([plan](/plans/FORGE-RELNOTES-1.md:260)), but `next` builds the rest of its report before printing those lines ([nextstep.py](/src/forge/nextstep.py:154)). For a ready fix, that report can attempt a fetch and fail ([nextstep.py](/src/forge/nextstep.py:1117), [repo.py](/src/forge/repo.py:688)). A retry then finds the marker already advanced, although the notes were never printed.  
+    Gain 3, Work 3, Harm 3
+   Disposition: cut - once() now writes nothing and next marks the version shown only after its final print, so a failed report marks nothing (Done-when 3 details; unreadable-notes case checks it).
+
+11. Advisory: The unreadable-notes test cannot reach the planned `forge next` call as written.
+    Raise: Test  
+    The test puts invalid UTF-8 in the fake release before the upgrade ([plan](/plans/FORGE-RELNOTES-1.md:269)). Upgrade first runs that release’s `sync` ([upgrade.py](/src/forge/upgrade.py:250)); the planned guide renderer reads those same notes during sync ([sync.py](/src/forge/sync.py:434)). The upgrade fails before the test can check that `next` continues.  
+    Gain 3, Work 2, Harm 2
+   Disposition: cut - the unreadable-notes case now breaks the installed release's notes file after the upgrade finishes, so it reaches forge next.
