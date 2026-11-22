@@ -339,46 +339,46 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - A reviewed change contains `_agents/hooks.json` with a startup hook.  
     The [plan](/plans/FORGE-ANTIGRAVITY-1.md:124) removes `.agents` and `.agent`, but [Antigravity also recognizes `_agents` and `_agent`](https://antigravity.google/docs/customization-discovery/). A [SessionStart hook](https://antigravity.google/docs/hooks) in one of those folders can run before the review. The stub checks only `.agents`, so the planned test misses it.  
     Gain 5, Work 2, Harm 5
-   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 45 are fixed in the builders' section (extra folder names, isolated guard start with fixed PATH, refuse reads without a location, encrypted-file care); advisory 46 and 47 stay for the builders; Astra validates the design before approval
+   Disposition: cut: isolate also removes _agents and _agent, the folder names Google's customization page lists, and the review test plants a _agents SessionStart hook.
 
 42. Blocking: Not done: item 4: The guard can import code from the checkout.  
     Raise: Security  
     Case: normal use - A checkout contains an `argparse.py` file when an Antigravity worker attempts a command.  
     The [guard](/plans/FORGE-ANTIGRAVITY-1.md:100) starts Python with `-c` from the checkout. [Python adds that directory to its import path](https://docs.python.org/3/using/cmdline.html), and [Forge’s CLI imports `argparse`](/src/forge/cli.py:2) before running the deny hook. The checkout’s file can execute and return an allow decision. The planned test plants fake executables, but no shadowed Python module.  
     Gain 5, Work 2, Harm 5
-   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 45 are fixed in the builders' section (extra folder names, isolated guard start with fixed PATH, refuse reads without a location, encrypted-file care); advisory 46 and 47 stay for the builders; Astra validates the design before approval
+   Disposition: cut: the guard starts python -I, so the checkout is not on the import path; test 4 plants argparse.py.
 
 43. Blocking: Not done: item 4: The guard’s CLI startup can run a checkout’s Git executable.  
     Raise: Security  
     Case: normal use - A Windows checkout contains a `git.cmd` when an Antigravity worker attempts a command.  
     The [new guard](/plans/FORGE-ANTIGRAVITY-1.md:100) calls `forge.cli.main()`. Before dispatching the deny hook, [CLI startup runs Git](/src/forge/cli.py:117) through [a lookup using `shutil.which`](/src/forge/repo.py:222). As [this repo’s test notes](/tests/test_rules.py:116), that lookup searches the current folder first on Windows. The checkout’s command can therefore run before the guard.  
     Gain 5, Work 2, Harm 5
-   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 45 are fixed in the builders' section (extra folder names, isolated guard start with fixed PATH, refuse reads without a location, encrypted-file care); advisory 46 and 47 stay for the builders; Astra validates the design before approval
+   Disposition: cut: the guard calls deny.hook directly, not forge.cli.main, with a fixed PATH; test 4 plants git and git.cmd.
 
 44. Blocking: Not done: item 3: A read request can have no location to check.  
     Raise: Security  
     Case: normal use - Antigravity requests permission to read an outside file but omits `toolCall.locations`.  
     The [plan](/plans/FORGE-ANTIGRAVITY-1.md:110) permits a read when every listed location is inside the copy, without requiring a location or checking the actual input. [ACP makes locations optional](https://agentclientprotocol.github.io/typescript-sdk/types/ToolCallUpdate.html), and [T3’s Antigravity adapter](/private/tmp/claude-501/-Users-ravikiranvemula-Workdir-symphony-forge/c01a489d-c76f-41c1-8371-d6f0052b027c/scratchpad/ext/t3code/apps/server/src/provider/acp/AntigravityProtocol.ts:297) falls back to the raw input path when none is present. An empty list can pass the planned check and allow the outside read.  
     Gain 5, Work 3, Harm 5
-   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 45 are fixed in the builders' section (extra folder names, isolated guard start with fixed PATH, refuse reads without a location, encrypted-file care); advisory 46 and 47 stay for the builders; Astra validates the design before approval
+   Disposition: cut: a read request with no location is refused, and rawInput paths are checked too; the read test has a no-location case.
 
 45. Blocking: Not done: item 3: A snapshot can change the files the cold reader opens.  
     Raise: Functional  
     Case: normal use - A repository uses `git-crypt` to encrypt its plan or product brief in Git, and a coordinator starts another cold-read round.  
     The [new copy rule](/plans/FORGE-ANTIGRAVITY-1.md:126) builds a commit from [`_snapshot`’s Git tree](/src/forge/story.py:1124). Git applies the original repository’s clean filter while building that tree, but the clone does not receive its local smudge-filter configuration. [Git passes content through when a filter is missing](https://git-scm.com/docs/gitattributes), so the copy can contain ciphertext where the working checkout has readable text. The reader cannot reopen the current plan or brief as promised.  
     Gain 5, Work 3, Harm 3
-   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 45 are fixed in the builders' section (extra folder names, isolated guard start with fixed PATH, refuse reads without a location, encrypted-file care); advisory 46 and 47 stay for the builders; Astra validates the design before approval
+   Disposition: cut: the read copy is a plain copy of the working-tree files, so encrypted or filtered files match what Claude and Codex readers see; the read test has a clean-filter case.
 
 46. Advisory: Not done: item 4: A local-only Antigravity worker does not discover Forge’s skills.  
     Raise: Not done  
     Case: normal use - A developer selects Antigravity only in `forge.local.toml`.  
     The [plan](/plans/FORGE-ANTIGRAVITY-1.md:120) now permits that worker, but adds the `.codex/skills` entry only when shared `forge.toml` selects Antigravity. Its private profile has no skills entry either. The local-only test checks the guard, not whether the worker discovers the shipped skills.  
     Gain 3, Work 2, Harm 3
-   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 45 are fixed in the builders' section (extra folder names, isolated guard start with fixed PATH, refuse reads without a location, encrypted-file care); advisory 46 and 47 stay for the builders; Astra validates the design before approval
+   Disposition: cut: the full profile's config/skills.json lists the run's .codex/skills, so a worker picked only in forge.local.toml finds them.
 
 47. Advisory: Not done: item 5: Doctor cannot establish both profile sign-ins over SSH.  
     Raise: Not done  
     Case: normal use - A developer uses Antigravity over SSH and has signed in to only one Forge profile.  
     [Doctor’s planned check](/plans/FORGE-ANTIGRAVITY-1.md:140) starts one session, while [builds and reads use separate profiles](/plans/FORGE-ANTIGRAVITY-1.md:99). The plan says their sign-ins are not shared over SSH, so one successful check cannot establish that both kinds of run can sign in.  
     Gain 3, Work 2, Harm 3
-   Disposition: keep - Owner accepted on 22 Nov 2026: notes 41 to 45 are fixed in the builders' section (extra folder names, isolated guard start with fixed PATH, refuse reads without a location, encrypted-file care); advisory 46 and 47 stay for the builders; Astra validates the design before approval
+   Disposition: cut: with SSH_CONNECTION set, doctor checks the sign-in of both profiles and names the one that is not signed in.
