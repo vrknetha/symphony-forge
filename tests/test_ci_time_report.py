@@ -161,11 +161,10 @@ def _recent_pushes(env):
         _job("test group 2 of 3", _at(), _at(4), _at(13), [
             ("Set up job", _at(4), _at(4, 30)),
             ("python .forge/review-tests.py", _at(4, 30), _at(5, 30)),
-            ("Run tests", _at(5, 30), _at(12, 30)),
-            ("Retry failed tests", _at(12, 30), _at(13)),
+            ("forge test --change", _at(5, 30), _at(13)),
         ], attempt=2),
-        _job("test group 2 of 3", _at(3, 45), _at(3, 45), _at(4),
-             [("Run tests", _at(3, 45), _at(4))]),
+        dict(_job("test group 2 of 3", _at(3, 45), _at(3, 45), _at(4),
+                  [("Run tests", _at(3, 45), _at(4))]), conclusion="failure"),
         _job("test group 3 of 3", _at(-2), _at(3), _at(9), []),
         _job("docs-check", _at(0, 30), _at(0, 30), _at(1), [
             ("python .forge/review-tests.py", _at(0, 30), _at(1))]),
@@ -182,8 +181,8 @@ def _recent_pushes(env):
     assert "queue 4 min" in closed.stdout
     assert "setup 30 s" in closed.stdout
     assert "selection 1 min 30 s" in closed.stdout
-    assert "tests 7 min" in closed.stdout
-    assert "retries 45 s" in closed.stdout
+    assert "tests 7 min 30 s" in closed.stdout
+    assert "retries 15 s" in closed.stdout
     assert "22 runner minutes" in closed.stdout
     assert "over budget" in closed.stdout.lower()
     assert "test group 3 of 3" in closed.stdout
