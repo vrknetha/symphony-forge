@@ -1,0 +1,15 @@
+{
+  "base": "a27cc967e4fbedac42dbca27c132e2ca7ca8851c",
+  "branch": "fix/release-v1-2-46",
+  "done_when": "Every version reference that names the current release says v1.2.46 (as the v1.2.45 release fix did, keeping v1.2.45 references used as a minimum release), the release version tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T10:45:51.153890+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Release v1.2.46: publish what merged since v1.2.45 (answered worker questions clear, dismissals carry over while code is unchanged, CI reruns only after runner loss or timeout, Codex capacity retry, review findings through the temporary review folder kept, custom pytest commands get one group, CI timing counts only real retries, a green manual full run frees the nightly hold, JS/TS test-only changes run one group)"
+}
