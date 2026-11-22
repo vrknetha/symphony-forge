@@ -690,6 +690,12 @@
       "title": "Ready pull requests stop re-running CI against each other",
       "status": "pending",
       "order": 127
+    },
+    {
+      "key": "FORGE-ANTIGRAVITY-1",
+      "title": "Google Antigravity as a third coding agent",
+      "status": "pending",
+      "order": 128
     }
   ],
   "epics": [
