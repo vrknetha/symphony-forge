@@ -1,0 +1,15 @@
+{
+  "base": "a27cc967e4fbedac42dbca27c132e2ca7ca8851c",
+  "branch": "fix/playwright-tests-skill",
+  "done_when": "Forge ships a playwright-tests skill to every client repo through forge init and forge sync, next to the database and agents skills, and the guide and the worker brief tell builders and reviewers to follow it when they write or change Playwright tests or their CI; the starters' test folders are unchanged; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T07:03:38.512922+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Builders and reviewers in Forge repos write Playwright browser tests and their CI with no shared rules, so layouts, sign-in, waits, workers and CI sharding differ and break"
+}
