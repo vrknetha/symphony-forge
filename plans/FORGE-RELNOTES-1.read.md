@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-22T18:28:13.675559+00:00
-seconds: 544.223
-read_hash: 7e1eff1ee4859b0429b4ab02f25f5cd6919f8908
-round: 2
+read_at: 2026-11-22T18:38:52.818115+00:00
+seconds: 482.788
+read_hash: 09efa1332bec19da7a7494cd3ba8b05382b4d3e7
+round: 3
 passed: no
-doc_seen: 7e1eff1ee4859b0429b4ab02f25f5cd6919f8908
+doc_seen: 09efa1332bec19da7a7494cd3ba8b05382b4d3e7
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: abd585cc19f0167ee669ae6dafdc9266328c73b2
+notes_seen: c183ab7fdb794d1b3aac1aa7f0051a6eff80bbf8
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a20460-af65-7c02-b859-7b2618e0c7a4
 session:
-loop_choice:
-loop_reason:
+loop_choice: accept
+loop_reason: Owner accepted on 23 Nov 2026: the builder starts the release check with uv run --frozen --python 3.11 python instead of python; advisory 13 stays for the builders; no plan edit
 ---
 # Cold read notes
 
@@ -110,3 +110,18 @@ Only a genuine trade-off goes to the human, as a question with options.
     The test puts invalid UTF-8 in the fake release before the upgrade ([plan](/plans/FORGE-RELNOTES-1.md:269)). Upgrade first runs that release’s `sync` ([upgrade.py](/src/forge/upgrade.py:250)); the planned guide renderer reads those same notes during sync ([sync.py](/src/forge/sync.py:434)). The upgrade fails before the test can check that `next` continues.  
     Gain 3, Work 2, Harm 2
    Disposition: cut - the unreadable-notes case now breaks the installed release's notes file after the upgrade finishes, so it reaches forge next.
+
+## Round 3
+
+12. Blocking: The new release check cannot start on this Mac.
+    Raise: Functional  
+    Case: normal use - A maintainer cuts a release from a Mac where Forge was installed with uv and no `python` command is on PATH.  
+    The new pre-tag step requires `python` ([plan](/plans/FORGE-RELNOTES-1.md:174)), but this checkout’s environment has no `python` command. Forge’s supported installation lets uv supply Python ([README](/README.md:224)). The planned test uses `sys.executable` ([plan](/plans/FORGE-RELNOTES-1.md:210)), so it would pass without exercising the release command.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted on 23 Nov 2026: the builder starts the release check with uv run --frozen --python 3.11 python instead of python; advisory 13 stays for the builders; no plan edit
+
+13. Advisory: The worktree lookup conflicts with the module’s dependency rule.
+    Raise: Plan gap  
+    The plan permits `release_notes.py` to use only the standard library, `forge.__version__`, and `repo` ([plan](/plans/FORGE-RELNOTES-1.md:137)), but requires it to call `story.worktrees` ([plan](/plans/FORGE-RELNOTES-1.md:263)), which belongs to [story.py](/src/forge/story.py:801). A builder must choose which instruction to break.  
+    Gain 3, Work 1, Harm 1
+   Disposition: keep - below the bar (follow-up)
