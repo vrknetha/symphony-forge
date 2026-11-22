@@ -224,12 +224,22 @@ def set_status(context: str, state: str, job_name: str) -> None:
          "target_url": next(job["html_url"] for job in jobs if job["name"] == job_name)})
 
 
+def javascript_tests(changed: list[str]) -> bool:
+    """Recognise test paths without loading pull-request code in the selector."""
+    return bool(changed) and all(
+        re.search(r"\.(?:test|spec)\.[jt]sx?$", name)
+        or "__tests__" in Path(name).parts and Path(name).suffix in {".js", ".jsx", ".ts", ".tsx"}
+        for name in changed)
+
+
 def test_files(top: Path, base: str, excludes: list[str], *, head: str = "HEAD") -> tuple[bool, list[str]]:
-    """Narrow CI only for existing Python test files, never shared test inputs."""
+    """Narrow CI for runnable JavaScript tests or independent Python test files."""
     paths = subprocess.run([shutil.which("git") or "git", "diff", "--name-only", "-z",
                             "--no-renames", f"{base}...{head}", "--", ".", *excludes],
                            cwd=top, check=True, capture_output=True, text=True).stdout
     changed = list(filter(None, paths.split("\0")))
+    if javascript_tests(changed):
+        return True, []
     if not changed or any(not (Path(name).name.startswith("test_") or name.endswith("_test.py"))
                           or not name.endswith(".py") or not (top / name).is_file()
                           for name in changed):
@@ -255,14 +265,30 @@ def small_change(base: str, excludes: list[str], tests_only: bool) -> bool:
     """Count selected tests, keeping shared build and selection inputs on all groups."""
     diff = ("git", "diff", "--name-only", "-z", "--no-renames", f"{base}...HEAD")
     changed = run(*diff).split("\0")
+    own_tests = list(filter(None, run(*diff, "--", ".", *excludes).split("\0")))
+    js_only = tests_only and javascript_tests(own_tests)
     for name in filter(None, changed):
+        if js_only and name.startswith((".factory/", "plans/")):
+            continue
         path = Path(name)
         if (name.startswith((".github/workflows/", ".forge/"))
                 or path.name in {"forge.toml", "conftest.py", "package.json", "pyproject.toml",
                                  "Pipfile", "pnpm-workspace.yaml", "nx.json", "turbo.json"}
-                or re.search(r"(^|[.-])(lock|config)([.-]|$)", path.name)
+                or (re.search(r"(^|[.-])(lock|config)([.-]|$)", path.name)
+                    and not (js_only and path.suffix in {".js", ".jsx", ".ts", ".tsx"}))
                 or re.fullmatch(r"requirements.*\.txt|tsconfig.*\.json", path.name)):
             return False
+    if js_only:
+        cfg = tomllib.loads(Path("forge.toml").read_text("utf-8"))
+        words = shlex.split(cfg.get("fast_test", ""))
+        # A name filter does not promise to run the changed files' tests.
+        if any(word.startswith(("--testNamePattern", "--grep", "-t", "-g")) for word in words):
+            return False
+        return any(runner in words and action in words and (
+            f"{flag}={{base}}" in words
+            or any(words[i:i + 2] == [flag, "{base}"] for i in range(len(words))))
+            for runner, action, flag in (("vitest", "run", "--changed"),
+                                         ("playwright", "test", "--only-changed")))
     try:
         from forge import repo
         from forge.fasttest import always_tests, pytest_options, related

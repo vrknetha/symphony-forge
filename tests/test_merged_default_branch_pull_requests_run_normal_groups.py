@@ -48,7 +48,8 @@ def test_1_pull_request_that_merged_the_default_branch_runs_normal_groups(
     if not adopted:
         # A new repo starts with one group; the pull request needs several to show the fan-out.
         _branch(repo, client, "merged-default")
-    # Automatic splitting permits one group before the branch merges main.
+    # Use Forge's automatic splitter for the merge-only group transition.
+    # Commands with their own shard flags now keep all groups even before a merge.
     _settings(client, test=PYTEST, groups=6 if adopted else 2)
     ignore = client / ".gitignore"
     ignore.write_text((ignore.read_text("utf-8") if ignore.exists() else "")

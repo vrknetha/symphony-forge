@@ -432,6 +432,11 @@ passes. In a CI-test repo, wider related tests, lint and type checks stay in pul
 Never edit or delete a test to make it pass; if a test
 is wrong, say so. A test whose result a stub or fake decides proves nothing. Use the test-audit
 skill whenever you write or change a test. Before you stop, $test_step
+JavaScript and TypeScript test-only changes use one CI group when fast_test selects the
+changed tests with Vitest --changed or Playwright --only-changed and {base}. Forge ignores
+its record files for this choice. Selection reads paths and settings without loading tests.
+A missing change command or a test-name filter keeps all groups. New repos get this at
+init; existing repos get it on upgrade and sync.
 In CI-test repos, `forge test --change` selects the pull request's own source changes
 (`base...HEAD`) plus test files that merges from main added or changed. The one-group rule
 counts only the pull request's own changes. Local-test repos keep all incoming changes in
