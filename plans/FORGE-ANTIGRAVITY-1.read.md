@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-22T12:01:53.374297+00:00
-seconds: 1159.293
-read_hash: 5ca925a351fc30fafe71e6920978bc989e42fb31
-round: 2
+read_at: 2026-11-22T12:26:47.378630+00:00
+seconds: 652.25
+read_hash: 88dc1c8e4896191e6e4be4c675f9d0fce0c40535
+round: 3
 passed: no
-doc_seen: 5ca925a351fc30fafe71e6920978bc989e42fb31
+doc_seen: 88dc1c8e4896191e6e4be4c675f9d0fce0c40535
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 5ffc6a080a51bb8ae7198861245a47f063d37686
+notes_seen: d415082b7275ea0681ccd0b5facb91b4471f8a26
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a202f2-fbec-7e52-97bc-9060b98f67be
 session:
 loop_choice: more
-loop_reason: Owner chose on 22 Nov 2026: one more round to fix the 8 open notes, mostly review-engine safety
+loop_reason: Owner chose on 22 Nov 2026: one last round fixes notes 33, 34, 35, 38 and 39; notes 36, 37 and 40 are accepted as known rare limits (Forge started from a Git hook with GIT_DIR set, a developer's environment-supplied checkout filter, a review changing the environment of tests running beside it)
 ---
 # Cold read notes
 
@@ -273,3 +273,53 @@ Only a genuine trade-off goes to the human, as a question with options.
     [worker.py](/src/forge/worker.py:222) applies the effort ladder only when the task is not design work. The [planned repair test](/plans/FORGE-ANTIGRAVITY-1.md:105) covers a non-design round, so it can pass while this repair stays at `low`.  
     Gain 3, Work 3, Harm 3
    Disposition: keep - Done-when 2 promises the ladder as with Claude and Codex, whose design rounds also keep the design effort (worker.py:222); the default design effort is already high.
+
+## Round 3
+
+33. Blocking: Not done: item 4: A Windows checkout can replace Forge’s command guard.  
+    Raise: Security  
+    Case: normal use - A Windows checkout contains a `forge.cmd` file when an Antigravity worker attempts a command.  
+    The [plan’s guard](/plans/FORGE-ANTIGRAVITY-1.md:98) runs `forge hook deny` without a path. [Windows searches the current directory before PATH](https://learn.microsoft.com/en-us/windows-server/administration/windows-commands/path), so it can run the checkout’s `forge.cmd` instead of Forge. That program can allow the destructive command or execute its own code. The planned test does not put a `forge.cmd` in the checkout.  
+    Gain 5, Work 3, Harm 5
+
+34. Blocking: Not done: item 3: A reader can open files outside its copy.  
+    Raise: Security  
+    Case: normal use - A review asks to read a credential file in the original checkout or the user’s home directory.  
+    The [read profile](/plans/FORGE-ANTIGRAVITY-1.md:120) denies writes and commands but does not restrict reads. Forge [approves every read request](/plans/FORGE-ANTIGRAVITY-1.md:105), including an outside path for which [Antigravity asks permission](https://antigravity.google/docs/permissions?tab=cli). The file can then be sent to Google, defeating the promised copy boundary and the review’s secret-file removal.  
+    Gain 5, Work 3, Harm 5
+
+35. Blocking: Not done: item 3: Cold-read copies still contain tracked secret files.  
+    Raise: Data loss  
+    Case: normal use - A repository has a tracked `.env.production` file when a cold read starts.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:121) calls `isolate(copy, [])` for cold reads, so it removes no sensitive paths. Code reviews pass the helper’s sensitive-file list instead. The cold reader can therefore open and send the credential file to Google, although the owner-facing text says cold reads receive the same exclusion.  
+    Gain 5, Work 2, Harm 5
+
+36. Blocking: Not done: item 3: Git isolation can change the original repository.  
+    Raise: Data loss  
+    Case: normal use - Forge is started from a Git hook with `GIT_DIR` pointing to the original repository.  
+    The new [Git isolation](/plans/FORGE-ANTIGRAVITY-1.md:118) leaves `GIT_DIR` and `GIT_WORK_TREE` in the environment. [Git documents](https://git-scm.com/docs/githooks) that hooks export these variables and that commands targeting another checkout must clear them. Forge’s planned commands to set the copy’s hook path and remove its `origin` can instead change the original repository’s configuration and remote. [Forge already clears these variables](/src/forge/repo.py:1021) for another temporary-repository operation.  
+    Gain 5, Work 3, Harm 5
+
+37. Blocking: Not done: item 3: A checkout filter can run before review isolation.  
+    Raise: Security  
+    Case: normal use - The developer supplies a Git checkout filter through environment configuration, and the reviewed change adds a matching `.gitattributes` entry and edits that filter’s repository script.  
+    The [new isolation](/plans/FORGE-ANTIGRAVITY-1.md:118) disables configuration files but leaves `GIT_CONFIG_COUNT` and its key/value variables intact. [Git applies those variables as configuration](https://git-scm.com/docs/git-config/2.38.1.html), and a configured [smudge filter runs during checkout](https://git-scm.com/book/en/v2/Customizing-Git-Git-Attributes). It can therefore execute the change’s script during clone, before `isolate` runs.  
+    Gain 5, Work 3, Harm 5
+
+38. Blocking: Cold readers lose the repository’s review rules.  
+    Raise: Functional  
+    Case: normal use - A repository has review rules in `AGENTS.md`, and Antigravity reads a plan.  
+    The [new isolation](/plans/FORGE-ANTIGRAVITY-1.md:119) removes every `AGENTS.md`. Code review receives the trusted default-branch review rules separately, but the [cold-read path](/plans/FORGE-ANTIGRAVITY-1.md:121) does not supply them. The reader is instructed to respect those rules but cannot inspect them, so it can miss required findings or raise settled ones.  
+    Gain 5, Work 2, Harm 3
+
+39. Blocking: Cold reads can use an outdated product brief.  
+    Raise: Functional  
+    Case: normal use - A coordinator changes `docs/product/BRIEF.md` without committing it, then starts a first cold read.  
+    The [copy rule](/plans/FORGE-ANTIGRAVITY-1.md:121) clones `HEAD` and overlays only the plan. The [cold-read prompt](/src/forge/templates/cold-read.md:17) asks the reader to inspect the brief’s current answers, but it opens the committed version. The fix for the stale plan therefore still lets a read approve a plan against stale product answers.  
+    Gain 5, Work 3, Harm 3
+
+40. Advisory: A review can change the Git environment of tests running beside it.  
+    Raise: Functional  
+    Case: normal use - A repository runs local close tests that need the developer’s global Git configuration.  
+    The [plan](/plans/FORGE-ANTIGRAVITY-1.md:118) changes process-wide `os.environ` for the duration of the review. [Close runs tests in another thread](/src/forge/close.py:359), and [the test runner copies that environment](/src/forge/review.py:425). Depending on timing, tests can inherit the empty global Git configuration and fail or exercise different behavior.  
+    Gain 4, Work 2, Harm 2
