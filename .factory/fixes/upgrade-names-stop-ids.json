@@ -1,0 +1,15 @@
+{
+  "base": "d381088d345e8e2be291755e4482531d48f0b963",
+  "branch": "fix/upgrade-names-stop-ids",
+  "done_when": "When forge upgrade refuses, it lists each blocking run with its id, kind and item and the exact forge stop --id <id> command for the person, and a handback that Forge refuses as stopped or replaced also ends that round's lane entry; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T16:08:56.986483+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "forge upgrade refuses with a list of runs but does not name how to end one, and a refused handback leaves its intake lane entry live (issue 1761)"
+}
