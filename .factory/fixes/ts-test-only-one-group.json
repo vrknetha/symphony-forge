@@ -1,0 +1,15 @@
+{
+  "base": "49482cc424deacb5293e499a187e010038173b7b",
+  "branch": "fix/ts-test-only-one-group",
+  "done_when": "A pull request that changes only JavaScript or TypeScript test files (such as *.test.ts and *.spec.ts) runs one CI test group with those tests, as a docs-only change does, and a change to any other code keeps today's group choice; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T03:23:22.076280+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "In a TypeScript app, a pull request that changes only test files still runs every CI test group, because the CI group choice recognises only Python test file names"
+}
