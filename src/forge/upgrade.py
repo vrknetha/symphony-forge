@@ -11,10 +11,11 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
-from forge import close, codex, event_log, machine, quicktest, repo, story, task
+from forge import close, codex, event_log, machine, native, quicktest, repo, story, task
 
 COMMANDS = [{
     "words": "upgrade", "run": "upgrade", "changes_state": False,
@@ -234,9 +235,11 @@ def upgrade(args: argparse.Namespace) -> int:
             live = codex._alive(process)
             if live is False:
                 continue
+            launchers = _launchers(process)
             if live is None or not codex._stop(process, False):
                 repo.refuse(REFUSALS["wait_end"], again=again, command=command,
                             item=wait["item"], repo=wait["repo_name"])
+            _wait_gone(launchers)
             resume = "forge land --all" if command == "merge train" else f"forge {command} {wait['item']}"
             print(f"Ended {command} for {wait['item']} to install Forge. "
                   f"Run {resume} to resume the CI wait.", flush=True)
@@ -285,6 +288,38 @@ def upgrade(args: argparse.Namespace) -> int:
 
 CODEX_INSTALL = ("irm https://chatgpt.com/codex/install.ps1 | iex" if os.name == "nt"
                  else "curl -fsSL https://chatgpt.com/codex/install.sh | sh")  # OpenAI's standalone installer
+
+
+def _launchers(process: dict[str, Any]) -> list[dict[str, Any]]:
+    """The programs above a process that only start it and wait, such as a virtual environment's
+    python.exe on Windows. Each holds the tool environment until it exits, which follows the end of
+    its child. A parent counts when it runs the same program and has no other child."""
+    def program(who: dict[str, Any]) -> str:
+        command = who.get("command", "")
+        return Path(command if os.name == "nt" else command.split()[0] if command else "").name.lower()
+
+    try:
+        parents = native.parent_ids()
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return []  # Nothing is known about the tree, so the install goes on as before.
+    found, current = [], process
+    for _ in range(len(parents)):
+        parent = parents.get(current["pid"], 0)
+        above = codex.identity(parent) if parent > 1 else None
+        if (not above or "command" not in above or program(above) != program(current)
+                or [pid for pid, up in parents.items() if up == parent] != [current["pid"]]):
+            break
+        found.append(above)
+        current = above
+    return found
+
+
+def _wait_gone(processes: list[dict[str, Any]], seconds: float = 10) -> None:
+    """Wait for processes to exit. A program that stays holds no more than this long, and the
+    install then says what it cannot replace."""
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline and any(codex._alive(who) is not False for who in processes):
+        time.sleep(0.1)
 
 
 def _codex_command() -> list[str] | None:

@@ -3,9 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import json
-import os
 import re
-import subprocess
 import sys
 import time
 from pathlib import Path
@@ -161,14 +159,11 @@ def _attempt(argv: list[str], cwd: Path, out: Path,
              selected: dict[str, str], top: Path, item: str, run_id: str,
              strict: bool = False) -> tuple[list[dict[str, Any]], str]:
     """Run Autoreview once: its findings, or the reason the run doesn't count."""
-    from forge import codex  # importing it here avoids sync's hook-import cycle
+    from forge import review_process  # importing it here avoids sync's hook-import cycle
     out.unlink(missing_ok=True)
-    proc = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, env={**os.environ, "FORGE_WORKER": "1"},
-                            **codex.GROUP)
     # The run's output file: what a person sees when they open the run from the pane.
     log = repo.forge_dir(top) / f"review-{run_id}.log"
-    with proc, log.open("wb") as saved, machine.agent_process(proc, log):
+    with review_process.owned(argv, cwd) as proc, log.open("wb") as saved, machine.agent_process(proc, log):
         last = ""
         pending = b""
         for line in proc.stdout or []:  # streamed as bytes: its progress is how a person watches it

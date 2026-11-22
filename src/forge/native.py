@@ -21,22 +21,25 @@ COMMANDS = [{"words": "handback", "run": "handback", "changes_state": True, "pos
              "listing": "| `forge handback <target>` | Records a session subagent result and frees its held place |"}]
 
 
-def session() -> dict[str, Any]:
-    """Find the host above shell/uv wrappers; its identity outlives each forge command."""
-    tool = repo.coordinator()
-    if tool is None:
-        raise repo.Refused("Run this command from the coordinating Claude Code or Codex session.", "")
+def parent_ids() -> dict[int, int]:
+    """Each running process's parent, by id."""
     if os.name == "nt":
         listed = repo.run("powershell", "-NoProfile", "-NonInteractive", "-Command",
                           "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId "
                           "| ConvertTo-Json -Compress")
         listed.check_returncode()
-        parents = {row["ProcessId"]: row["ParentProcessId"] for row in json.loads(listed.stdout)}
-    else:
-        listed = repo.run("ps", "-axo", "pid=,ppid=")
-        listed.check_returncode()
-        parents = {int(pid): int(parent) for pid, parent in
-                   (line.split() for line in listed.stdout.splitlines())}
+        return {row["ProcessId"]: row["ParentProcessId"] for row in json.loads(listed.stdout)}
+    listed = repo.run("ps", "-axo", "pid=,ppid=")
+    listed.check_returncode()
+    return {int(pid): int(parent) for pid, parent in (line.split() for line in listed.stdout.splitlines())}
+
+
+def session() -> dict[str, Any]:
+    """Find the host above shell/uv wrappers; its identity outlives each forge command."""
+    tool = repo.coordinator()
+    if tool is None:
+        raise repo.Refused("Run this command from the coordinating Claude Code or Codex session.", "")
+    parents = parent_ids()
     pid, seen = os.getppid(), set()
     owner = node = None
     while pid > 1 and pid not in seen:

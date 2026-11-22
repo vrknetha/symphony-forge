@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/review_process.py\tNot done: Killing a close, by forge stop or by ending its process, also ends its review subprocess tree, so no review run stays alive on\tkilled-close-ends-review",
+      "kind": "bug",
+      "path": "src/forge/review_process.py",
+      "line": 53,
+      "text": "Not done: Killing a close, by forge stop or by ending its process, also ends its review subprocess tree, so no review run stays alive on",
+      "from": "blocking",
+      "item": "killed-close-ends-review",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_close_ends_review_processes.py\tGate: Windows execution of test_1_close_ends_its_review_tree_and_releases_upgrade\tkilled-close-ends-review",
+      "kind": "bug",
+      "path": "tests/test_close_ends_review_processes.py",
+      "line": 20,
+      "text": "Gate: Windows execution of test_1_close_ends_its_review_tree_and_releases_upgrade",
+      "from": "blocking",
+      "item": "killed-close-ends-review",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\ttests/test_close_ends_review_processes.py\tGate: test_1_close_ends_its_review_tree_and_releases_upgrade[normal]\tkilled-close-ends-review",
+      "kind": "bug",
+      "path": "tests/test_close_ends_review_processes.py",
+      "line": 38,
+      "text": "Gate: test_1_close_ends_its_review_tree_and_releases_upgrade[normal]",
+      "from": "blocking",
+      "item": "killed-close-ends-review",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

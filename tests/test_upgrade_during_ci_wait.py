@@ -26,19 +26,32 @@ def test_1_upgrade_allows_ci_wait_and_keeps_review_protected(up, tmp_path, monke
     hold_agents(up.env)
     up.env.checks([run("tests", None, "in_progress"), run("forge-pr-check")])
     item, checkout = up.env.start_fix()
-    closing, output = start(checkout, tmp_path / "close", up.repo, "close", item)
+    # A launcher above close, like a virtual environment's python.exe on Windows, starts it, waits
+    # for it and keeps the tool environment a moment after it ends.
+    wrapper = tmp_path / "wrapper.py"
+    wrapper.write_text("import subprocess, sys, time\n"
+                       "code = subprocess.call([sys.executable, *sys.argv[1:]])\n"
+                       "time.sleep(2)\n"
+                       "sys.exit(code)\n", "utf-8")
+    closing, output = start(checkout, tmp_path / "close", up.repo, "close", item, via=wrapper)
     processes = [closing]
     # Model the real installer's environment-in-use refusal on every platform.
     installer = UV.format(python=sys.executable, mark=MARK,
                           root=str(conftest.ROOT), idle_machine=conftest.IDLE_MACHINE)
     installer = installer.replace('    put(here.parent / "uvbin" / "forge",',
         f'    pid = {closing.pid}\n'
-        '    try:\n'
-        '        os.kill(pid, 0)\n'
-        '        live = os.name == "nt" or not subprocess.run(\n'
-        '            ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True).stdout.strip().startswith("Z")\n'
-        '    except OSError:\n'
-        '        live = False\n'
+        '    if os.name == "nt":  # os.kill(pid, 0) sends Ctrl+C there; it is no check\n'
+        '        import ctypes\n'
+        '        code, kernel = ctypes.c_ulong(), ctypes.windll.kernel32\n'
+        '        handle = kernel.OpenProcess(0x1000, False, pid)\n'
+        '        live = bool(handle) and kernel.GetExitCodeProcess(handle, ctypes.byref(code)) and code.value == 259\n'
+        '    else:\n'
+        '        try:\n'
+        '            os.kill(pid, 0)\n'
+        '            live = not subprocess.run(\n'
+        '                ["ps", "-o", "stat=", "-p", str(pid)], capture_output=True, text=True).stdout.strip().startswith("Z")\n'
+        '        except OSError:\n'
+        '            live = False\n'
         '    if live: sys.exit("tool environment is still in use by close")\n'
         '    put(here.parent / "uvbin" / "forge",')
     _install(up.repo.bin, "uv", installer)

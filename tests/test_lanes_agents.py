@@ -94,11 +94,12 @@ def make_work(repo, name):
     return item, worktree(repo, "fix/" + item).name
 
 
-def start(where, directory, repo, *args, launcher=None):
+def start(where, directory, repo, *args, launcher=None, via=None):
     directory.mkdir(exist_ok=True)
     output = directory / f"{args[0]}.out"
     with output.open("w", encoding="utf-8") as sink:
-        process = subprocess.Popen([sys.executable, str(launcher or repo.bin / "forge"), *args], cwd=where,
+        process = subprocess.Popen([sys.executable, *([str(via)] if via else []),
+                                    str(launcher or repo.bin / "forge"), *args], cwd=where,
             stdin=subprocess.DEVNULL, stdout=sink, stderr=subprocess.STDOUT)
     return process, output
 
