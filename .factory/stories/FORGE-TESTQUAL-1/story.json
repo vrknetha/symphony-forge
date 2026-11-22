@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-TESTQUAL-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-22T10:52:54.266523+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Make agent-written tests prove real behaviour",
+  "touches": 0
+}
