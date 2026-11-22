@@ -1,0 +1,15 @@
+{
+  "base": "8b1df4631466ba1698329145daa30aeaf13cc0da",
+  "branch": "fix/nightly-hold-manual-run",
+  "done_when": "Merge reads the newest finished full run on the default branch, scheduled or started by hand, so a green full run started by hand after the repair frees story merges, and the hold message says that a full run started by hand clears it; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T04:38:40.457262+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "After a failed nightly full run, story merges stay held until the next scheduled run even when a repair merged and a full run started by hand on main passed, because merge reads only scheduled runs"
+}
