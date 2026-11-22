@@ -1,0 +1,15 @@
+{
+  "base": "c10935c6643bec99aa3f0cd97c9ec51192210abf",
+  "branch": "fix/guide-catchup-1-2-40-to-46",
+  "done_when": "skill.md and brief.md state the missing items found by the 22 Nov 2026 audit: the workarounds for issues 1674, 1675, 1699 and 1712, forge land --all reporting Merged only when the pull request merged, one forge work --note round clearing each answered worker question with its known limits, the Vitest name-filter limit, and the close restart step when the review check fails to start; the issue 1699 line is corrected; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T17:13:50.928023+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The guide and worker brief miss agent-facing items from releases v1.2.40 to v1.2.46, and one guide line wrongly implies that close reviews the amended Done-when (issue 1699)"
+}
