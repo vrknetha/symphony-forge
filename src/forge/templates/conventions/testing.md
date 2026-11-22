@@ -86,8 +86,8 @@ To set one kind aside for one screen, add `waive: { 'cut-text': '<the reason>' }
 Close runs this check only when its test command runs the browser tests.
 
 Keep browser tests and each screen's rendered check in the full test command and nightly full
-run, not in `fast_test` or pull request CI, even when shared settings select all other tests.
-A broken screen can merge; the nightly run finds it the next morning. Playwright runs in
+run, outside `fast_test`, even when shared settings select all other tests.
+Pull request CI runs the desktop Playwright project. Nightly runs all projects. Playwright runs in
 parallel workers with zero retries: an intermittent failure fails the check. Fix its cause by
 waiting for real app state, never by adding a fixed sleep. A minimal config is:
 
@@ -119,10 +119,11 @@ running after a timeout. Reset only that file's data. If a global reset forces s
 repair it first and measure again. Never hide leftover work with `INSERT OR IGNORE`, upserts,
 random keys, blind retries or a serial suite.
 
-- Each test creates what it needs through the running app's API on a fresh database per run.
-  Do not use a shared seed or insert rows directly into the database.
-- Shared seed data stays out of tests, the demo loader's too: demo data is allowed on the demo
-  host only (see demo-data.md).
+- Each test run uses a fresh database. Seed the database directly only for the initial fresh
+  data, one base seed per worker. All other test setup goes through the app's real APIs,
+  including admin APIs, user APIs and webhooks. Use a test-only route only for what no real API
+  can do, such as moving the clock, and say why in the helper.
+- Demo data stays out of tests. Run the demo loader on the demo host only (see demo-data.md).
 - Unit tests for pure logic with many cases (a price rule, a date calculation) need no database.
 - No sleeps: wait for the thing itself (`findBy...`, an awaited promise).
 

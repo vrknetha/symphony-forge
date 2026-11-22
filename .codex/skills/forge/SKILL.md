@@ -18,8 +18,8 @@ Start with the largest measured cost:
 
 1. Upgrade to the record-commit rerun fix to remove repeated runs caused only by Forge records.
    Keep runs that test changed code or a changed base.
-2. Run browser tests, including each screen's rendered check, nightly through the full command,
-   outside `fast_test` and pull request CI, even for shared-settings changes.
+2. Run the desktop Playwright project on pull requests and all projects nightly through the full
+   command, including each screen's rendered check. Keep browser tests outside `fast_test`.
 3. Keep test setup and helpers from importing the app entry or the whole app. Preserve real
    import dependencies: never drop changed files from related selection or replace them with
    area names. Keep a table of slow tests and their input paths; run them for changed inputs on
@@ -1410,6 +1410,7 @@ Draft the Roles table from the client notes. Where the notes say nothing, admins
 actions and members view and create. Keep each feature's role mapping in one place.
 
 Follow the database skill (.codex/skills/database/SKILL.md) for new tables and extensions.
+Follow the playwright-tests skill (.codex/skills/playwright-tests/SKILL.md) when writing or changing Playwright tests or their CI.
 Follow the agents skill (.codex/skills/agents/SKILL.md) for any agent, chat, voice or in-app assistant work. When a part adds one, the plan names the skill's sections that apply and the model service it uses.
 An extension outside its allowed list needs the owner's OK for this client. Ask the owner,
 then write `- Postgres extension <name>: the owner allows it on <date> (<why>)` under
@@ -1487,13 +1488,13 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    the human agrees. Keep `test` as the full suite. New repos get this review at setup; existing
    adopted repos get this guidance on upgrade and sync, with settings changed only through that fix.
    Keep browser tests and each screen's rendered check in the full test command and nightly
-   full run, not in `fast_test` or pull request CI, including shared-settings changes.
-   A broken screen can merge; the nightly run finds it the next morning.
+   full run, outside `fast_test`, including shared-settings changes.
+   Pull request CI runs the desktop Playwright project. Nightly runs all projects.
    The pytest picker retains non-pytest steps from `test`. It does not filter out browser steps.
    For a combined Python/browser command, use a separate non-browser `fast_test` through the
    owner's settings fix. For example, with `test = "uv run pytest -q && npx playwright test"`,
    use `fast_test = "uv run pytest -q"`. This runs all Python tests on pull requests and keeps
-   browser tests nightly. Keep any required install, lint, type-check and setup steps too.
+   browser tests in a separate desktop Playwright job, with all projects nightly. Keep any required install, lint, type-check and setup steps too.
    For changed-only Python selection, adapt the app's script to accept a base and omit browser
    steps. Do not use `forge test --pytest {base}` alone to exclude them.
    Forge writes no `fast_test` by itself.
@@ -2404,7 +2405,7 @@ upgrade. Upgrade never rewrites their `test` or `fast_test` settings. Doctor rep
 in the project: it loads a temporary pytest hook to exclude unrelated files, including on pytest
 before 8.2. Test launchers must preserve `PYTHONPATH`, forward pytest arguments and expose xdist
 options in the command or pytest configuration.
-On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep browser steps in the nightly full command, outside pull request CI and `fast_test`; this Windows shortcut does not change selection elsewhere.
+On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep all browser projects in the nightly full command and outside `fast_test`. Pull request CI runs the desktop Playwright project; this Windows shortcut does not change selection elsewhere.
 Workers run tests only through bare `forge test`. It runs `fast_test`, or `test` when none is
 set (using pytest selection when supported), with `{base}` as the merge base with
 `origin/<default branch>`, in the same fair machine-wide test lane as close.

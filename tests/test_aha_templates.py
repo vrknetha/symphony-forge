@@ -75,8 +75,11 @@ def test_2_new_client_keeps_their_words_and_gets_guarded_demo_data(repo, gh, tmp
                  "before `corepack pnpm run start:prod`",
                  "await app.get(DemoDataService).loadIfAllowed(); await app.listen(port);"):
         assert rule in demo, rule
-    assert ("Shared seed data stays out of tests, the demo loader's too: demo data is allowed on "
-            "the demo host only") in pages["testing.md"]
+    # The approved base seed is separate from demo data, which stays out of tests.
+    assert "one base seed per worker" in pages["testing.md"]
+    assert "All other test setup goes through the app's real APIs" in pages["testing.md"]
+    assert ("Demo data stays out of tests. Run the demo loader on the demo host only"
+            in pages["testing.md"])
 
 
 def test_3_agentation_toolbar_is_demo_only(repo, gh, tmp_path):

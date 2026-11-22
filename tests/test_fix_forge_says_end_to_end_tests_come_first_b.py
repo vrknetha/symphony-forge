@@ -50,9 +50,14 @@ def test_3_one_check_starts_app_and_runs_all_tests():
 def test_4_test_data_comes_through_running_api():
     testing = guidance("templates/conventions/testing.md")
     standards = guidance("standards.md")
-    assert "Each test creates what it needs through the running app's API" in testing
-    assert "Do not use a shared seed or insert rows directly into the database" in testing
-    assert "Client tests create their data through the app's API" in standards
+    assert "Each test run uses a fresh database" in testing
+    assert "one base seed per worker" in testing
+    assert "All other test setup goes through the app's real APIs" in testing
+    assert "Use a test-only route only for what no real API can do" in testing
+    assert "Client tests use a fresh database per run" in standards
+    assert "Direct database inserts are allowed only for one initial base seed per worker" in standards
+    assert "All other test setup goes through the app's real APIs" in standards
+    assert "Use a test-only route only for what no real API can do" in standards
 
 
 def test_5_flaky_browser_tests_fail_without_retry():

@@ -25,6 +25,7 @@ SOURCES = {
         "skills/app-baseline/SKILL.md": ".codex/skills/app-baseline/SKILL.md",
         "skills/database/SKILL.md": "src/forge/templates/skills/database/SKILL.md",
         "skills/agents/SKILL.md": "src/forge/templates/skills/agents/SKILL.md",
+        "skills/playwright-tests/SKILL.md": "src/forge/templates/skills/playwright-tests/SKILL.md",
         "skills/test-audit/NOTICE.md": ".codex/skills/test-audit/NOTICE.md",
         "skills/test-audit/SKILL.md": ".codex/skills/test-audit/SKILL.md",
         **{f"skills/simplified-technical-english/{name}":

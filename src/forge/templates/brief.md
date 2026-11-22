@@ -719,10 +719,10 @@ part of that address only when the listed address has one. Set `phone: true` whe
 other answer, leave it out. When the browser tests run, the check opens each listed screen in light and
 dark and fails on sideways overflow, cut text, low contrast or a page that is not the listed screen.
 To set one kind of problem aside for a screen, add `waive: { '<kind>': '<the reason>' }` to its entry.
-On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep browser steps in the nightly full command, outside pull request CI and `fast_test`; this Windows shortcut does not change selection elsewhere.
+On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep all browser projects in the nightly full command and outside `fast_test`. Pull request CI runs the desktop Playwright project; this Windows shortcut does not change selection elsewhere.
 The rendered check runs with browser tests in the full test command and nightly full run.
-Keep browser tests outside `fast_test` and pull request CI, even when shared settings select
-all other tests. A broken screen can merge; the nightly run finds it the next morning.
+Keep browser tests outside `fast_test`, even when shared settings select all other tests.
+Pull request CI runs the desktop Playwright project. Nightly runs all projects.
 When you add a sample-data prototype's first
 tests, list every screen the prototype has. A new app asks the phone-view question before its build
 starts; an existing app asks at the next change to one of its screens.
@@ -755,6 +755,8 @@ check in a prototype repo with no live release. To allow a migration that drops 
 table or column, or changes a column's type, add a `-- Contract: ...` comment to Prisma SQL or
 `# Contract: ...` to Alembic Python. Explain why the live release no longer reads the table or
 column; close allows the migration when the line is present, and review reads the explanation.
+
+Follow the playwright-tests skill (.codex/skills/playwright-tests/SKILL.md) when writing or changing Playwright tests or their CI.
 
 Before any agent, chat, voice or in-app assistant work, load the agents skill (.codex/skills/agents/SKILL.md) and follow it. Say which of its sections apply to your change. A review holds a broken Must rule.
 
