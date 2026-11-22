@@ -4,40 +4,21 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon. End each
-item with its source in plain words, such as (Source: the client's note on late orders, 12 Oct),
-or with the sourced item that needs it, such as (Needed by: the Customers screen). A source is a
-client note, a brief answer, a decision, a screen marked Build now at sign-off, a fixed rule of
-the app, or the owner's own request with its date. Name each screen, field, endpoint, tool and
-setting that the plan adds in one of these items.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact made with the client's design system (link in
-docs/design/design-system.md); on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id and a new plan approval.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- Each release ships its notes as a file inside Forge, so they install with it and need no network. A new client repo gets them from its first install; an existing client repo gets them on its next upgrade.
+- The upgrade output lists the changes of every release between the old version and the new one.
+- The next command shows those changes once to the agent, so the agent can tell the owner and adjust.
+- The sync command writes the open known issues, with their workarounds, into a section of the shipped guide, taken from the notes files. An issue that a later release fixes drops out. Release notes must be written so an agent can act on them.
 
 ## Why
 
-Tell clients what each Forge release changed
-
-
+Clients do not learn what each Forge release changed. Release notes live only on GitHub, and the upgrade, sync and next commands print none. After an upgrade, neither the agent nor the person knows the new features, fixes or known issues.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **A release cannot be cut without its notes file inside Forge.**
+2. **After an upgrade, the output lists the changes of every release between the old and the new version.**
+3. **The next step shows the new release's changes once to the agent, and not again on later runs.**
+4. **The shipped guide has a known-issues section with each open issue's workaround, and a fixed issue is gone after the release that fixes it.**
 
 ## Risks
 
