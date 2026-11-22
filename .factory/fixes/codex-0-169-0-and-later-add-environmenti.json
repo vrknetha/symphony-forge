@@ -1,0 +1,29 @@
+{
+  "base": "a27cc967e4fbedac42dbca27c132e2ca7ca8851c",
+  "branch": "fix/codex-0-169-0-and-later-add-environmenti",
+  "done_when": "A Codex worker or reader turn starts on SDK 0.171.0 with Forge's own hooks trusted, and new repos default Codex build, fix and lite to gpt-6.2-sol.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-22T07:47:28.273147+00:00",
+      "step": "start"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-22T07:47:26.763066+00:00",
+    "predicted_files": [
+      ".github/workflows/codex-smoke.yml",
+      "forge.toml",
+      "src/forge/codex.py",
+      "src/forge/codex_turn.py",
+      "src/forge/init.py",
+      "src/forge/repo.py",
+      "src/forge/upgrade.py"
+    ],
+    "question": "Allow this fix to change 7 code files: .github/workflows/codex-smoke.yml, forge.toml, src/forge/codex.py, src/forge/codex_turn.py, src/forge/init.py, src/forge/repo.py, src/forge/upgrade.py?",
+    "wait_id": "2f8c292d-7e60-44ca-b75e-1548cff03029"
+  },
+  "why": "Codex 0.169.0 and later add environmentId to each project hook's metadata. Forge's hook-trust check in src/forge/codex_turn.py compares every hook field that is not in its PLACE set against Forge's own hook definitions, so environmentId makes Forge's own hooks fail the check and Forge starts no Codex worker or reader turn. Forge also still pins SDK 0.159.2 and defaults Codex build, fix and lite to gpt-6.1-sol."
+}
