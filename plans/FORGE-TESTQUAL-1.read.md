@@ -195,38 +195,42 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Not done. [The plan](/plans/FORGE-TESTQUAL-1.md:193) says results are for the current commit, but [close runs the test command in the working checkout](/src/forge/review.py:455). A dirty checkout disables the cache; it does not prevent the run.
     Case: normal use - committed code fails the named test, but an uncommitted edit makes it pass. Close can accept that result while the pull request still contains the failing code.
     Gain 5, Work 3, Harm 3
+   Disposition: cut - on the pytest path, close's local check now refuses a checkout with uncommitted changes (case `uncommitted-edit`); the JavaScript side moves to the Split out follow-up.
 
 28. Blocking: The extra Vitest report can be written outside the directory close reads.
     Raise: Not done. [The plan](/plans/FORGE-TESTQUAL-1.md:247) gives the extra run a relative report path, but Vitest resolves it against its configured root. The [starter’s web config](/src/forge/templates/starter/apps/web/vitest.config.ts:6) sets that root to `apps/web`; close reads reports under the repository’s `test-results/`.
     Case: normal use - a repo runs Vitest directly with that web config and names an unchanged test. The extra run writes under `apps/web/test-results/`, so close cannot see its result.
     Gain 4, Work 2, Harm 2
+   Disposition: cut - JavaScript report reading and the extra Vitest run are removed by the owner's split; the case is listed under Split out.
 
 29. Blocking: Two extra Vitest runs overwrite each other’s reports.
     Raise: Not done. [The revised plan](/plans/FORGE-TESTQUAL-1.md:247) assigns every extra run `test-results/runs/forge-proof.xml`. The existing [test command handler](/src/forge/fasttest.py:321) supports more than one Vitest part, and close reads the reports after the command finishes.
     Case: normal use - a repo has separate unit and integration Vitest commands, each with a reused proof test. The second extra run replaces the first report, so close says the first test did not run.
     Gain 4, Work 2, Harm 2
+   Disposition: cut - the extra Vitest runs are removed by the owner's split; the case is listed under Split out.
 
 30. Blocking: A Playwright proof is passed to Vitest.
     Raise: Functional. [The plan](/plans/FORGE-TESTQUAL-1.md:131) puts both Vitest and Playwright files in `FORGE_PROOF_TESTS`, then [passes those files to each extra Vitest run](/plans/FORGE-TESTQUAL-1.md:252). Forge supports [commands containing both runners](/tests/test_windows_worker_skips_browser_tests.py:122).
     Case: normal use - a mixed command names a Playwright `*.spec.ts` as proof. A Vitest configuration that discovers that file tries to load its Playwright `test()` outside Playwright and fails before the browser command runs.
     Gain 5, Work 2, Harm 3
+   Disposition: cut - FORGE_PROOF_TESTS and the extra Vitest run are removed by the owner's split; the case is listed under Split out.
 
 31. Advisory: CI and close use different rules for finding the effective proof.
     Raise: Plan gap. [The revised CI lookup](/plans/FORGE-TESTQUAL-1.md:198) skips `.factory/` and `plans/spotted/`, while [close skips all of `plans/`](/src/forge/review.py:40). If a `plans/ideas.md` commit carries proof B after proof A, and an empty commit then repeats B, CI sees B at both heads while close changes from A to B. CI can reuse the run that checked A.
     Gain 3, Work 1, Harm 2
-   Disposition: keep - below the bar (follow-up)
+   Disposition: cut - CI reuse now skips the same record-only commits as close, every path under `review.BOOKKEEPING` (`.factory/` and `plans/`).
 
 32. Advisory: A recovered timeout remains a failed proof result.
     Raise: Functional. [Close retains both attempts’ pytest results](/src/forge/review.py:468), and its [existing retry test](/tests/test_close_retries_failed_files.py:105) expects Ready when a timeout passes on retry. [The new proof rule](/plans/FORGE-TESTQUAL-1.md:219) refuses any matching failure, including the first attempt.
     Gain 3, Work 2, Harm 2
-   Disposition: keep - below the bar (follow-up)
+   Disposition: cut - pytest results now come from each test's last attempt (lines after the last `fasttest.RETRY_HEADER` for a retried file), so a retry that passes counts as passed; new case `retry-recovered`.
 
 33. Advisory: The review is told checks have finished while they are still running.
     Raise: Not done. [The revised prompt](/plans/FORGE-TESTQUAL-1.md:168) says close has already refused invalid test results. In the local-test flow, [close starts tests alongside the review](/src/forge/close.py:354) and waits for their result afterward, so that statement is not established when the reviewer reads it.
     Gain 3, Work 1, Harm 2
-   Disposition: keep - below the bar (follow-up)
+   Disposition: cut - `$proof_checked` now says close refuses when its test run finishes and that the run may still be going during the review.
 
 34. Advisory: A reused browser test can reach a project the starter does not select.
     Raise: Not done. [The plan](/plans/FORGE-TESTQUAL-1.md:254) says a test in an unaffected project cannot reach the change. The starter’s [browser test calls the API](/src/forge/templates/starter/apps/web/e2e/served-app.spec.ts:13), while an [API-only change does not select the browser tests](/tests/test_affected_ts_starter.py:105). Naming that existing browser test can therefore make close refuse valid proof as not run.
     Gain 3, Work 2, Harm 2
-   Disposition: keep - below the bar (follow-up)
+   Disposition: cut - JavaScript run proof is removed by the owner's split; the case is listed under Split out.
