@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from forge import machine, repo, sync
+from forge import machine, repo, routing, sync
 
 if os.name == "nt":
     import msvcrt
@@ -565,7 +565,7 @@ def run(checkout: Path, item: str, kind: str, name: str, prompt: str, sandbox: s
         require_trust(checkout)
     root = Path(repo.git("rev-parse", "--path-format=absolute", "--git-common-dir",
                          cwd=checkout)).resolve().parent
-    config = repo.config(checkout)
+    config = routing.routed(checkout, repo.config(checkout))
     chosen = (repo.design_models(config, "codex") if design else None)
     request = {"cwd": str(checkout), "root": str(root), "name": name, "prompt": prompt, "sandbox": sandbox,
                "config": ({} if archive_thread or attach_request else

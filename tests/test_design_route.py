@@ -68,6 +68,11 @@ def test_3_user_facing_task_uses_design_claude_with_split_workers(repo, monkeypa
                                                      'repo = "forge-source"').replace(
         'workers = "split"', 'workers = "codex"'), encoding="utf-8")
     repo.git("commit", "--allow-empty", "-qam", "Use the source repo", cwd=folder)
+    # Workers come from the default branch unless the task changed them from where it started.
+    main = repo.path / "forge.toml"
+    main.write_text(main.read_text("utf-8").replace('workers = "split"', 'workers = "codex"'), encoding="utf-8")
+    repo.git("commit", "-qam", "Use Codex workers")
+    repo.git("push", "-q", "origin", "main")
     source = repo.forge("work", "BOARD/PAGE")
     assert source.returncode == 0, source.stdout + source.stderr
     assert len(_sent(codex_log, "turn/start")) == 1

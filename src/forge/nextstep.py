@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from forge import (__version__, approval, board, board_facts, close, codex, gaps, githooks, machine, migration_warnings,
-                   intake, journey, land, native, owner_choices, records, release_notes, repo, review, spotted, story, score, task, time_records, upgrade)
+                   intake, journey, land, native, owner_choices, records, release_notes, repo, review, routing, spotted, story, score, task, time_records, upgrade)
 from forge.task import _merged, _started, can_start, developer, github_login, owner, sections, start_base, unbuilt_fix, waits_for
 from forge.task import rows as task_rows
 
@@ -502,7 +502,7 @@ def _needs_demo_address(top: Path) -> bool:
 
 def _report_config(path: Path, refusals: dict[Path, str]) -> dict[str, Any]:
     try:
-        return repo.command_fact(("report config", path.resolve()), path, lambda: repo.config(path))
+        return repo.command_fact(("report config", path.resolve()), path, lambda: routing.routed(path, repo.config(path)))
     except repo.Refused as refusal:
         refusals[path] = str(refusal).splitlines()[0]
         return repo.DEFAULTS
@@ -755,7 +755,7 @@ def _story(top: Path, key: str, path: Path | None, text: str,
             settings = (story.show(top, base, "forge.toml") if history is None
                         else history["docs"].get(f"{base}:forge.toml"))
             try:
-                cfg = (repo._config_text(settings, top) if settings  # pyright: ignore[reportPrivateUsage]
+                cfg = (routing.routed(top, repo._config_text(settings, top), base) if settings  # pyright: ignore[reportPrivateUsage]
                        else _report_config(top, refusals))
             except repo.Refused:  # unreadable there: what forge next reads here
                 cfg = _report_config(top, refusals)
