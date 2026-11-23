@@ -1,0 +1,15 @@
+{
+  "base": "d68b2284a746600b50fb05afa7981d365407f876",
+  "branch": "fix/builders-can-ship-bold-all-caps-gradient",
+  "done_when": "Close refuses a changed screen file that uses bold text, all-caps text, a background gradient, a hex colour outside the theme file, or motion of 300 ms or more, and the app baseline lists the rest of the owner's rules.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T16:58:01.789368+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Builders can ship bold, all-caps, gradient, hex-coloured or slow-motion screens that close does not catch, because the owner's rules are not in the app baseline or in Forge's checker; the impeccable detector covers only some of them (gradient text, glow shadows, bounce easing)."
+}
