@@ -1,0 +1,15 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/proof-list-from-handback",
+  "done_when": "The worker brief states the exact place and form of the Proof list (a commit message paragraph with one line per Done-when item, '<n>: <test>'), and forge handback writes a Proof list from the worker's report into a commit when the branch has none, so a native Claude round never fails the proof check for its form alone; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T03:23:43.872447+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Native Claude builders write their proof in the handback report instead of a Proof list paragraph in the last commit, so the Done-when proof check refuses close and items reach the round limit for that alone"
+}
