@@ -1,0 +1,15 @@
+{
+  "base": "d68b2284a746600b50fb05afa7981d365407f876",
+  "branch": "fix/windows-run-records-order",
+  "done_when": "tests/test_run_records.py::test_2 checks each round's worker, test and review rows without depending on which of the parallel test run and review ends first, and passes on Linux and in forge-next.yml's Windows jobs on the fix branch",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T17:42:58.381778+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The v1.2.47 Windows release check fails in tests/test_run_records.py::test_2_each_round_records_worker_tests_review_and_ci_times[claude]: close runs the tests alongside the review and records each when it ends, so on a slow Windows runner the fix's test run (with its replay on the old code) ends after the review and the timing rows come in a different order than the test expects"
+}
