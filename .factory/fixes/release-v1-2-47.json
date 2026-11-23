@@ -1,0 +1,15 @@
+{
+  "base": "f0639fa2f8e92ce71b40d4ff085fd70f510baf0d",
+  "branch": "fix/release-v1-2-47",
+  "done_when": "Every version reference that names the current release says v1.2.47 (as the v1.2.46 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.47.md exists, the release version tests and the release notes tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T16:02:28.607923+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Release v1.2.47: publish what merged since v1.2.46 (release notes inside Forge and shown after upgrade, Done-when tests checked at close, fix tests must fail on old code, proof list from handback, quota wait lines, settings from the default branch, reprinted intake prompt, resolve refusal next step, design redraw keeps approval, playwright skill, SDK and model updates, upgrade ends CI waits and lists blocking runs, close ends its process tree, forge ask)"
+}
