@@ -1,0 +1,15 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/reprint-intake-prompt",
+  "done_when": "When an intake is pending for the same idea, forge start and forge next print that intake's prompt and handback command again instead of refusing, so the agent can start the explorer and hand back without forge stop; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T04:24:31.539187+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "A lost intake prompt from forge start cannot be printed again: rerunning forge start says the intake is already running, a handback with hand-written lines is refused, and the lane entry stays until forge stop --id"
+}
