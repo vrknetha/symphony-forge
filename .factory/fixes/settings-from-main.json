@@ -1,0 +1,15 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/settings-from-main",
+  "done_when": "forge next, forge task start and forge work take workers, tools and model settings from the default branch's forge.toml (plus the clone's forge.local.toml), not from a story or task branch's older copy, so a settings change on main applies to open stories at once; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T03:27:00.160228+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "A story branch reads its own old forge.toml for settings like workers, so after main changed workers to claude, story parts still said Codex builds them until main was merged into the story branch"
+}
