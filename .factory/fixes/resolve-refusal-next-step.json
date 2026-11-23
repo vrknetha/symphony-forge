@@ -1,0 +1,15 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/resolve-refusal-next-step",
+  "done_when": "The refusal says which state --resolve needs (a review stopped at the round limit or a stuck loop) and names the real next step for the item's current state, such as forge work or forge close, never the refused command; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T04:24:37.562631+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "forge close --resolve on a review loop that has not stopped refuses with 'Record the human's choice only on a stopped review loop' and then names the same --resolve command as the next step"
+}
