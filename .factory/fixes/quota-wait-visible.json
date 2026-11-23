@@ -1,0 +1,15 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/quota-wait-visible",
+  "done_when": "While close, merge or land wait for GitHub quota they print the REST and GraphQL numbers they are waiting on and the reset time, they recheck the quota at least once a minute and resume as soon as it is above the threshold, and no wait goes more than a few minutes without a printed line; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T03:23:38.791742+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Close can wait silently for a long time on 'Waiting for GitHub API quota' while the quota is fine (a client saw 47 minutes with all checks green; restarting close made it Ready at once)"
+}
