@@ -1,0 +1,15 @@
+{
+  "base": "d68b2284a746600b50fb05afa7981d365407f876",
+  "branch": "fix/story-drop-refuses-any-story-with-a-part",
+  "done_when": "After forge story drop on a story with a built, unmerged part, the story shows as dropped, its open pull requests are closed, and another story's part that shares a file starts without the would-change-hasn't-merged-yet refusal.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T17:57:07.460011+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Story drop refuses any story with a part record (src/forge/intake.py story_drop, the has started parts check), so an owner cannot park a story whose part is built but unmerged. Also, task._started (src/forge/task.py) treats every unmerged task branch as busy with its Scope and never checks whether its story was dropped, so closing the part's pull request does not release its files against another story's part."
+}
