@@ -1,6 +1,7 @@
 """Session-owned reads use the existing item record, lock and machine lane."""
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -254,6 +255,23 @@ def handback(args: Any) -> int:
                 lock.unlink(missing_ok=True)
 
 
+def _proof_paragraph(text: str) -> str:
+    """The report's Proof list: its label through the last proof line, blank lines included."""
+    from forge import proof
+
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.startswith("Proof list:")), None)
+    if start is None:
+        return ""
+    end = start
+    for i in range(start + 1, len(lines)):
+        if proof.LINE.match(lines[i]) or re.match(r"\s*(?:-\s*)?check:", lines[i], re.I) or (lines[i].startswith((" ", "\t")) and i == end + 1):
+            end = i
+        elif lines[i].strip() and not lines[i].startswith((" ", "\t")):
+            break
+    return "\n".join(lines[start:end + 1]) if end > start else ""
+
+
 def _work_result(path: Path, item: str, pending: dict[str, Any], said: str, owner: dict[str, Any],
                  subagent: str) -> bool:
     """What a build round does once its worker ends; True keeps the place for the commit nudge."""
@@ -292,6 +310,16 @@ def _work_result(path: Path, item: str, pending: dict[str, Any], said: str, owne
         print(f"Send this to subagent {subagent}, then hand back again:\n"
               f"{worker.commit_nudge(top)}")
         return True
+    # Native builders report their proof in text, but close reads only commit messages.
+    from forge import proof as proof_list, review
+    report = _proof_paragraph(pending.get("said", "")) or _proof_paragraph(said)
+    if report:
+        found, base = proof_list._proof(top, item, "HEAD")
+        if not found:
+            check = review.commit_paragraph(top, base, "Functional check:")
+            # -o with no paths commits nothing from the index, so staged edits stay uncommitted.
+            repo.git("commit", "-q", "-o", "--allow-empty", "-m", "Record the proof list",
+                     "-m", "\n\n".join(filter(None, [report, check])), cwd=top)
     outcome = "completed"
     asked = worker.questions(pending.get("said", ""), said)
     identity = repo.record_event(top, item, "worker question", question=asked) if asked else None
