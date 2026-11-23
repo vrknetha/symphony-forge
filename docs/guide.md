@@ -489,6 +489,8 @@ If that round fails or is interrupted, answer again with `--note`; the question 
 
 For a quick read-only question about this checkout, hand it to the session's `explorer`
 subagent role. It uses the explore entry in `forge.toml`; no separate Forge command is needed.
+To ask Codex itself (for example a stronger model), run `forge ask "<question>" [--model <model>]`.
+It runs one read-only turn in an agent place and prints the answer.
 
 New repos get explore on Claude with `claude-haiku-5-5` at high effort and on Codex with the
 initial lite settings. Upgrading and syncing an existing repo preserves its settings: without

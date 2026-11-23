@@ -163,6 +163,7 @@ the next merge.
 |---|---|
 | "What now?" | `forge next` |
 | "Show me progress" | `forge board` |
+| "Ask Codex (or Astra) a question" | `forge ask "<question>" [--model <model>]`: one read-only turn in an agent place; the model is `--model` or `[models.ask]` |
 | "I have an idea", "Fix this" or "Plan this" | `forge start "<their words>"` |
 | "Read the plan cold" | `forge read <KEY>`, or `forge read <slug>` for a spec or decision |
 | "I've amended it" | `forge read <KEY>` again, for the next round |
@@ -2009,6 +2010,8 @@ ask the human to review it in Codex's /hooks, then run the command again.
 
 For a quick read-only question about this checkout, hand it to the session's `explorer`
 subagent role. It uses the explore entry in `forge.toml`; no separate Forge command is needed.
+To ask Codex itself (for example a stronger model), run `forge ask "<question>" [--model <model>]`.
+It runs one read-only turn in an agent place and prints the answer.
 
 Each kind in `forge.toml`'s `[models]` table may have a codex and a claude entry, such as
 `[models.build.codex]` and `[models.build.claude]`; a single entry counts only for its own model's

@@ -1,0 +1,253 @@
+{
+  "allow_large": "Owner chose on 22 Nov 2026 to build forge ask; a new top-level command needs one ROUTES entry in src/forge/cli.py and raises the command ceiling from 25 to 26",
+  "base": "d76c106bc310c8ddf40cbc3251bc9025a6942c5d",
+  "branch": "fix/forge-ask",
+  "done_when": "forge ask \"<question>\" [--model <model>] runs one read-only Codex turn on the same app-server path builders use, waits for a place in the agent lane, prints the answer and records the run; the guide line matches the command; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 20,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Security: keep MCP writes out of read-only ask turns",
+      "work": 2
+    },
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 19,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: make the pinned SDK available to forge ask",
+      "work": 2
+    },
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 17,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner asleep on 23 Nov 2026 and asked for the recommended choice: accept as known issues. A session-owned native worker that runs forge ask without FORGE_WORKER can wait behind its own agent place; the test does not prove the SDK install step or the guide line in docs/guide.md",
+      "round": 1,
+      "security": false,
+      "title": "Functional: prevent a worker waiting behind its own agent place",
+      "work": 2
+    },
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 17,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: show ask runs in the existing lane views",
+      "work": 2
+    },
+    {
+      "area": "docs/commands.md",
+      "file": "docs/commands.md",
+      "gain": 3,
+      "harm": 2,
+      "line": 8,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: update the existing guide with the ask syntax",
+      "work": 1
+    },
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 22,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Standard: fail loud, early, once",
+      "work": 2
+    },
+    {
+      "area": "test_1_ask_runs_one_read_only_codex_turn() in tests/test_ask_command.py",
+      "file": "tests/test_ask_command.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 24,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner asleep on 23 Nov 2026 and asked for the recommended choice: accept as known issues. A session-owned native worker that runs forge ask without FORGE_WORKER can wait behind its own agent place; the test does not prove the SDK install step or the guide line in docs/guide.md",
+      "round": 1,
+      "security": false,
+      "title": "Gate: prove ask waits for a place and ships its guide",
+      "work": 2
+    },
+    {
+      "area": "test_1_ask_runs_one_read_only_codex_turn() in tests/test_ask_command.py",
+      "file": "tests/test_ask_command.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 39,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: check ask run records at the owning boundary",
+      "work": 2
+    },
+    {
+      "area": "_no_mcp() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 4,
+      "harm": 4,
+      "line": 21,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Functional: use the bundled Codex program to list MCP servers",
+      "work": 2
+    },
+    {
+      "area": "_no_mcp() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 4,
+      "harm": 4,
+      "line": 27,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Functional: preserve a valid transport when disabling plugin MCP servers",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "c1e77dfd297d9541a674d526639ad50887725cdd7743821515c973d2911dcbc8",
+    "changed": "65dcda3844c30d5506d3289cdc337fbef02bcd7eedbf5f57978e98d43922973b",
+    "commit": "e7c93392d6dc579b4c15bff401808fcdb2c9c173",
+    "dismissals": [],
+    "findings": [],
+    "id": "024f5585-9e04-418b-99ec-e3885f04bc23",
+    "status": "clean"
+  },
+  "round": 6,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T19:23:46.938849+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T19:24:02.293040+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T19:46:03.499332+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T19:58:10.907476+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T20:11:40.507962+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T20:17:19.304130+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T20:36:34.098492+00:00",
+      "by": "owner",
+      "choice": "narrow",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-22T21:00:43.000445+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T21:16:18.908664+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T21:16:18.931350+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T21:17:32.810630+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-22T22:16:38.692214+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T22:22:16.910699+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T22:48:45.279435+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T22:52:00.150064+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T23:45:16.350571+00:00",
+      "round": 6,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T23:48:11.784021+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-22T21:16:18.931350+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/ask.py",
+    "reason": "Owner asleep on 23 Nov 2026 and asked for the recommended choice: accept as known issues. A session-owned native worker that runs forge ask without FORGE_WORKER can wait behind its own agent place; the test does not prove the SDK install step or the guide line in docs/guide.md",
+    "wait_id": "918bd6ee-156b-4f08-8670-24d92f22692f",
+    "worker_round": 3
+  },
+  "stuck": {
+    "close": "a33c2394-19b8-47fe-a205-ecea2eb61b82",
+    "head": "211f1f7521954010f7d576057aedbe3ad455073d",
+    "keys": {},
+    "round": 5
+  },
+  "why": "The guide lists forge ask for asking Codex a question, but no such command exists, so advisor questions (for example to Astra) run outside Forge through a bare codex exec that skips the agent lanes, the pinned SDK and run records",
+  "worker": "claude"
+}

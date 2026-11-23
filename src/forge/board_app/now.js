@@ -12,7 +12,7 @@ const STAGE_OF = {
 };
 const VERB = { approval: 'Approve', 'worker question': 'Answer', merge: 'Merge', 'failed run': 'Fix', 'checks failed': 'Fix' }; // every other wait: Decide
 const KINDS = [['all', 'All'], ['task', 'Story parts'], ['fix', 'Fixes']];
-const RUN = { work: 'Building', worker: 'Building', review: 'Reviewing', read: 'Reading the plan', test: 'Testing' };
+const RUN = { work: 'Building', worker: 'Building', review: 'Reviewing', read: 'Reading the plan', test: 'Testing', ask: 'Answering a question' };
 const CARDS = 4; // per stage, then "and N more"
 const STORIES = 5;
 const ASKS = 3;

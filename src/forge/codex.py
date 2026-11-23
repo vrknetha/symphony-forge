@@ -589,7 +589,7 @@ def run(checkout: Path, item: str, kind: str, name: str, prompt: str, sandbox: s
     request["config"].update(QUIET)
     log = repo.work_log(checkout, item)
     record, turns = (_item_file(checkout, item, suffix, kind) for suffix in (".json", ".log"))
-    command = "read" if kind == "Grill" else "work"
+    command = {"Grill": "read", "Ask": "ask"}.get(kind, "work")
     started: dict[str, Any] = {}
     continued: dict[str, Any] = {}
     result: dict[str, Any] = {"conversation": None, "turn": None, "status": None, "text": None,
@@ -825,7 +825,7 @@ def _item_file(checkout: Path, item: str, suffix: str, kind: str) -> Path:
     worktree shares: threads/task/<STORY>/<TASK>, threads/fix/<name>, threads/read/<item>."""
     # A cold read's item is its story key or spec slug, so reads get their own folder: a spec and
     # a fix of one name never share a conversation.
-    folder = ("read" if kind == "Grill" else "task" if "/" in item else "fix")
+    folder = {"Grill": "read", "Ask": "ask"}.get(kind) or ("task" if "/" in item else "fix")
     path = repo.forge_dir(checkout) / "threads" / folder / f"{item}{suffix}"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path

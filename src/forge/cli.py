@@ -25,7 +25,7 @@ REFUSALS = {
 ROUTES = {
     "init": "init", "sync": "sync", "doctor": "doctor", "test": "fasttest",
     "migrate": "migrate", "upgrade": "upgrade", "next": "nextstep", "board": "board", "lanes": "machine", "stop": "machine",
-    "start": "intake", "story drop": "intake", "story new": "story", "story done": "story", "read": "story", "assign": "task",
+    "start": "intake", "ask": "ask", "story drop": "intake", "story new": "story", "story done": "story", "read": "story", "assign": "task",
     "task start": "task", "task feature": "feature", "task feature-check": "feature_remove", "fix start": "task", "fix drop": "task", "fix allow-large": "task", "fix amend": "task",
     "work": "worker", "handback": "native", "close": "close", "merge": "merge", "land": "land",
     "spec save": "records", "spec confirm": "records", "spec measure": "records",

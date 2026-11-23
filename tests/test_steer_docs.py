@@ -30,4 +30,3 @@ def test_5_sync_and_guide_explain_coordinator_steering(repo):
         assert 'Question:' in prose and 'forge work <item> --note "<answer>"' in prose
         assert 'forge close <item>' in prose and "conversation" in prose
         assert "`explorer`" in prose and "read-only" in prose
-        assert "forge ask" not in prose

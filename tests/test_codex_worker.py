@@ -273,7 +273,7 @@ def test_3_models_per_kind(repo, monkeypatch, sdk_data, claude_session):
              "models.fix sets only one of subagents and subagent_effort; set both or neither"),
             ({**MODELS, "debug": lite},
              "debug is not a kind of work; the kinds are "
-             "build, fix, lite, explore, grill, design, review and light_review")):
+             "build, fix, lite, explore, grill, design, review, light_review and ask")):
         toml.write_text(_toml(version, "codex", models), encoding="utf-8")
         refused = repo.forge("work", "BOARD/PAGE")
         assert refused.stderr == MODELS_REFUSAL.format(problem), refused.stderr
