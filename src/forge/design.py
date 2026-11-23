@@ -90,6 +90,40 @@ def require_working_build(top: Path, base: str) -> None:
                      "forge decision new prototype-plan"))
 
 
+ID_LINE = re.compile(r"(?m)^(Design: docs/design/[^/\s]+/) \((?:[0-9a-f]{40}|[0-9a-f]{64})\)[ \t]*$")
+
+
+def kept_plan(top: Path, key: str) -> str:
+    """The plan a design part's close checks its folder against. When an approved story's part redrew
+    the screens and the plan differs only in the Design line's tree id (in What changes for you, not
+    Done when), keep the approval and the passed read for the new text and return that text."""
+    from forge import story
+
+    old = story.show(top, story.plan_ref(top, key), f"plans/{key}.md") or ""
+    new = story.show(top, "HEAD", f"plans/{key}.md") or ""
+    state, was, now = repo.read_state(key, top) or {}, story.sections(old), story.sections(new)
+    approval = state.get("approval") or {}
+    if (old == new or not approval.get("hash")
+            or approval["hash"] not in (story.approval_hash(old), story.approval_hash(new))
+            or not all(name in now for name in story.APPROVED)
+            or now["Done when"] != was["Done when"]
+            or not ID_LINE.search(was["What changes for you"]) or not ID_LINE.search(now["What changes for you"])
+            or ID_LINE.sub(r"\1", was["What changes for you"]) != ID_LINE.sub(r"\1", now["What changes for you"])):
+        return old
+    if approval["hash"] == story.approval_hash(new):
+        return new  # an earlier close already kept the approval in this checkout
+    notes = top / "plans" / f"{key}.read.md"
+    record, findings = story._record(story._text(notes))  # pyright: ignore[reportPrivateUsage]
+    if not record.get("read_hash") or story.changed_since_read(record["read_hash"], story._store(top, old.encode("utf-8")), old, top):  # pyright: ignore[reportPrivateUsage]
+        return old  # the old plan was not the one read
+    digest = story._store(top, new.encode("utf-8"))  # pyright: ignore[reportPrivateUsage]
+    story._write(notes, story._notes({**record, "read_hash": digest, "doc_seen": digest}, findings))  # pyright: ignore[reportPrivateUsage]
+    state["approval"] = {**approval, "hash": story.approval_hash(new)}
+    rel = repo.write_state(key, state, top)
+    repo.commit_state(f"Keep the approval after the redraw of {key}", rel, f"plans/{key}.read.md", top=top)
+    return new
+
+
 def check(top: Path, text: str, ref: str | None = None, *, required: bool = True) -> str | None:
     from forge import story
 

@@ -1146,7 +1146,10 @@ The one prototype plan approval covers the design.
 For each story that adds a screen or changes a flow, use this design process before its cold read.
 Save the folder under `docs/design/<KEY>/`. End `## What changes for you` with
 `Design: docs/design/<KEY>/ (<tree id>)`, using `git rev-parse HEAD:docs/design/<KEY>`.
-One plan approval covers that exact folder. A changed folder needs a new tree id and approval.
+One plan approval covers that exact folder. A changed folder needs a new tree id. When an approved story's
+design part redraws the folder and changes only that tree id in the plan, its close keeps the approval and the
+cold read for the new plan; any other change to What changes for you or Done when needs a new approval. A redraw
+before the first approval needs a new cold read.
 For small changes to existing screens that add no screen and change no flow, use
 `Design: none (<why>)` instead. Backend-only stories need no canvas. Earlier approved stories keep working.
 The build applies any existing app theme and follows the approved story design, including its

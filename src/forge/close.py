@@ -241,7 +241,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         _refresh_record(top, item, state, pr)
     if "/" in item:
         key = item.split("/")[0]
-        design.check(top, story.show(top, story.plan_ref(top, key), f"plans/{key}.md") or "", "HEAD", required=False)
+        design.check(top, design.kept_plan(top, key), "HEAD", required=False)
         excluded = list(review.DOC_EXCLUDES)
         excluded += [path.replace(":(glob)", ":(exclude,glob)") for path in repo.TEST_PATHS]
         stats = repo.git("diff", "--numstat", "-z", "--no-renames", f"{review_ref}...HEAD",
