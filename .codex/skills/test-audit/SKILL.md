@@ -44,6 +44,7 @@ Bug regression tests must fail on the pre-fix code for the intended reason and
 pass after the owner-boundary repair. A regression test that never demonstrably
 failed proves the mock, not the fix. One regression at the owner boundary
 covers the bug; do not replay the same scenario at every layer it crosses.
+Close checks this for a fix's pytest tests: it runs them on the code before the fix.
 
 ## Junk patterns
 

@@ -455,8 +455,11 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
             results.write_text(passed.read_text("utf-8"), "utf-8")
             if closing:
                 valid, lines = proof.check(top, item, proof_base, results.read_text("utf-8"))
+                if valid:
+                    valid, lines = proof.replay(top, item, proof_base)
                 if not valid:
                     return 1, "\n".join(lines)
+                skipped = "\n".join([skipped, *lines])
             return 0, skipped
         entry = machine.join("test", top, item, None, None)
         preload_folder = tempfile.TemporaryDirectory(prefix="forge-node-")
@@ -465,8 +468,12 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
                 results.write_text(passed.read_text("utf-8"), "utf-8")
                 if closing:
                     valid, lines = proof.check(top, item, proof_base, results.read_text("utf-8"))
+                    if valid:
+                        machine.leave(entry)  # the old-code run asks for a place of its own
+                        valid, lines = proof.replay(top, item, proof_base)
                     if not valid:
                         return 1, "\n".join(lines)
+                    skipped = "\n".join([skipped, *lines])
                 return 0, skipped
             from forge import fasttest
 
@@ -551,6 +558,9 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
         finally:
             preload_folder.cleanup()
             machine.leave(entry)
+        if closing and done.returncode == 0 and os.environ.get("FORGE_GROUP", "1") == "1":
+            valid, lines = proof.replay(top, item, proof_base)  # after this run's place is free
+            done = subprocess.CompletedProcess(command, int(not valid), done.stdout + "\n" + "\n".join(lines))
         out = [line.rstrip() for line in done.stdout.splitlines()]
         shown = {n for n, line in enumerate(out) if any(mark in line for mark in RENDERED)}
         picked = sorted(({i for n, line in enumerate(out) if "skip" in line.lower()

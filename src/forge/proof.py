@@ -4,6 +4,9 @@ from __future__ import annotations
 import collections
 import os
 import re
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -230,6 +233,138 @@ def check(top: Path, item: str, base: str, results: str, *, ran: bool = True,
             elif not matches and int(os.environ.get("FORGE_GROUPS", "1")) == 1:
                 messages.append(f"Done-when proof: {name} did not run in this test run.")
     return not messages, messages
+
+
+# The longest an old-code run may take; a test that hangs there gives the "timed out" warning.
+OLD_CODE_SECONDS = float(os.environ.get("FORGE_OLD_CODE_SECONDS", 300))
+
+
+def _old_code_run(top: Path, item: str, base: str, head: str, tests: list[str], gone: list[str]) -> str:
+    """Run close's test command on the code before the fix, in a temporary copy. Returns the run's
+    per-test results, then a `# error` line with the first error line of its output."""
+    from forge import codex, fasttest, machine, review
+
+    temp = Path(tempfile.mkdtemp(prefix="forge-before-")).resolve()
+    results = repo.forge_dir(top) / f"replay-results-{item}.txt"
+    results.unlink(missing_ok=True)
+    entry, hung = None, False
+    try:
+        repo.git("worktree", "add", "-q", "--detach", str(temp), base, cwd=top)
+        if tests:
+            repo.git("checkout", head, "--", *tests, cwd=temp)
+        if gone:
+            repo.git("rm", "-q", "--", *gone, cwd=temp)
+        # The copy's own command, with every CI group's files in this one run.
+        command = review.close_test(temp, base).replace("{group}", "1").replace("{groups}", "1")
+        hook = repo.forge_dir(top) / "pytest"
+        hook.mkdir(exist_ok=True)
+        (hook / "_forge_test_results.py").write_text(fasttest.RESULTS, "utf-8")
+        # A picker that Forge's own command starts in the copy finds this entry and reuses it.
+        entry = machine.join("test", temp, item, None, None)
+        workers = machine.test_cpus(entry)
+        # The copy's code first, so an editable install of the checkout cannot supply the new code.
+        path = [str(temp), *([str(temp / "src")] if (temp / "src").is_dir() else []), str(hook),
+                os.environ.get("PYTHONPATH", "")]
+        env = {**os.environ, "FORGE_WORKER": "1", "FORGE_GROUPS": "1", "FORGE_GROUP": "1",
+               "FORGE_TEST_RESULTS": str(results), "FORGE_TEST_REPO": str(temp),
+               "FORGE_TEST_LANE": entry["id"], "FORGE_TEST_CPUS": workers,
+               "PYTEST_XDIST_AUTO_NUM_WORKERS": workers, "PYTHONDONTWRITEBYTECODE": "1",
+               "PYTHONPATH": os.pathsep.join(filter(None, path)),
+               "PYTEST_PLUGINS": ",".join(filter(None, [os.environ.get("PYTEST_PLUGINS"),
+                                                        "_forge_test_results"]))}
+        for name in ("FORGE_WORKER_TESTS", "FORGE_RETRY_FILES"):
+            env.pop(name, None)
+        with subprocess.Popen(command, shell=True, cwd=temp, env=env, stdin=subprocess.DEVNULL,
+                              stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
+                              encoding="utf-8", errors="replace", **codex.GROUP) as process:
+            try:
+                machine.started(entry, process.pid)
+                try:
+                    output = process.communicate(timeout=OLD_CODE_SECONDS)[0]
+                except subprocess.TimeoutExpired:  # a hang is not a result: warn, never hold the place
+                    codex._stop(codex.identity(process.pid) or {"pid": process.pid}, True)
+                    output = process.communicate()[0]
+                    hung = True
+            except BaseException:
+                codex._stop(codex.identity(process.pid) or {"pid": process.pid}, True)
+                process.wait()
+                raise
+        error = next((line[1:].strip() for line in output.splitlines() if re.match(r"E\s", line)), "")
+        return (results.read_text("utf-8") if results.is_file() else "") + ("# hung\n" if hung else "") + f"# error {error}\n"
+    finally:
+        if entry:
+            machine.leave(entry)
+        repo.run("git", "worktree", "remove", "--force", str(temp), cwd=top)
+        shutil.rmtree(temp, ignore_errors=True)
+        repo.run("git", "worktree", "prune", cwd=top)
+
+
+def replay(top: Path, item: str, base: str) -> tuple[bool, list[str]]:
+    """A fix's new or changed pytest Done-when test must fail on the code before the fix.
+    Refuse a test that passes there; warn when it cannot run there. Never touches `top`."""
+    if "/" in item:
+        return True, []
+    from forge import review
+
+    head = repo.git("rev-parse", "HEAD", cwd=top)
+    proof, _ = _proof(top, item, head, base)
+
+    def files(*flags: str, spec: tuple[str, ...]) -> list[str]:
+        return repo.git("diff", "--name-only", "--no-renames", *flags, base, head, "--", *spec,
+                        cwd=top).splitlines()
+
+    fixtures = (":(glob)**/conftest.py",)  # shared test setup travels with the tests
+    tests = files("--diff-filter=ACMRT", spec=tuple(repo.TEST_PATHS))
+    code = files(spec=(".", *(path.replace(":(glob)", ":(exclude,glob)") for path in (*repo.TEST_PATHS, *fixtures)),
+                       *review.DOC_EXCLUDES, ":(exclude)forge.toml"))
+    # Ignore rules and generated files change no runtime code, as in a fix's size count.
+    code = [path for path in code if Path(path).name not in (".gitignore", ".gitattributes")]
+    generated = repo.generated_files(top, code, head)
+    code = [path for path in code if path not in generated]
+    names = list(dict.fromkeys(name for found in _parsed(proof).values() for name in found
+                               if (name.lower().endswith(".py") or ".py::" in name)
+                               and name.partition("::")[0] in tests))
+    if not (names and code):
+        return True, []
+    command = review.close_test(top, base)
+    # The old code is part of the key: a fix that merges main keeps its files but not its base.
+    record = review.passed_record(top, f"replay {repo.git('rev-parse', base, cwd=top)} {command}", base=base)
+    saved = record.with_name(record.name + ".old-code") if record else None
+    if saved and saved.is_file():
+        report = saved.read_text("utf-8")
+    else:
+        gone = files("--diff-filter=D", spec=(*repo.TEST_PATHS, *fixtures))
+        report = _old_code_run(top, item, base, head,
+                               [*tests, *files("--diff-filter=ACMRT", spec=fixtures)], gone)
+        if saved:
+            saved.parent.mkdir(exist_ok=True)
+            saved.write_text(report, "utf-8")
+    outcomes, slow = _results(report), set(re.findall(r"^# timeout (.+)$", report, re.M))
+    error = (re.findall(r"^# error (.*)$", report, re.M) or [""])[-1]
+    tree = _tree(top, head)
+    hung = "# hung\n" in report
+    messages: list[str] = []
+    refused = False
+    for name in names:
+        matches = _result_for(name, outcomes, tree)
+        seen = {outcome for outcome, _ in matches}
+        timed_out = any(node in slow for _, node in matches)
+        if hung and seen != {"failed"} or not matches or seen - {"passed", "failed"} or timed_out:
+            broken = any(result == "error" and node.partition("::")[0] == name.partition("::")[0]
+                         for node, result in outcomes.items())
+            why = "it timed out" if timed_out or hung else error if broken and error else "it did not run"
+            messages.append(f"Done-when proof: {name} could not run on the code before the fix ({why}). "
+                            "The review judges it.")
+        elif seen == {"failed"}:
+            continue
+        else:
+            refused = True
+            messages.append(
+                f"Done-when proof: {name} passed on the code before the fix, so it does not prove the fix. "
+                "Make it fail there for the reported problem." if seen == {"passed"} else
+                f"Done-when proof: {name} has passing and failing cases on the code before the fix. "
+                "Name the case that proves the fix.")
+    return not refused, messages
 
 
 def proof_list(top: Path, base: str, report: str | None = None) -> str:

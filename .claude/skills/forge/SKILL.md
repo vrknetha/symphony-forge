@@ -2172,6 +2172,8 @@ restore after they fetch.
 
 In `forge.toml`, `cold_read_rounds` sets the cold-read limit and `task_review_rounds` sets the task and fix review limit. Each accepts 1 or 2 and defaults to 2. For a fix, only blocked reviews count toward this limit.
 
+For a fix, close also runs its new or changed pytest Done-when tests on the code before the fix, in a temporary copy of the repo, and refuses a test that passes there; when the test cannot start there, close warns and the review judges it.
+
 A person can ask you to skip the model review for a task or fix. Run `forge close <item> --no-review --by "<name>" --reason "<why>"` only when a person asks. Close adds the name and reason to the pull request. Close refuses if an earlier review blocked the item. Tests, CI, design checks and merge still run.
 
 At the round limit (the repo's setting, two by default), open findings below P0

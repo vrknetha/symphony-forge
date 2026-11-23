@@ -47,10 +47,12 @@ def _close(env, adopted, command, red=True, greeting=GREETING, docs_only=False, 
                + "\n".join(kept) + "\n", "Run the tests")
     # Named skipped, missing-run and failing tests now refuse close, while its published list
     # still reports each result. Missing branch names have their own Done-when refusal cases.
-    files = {".gitignore": "__pycache__/\n", "tests/test_greeting.py": greeting,
-             "tests/test_other.py": "def test_other():\n    assert True\n",
-             "src/greet.test.ts": "test('greets', () => {});\n",
-             "__tests__/greeting.js": "test('greets', () => {});\n"}
+    # The fix adds only pytest files, so close has no code before the fix to run them against.
+    env.commit(repo.path, ".gitignore", "__pycache__/\n", "Ignore caches")
+    for path in ("src/greet.test.ts", "__tests__/greeting.js"):
+        env.commit(repo.path, path, "test('greets', () => {});\n", "Add a script test")
+    files = {"tests/test_greeting.py": greeting,
+             "tests/test_other.py": "def test_other():\n    assert True\n"}
     if docs_only:  # the tests are already on the default branch; the fix changes only a readme
         for path, text in files.items():
             env.commit(repo.path, path, text, "Add the tests")

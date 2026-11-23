@@ -619,23 +619,25 @@ def pytest_runtest_logreport(report):
         CRASH_ITEMS.add(report.nodeid)
     if not FILE or report.outcome == "rerun" or report.when != "call" and report.passed:
         return
+    slow = False
     FINISHED.add(report.nodeid)
     if report.failed and report.when != "???":
         message = getattr(getattr(report.longrepr, "reprcrash", None), "message", "")
-        if report.when != "call" or not re.fullmatch(
-                r"Failed: Timeout (?:>[^\\s]+s|\\(>[^\\s]+s\\) from pytest-timeout\\.)", message):
+        slow = report.when == "call" and bool(re.fullmatch(
+                r"Failed: Timeout (?:>[^\\s]+s|\\(>[^\\s]+s\\) from pytest-timeout\\.)", message))
+        if not slow:
             PRODUCT_FAILURES.add(report.nodeid)
     if report.when == "call":
         outcome = (("xfail" if report.skipped else "xpass") if hasattr(report, "wasxfail")
                    else report.outcome)
     else:
         outcome = "skipped" if report.skipped else "error"
-    _write_result(outcome, report.nodeid)
+    _write_result(outcome, report.nodeid, slow)
 def pytest_collectreport(report):
     if FILE and report.failed:
         PRODUCT_FAILURES.add(report.nodeid)
         _write_result("error", report.nodeid)
-def _write_result(outcome, nodeid):
+def _write_result(outcome, nodeid, slow=False):
     file, _, rest = nodeid.partition("::")
     if outcome in ("failed", "error"):
         FAILED.add((ROOT[0] / file).resolve().as_posix())
@@ -645,6 +647,8 @@ def _write_result(outcome, nodeid):
         PASSED.add(nodeid)
     with FILE[0].open("a", encoding="utf-8") as results:
         results.write(outcome + " " + nodeid + "\\n")
+        if slow:
+            results.write("# timeout " + nodeid + "\\n")
 @pytest.hookimpl(hookwrapper=True)
 def pytest_sessionfinish(session):
     yield  # Capture the final status, including always_test validation.

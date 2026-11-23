@@ -409,6 +409,10 @@ Interface globs in forge.toml: $interfaces. Recorded allowance: $allowance.
 A fix's tests go in their own file with the fix's own STORY key, never into a story's test file:
 a test there takes a number the story's own criterion needs.
 
+A fix's new or changed pytest test that the Proof list names must fail on the code before the fix.
+Close runs it there, in a temporary copy of the repo, and refuses when it passes; when it cannot
+start there, close warns and the review judges it.
+
 You may also update an existing test your intended change breaks, even outside Scope; name each
 such test and why it changed in your handoff, and never weaken a test to hide a defect.
 
