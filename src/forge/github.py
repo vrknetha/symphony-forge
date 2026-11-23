@@ -19,7 +19,8 @@ def _quota(cwd, fresh=False):
     with codex._one_at_a_time(cache):
         try:
             saved = json.loads(cache.read_text(encoding="utf-8"))
-            if not fresh and 0 <= time.monotonic() - saved["at"] < 45:
+            # A fresh reading still reuses a lookup that just failed: the endpoint refused us a moment ago.
+            if 0 <= time.monotonic() - saved["at"] < 45 and (not fresh or not saved["resources"]):
                 return saved["resources"]
         except (OSError, ValueError, KeyError, TypeError):
             pass
@@ -49,9 +50,10 @@ def _numbers(resources):
     return "; ".join(parts)
 
 
-def _wait_until(cwd, ready, say, fresh=False):
+def _wait_until(cwd, ready, say, fresh=False, wake=None, stream=None):
     """Shared quota wait: recheck every 15 seconds (the shared lookup is at most 45 seconds old,
-    so the quota is read at least once a minute), print the numbers at least every two minutes."""
+    so the quota is read at least once a minute), print the numbers at least every two minutes.
+    `wake` gives the monotonic time the wait ends, so the last sleep does not overshoot it."""
     said_at = None
     while True:
         resources = _quota(cwd, fresh)
@@ -59,9 +61,9 @@ def _wait_until(cwd, ready, say, fresh=False):
         if ready(resources):
             return
         if said_at is None or time.monotonic() - said_at >= 120:
-            print(say(resources), flush=True)
+            print(say(resources), file=stream, flush=True)
             said_at = time.monotonic()
-        time.sleep(15)
+        time.sleep(15 if wake is None else max(0, min(15, wake() - time.monotonic())))
 
 
 @contextmanager
@@ -155,24 +157,33 @@ def run(args, execute, cwd):
                 r"\brate limit\b.*\bexceeded\b|\bexceeded\b.*\brate limit\b|\bHTTP\s+429\b", said, re.I | re.S):
             return done
         failed_at, failed_time = time.monotonic(), time.time()
-        primary = None
+        due, primary, shown = None, False, False  # `due`: wall-clock time the wait ends
 
         def ready(resources):
-            nonlocal primary
+            nonlocal due, primary
             try:
                 quota = resources[name]
                 remaining, reset = int(quota["remaining"]), int(quota["reset"]) + 3
-                if primary is None:  # The reading taken just after the failure says which limit it was.
-                    primary = remaining == 0 and reset > failed_time
-                if primary:
-                    return remaining > 0 or reset <= time.time()  # Primary limit: resume once quota is back.
             except (ValueError, KeyError, TypeError, AttributeError):
-                pass  # An unavailable quota lookup still permits the documented one-minute retry.
-            return time.monotonic() - failed_at >= 60  # Secondary limit: back off one minute.
+                remaining, reset = None, 0  # An unavailable lookup still permits the one-minute retry.
+            if due is None:  # The reading taken just after the failure says which limit it was.
+                primary = remaining == 0 and reset > failed_time
+                due = reset if primary else failed_time + 60
+            if remaining is None:  # A failed refresh falls back to the one-minute retry.
+                primary, due = False, min(due, failed_time + 60)
+            # The wall clock may not move with the monotonic one, so count the wait on the latter.
+            return bool(primary and remaining) or time.monotonic() - failed_at >= due - failed_time
 
-        _wait_until(cwd, ready, lambda resources: (
-            "GitHub rate limit reached. Waiting for GitHub API quota: " + _numbers(resources)
-            + ". Checking again each minute."), fresh=True)
+        def say(resources):
+            nonlocal shown
+            if shown:
+                return f"Still waiting for GitHub API quota: {_numbers(resources)}. Checking again each minute."
+            shown = True
+            when = datetime.fromtimestamp(due, timezone.utc).strftime("%H:%M:%S UTC")
+            return f"{_numbers(resources)}. GitHub rate limit reached. Wait until {when}, then continue."
+
+        _wait_until(cwd, ready, say, fresh=True, stream=sys.stderr,
+                    wake=lambda: failed_at + due - failed_time)
 
 
 def read(args: tuple[str, ...], execute) -> subprocess.CompletedProcess[str]:
