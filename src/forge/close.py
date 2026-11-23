@@ -84,7 +84,7 @@ def close(args: argparse.Namespace) -> int:
 
 
 def _close(args: argparse.Namespace, top: Path) -> int:
-    from forge import backfill, records
+    from forge import backfill, nextstep, records
     from forge.merge import ENABLE
 
     item = args.item
@@ -108,8 +108,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
                                           and state["stop"].get("by") != "default") or
                 args.dismiss or args.because or
                 (choice in ("accept", "more") if stuck else choice in ("switch", "same", "narrow"))):
-            repo.refuse((REFUSALS["bad_choice"][0], REFUSALS["stuck"][1]) if stuck
-                        else REFUSALS["bad_choice"], item=item)
+            repo.refuse(nextstep.resolve_refusal(item, state, top, stuck), item=item)
         if not continued:
             plan_updated = False
             if choice in ("narrow", "split") and "/" in item:

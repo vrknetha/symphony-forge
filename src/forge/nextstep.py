@@ -1151,6 +1151,16 @@ def _item(item: str, label: str, state: dict[str, Any], top: Path,
                        f"Next: {step.format(**values)}{built}"]
 
 
+def resolve_refusal(item: str, state: dict[str, Any], top: Path, stuck: bool) -> tuple[str, str]:
+    """The refusal of --resolve on an item with no open stop; its next step is the one forge next gives."""
+    stop = state.get("stop")
+    if stop and not stop.get("choice"):
+        return (close.REFUSALS["bad_choice"][0], close.REFUSALS["stuck"][1]) if stuck else close.REFUSALS["bad_choice"]
+    lines = _item(item, item, state, top, top, {}, {})
+    step = (lines[-1].removeprefix("Next: ").split("  # ")[0]) if lines else "forge next"
+    return (close.REFUSALS["chosen_already" if stop else "no_stop"][0], step)
+
+
 def _builder(item: str, state: dict[str, Any], folder: Path, refusals: dict[Path, str]) -> str:
     """The worker beside a forge work line, chosen as forge work chooses it, with where its
     settings came from, when a forge.local.toml sets any; "" otherwise."""

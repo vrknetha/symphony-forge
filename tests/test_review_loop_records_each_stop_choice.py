@@ -58,4 +58,4 @@ def test_1_each_new_stop_waits_for_and_records_its_own_choice(
             assert row(env.repo, item)["status"] != "Needs your decision"
             duplicate = env.close(item, "--resolve", choice, "--reason", reason)
             assert duplicate.returncode == 1
-            assert "Record the human's choice only on a stopped review loop" in duplicate.stderr
+            assert "already recorded" in duplicate.stderr  # was: a stopped-loop refusal that named --resolve again

@@ -282,4 +282,4 @@ def test_3_close_continues_the_current_human_accept_choice_under_changed_pin(
                                                      src=(ROOT / "src").as_posix()))
     replayed = env.repo.forge(*args, cwd=where)
     assert replayed.returncode == 1
-    assert "Record the human's choice only on a stopped review loop" in replayed.stderr
+    assert "already recorded" in replayed.stderr
