@@ -35,6 +35,14 @@ def parent_ids() -> dict[int, int]:
     return {int(pid): int(parent) for pid, parent in (line.split() for line in listed.stdout.splitlines())}
 
 
+def session_id() -> str | None:
+    """This session's id, or None in a plain terminal."""
+    try:
+        return session()["id"]
+    except repo.Refused:
+        return None
+
+
 def session() -> dict[str, Any]:
     """Find the host above shell/uv wrappers; its identity outlives each forge command."""
     tool = repo.coordinator()
@@ -104,6 +112,11 @@ def _start(top: Path, item: str, kind: str, owner: dict[str, Any], entry: dict[s
 
 def offer(top: Path, target: str, result: dict[str, Any], prompt: str, fresh_prompt: str,
           why: str, models: dict[str, str]) -> int:
+    if "intake" in result and (kept := pending_offer(top, result["intake"])):
+        if kept[0]["session"] != session()["id"]:
+            repo.refuse(("Session {session} holds this intake, so only it can hand it back.", "forge next"), session=kept[0]["session"])
+        print(json.dumps(kept[1]))
+        return 0
     with hold(top, target, "Grill", models) as (owner, entry):
         path = codex._item_file(top, target, ".json", "Grill")
         previous = {} if "intake" in result else codex.record(top, target, "Grill").get("native") or {}
@@ -116,18 +129,37 @@ def offer(top: Path, target: str, result: dict[str, Any], prompt: str, fresh_pro
                          "start a reader in this session")
         codex._record(path, **({"claude": None} if result["reader"] == "codex" else
                               {"conversation": None, "start": None}))
-        _start(top, target, "Grill", owner, entry, result=result)
+        shown = offer_json(top, target, round_number, result, prompt, fresh_prompt, resume, reason, models)
+        _start(top, target, "Grill", owner, entry, result=result, offer=shown)
+    print(json.dumps(shown))
+    return 0
+
+
+def pending_offer(top: Path, idea: str | None = None) -> tuple[dict[str, Any], dict[str, Any]] | None:
+    """A live intake still owed its handback: its pending record and the offer first printed."""
+    for record in sorted((repo.forge_dir(top) / "threads/read").glob("intake-*.json")):
+        pending = codex._json(record).get("pending") or {}
+        if ("intake" in pending.get("result", {}) and idea in (None, pending["result"]["intake"])
+                and lock_alive(record.with_suffix(".lock")) is not False):
+            from forge import intake
+            return pending, pending.get("offer") or intake.legacy_offer(top, pending)
+    return None
+
+
+def offer_json(top: Path, target: str, round_number: int, result: dict[str, Any], prompt: str,
+                fresh_prompt: str, resume: str | None, reason: str, models: dict[str, str]) -> dict[str, Any]:
     role = "explorer" if "intake" in result else "reader"
     instruction = ("Continue the named reader with the short brief as a background subagent.\n"
                    "Start fresh with the whole brief if this session cannot reach that subagent."
                    if resume else f"Start a {role} as a background subagent with the whole brief.")
     instruction += (f"\nChange no files. Hand its final message and id back with forge handback {target} "
                     f"--round {round_number} --subagent <id> --text <message>.")
-    print(json.dumps({"target": target, "role": role, "tool": result["reader"],
-                      "checkout": top.resolve().as_posix(), **models, "round": round_number,
-                      "prompt": prompt if resume else fresh_prompt, "fresh_prompt": fresh_prompt,
-                      "subagent": resume, "reason": reason, "instruction": instruction}))
-    return 0
+    return {"target": target, "role": role, "tool": result["reader"],
+            "checkout": top.resolve().as_posix(), **models, "round": round_number,
+            "prompt": prompt if resume else fresh_prompt, "fresh_prompt": fresh_prompt,
+            "subagent": resume, "reason": reason, "instruction": instruction}
+
+
 
 
 def resumable(top: Path, item: str, owner: dict[str, Any]) -> tuple[dict[str, Any], str | None, str]:

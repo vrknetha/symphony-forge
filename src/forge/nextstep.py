@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from forge import (__version__, approval, board, board_facts, close, codex, gaps, githooks, machine, migration_warnings,
-                   journey, land, native, owner_choices, records, repo, review, spotted, story, score, task, time_records, upgrade)
+                   intake, journey, land, native, owner_choices, records, repo, review, spotted, story, score, task, time_records, upgrade)
 from forge.task import _merged, _started, can_start, developer, github_login, owner, sections, start_base, unbuilt_fix, waits_for
 from forge.task import rows as task_rows
 
@@ -342,7 +342,7 @@ def _report(top: Path, history: dict[str, Any] | None = None,
                 lines += found
     lines += owner_choices.documents(top, trees)
     quiet = not lines and not pinned
-    lines = _refresh(top, trees) + (lines or ([] if pinned else _idle(top)))
+    lines = _refresh(top, trees) + (lines or ([] if pinned else _idle(top))) + intake.offer_lines(top)
     if (top / "forge.toml").is_file():
         cfg = _report_config(top, refusals)
         if cfg["repo"] == "client":

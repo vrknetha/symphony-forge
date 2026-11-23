@@ -223,7 +223,8 @@ the owner agrees. `forge doctor --fix` does not drop these fixes. New and upgrad
 client repos get this check from the installed Forge command.
 
 Send every new idea through `forge start "<their words>"`. Never ask the human whether it is a
-story or a fix. When the answer is a fix, run its `forge land <fix>` in the background and watch it.
+story or a fix. If the explorer prompt is lost, run the same `forge start "<idea>"` again, or read `forge next`: both print
+the prompt and handback command again (only the session that holds it can hand back). When the answer is a fix, run its `forge land <fix>` in the background and watch it.
 For an idea that extends an existing story, the explorer can return that story's key with
 `Lane: plan`. Handback reuses its branch and worktree and adds to its plan. Read the revised plan
 before approval.
