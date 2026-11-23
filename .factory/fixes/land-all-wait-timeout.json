@@ -1,0 +1,15 @@
+{
+  "base": "7bdf89567fdbce8112648932a5e1577e24f76be7",
+  "branch": "fix/land-all-wait-timeout",
+  "done_when": "tests/test_queue_land_all.py passes on main again with its rules unchanged, and the rate-limit and quota wait tests still pass; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T08:48:02.445218+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Main is broken again: tests/test_queue_land_all.py::test_1_one_run_starts_changes_oldest_first_and_merges_each[new] times out on main (locally after 10 minutes and in CI on five branches), most likely since the quota wait changes in src/forge/github.py"
+}
