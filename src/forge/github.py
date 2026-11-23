@@ -105,9 +105,10 @@ def check_wait(cwd, slot=None):
                     quota = resources[name]
                     remaining = max(0, int(quota["remaining"]))
                     minutes = max(1, math.ceil((int(quota["reset"]) - time.time()) / 60))
-                    # One place stays open while any quota remains.
+                    # One place stays open while any quota remains. No wait polls faster than
+                    # once a second, however FORGE_CHECKS_POLL is set (tests set it to 0.01).
                     limits.append(max(1 if remaining else 0,
-                                      int(remaining // (minutes * per_poll * 60 / checks.POLL))))
+                                      int(remaining // (minutes * per_poll * 60 / max(checks.POLL, 1)))))
                 except (KeyError, TypeError, ValueError):
                     limits.append(1)  # An unavailable quota permits only one wait.
             state["allowed"] = min(*limits, 8)  # ponytail: eight waits is plenty on one machine
