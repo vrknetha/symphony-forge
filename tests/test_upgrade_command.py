@@ -43,6 +43,8 @@ def launcher(release, via):
                         ignore=shutil.ignore_patterns("__pycache__"))
         for host in (".claude", ".codex"):
             shutil.copytree(pathlib.Path({root!r}, host, "skills"), src.parent / host / "skills")
+        for note in (here / "extra-notes").glob("*.md"):
+            shutil.copyfile(note, src / "forge" / "release-notes" / note.name)
         for rel, old, new in (("__init__.py", re.compile(r'__version__ = ".*"'), f'__version__ = "{{release[1:]}}"'),
                               ("templates/skill.md", re.compile(r"\\Z"), f"\\n<!-- {mark} {{release}} -->\\n")):
             path = src / "forge" / rel

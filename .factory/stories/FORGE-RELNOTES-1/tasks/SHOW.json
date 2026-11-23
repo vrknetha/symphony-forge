@@ -1,0 +1,203 @@
+{
+  "branch": "task/FORGE-RELNOTES-1-SHOW",
+  "known": [
+    {
+      "area": "upgrade_notice() in src/forge/release_notes.py",
+      "file": "src/forge/release_notes.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 95,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: After an upgrade, the output lists the changes of every release between the old and the new version.",
+      "work": 2
+    },
+    {
+      "area": "once() in src/forge/release_notes.py",
+      "file": "src/forge/release_notes.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 112,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (prerelease)",
+      "work": 2
+    },
+    {
+      "area": "once() in src/forge/release_notes.py",
+      "file": "src/forge/release_notes.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 131,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (unreadable)",
+      "work": 2
+    },
+    {
+      "area": "once() in src/forge/release_notes.py",
+      "file": "src/forge/release_notes.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 116,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (stale marker)",
+      "work": 2
+    },
+    {
+      "area": "test_2_upgrade_lists_the_changes_of_every_release_between() in tests/test_release_notes.py",
+      "file": "tests/test_release_notes.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 143,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: tests/test_release_notes.py::test_2_upgrade_lists_the_changes_of_every_release_between",
+      "work": 1
+    },
+    {
+      "area": "test_3_next_shows_the_changes_once_after_an_upgrade() in tests/test_release_notes.py",
+      "file": "tests/test_release_notes.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 179,
+      "outcome": "fixed in round 4",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: tests/test_release_notes.py::test_3_next_shows_the_changes_once_after_an_upgrade",
+      "work": 1
+    },
+    {
+      "area": "once() in src/forge/release_notes.py",
+      "file": "src/forge/release_notes.py",
+      "gain": 2,
+      "harm": 2,
+      "line": 124,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: Avoid a false notes error during live-app adoption",
+      "work": 1
+    },
+    {
+      "area": "changes() in src/forge/release_notes.py",
+      "file": "src/forge/release_notes.py",
+      "gain": 1,
+      "harm": 1,
+      "line": 74,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Simpler: missing approach record \u2192 the three before-coding lines",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "c69887bf115b0d36fc39c456723240b68190fed2f3c014d23fa207b52908ee15",
+    "changed": "6d44f59804d2ef5b03d221b5dc9df726c289dc529004b0bd19f70d98b17deebc",
+    "commit": "bf4f87ec5f24608b01aafdb8247dff3989a45f87",
+    "dismissals": [],
+    "findings": [],
+    "id": "b5af3013-963e-42be-9891-c6733e0a9cd4",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T10:42:15.392265+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T10:42:28.878416+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T11:03:33.288608+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T11:04:03.644536+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T11:13:56.100624+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T11:13:56.100883+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T11:20:51.570468+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-23T12:29:32.967971+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T12:35:03.104858+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T12:35:03.105107+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T13:12:12.874469+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-23T13:34:43.492581+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T13:40:46.786997+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-23T12:35:03.105107+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "tests/test_release_notes.py",
+    "reason": "Owner chose one more round: replace the line list in test_3 with one check: the second forge next prints no line that the first run printed in its change list",
+    "wait_id": "76fc6446-aaad-473b-b2a5-5f26cac2a264",
+    "worker_round": 3
+  },
+  "stuck": {
+    "close": "c57f2c98-be69-4f38-a091-f50e29f5cd4e",
+    "head": "d3326fa9a652aa0d97789650fb5ef8e9313c5756",
+    "keys": {},
+    "round": 3
+  },
+  "worker": "claude"
+}

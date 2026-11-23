@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from forge import (__version__, approval, board, board_facts, close, codex, gaps, githooks, machine, migration_warnings,
-                   intake, journey, land, native, owner_choices, records, repo, review, spotted, story, score, task, time_records, upgrade)
+                   intake, journey, land, native, owner_choices, records, release_notes, repo, review, spotted, story, score, task, time_records, upgrade)
 from forge.task import _merged, _started, can_start, developer, github_login, owner, sections, start_base, unbuilt_fix, waits_for
 from forge.task import rows as task_rows
 
@@ -151,7 +151,8 @@ def next_step(args: Any) -> int:
         except repo.Refused as refusal:
             if refusal.entry == repo.REFUSALS["added_work_min_gain"]:
                 raise
-    notice = upgrade.release_notice(top) + fullrun.notices(top)
+    shown, version = release_notes.once(top)
+    notice = upgrade.release_notice(top) + fullrun.notices(top) + shown
     # Populate shared facts before concurrent readers can race on their first lookup.
     repo.forge_dir(top)
     repo.default_branch(top)
@@ -180,6 +181,8 @@ def next_step(args: Any) -> int:
     step = ([journey.step_line(top, _report_config(top, {}), history, idle=_idle(top)[0] in lines)]
             if (top / "forge.toml").is_file() else [])
     print("\n".join(owner_choices.first(top, step + notice + lines, (facts["github"] or {}).get("open", []))))
+    if version:
+        release_notes.mark(top, version)
     return 0
 
 

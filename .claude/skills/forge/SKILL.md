@@ -1598,6 +1598,10 @@ Close checks the fix that `forge upgrade` made mechanically instead of asking a 
 the value of forge.toml's `version` line and files exactly as that version's sync writes them (content and
 mode). Any other change, or an earlier review of that fix that still blocks, gets the normal model review.
 Use `forge upgrade <release>` directly, not `forge fix start`: upgrade creates its own fix.
+After an upgrade, forge upgrade and then forge next (once on each computer) list what changed in each
+release and the open known Forge issues. Tell the owner the changes that affect them in plain
+words, follow each line's instruction, and read the "Known Forge issues" part at the end of
+this guide.
 `forge next` gives `Next: forge upgrade <release>` when its release check finds a newer release
 than the repo pins. If upgrade refuses outside the default branch, move to the main checkout.
 Drop the current fix only if Forge started it and the owner agrees. Then switch to the default
