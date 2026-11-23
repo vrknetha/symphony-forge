@@ -1,0 +1,15 @@
+{
+  "base": "537ad6b79e4517770d896009f51888fb70c3b2c0",
+  "branch": "fix/design-redraw-keeps-approval",
+  "done_when": "A design part's own redraw may change only the Design line of an approved story's What changes for you without voiding the approval or asking for a new cold read; any other change to What changes for you or Done when still needs a new approval; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-23T05:45:50.033875+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "When a story's design part redraws the screens, the plan's Design line changes and Forge treats the approved plan as changed, asking for a new cold read and a new approval although the owner already saw the screens"
+}
