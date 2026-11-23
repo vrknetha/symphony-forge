@@ -88,11 +88,8 @@ NAMES = {"claude": "Claude Code", "codex": "Codex"}
 def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
     from forge import sync
 
-    skill = (TEMPLATES / "skill.md").read_text(encoding="utf-8")
     return {
         ".forge/design/support.js": (TEMPLATES / "design/support.js").read_text(encoding="utf-8"),
-        ".claude/skills/forge/SKILL.md": skill,
-        ".codex/skills/forge/SKILL.md": skill,
         **{f"{host}/skills/forge/standards.md":
            (TEMPLATES.parent / "standards.md").read_text(encoding="utf-8")
            for host in (".claude", ".codex")},

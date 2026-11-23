@@ -65,7 +65,9 @@ def test_1_upgrade_to_installed_release_continues_during_runs(
         # The release fixture appends its marker to the source template. Both hosts
         # must receive that whole release template, including the marker.
         template = (ROOT / "src/forge/templates/skill.md").read_text(encoding="utf-8")
-        expected = (template + f"\n<!-- {MARK} {release} -->\n").strip()
+        committed = (ROOT / ".claude/skills/forge/SKILL.md").read_text(encoding="utf-8")
+        part = committed[len(template.rstrip("\n")):]  # the open known issues follow the template
+        expected = (template + f"\n<!-- {MARK} {release} -->\n").strip() + part.rstrip("\n")
         for host in (".claude", ".codex"):
             assert upgrade.repo.git("show", f"fix/{name}:{host}/skills/forge/SKILL.md") == expected
         assert not [call for call in upgrade.uv() if call["args"][:2] == ["tool", "install"]]

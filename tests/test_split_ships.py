@@ -17,7 +17,7 @@ ROOT = Path(__file__).resolve().parents[1]
 # New contract: sync writes these byte for byte from their source, whatever the source says.
 SOURCES = {
     **{f"{host}/{rel}": source for host in (".claude", ".codex") for rel, source in {
-        "skills/forge/SKILL.md": "src/forge/templates/skill.md",
+        "skills/forge/SKILL.md": ".claude/skills/forge/SKILL.md",  # the template plus the known issues
         "skills/forge/standards.md": "src/forge/standards.md",
         "skills/forge/migrate-skill.md": "src/forge/templates/migrate-skill.md",
         "skills/forge/run-reference.md": "src/forge/templates/run-reference.md",

@@ -197,8 +197,9 @@ def test_1_running_command_continues_under_the_pin_merged_from_upgraded_default(
                                   "hooks", cwd=where))
         assert not (hooks / "pre-commit").exists()
         assert not (hooks / "pre-push").exists()
-        assert (where / guide).read_text("utf-8") == (
-            ROOT / "src" / "forge" / "templates" / "skill.md").read_text("utf-8")
+        template = (ROOT / "src" / "forge" / "templates" / "skill.md").read_text("utf-8").rstrip("\n")
+        committed = (ROOT / ".claude/skills/forge/SKILL.md").read_text("utf-8")  # plus known issues
+        assert (where / guide).read_text("utf-8") == template + committed[len(template):]
     else:
         [dispatch] = dispatches
     assert dispatch["args"] == ["tool", "run", "--from",

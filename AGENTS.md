@@ -111,6 +111,13 @@ change is dogfooded on Forge itself before clients get it.
 - Every change says what a new client repo and an existing client repo each get.
 - Forge's own principles and its own test policies (such as the real-Codex tests) live here, not in
   the shared standards.
+- Each release bump adds src/forge/release-notes/v<version>.md for everything merged since the
+  previous release, and merges last before the cut. Write each line for an agent that must act on
+  it: what changed, and what the agent or owner now does differently. Each known issue starts with
+  a short bold title, says what happens, and ends with Workaround: <what to do>, or Workaround:
+  none; <what to expect>. When a release fixes an earlier known issue, list that issue's bold
+  title, unchanged, under Fixed known issues. Leave out Forge's own tests and work, and name no
+  client. Before tagging, run .github/release-notes-check.py on the cut commit.
 
 ## Review rules
 

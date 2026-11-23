@@ -15,7 +15,9 @@ HOSTS = (".claude", ".codex")
 def test_1_generated_skill_copies_share_the_review_round_rule(repo, gh, tmp_path):
     client, initialized = _fresh_client(repo, gh, tmp_path)
     assert initialized.returncode == 0, initialized.stderr
-    template = (ROOT / "src/forge/templates/skill.md").read_bytes()
+    # The guide is the template plus the open known issues of the release.
+    template = (ROOT / "src/forge/templates/skill.md").read_bytes().rstrip(b"\n")
+    template += (ROOT / ".claude/skills/forge/SKILL.md").read_bytes()[len(template):]
     for host in HOSTS:
         assert (client / host / "skills/forge/SKILL.md").read_bytes() == template
 

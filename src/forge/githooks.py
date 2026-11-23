@@ -113,6 +113,7 @@ REFUSALS = {
                      "forge close <item>"),
     "release_tag": ("Release tag {tag} must point to the latest commit on {default}.",
                     "create {tag} on the latest commit of {default}, then push it"),
+    "release_notes": ("{reason}", "fix the notes in a fix, merge it, then tag its merge commit"),
     "worker_settings": ("Workers leave forge.toml to the coordinator; settings change in their own "
                         "fix whose Done-when names forge.toml.",
                         "report the needed settings change in your last message."),
@@ -168,6 +169,11 @@ def pre_push(args: argparse.Namespace) -> None:
                 tagged = git("rev-parse", "--verify", f"{sha}^{{commit}}", cwd=top)
                 if tagged != release_main:
                     refuse(REFUSALS["release_tag"], tag=tag, default=default)
+                if repo.config(top)["repo"] == "forge-source":  # never a client's files
+                    from forge import release_notes
+
+                    if reason := release_notes.check(top, tag, tagged):
+                        refuse(REFUSALS["release_notes"], reason=reason)
                 continue
 
 

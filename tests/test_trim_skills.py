@@ -18,8 +18,9 @@ SOURCES = {
     ".codex/skills/test-audit/NOTICE.md": ".codex/skills/test-audit/NOTICE.md",
     ".claude/skills/remote-approval/SKILL.md": ".claude/skills/remote-approval/SKILL.md",
     # FORGE-READLOOP-1 adds the Forge skill, so a package missing its reader steps fails here.
-    ".claude/skills/forge/SKILL.md": "src/forge/templates/skill.md",
-    ".codex/skills/forge/SKILL.md": "src/forge/templates/skill.md",
+    # The guide is the template plus the release's open known issues; the committed copy has both.
+    ".claude/skills/forge/SKILL.md": ".claude/skills/forge/SKILL.md",
+    ".codex/skills/forge/SKILL.md": ".claude/skills/forge/SKILL.md",
 }
 # SHA-256 of the four package copies before the trim, with LF endings as sync writes.
 # The test-audit pin leaves CI-mode repair tests to the builder and wider checks to CI.

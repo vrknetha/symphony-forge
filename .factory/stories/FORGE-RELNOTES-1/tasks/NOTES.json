@@ -1,0 +1,127 @@
+{
+  "branch": "task/FORGE-RELNOTES-1-NOTES",
+  "known": [
+    {
+      "area": "pre_push() in src/forge/githooks.py",
+      "file": "src/forge/githooks.py",
+      "gain": 5,
+      "harm": 5,
+      "line": 173,
+      "outcome": "accepted",
+      "reason": "src/forge/githooks.py:175 Owner accepted on 23 Nov 2026 as a one-time gap: the first release with this check is cut with the v1.2.46 hook installed, which cannot have the check; the documented manual release-notes check step covers that release, and the hook covers every later release",
+      "round": 1,
+      "security": false,
+      "title": "The release-tag hook can run without the new notes gate",
+      "work": 2
+    },
+    {
+      "area": "pre_push() in src/forge/githooks.py",
+      "file": "src/forge/githooks.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 173,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Disputed keep hook isolation: a client-controlled file runs on tag pushes",
+      "work": 1
+    },
+    {
+      "area": "docs/guide.md",
+      "file": "docs/guide.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 720,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Publish the release notes from the cut commit",
+      "work": 1
+    },
+    {
+      "area": "src/forge/release-notes/v1.2.41.md",
+      "file": "src/forge/release-notes/v1.2.41.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 17,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The shipped guide has a known-issues section with each open issue's workaround",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "6393dbeb3c19d32cdd8ef3f1e5ea6933bdf4455337b55717a66156b3db46257a",
+    "changed": "aa1d6365dd9c7e1dbd3664f25db33d31b51fb107cf815dd1efe56c048808ba09",
+    "commit": "f66e2512de94ada7dd0f22ab5f6de67daba4607a",
+    "dismissals": [],
+    "findings": [],
+    "id": "1b8bc255-9961-4563-ba76-d0ebfbc9fd34",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T01:52:38.525936+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T01:52:55.648527+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T02:20:28.364249+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T02:21:07.903538+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T02:27:22.919817+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T03:23:22.737397+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T03:25:56.522921+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:24:33.661626+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:29:12.180011+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:31:08.707139+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:32:39.248265+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "a958cadd-2eed-4928-8d86-6e7017a55068",
+    "head": "73cebbf8eba28d1b745cb95061adbb98040a817d",
+    "keys": {},
+    "round": 4
+  },
+  "worker": "claude"
+}

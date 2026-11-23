@@ -695,23 +695,30 @@ Publish within 30 minutes of the cut, without a separate owner yes.
 Skip the day when nothing merged since the last release or main is red.
 Hold merges from the cut until you push the tag and check the installed version.
 
-1. In a fix, set `__version__` in `src/forge/__init__.py` to the new version (without the `v`),
-   close it and merge it before the nightly runs.
-2. Before the cut, reuse passed nightly runs on the version-bump commit or a later main commit.
+1. In a fix, set `__version__` in `src/forge/__init__.py` to the new version (without the `v`)
+   and add `src/forge/release-notes/v<version>.md` for everything merged since the previous
+   release. Merge it last: the cut commit is this fix's merge commit. A fix that must join the
+   release after it (a fix without which the release is unsafe) also updates that notes file.
+2. Before the cut, reuse passed nightly runs on the bump's merge commit (or the last joining fix's).
    If a run is missing, start it with `gh workflow run forge.yml --ref main` (Linux) or
    `gh workflow run forge-next.yml --ref main` (Windows). Both must pass before the cut.
-   At 05:00 UTC, select the newest main commit whose Linux full run and Windows run passed.
-   Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
+   At 05:00 UTC, select the bump's merge commit (or the last joining fix's), once its Linux full
+   run and Windows run passed. Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
    If current main is ahead of that commit, skip the day: the release gate requires current main.
    Reuse the passed nightly runs on that exact commit. Do not start them again.
    The Linux workflow posts the full-run status that sign-off and release read.
    If an essential fix must join, repeat both runs and record its tested commit before the tag.
-3. Tag the exact cut commit with `git tag vX.Y.Z <full cut SHA>`, then `git push origin vX.Y.Z`.
+3. Before you create the tag, run `uv run --frozen --python 3.11 python
+   .github/release-notes-check.py vX.Y.Z <full cut SHA>`. When it fails, do not tag: add the
+   missing change to the notes in a fix, merge it, and use its merge commit as the cut.
+   Tag the exact cut commit with `git tag vX.Y.Z <full cut SHA>`, then `git push origin vX.Y.Z`.
    Use the recorded full SHA, never `origin/main`. Check the tag's tree against the cut with
    `git diff --quiet vX.Y.Z <full cut SHA>`.
    The tag push runs the Windows checks again or reuses passed proof for the same tree.
    Confirm that run is green too.
 4. Install from the tag and check that `forge --version` prints `vX.Y.Z`. Then allow merges again.
+   Publish the GitHub release from the cut commit's notes file, not the local one:
+   `git show <full cut SHA>:src/forge/release-notes/vX.Y.Z.md | gh release create vX.Y.Z --notes-file -`.
 5. Score the release. Nothing else starts this, a pull request never does, and it never holds the
    release. Use Claude only, in your own Claude Code session. Use no model whose id contains
    `fable` or `astra`.

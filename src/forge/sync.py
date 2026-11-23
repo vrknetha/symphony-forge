@@ -608,7 +608,7 @@ def write(top: Path, cfg: dict[str, Any], keep: frozenset[str] = frozenset()) ->
 def check_guides(top: Path, changed_files: list[str]) -> None:
     """Check branch guide edits without blocking unrelated work on inherited drift."""
     if not any(path.startswith(("src/forge/templates/", "src/forge/standards.md",
-                                ".claude/skills/", ".codex/skills/")) for path in changed_files):
+                                "src/forge/release-notes/", ".claude/skills/", ".codex/skills/")) for path in changed_files):
         return
     package = top / "src" if repo.config(top)["repo"] == "forge-source" else Path(__file__).resolve().parent.parent
     script = f"""import sys, json
@@ -630,7 +630,7 @@ print(json.dumps(sync.differing(top, wanted)))
 def refresh_merged_guides(top: Path, before: str) -> None:
     """Keep committed skill copies current when a default merge changes their templates."""
     incoming = repo.git("diff", "--name-only", before, "HEAD", "--",
-                        "src/forge/templates", "src/forge/standards.md", cwd=top)
+                        "src/forge/templates", "src/forge/standards.md", "src/forge/release-notes", cwd=top)
     if not incoming:
         return
     # The merge can change the renderers as well as their templates. Import the merged

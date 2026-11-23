@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tdocs/guide.md\tPublish the release notes from the cut commit\tFORGE-RELNOTES-1/NOTES",
+      "kind": "bug",
+      "path": "docs/guide.md",
+      "line": 720,
+      "text": "Publish the release notes from the cut commit",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/NOTES",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/githooks.py\tDisputed keep hook isolation: a client-controlled file runs on tag pushes\tFORGE-RELNOTES-1/NOTES",
+      "kind": "bug",
+      "path": "src/forge/githooks.py",
+      "line": 173,
+      "text": "Disputed keep hook isolation: a client-controlled file runs on tag pushes",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/NOTES",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/githooks.py\tThe release-tag hook can run without the new notes gate\tFORGE-RELNOTES-1/NOTES",
+      "kind": "bug",
+      "path": "src/forge/githooks.py",
+      "line": 173,
+      "text": "The release-tag hook can run without the new notes gate",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/NOTES",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "edge\tsrc/forge/release-notes/v1.2.41.md\tNot done: The shipped guide has a known-issues section with each open issue's workaround",
+      "kind": "edge",
+      "path": "src/forge/release-notes/v1.2.41.md",
+      "line": 17,
+      "text": "Not done: The shipped guide has a known-issues section with each open issue's workaround",
+      "from": "review",
+      "item": "FORGE-RELNOTES-1/NOTES",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

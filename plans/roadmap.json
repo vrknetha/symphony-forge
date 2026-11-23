@@ -692,6 +692,12 @@
       "order": 127
     },
     {
+      "key": "FORGE-RELNOTES-1",
+      "title": "Tell clients what each Forge release changed",
+      "status": "pending",
+      "order": 128
+    },
+    {
       "key": "FORGE-TESTQUAL-1",
       "title": "Make agent-written tests prove real behaviour",
       "status": "pending",
