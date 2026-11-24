@@ -111,7 +111,7 @@ def check_wait(cwd, slot=None):
                                       int(remaining // (minutes * per_poll * 60 / max(checks.POLL, 1)))))
                 except (KeyError, TypeError, ValueError):
                     limits.append(1)  # An unavailable quota permits only one wait.
-            state["allowed"] = min(*limits, 8)  # ponytail: eight waits is plenty on one machine
+            state["allowed"] = min(limits)
             with codex._one_at_a_time(folder / "github-check-waits"):
                 # Renew before each poll. Count every holder, including places
                 # above a newly reduced budget, before admitting another wait.
