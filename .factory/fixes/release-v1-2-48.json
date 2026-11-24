@@ -1,0 +1,15 @@
+{
+  "base": "5074af3a482f5ddf6f9852137ef16dc9c2f44595",
+  "branch": "fix/release-v1-2-48",
+  "done_when": "Every version reference that names the current release says v1.2.48 (as the v1.2.47 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.48.md exists, the release version tests and the release notes tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-24T13:52:53.050822+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Release v1.2.48: publish what merged since v1.2.47 (design rules for app screens and their close checks, story drop parks a started story, no false GitHub quota waits, merge survives a removed task folder, stable flaky tests)"
+}
