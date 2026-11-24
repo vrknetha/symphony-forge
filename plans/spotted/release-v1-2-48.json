@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/release-notes/v1.2.48.md\tFunctional: Explain that a design waiver applies to the whole file\trelease-v1-2-48",
+      "kind": "bug",
+      "path": "src/forge/release-notes/v1.2.48.md",
+      "line": 6,
+      "text": "Functional: Explain that a design waiver applies to the whole file",
+      "from": "blocking",
+      "item": "release-v1-2-48",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/release-notes/v1.2.48.md\tFunctional: Preserve the theme exception in the release notes\trelease-v1-2-48",
+      "kind": "bug",
+      "path": "src/forge/release-notes/v1.2.48.md",
+      "line": 5,
+      "text": "Functional: Preserve the theme exception in the release notes",
+      "from": "blocking",
+      "item": "release-v1-2-48",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/release-notes/v1.2.48.md\tFunctional: Retry the pending handback before closing\trelease-v1-2-48",
+      "kind": "bug",
+      "path": "src/forge/release-notes/v1.2.48.md",
+      "line": 13,
+      "text": "Functional: Retry the pending handback before closing",
+      "from": "blocking",
+      "item": "release-v1-2-48",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
