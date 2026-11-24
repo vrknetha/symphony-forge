@@ -1,0 +1,15 @@
+{
+  "base": "3290e6eea81bf29ad4853d6824b605613bf79bee",
+  "branch": "fix/stable-flaky-tests",
+  "done_when": "The three tests pass in five repeated runs each on Linux, and forge-next.yml's Windows jobs pass on the fix branch, each still checking the behaviour it was written for",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-24T12:18:03.956876+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Three Forge tests fail often without a code change, each costing a 15 to 30 minute CI rerun: tests/test_parallel_worker_crash_keeps_failed_names.py::test_1 on Linux (pytest-xdist INTERNALERROR 'cannot send (already closed?)', about one run in three), and on Windows tests/test_windows_stdin_bytes.py::test_1 (a test sitecustomize patches Popen._save_input, which Windows lacks) and tests/test_board_first_screen_reads_whole.py::test_1 (its Playwright run times out and the assertion message adds None)"
+}
