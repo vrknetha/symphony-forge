@@ -9,7 +9,12 @@
     "session": "c01a489d-c76f-41c1-8371-d6f0052b027c"
   },
   "doc": "plans/FORGE-GHAPP-1.md",
-  "status": "approved",
+  "drop": {
+    "at": "2026-11-24T14:55:50.905846+00:00",
+    "because": "Parked by the owner on 23 Nov 2026: GitHub's request budget no longer runs out since the quota waits; bring it back from its branch if close shows quota waits weekly or more",
+    "by": "vrknetha <vrknetha@gmail.com> 1795532150 +0530"
+  },
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-19T08:51:17.194487+00:00",
