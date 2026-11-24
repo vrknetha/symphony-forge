@@ -64,8 +64,9 @@ def _configure(client, command):
 def test_1_parallel_worker_crash_keeps_failed_test_names(
         repo, gh, tmp_path, monkeypatch, adopted, worker_only):
     client = _client(repo, gh, tmp_path, adopted)
+    # Run test_a.py first even when it contains only the crashing test.
     command = (f'"{Path(sys.executable).as_posix()}" -m pytest tests -q '
-               '-n 1 --dist loadfile --max-worker-restart=0')
+               '-n 1 --dist loadfile --no-loadscope-reorder --max-worker-restart=0')
     client.write("tests/test_a.py", "import os\n"
                  + ("def test_failure():\n    assert False, 'real assertion failure'\n"
                     if not worker_only else "")
@@ -73,8 +74,11 @@ def test_1_parallel_worker_crash_keeps_failed_test_names(
                  + ("    if hasattr(request.config, 'workerinput'):\n        os._exit(42)\n"
                     if worker_only else "    os._exit(42)\n"))
     # These files must not be silently treated as passing after the worker dies.
-    for name in ("b", "c"):
-        client.write(f"tests/test_{name}.py", "def test_pending():\n    assert False\n")
+    # Keep two queued cases behind the crash. Otherwise, receiving test_failure's
+    # completion makes xdist send test_c.py while the worker is closing its channel.
+    client.write("tests/test_b.py", "def test_pending():\n    assert False\n"
+                 "def test_also_pending():\n    assert False\n")
+    client.write("tests/test_c.py", "def test_pending():\n    assert False\n")
     _configure(client, command)
     monkeypatch.delenv("PYTEST_ADDOPTS", raising=False)
 
@@ -86,6 +90,7 @@ def test_1_parallel_worker_crash_keeps_failed_test_names(
     failures = output.split("Failed tests:\n", 1)[-1]
     if not worker_only:
         assert "- tests/test_a.py::test_failure\n" in failures, output
+    assert "tests/test_b.py::" not in output and "tests/test_c.py::" not in output, output
     assert "- tests/test_a.py::test_worker_dies\n" in failures, output
     assert "Flaky test files:" not in output, output
 

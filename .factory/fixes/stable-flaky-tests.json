@@ -1,0 +1,77 @@
+{
+  "base": "3290e6eea81bf29ad4853d6824b605613bf79bee",
+  "branch": "fix/stable-flaky-tests",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a20d7e-384f-70b1-bfcb-4c947a3664a7",
+    "head": null,
+    "start": "c33f680f9fe69be5439426c88a8e360587d96e5d"
+  },
+  "done_when": "The three tests pass in five repeated runs each on Linux, and forge-next.yml's Windows jobs pass on the fix branch, each still checking the behaviour it was written for",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "test_1_parallel_worker_crash_keeps_failed_test_names() in tests/test_parallel_worker_crash_keeps_failed_names.py",
+      "file": "tests/test_parallel_worker_crash_keeps_failed_names.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 79,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_parallel_worker_crash_keeps_failed_test_names",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "5ab36f6c1d910f404878851a3e8bd3713ef190788b3aea79f8adf7127db2e712",
+    "changed": "0323ce42c5de70e4c941451274cb61908bc25840c83ffd4fac28a84bf7535a37",
+    "commit": "93dca6dabee356c40eab6ca9e87a9232c060df55",
+    "dismissals": [],
+    "findings": [],
+    "id": "470a365a-4327-4bb4-9f43-4e71e530e253",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-24T12:18:03.956876+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-24T12:18:23.298551+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T13:31:14.182646+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T13:31:50.778946+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T13:37:04.653532+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T13:43:15.296200+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "6e0e0d54-3dcc-4430-a958-ee2f726cc224",
+    "head": "5f1c1cc417c00d5ef78aef10f5c28f1f824a0531",
+    "keys": {},
+    "round": 1
+  },
+  "why": "Three Forge tests fail often without a code change, each costing a 15 to 30 minute CI rerun: tests/test_parallel_worker_crash_keeps_failed_names.py::test_1 on Linux (pytest-xdist INTERNALERROR 'cannot send (already closed?)', about one run in three), and on Windows tests/test_windows_stdin_bytes.py::test_1 (a test sitecustomize patches Popen._save_input, which Windows lacks) and tests/test_board_first_screen_reads_whole.py::test_1 (its Playwright run times out and the assertion message adds None)",
+  "worker": "codex"
+}

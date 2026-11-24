@@ -25,6 +25,7 @@ LONG = "Readers see the exact basket total after a refund in {} parts"  # 60 cha
 MERGED_TITLE = "Readers can follow the progress of their improvement without contradictory information everywhere"  # 97 characters
 PART = "Share a saved basket with a friend by email or message"
 STORY_TITLE = "Forge v1: a lean rebuild that both coordinators and workers can follow end to end"
+BROWSER_SECONDS = 420
 
 SCRIPT = r"""
 import json, re, sys
@@ -157,6 +158,8 @@ def _part(repo, tmp_path, started):
         repo.git("commit", "-qm", "Start sharing", cwd=folder)
 
 
+# The outer deadline must leave time to stop the browser tree and drain its output.
+@pytest.mark.timeout(BROWSER_SECONDS + 180)
 def test_1_the_first_screen_shows_whole_titles_idle_time_owners_and_plan_titles(client, gh, tmp_path):
     now = datetime.now(timezone.utc).replace(microsecond=0)
     six_days = (now - timedelta(days=6)).isoformat()
@@ -193,9 +196,13 @@ def test_1_the_first_screen_shows_whole_titles_idle_time_owners_and_plan_titles(
                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8",
                                  start_new_session=os.name != "nt")
         try:
-            out, err = shown.communicate(timeout=360)
+            out, err = shown.communicate(timeout=BROWSER_SECONDS)
+        except subprocess.TimeoutExpired:
+            stop_tree(shown)
+            out, err = shown.communicate(timeout=30)
+            pytest.fail(f"The browser ran past {BROWSER_SECONDS} s and was stopped.\n{out or ''}{err or ''}")
         finally:
             if shown.poll() is None:
                 stop_tree(shown)
-                shown.communicate(timeout=30)
-        assert shown.returncode == 0, out + err
+                shown.wait(timeout=30)
+        assert shown.returncode == 0, f"{out or ''}{err or ''}"
