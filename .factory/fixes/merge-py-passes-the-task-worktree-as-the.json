@@ -1,0 +1,15 @@
+{
+  "base": "ae0f9bd8e27117263e788aad6db62374ac5124a6",
+  "branch": "fix/merge-py-passes-the-task-worktree-as-the",
+  "done_when": "forge merge keeps waiting on checks and prints its Merged line, with its start-to-merge time, even when the task folder is removed during the check wait.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-24T06:00:34.455010+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "merge.py passes the task worktree as the top argument to checks.wait, and checks._ask runs every gh api call with cwd set to it, so subprocess raises FileNotFoundError once that folder is gone; the code after the wait also reads the task folder (story.show, close._pull_request, time_records.merge_line and git rev-parse), so those reads need the same care."
+}
