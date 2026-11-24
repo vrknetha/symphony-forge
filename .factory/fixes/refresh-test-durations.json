@@ -1,0 +1,15 @@
+{
+  "base": "da616d5fc7d1868731bb54b8bf4c0a0d23afd8ca",
+  "branch": "fix/refresh-test-durations",
+  "done_when": "tests/test_ci_timing_inventory.py::test_1_recorded_timings_name_existing_tests passes on the fix branch because .test_durations names the renamed tests, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-24T10:23:48.205068+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Main fails tests/test_ci_timing_inventory.py::test_1_recorded_timings_name_existing_tests since the workers-codex-2 fix renamed two tests: .test_durations still names tests/test_fix_the_owner_moved_this_repo_s_workers_from.py::test_1_this_repo_works_on_claude_low_and_reviews_on_codex and the old test_source_split_workers test_1 name"
+}
