@@ -1,0 +1,75 @@
+{
+  "base": "da616d5fc7d1868731bb54b8bf4c0a0d23afd8ca",
+  "branch": "fix/refresh-test-durations",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a20d15-f186-76a3-a96b-e81726e12b18",
+    "head": null,
+    "start": "cd1d422fd8b4f0da62fb5c2758d35e6e7617326c"
+  },
+  "done_when": "tests/test_ci_timing_inventory.py::test_1_recorded_timings_name_existing_tests passes on the fix branch because .test_durations names the renamed tests, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": ".test_durations",
+      "file": ".test_durations",
+      "gain": 3,
+      "harm": 2,
+      "line": 1432,
+      "outcome": "follow-up",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: tests/test_ci_timing_inventory.py::test_1_recorded_timings_name_existing_tests passes because .test_durations names the renamed tests",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "991944fb7cf29fe741bef928d62c8d8cb437dd3f16ddab24e65a9bb911289ea9",
+    "changed": "4642c3cbf5069593a6c94c94cfd1beec668605f78003765ed395ec9843946970",
+    "commit": "5daf19bd2b1f901a7a47c641cbd797d4c009ef20",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 3, Work 1, Harm 2\nRaise: Test\nCase: normal use - refreshing recorded timings after tests are renamed.\nThe coordinator selected this proof because it fails on main, but `tests/test_ci_timing_inventory.py:25-27` checks only keys that remain in the file. Deleting both obsolete entries instead of renaming them would also make the assertion pass, while losing both recorded durations and leaving the renamed tests unnamed. The proof therefore does not establish the stated requirement for either changed entry at `.test_durations:1432` and `.test_durations:3007`.",
+        "file": ".test_durations",
+        "gain": 3,
+        "harm": 2,
+        "line": 1432,
+        "priority": "P1",
+        "title": "Test: tests/test_ci_timing_inventory.py::test_1_recorded_timings_name_existing_tests passes because .test_durations names the renamed tests",
+        "work": 1
+      }
+    ],
+    "id": "ea66986b-1a9b-4232-9139-a32d8d365c7c",
+    "status": "clean"
+  },
+  "round": 1,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-24T10:23:48.205068+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-24T10:24:29.377975+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T10:31:00.552899+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": null,
+    "head": "1000b9578f60d1b8521941cf9b7330fe9a8b05f6",
+    "keys": {},
+    "round": null
+  },
+  "why": "Main fails tests/test_ci_timing_inventory.py::test_1_recorded_timings_name_existing_tests since the workers-codex-2 fix renamed two tests: .test_durations still names tests/test_fix_the_owner_moved_this_repo_s_workers_from.py::test_1_this_repo_works_on_claude_low_and_reviews_on_codex and the old test_source_split_workers test_1 name",
+  "worker": "codex"
+}
