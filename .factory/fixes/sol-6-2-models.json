@@ -1,0 +1,86 @@
+{
+  "base": "32d4ae05e6e815e458e6fd117284f1303d270184",
+  "branch": "fix/sol-6-2-models",
+  "chat": {
+    "approval": null,
+    "claude": {
+      "id": "88c8c81a-2b89-4ee3-a165-871f15579ec9",
+      "rounds": 0,
+      "start": "605083d82c619e94902b7c57ec0b0de02dc3511a"
+    },
+    "conversation": null,
+    "head": null,
+    "start": null
+  },
+  "done_when": "Every gpt-6.1-sol model entry in forge.toml says gpt-6.2-sol, the Terra review entries are unchanged, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "forge.toml",
+      "file": "forge.toml",
+      "gain": 3,
+      "harm": 3,
+      "line": 12,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Every gpt-6.1-sol model entry in forge.toml says gpt-6.2-sol, the Terra review entries are unchanged, and nothing else changes",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "7915839deaa7e4fef838212f03537512c160f7b915ea329a7ee5a2b24cf08f15",
+    "changed": "b8d9f8e7e03e1d61ecec04df8ccfa8b5d46bcfad82de12125f2b7fbd70400bb4",
+    "commit": "9d77ed5b2dc8ae7fe7108a9a1df2930052704214",
+    "dismissals": [],
+    "findings": [],
+    "id": "3368b48c-4298-46aa-9b47-12714bf24746",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-24T03:30:31.402818+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-24T03:30:53.156507+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T03:34:32.716514+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T03:35:11.660483+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T03:37:34.634544+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T04:07:08.057962+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T04:13:11.525522+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "8bcba212-14e2-4b6f-85e6-15416c77fd2d",
+    "head": "b89a914b2a3f9b9aee61cf01f583a81c04b02fc9",
+    "keys": {},
+    "round": 2
+  },
+  "why": "This repo's forge.toml still runs Codex work on gpt-6.1-sol; v1.2.47 makes gpt-6.2-sol Forge's default for Codex work and supports it on ChatGPT accounts, and the owner decided on 22 Nov that Sol work moves to 6.2 while Terra reviews stay",
+  "worker": "claude"
+}

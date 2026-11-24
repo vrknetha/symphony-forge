@@ -30,5 +30,5 @@ def test_1_forge_init_defaults_work_to_gpt_6_1_sol_and_pins_claude_reviews(repo,
 def test_2_this_repos_cold_reader_and_review_use_terra_and_design_keeps_sol(repo):
     models = tomllib.loads((ROOT / "forge.toml").read_text(encoding="utf-8"))["models"]
     assert models["grill"]["codex"] == REVIEW
-    assert models["design"]["codex"] == {"model": "gpt-6.1-sol", "effort": "high"}
+    assert models["design"]["codex"] == {"model": NEW, "effort": "high"}
     assert models["review"] == REVIEW

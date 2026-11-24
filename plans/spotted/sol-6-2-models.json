@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\tforge.toml\tTest: Every gpt-6.1-sol model entry in forge.toml says gpt-6.2-sol, the Terra review entries are unchanged, and nothing else changes\tsol-6-2-models",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 12,
+      "text": "Test: Every gpt-6.1-sol model entry in forge.toml says gpt-6.2-sol, the Terra review entries are unchanged, and nothing else changes",
+      "from": "blocking",
+      "item": "sol-6-2-models",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
