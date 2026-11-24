@@ -62,10 +62,6 @@ def test_1_approved_unstarted_story_can_drop(intake, claude_payload, monkeypatch
     assert "APPROVED" in repo.forge("next", cwd=top).stdout
     started = repo.forge("task", "start", "APPROVED/SAVE", cwd=top)
     assert started.returncode == 0, started.stdout + started.stderr
-    refused = repo.forge("story", "drop", "APPROVED", "--because", "Keep it for later", cwd=top)
-    assert refused.returncode == 1
-    assert refused.stderr == ("APPROVED has started parts, so it cannot be dropped.\n"
-                              "Next: forge close APPROVED/SAVE\n")
     # After a part merges, its record survives only on the default branch.
     part = _checkout(repo, top, "task/APPROVED-SAVE")
     repo.git("merge", "-q", "--no-ff", "task/APPROVED-SAVE", "-m", "Merge saved basket part", cwd=top)

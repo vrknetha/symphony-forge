@@ -207,6 +207,7 @@ def story_drop(args: Any) -> None:
     if not task._one_line(args.because):
         raise repo.Refused("Give one reason to drop the plan.", "forge next")
     branch, rel = f"story/{key}", repo.state_path(key)
+    repo.git("fetch", "-q", "origin", cwd=top)  # a teammate's new or merged part counts
     ref = story.plan_ref(top, key)
     state = story.json_of(story.show(top, ref, rel))
     if not state:
@@ -216,9 +217,10 @@ def story_drop(args: Any) -> None:
     records = sorted({path for part in (ref, f"origin/{repo.default_branch(top)}", *parts.splitlines())
                       for path in repo.git("ls-tree", "-r", "--name-only", part, "--",
                                            f".factory/stories/{key}/tasks/", cwd=top).splitlines()})
-    if records:
+    merged = [path for path in records if repo.read_blob(top, f"origin/{repo.default_branch(top)}:{path}") is not None]
+    if merged:
         raise repo.Refused(f"{key} has started parts, so it cannot be dropped.",
-                           f"forge close {key}/{Path(records[0]).stem}")
+                           f"forge close {key}/{Path(merged[0]).stem}")
     if state.get("status") not in ("planning", "approved", "dropped"):
         raise repo.Refused(f"{key} is no longer an unstarted plan, so it cannot be dropped.", "forge next")
     root = machine.main_checkout(top)
@@ -232,14 +234,15 @@ def story_drop(args: Any) -> None:
     if repo.git("status", "--porcelain", "--untracked-files=all", cwd=path):
         raise repo.Refused(f"{key} has uncommitted changes. Commit or set them aside first.", "forge next")
     repo.git("merge", "--ff-only", "--no-overwrite-ignore", ref, cwd=path)
+    # Close the pull requests first: the published drop frees the parts' files.
+    for head in [branch, *(f"task/{key}-{Path(record).stem}" for record in records)]:
+        for pr in json.loads(close._gh(path, "pr", "list", "--head", head, "--state", "open", "--json", "number")):
+            close._gh(path, "pr", "close", str(pr["number"]), "--comment", args.because.strip())
     state = repo.read_state(key, path) or {}
     state.update(status="dropped", drop={"because": args.because.strip(),
                  "by": repo.git("var", "GIT_AUTHOR_IDENT", cwd=path), "at": repo.now()})
     repo.commit_state("Drop the plan", repo.write_state(key, state, path), top=path)
     repo.git("push", "-q", "--set-upstream", "origin", branch, cwd=path)
-    prs = json.loads(close._gh(path, "pr", "list", "--head", branch, "--state", "open", "--json", "number"))
-    for pr in prs:
-        close._gh(path, "pr", "close", str(pr["number"]), "--comment", args.because.strip())
     print(f"Dropped plan {key}. Its remote branch keeps the work.")
     ignored = repo.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z", cwd=path)
     if ignored:

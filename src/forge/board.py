@@ -265,11 +265,13 @@ def machine_board(top: Path, history: Item | None = None, trim: bool = True, cac
             if rel not in merged and state.get("branch") not in merged_prs:
                 state = nextstep.at_ref(top, fix, state, by_branch.get(state.get("branch")))
             best[rel] = state, where
-    dropped = {STATE.fullmatch(rel)["key"] for rel, (state, _) in best.items()
+    # A part's older worktree can hold an older story record, so any dropped copy counts.
+    dropped = {STATE.fullmatch(rel)["key"] for rel, state, _ in history["copies"]
                if rel.endswith("/story.json") and state.get("status") == "dropped"}
     promoted = {state["from_fix"] for state, _ in best.values() if state.get("from_fix")}
     best = {rel: pair for rel, pair in best.items()
-            if pair[0].get("status") != "dropped" and STATE.fullmatch(rel)["fix"] not in promoted}
+            if pair[0].get("status") != "dropped" and STATE.fullmatch(rel)["fix"] not in promoted
+            and STATE.fullmatch(rel)["key"] not in dropped}
     readiness: dict[str, Item] = {}
     person_waits: dict[str, list[Item]] = {}  # each part's and fix's waits on a person, for Needs you
     roadmap = {s["key"]: s for s in repo.roadmap(top) if s.get("status") != "superseded" and s["key"] not in dropped}

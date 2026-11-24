@@ -542,6 +542,14 @@ def plan_ref(top: Path, key: str, history: dict[str, Any] | None = None) -> str:
     return found[key]
 
 
+def state_of(top: Path, key: str, ref: str, history: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The story's state record at a ref, from the snapshot when there is one."""
+    if history is None:
+        return json_of(show(top, ref, repo.state_path(key)))
+    full = f"refs/heads/{ref}" if ref.startswith("story/") else f"refs/remotes/{ref}" if ref.startswith("origin/story/") else ref
+    return history["ref_states"].get(full, {}).get(repo.state_path(key), {})
+
+
 def _plan_ref(top: Path, key: str, history: dict[str, Any] | None = None) -> str:
     local, remote = f"story/{key}", f"origin/story/{key}"
     landed = landed_ref(top)
@@ -554,15 +562,10 @@ def _plan_ref(top: Path, key: str, history: dict[str, Any] | None = None) -> str
         same = tips.get(f"refs/heads/{local}") is not None and tips.get(f"refs/heads/{local}") == tips.get(f"refs/remotes/{remote}")
         if local_doc is None or (not same and repo.run("git", "merge-base", "--is-ancestor", remote, local, cwd=top).returncode):
             source = remote
-    def state_at(ref: str) -> dict[str, Any]:
-        if history is None:
-            return json_of(show(top, ref, repo.state_path(key)))
-        full = f"refs/heads/{ref}" if ref.startswith("story/") else f"refs/remotes/{ref}" if ref.startswith("origin/story/") else ref
-        return history["ref_states"].get(full, {}).get(repo.state_path(key), {})
-    state = state_at(source)
+    state = state_of(top, key, source, history)
     # A failed approval push leaves the initial claim behind the first merged part.
     if (not state.get("approval") and all(step.get("step") == "start" for step in state.get("steps", []))
-            and state_at(landed).get("approval")):
+            and state_of(top, key, landed, history).get("approval")):
         return landed
     return source
 

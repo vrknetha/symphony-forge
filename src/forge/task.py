@@ -22,6 +22,7 @@ REFUSALS = {
                'forge story new {key} "<title>"'),
     "no_task": ("The story doc of {key} has no task {task}.", "forge next"),
     "not_approved": ("Story {key} is not approved yet.", "forge next"),
+    "dropped": ("Story {key} is dropped, so its parts stop.", "forge next"),
     "changed": ('"What changes for you" or "Done when" of story {key} changed after its approval, '
                 "so it needs a new approval.", "forge next"),
     "started": ("{item} is already started on {branch}{person}.", "forge work {item}"),
@@ -444,7 +445,10 @@ def start(args: argparse.Namespace) -> None:
     tasks = rows(sections(text))
     if task not in tasks:
         refuse(REFUSALS["no_task"], key=key, task=task)
-    approval = json.loads(show(source, repo.state_path(key)) or "{}").get("approval") or {}
+    record = json.loads(show(source, repo.state_path(key)) or "{}")
+    if record.get("status") == "dropped":
+        refuse(REFUSALS["dropped"], key=key)
+    approval = record.get("approval") or {}
     approved = approval.get("hash")
     if not approved:
         refuse(REFUSALS["not_approved"], key=key)
@@ -625,6 +629,14 @@ def _merged(main: str, item: str, top: Path | None = None) -> bool:
     return repo.read_blob(top or repo.root(), f"{main}:{repo.state_path(item)}") is not None
 
 
+def _dropped(key: str, top: Path | None, history: dict[str, Any] | None) -> bool:
+    """A dropped story's unmerged parts hold no files."""
+    from forge import story
+
+    top = top or repo.root()
+    return story.state_of(top, key, story.plan_ref(top, key, history), history).get("status") == "dropped"
+
+
 def _started(main: str, top: Path | None = None,
              history: dict[str, Any] | None = None) -> dict[str, list[str]]:
     """Every story's started, unmerged tasks, each with its Scope."""
@@ -640,7 +652,8 @@ def _started(main: str, top: Path | None = None,
         for rel in paths:
             match = re.fullmatch(r"\.factory/stories/([^/]+)/tasks/([^/]+)\.json", rel)
             if match and f"task/{match[1]}-{match[2]}" == branch and not (
-                    rel in history["states"] if history is not None else _merged(main, f"{match[1]}/{match[2]}", top)):
+                    rel in history["states"] if history is not None else _merged(main, f"{match[1]}/{match[2]}", top)
+            ) and not _dropped(match[1], top, history):
                 text = (history["docs"].get(f"{ref}:plans/{match[1]}.md", "") if history is not None else
                         show(ref, f"plans/{match[1]}.md", top) or "")
                 doc = rows(sections(text))
@@ -900,6 +913,11 @@ def require_active(item: str, top: Path | None = None, *, allow_size: bool = Fal
     """A retained checkout cannot resume a dropped fix without an explicit restore."""
     from forge import nextstep, owner_choices, story
 
+    if "/" in item:
+        key = item.split("/", 1)[0]
+        git("fetch", "-q", "origin", cwd=top)  # a clone that has not fetched the drop must still refuse
+        if _dropped(key, top, None):
+            refuse(REFUSALS["dropped"], key=key)
     location = top or repo.root()
     location = next((path for branch, path in story.worktrees(location).items()
                      if branch == f"fix/{item}"), location)
