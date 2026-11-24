@@ -716,7 +716,7 @@ A refusal names the file, the rule and its waiver comment. Fix the problem, or u
 with a reason. If the checker cannot run, close prints one line and runs the other checks.
 Without Node, close prints one line and skips the design checks. Sync changes no app code.
 Close also refuses a changed UI file that animates all properties, shadcn copies included; list the
-properties, or use `forge-ui-ignore motion-all: <reason>`. Review reports a button-like part with no
+properties, or use `forge-ui-ignore motion-all: <reason>`. Close also refuses a changed screen file (a UI file under `apps/` or `libs/`; not a shadcn copy, an email template or a saved design canvas) with bold text (weight 600 or more), all caps (the `uppercase` class or `text-transform: uppercase`), a background gradient, a hex colour value outside a `--name:` theme value in `:root`, `.dark` or `@theme`, or a transition or animation duration of 300 ms or more (a delay does not count). It names `file:line <rule>` (`bold-text`, `all-caps`, `bg-gradient`, `raw-hex`, `slow-motion`); fix it or set it aside with `forge-ui-ignore <rule>: <reason>`. The app baseline lists the owner's other design rules. Review reports a button-like part with no
 pressed state (the `link` variant is exempt), a new animation that ignores reduced motion, a
 hand-built loading, empty or error block where the app has the shared state parts, and motion that
 skips the shared curve and speeds.
