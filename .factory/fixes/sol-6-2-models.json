@@ -1,0 +1,15 @@
+{
+  "base": "32d4ae05e6e815e458e6fd117284f1303d270184",
+  "branch": "fix/sol-6-2-models",
+  "done_when": "Every gpt-6.1-sol model entry in forge.toml says gpt-6.2-sol, the Terra review entries are unchanged, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-24T03:30:31.402818+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "This repo's forge.toml still runs Codex work on gpt-6.1-sol; v1.2.47 makes gpt-6.2-sol Forge's default for Codex work and supports it on ChatGPT accounts, and the owner decided on 22 Nov that Sol work moves to 6.2 while Terra reviews stay"
+}
