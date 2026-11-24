@@ -195,6 +195,7 @@ def _a_hook_with_its_pre_forge_copy_is_a_row_not_a_traceback(repo, gh, tmp_path,
 def _sdk(repo, tmp_path, monkeypatch, workers: str) -> Path:
     _client(repo, workers=workers)
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))  # never the real SDK environment
+    (tmp_path / "data/forge/codex-sdk" / f"openai-codex-{SDK_PIN}" / "forge-sdk-ready").unlink()
     program = tmp_path / "bundled-codex"
     program.write_text(f"#!/bin/sh\necho codex-cli {SDK_PIN}\n", encoding="utf-8")
     program.chmod(0o755)
@@ -223,6 +224,7 @@ def _the_codex_sdk_is_installed_only_where_codex_is_used(repo, gh, tmp_path, mon
 def _a_failing_sdk_install_is_a_row(repo, gh, tmp_path, monkeypatch, _):
     _client(repo, workers="codex")
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+    (tmp_path / "data/forge/codex-sdk" / f"openai-codex-{SDK_PIN}" / "forge-sdk-ready").unlink()
     _install(repo.bin, "uv", f"#!{sys.executable}\nimport sys\n"
                              "sys.stderr.write('uv: the network is down\\n')\nsys.exit(1)\n")
     done = repo.forge("doctor", "--fix")

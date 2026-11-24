@@ -215,6 +215,8 @@ def test_6_coordinator_generated_merge_commits_incoming_settings(env, client):
     assert closed.returncode == 0, closed.stdout + closed.stderr
     assert "Ready:" in closed.stdout
     assert "Incoming coordinator settings" in (folder / "forge.toml").read_text("utf-8")
-    assert (folder / guide).read_text("utf-8") == (ROOT / "src/forge/templates/skill.md").read_text("utf-8")
+    template = (ROOT / "src/forge/templates/skill.md").read_text("utf-8").rstrip("\n")
+    committed = (ROOT / ".claude/skills/forge/SKILL.md").read_text("utf-8")
+    assert (folder / guide).read_text("utf-8") == template + committed[len(template):]
     client.git("merge-base", "--is-ancestor", "origin/main", "HEAD", cwd=folder)
     assert client.git("status", "--porcelain", cwd=folder) == ""

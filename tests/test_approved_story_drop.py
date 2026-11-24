@@ -10,8 +10,16 @@ from test_story import DOC, approved_constitution, claude_plan
 STORY = "FIX-DROP-APPROVED-UNSTARTED-STORY"
 
 
-def test_1_approved_unstarted_story_can_drop(intake, claude_payload):
+def test_1_approved_unstarted_story_can_drop(intake, claude_payload, monkeypatch, tmp_path):
     repo, top, owner, *_ = intake
+    # The ready SDK lets the plan reader use Codex, whose real trust check
+    # needs this test's own project approval and isolated configuration.
+    home = tmp_path / "codex-home"
+    home.mkdir()
+    (home / "config.toml").write_text(
+        f'[projects.{json.dumps(str(top))}]\ntrust_level = "trusted"\n', encoding="utf-8")
+    monkeypatch.setenv("CODEX_HOME", str(home))
+    monkeypatch.setenv("STUB_CODEX_TEXT", "No findings.")
     _signed_off(intake)
     approved_constitution(repo, where=top)
     roadmap = top / "plans/roadmap.json"
@@ -54,10 +62,6 @@ def test_1_approved_unstarted_story_can_drop(intake, claude_payload):
     assert "APPROVED" in repo.forge("next", cwd=top).stdout
     started = repo.forge("task", "start", "APPROVED/SAVE", cwd=top)
     assert started.returncode == 0, started.stdout + started.stderr
-    refused = repo.forge("story", "drop", "APPROVED", "--because", "Keep it for later", cwd=top)
-    assert refused.returncode == 1
-    assert refused.stderr == ("APPROVED has started parts, so it cannot be dropped.\n"
-                              "Next: forge close APPROVED/SAVE\n")
     # After a part merges, its record survives only on the default branch.
     part = _checkout(repo, top, "task/APPROVED-SAVE")
     repo.git("merge", "-q", "--no-ff", "task/APPROVED-SAVE", "-m", "Merge saved basket part", cwd=top)

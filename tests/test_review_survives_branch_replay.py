@@ -12,7 +12,8 @@ STORY = "review-after-replay"
 def test_1_reused_review_passes_pr_check_after_replay(env, previous):
     repo = configured(env, previous)
     fix, where = started(repo, "Repair a greeting")
-    env.commit(where, "src/greeting.py", "GREETING = 'Hello'\n")
+    env.commit(where, "src/greeting.py", "GREETING = 'Hello'\n",
+               "Work\n\nProof list:\n- Done when: check: The fixture's greeting was checked.")
     first = env.close(fix)
     assert first.returncode == 0, first.stdout + first.stderr
     old_head = repo.git("rev-parse", "HEAD", cwd=where)

@@ -1,0 +1,87 @@
+{
+  "base": "c10935c6643bec99aa3f0cd97c9ec51192210abf",
+  "branch": "fix/workers-claude-2",
+  "done_when": "forge.toml says workers = \"claude\", so every task and fix in Forge's repo is built by Claude, and reviews and cold reads stay as they are",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "forge.toml",
+      "file": "forge.toml",
+      "gain": 4,
+      "harm": 3,
+      "line": 4,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: update the source-worker tests for Claude routing",
+      "work": 2
+    },
+    {
+      "area": "forge.toml",
+      "file": "forge.toml",
+      "gain": 4,
+      "harm": 1,
+      "line": 4,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: proof list",
+      "work": 1
+    },
+    {
+      "area": "forge.toml",
+      "file": "forge.toml",
+      "gain": 1,
+      "harm": 1,
+      "line": 4,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Simpler: undocumented approach \u2192 record the three decisions",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "98343b7fba7d60b15a1bff05d41b062c313c63842403cd5a2ae7eb561fc491ab",
+    "changed": "6fc56008f08fae8f24b83767a9a947a1b8e44f79e81961ac4fed047b845fbc29",
+    "commit": "aa0a95cd35ea34728b772375df5e6580b81bd572",
+    "dismissals": [],
+    "findings": [],
+    "id": "305ee758-a0c8-42fa-80c0-3c0bba16f492",
+    "status": "clean"
+  },
+  "round": 1,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T17:51:16.606132+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T17:57:49.760277+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T18:20:39.787201+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T18:27:28.251627+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "0e5c3085-e603-48d1-908f-82f666446e4f",
+    "head": "581e0596e3a52d2310dc91e8ffa432b063e80d46",
+    "keys": {},
+    "round": null
+  },
+  "why": "The owner wants every build and fix in Forge's own repo to run on Claude, but forge.toml still says workers = split",
+  "worker": "claude"
+}

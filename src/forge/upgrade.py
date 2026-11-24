@@ -11,10 +11,11 @@ import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
-from forge import close, event_log, machine, quicktest, repo, story, task
+from forge import close, codex, event_log, machine, native, quicktest, repo, story, task
 
 COMMANDS = [{
     "words": "upgrade", "run": "upgrade", "changes_state": False,
@@ -42,6 +43,8 @@ REFUSALS = {
     "running": ("Forge runs are still in progress on this machine:\n{runs}\n"
                 "An install during a run can mix two releases.",
                 "Wait until no Forge runs are in progress, then {again}"),
+    "wait_end": ("Forge could not end the {command} CI wait for {item} in {repo}.",
+                 "Wait for that command to finish, then {again}"),
     "bad_release": ("{release!r} is not a Forge release; a release is v and three numbers, such "
                     "as v1.3.0.", "forge upgrade <release>"),
     "not_newer": ("{default} already pins Forge {pinned}, so {release} would not be an upgrade.",
@@ -91,20 +94,30 @@ def upgrade(args: argparse.Namespace) -> int:
         repo.refuse(REFUSALS["bad_release"], release=release)
     needs_install = _on_path()[0] != release
     runs = machine.entries() if needs_install else []
+    waits = []
     if needs_install:
-        # Close can wait for CI after leaving both lanes. Unfinished history alone
-        # is not a live run: use the lanes' process identity check for these too.
+        # Only lane entries have ids that forge stop can end. CI-only waits release
+        # the installed environment here instead of appearing in that stop list.
         for root in dict.fromkeys([top, *machine.remembered()]):
             activity = event_log.read(root)
             ended = {event.get("run_id") for event in activity if event.get("event") == "run end"}
             for event in activity:
-                if (event.get("event") == "run start" and event.get("id") not in ended
+                if (event.get("event") == "run start" and event.get("kind") == "ci"
+                        and event.get("id") not in ended
                         and machine._running(event.get("process"))
                         and not any(run.get("process") == event["process"] for run in runs)):
-                    runs.append({**event, "repo_name": root.name})
+                    if not any(wait["process"] == event["process"] for wait in waits):
+                        waits.append({**event, "repo_name": root.name})
     if runs:
+        for run in runs:
+            if run.get("legacy") and not run.get("item"):
+                checkout = Path(run["repo"])
+                found = task.branch_item(repo.current_branch(checkout), checkout)
+                run["item"] = found[0] if found else None
         repo.refuse(REFUSALS["running"], runs="\n".join(
-            f"- {run['repo_name']}: {run['item'] or 'test command'} ({run['kind']})"
+            f"- {run['repo_name']}: {run['item'] or ('test command' if run['kind'] == 'test' else 'item not recorded')} "
+            f"({run['kind']}), id {run['id']}\n"
+            f"  To end this run: forge stop --id {run['id']}"
             for run in runs), again=again)
     pinned = repo.default_config(top)["version"]  # fetches the default branch first
     if _numbers(release) <= _numbers(pinned):
@@ -216,6 +229,20 @@ def upgrade(args: argparse.Namespace) -> int:
     if not needs_install:
         print(f"Forge {release} is already installed, so the install was skipped.", flush=True)
     else:
+        for wait in waits:
+            process = wait["process"]
+            command = wait.get("command", "close")
+            live = codex._alive(process)
+            if live is False:
+                continue
+            launchers = _launchers(process)
+            if live is None or not codex._stop(process, False):
+                repo.refuse(REFUSALS["wait_end"], again=again, command=command,
+                            item=wait["item"], repo=wait["repo_name"])
+            _wait_gone(launchers)
+            resume = "forge land --all" if command == "merge train" else f"forge {command} {wait['item']}"
+            print(f"Ended {command} for {wait['item']} to install Forge. "
+                  f"Run {resume} to resume the CI wait.", flush=True)
         install = INSTALL.format(release=release)
         installed = repo.run(*install.split())
         if installed.returncode:
@@ -261,6 +288,38 @@ def upgrade(args: argparse.Namespace) -> int:
 
 CODEX_INSTALL = ("irm https://chatgpt.com/codex/install.ps1 | iex" if os.name == "nt"
                  else "curl -fsSL https://chatgpt.com/codex/install.sh | sh")  # OpenAI's standalone installer
+
+
+def _launchers(process: dict[str, Any]) -> list[dict[str, Any]]:
+    """The programs above a process that only start it and wait, such as a virtual environment's
+    python.exe on Windows. Each holds the tool environment until it exits, which follows the end of
+    its child. A parent counts when it runs the same program and has no other child."""
+    def program(who: dict[str, Any]) -> str:
+        command = who.get("command", "")
+        return Path(command if os.name == "nt" else command.split()[0] if command else "").name.lower()
+
+    try:
+        parents = native.parent_ids()
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return []  # Nothing is known about the tree, so the install goes on as before.
+    found, current = [], process
+    for _ in range(len(parents)):
+        parent = parents.get(current["pid"], 0)
+        above = codex.identity(parent) if parent > 1 else None
+        if (not above or "command" not in above or program(above) != program(current)
+                or [pid for pid, up in parents.items() if up == parent] != [current["pid"]]):
+            break
+        found.append(above)
+        current = above
+    return found
+
+
+def _wait_gone(processes: list[dict[str, Any]], seconds: float = 10) -> None:
+    """Wait for processes to exit. A program that stays holds no more than this long, and the
+    install then says what it cannot replace."""
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline and any(codex._alive(who) is not False for who in processes):
+        time.sleep(0.1)
 
 
 def _codex_command() -> list[str] | None:

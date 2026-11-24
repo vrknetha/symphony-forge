@@ -1,0 +1,152 @@
+{
+  "base": "a27cc967e4fbedac42dbca27c132e2ca7ca8851c",
+  "branch": "fix/playwright-tests-skill",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a20211-a291-7500-898b-33d32e2e8885",
+    "head": null,
+    "start": "e6bad6d400ed80ebf8e15e7bdf0ed9c20fcecaf4"
+  },
+  "done_when": "Forge ships a playwright-tests skill to every client repo through forge init and forge sync, next to the database and agents skills, and the guide and the worker brief tell builders and reviewers to follow it when they write or change Playwright tests or their CI; the starters' test folders are unchanged; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "ships() in src/forge/app_baseline.py",
+      "file": "src/forge/app_baseline.py",
+      "gain": 2,
+      "harm": 4,
+      "line": 150,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Preserve client-owned Playwright skills during sync",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "file": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 25,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Reconcile the pull-request browser test instructions",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "file": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 18,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Standard: Client tests create their data without a shared seed",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "file": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 24,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Standard: Playwright retries are zero",
+      "work": 2
+    },
+    {
+      "area": "sync() in src/forge/sync.py",
+      "file": "src/forge/sync.py",
+      "gain": 2,
+      "harm": 4,
+      "line": 725,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Preserve client-owned Playwright skills during sync",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "8802fa91f188806649906e4d33815cd0d0d988124f59042647cdf1cebe2cb0ce",
+    "changed": "3771b9a3bbc040f656cff0ecb3ece808994c63ebdcd779398405795e72d498fc",
+    "commit": "feb29634cb5eeafc2d3220c0a1b80dfea24205f0",
+    "dismissals": [],
+    "findings": [],
+    "id": "2728e9e6-0ac6-4c45-8ea1-e8f62a82a686",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T07:03:38.512922+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T07:03:58.367676+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T07:14:41.333221+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T07:27:38.811727+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T07:51:04.065952+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T07:56:44.378565+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T08:00:40.565191+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T08:35:05.572106+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T08:49:03.353221+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T10:36:07.987626+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T11:11:08.615542+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "a73d531b-a227-4524-a1fb-7aa38e45ed77",
+    "head": "09d28651caf248b7abc1403dd9647cc78b07edf2",
+    "keys": {},
+    "round": 4
+  },
+  "why": "Builders and reviewers in Forge repos write Playwright browser tests and their CI with no shared rules, so layouts, sign-in, waits, workers and CI sharding differ and break",
+  "worker": "codex"
+}

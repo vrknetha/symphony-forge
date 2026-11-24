@@ -871,7 +871,7 @@ def _train(top: Path, default: str, plan: dict, merged: list[str], needs: dict, 
             try:
                 checks.wait(top, members[0][0], tip,
                             [name for name in repo.default_config(top)["checks"] if name != "forge-pr-check"],
-                            branch=branch, progress=True, train=True)
+                            branch=branch, progress=True, train=True, command="merge train")
                 break
             except repo.Refused as error:
                 # A red check, and a job that ran out of time, say which files broke it in their logs.

@@ -197,8 +197,9 @@ def test_1_running_command_continues_under_the_pin_merged_from_upgraded_default(
                                   "hooks", cwd=where))
         assert not (hooks / "pre-commit").exists()
         assert not (hooks / "pre-push").exists()
-        assert (where / guide).read_text("utf-8") == (
-            ROOT / "src" / "forge" / "templates" / "skill.md").read_text("utf-8")
+        template = (ROOT / "src" / "forge" / "templates" / "skill.md").read_text("utf-8").rstrip("\n")
+        committed = (ROOT / ".claude/skills/forge/SKILL.md").read_text("utf-8")  # plus known issues
+        assert (where / guide).read_text("utf-8") == template + committed[len(template):]
     else:
         [dispatch] = dispatches
     assert dispatch["args"] == ["tool", "run", "--from",
@@ -281,4 +282,4 @@ def test_3_close_continues_the_current_human_accept_choice_under_changed_pin(
                                                      src=(ROOT / "src").as_posix()))
     replayed = env.repo.forge(*args, cwd=where)
     assert replayed.returncode == 1
-    assert "Record the human's choice only on a stopped review loop" in replayed.stderr
+    assert "already recorded" in replayed.stderr

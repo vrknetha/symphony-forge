@@ -9,7 +9,9 @@ def test_9_synced_guides_explain_tools_and_the_session_handoff(repo):
     repo.git("checkout", "-q", "-b", "fix/tools-guide")
     version = repo.forge("--version").stdout.split()[-1]
     repo.write("forge.toml", f'version = "{version}"\ntest = "true"\n')
-    template = (ROOT / "src/forge/templates/skill.md").read_text(encoding="utf-8")
+    template = (ROOT / "src/forge/templates/skill.md").read_text(encoding="utf-8").rstrip("\n")
+    # The guide is the template plus the open known issues of the release.
+    template += (ROOT / ".claude/skills/forge/SKILL.md").read_text(encoding="utf-8")[len(template):]
     # Fixture sync cannot detect stale guides delivered in this checkout, including
     # the SDK recovery steps changed to forge doctor --fix.
     for host in (".claude", ".codex"):

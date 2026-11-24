@@ -460,10 +460,11 @@ def work_log(top: Path, item: str) -> Path:
 
 
 def record_timing(top: Path, item: str, step: str, start: str, clock: float,
-                  outcome: str, model: dict[str, str] | None = None) -> None:
+                  outcome: str, model: dict[str, str] | None = None, *, worker_round: int | None = None) -> None:
     """Append a best-effort timing in the shared, uncommitted Git directory."""
-    line = {"item": item, "round": (read_state(item, top) or {}).get("round", 0),
-            "step": step, "start": start,
+    if worker_round is None:
+        worker_round = (read_state(item, top) or {}).get("round", 0)
+    line = {"item": item, "round": worker_round, "step": step, "start": start,
             "seconds": round(time.monotonic() - clock, 3), "outcome": outcome}
     if model:
         line.update({key: model[key] for key in ("model", "effort") if key in model})
@@ -477,8 +478,9 @@ def record_timing(top: Path, item: str, step: str, start: str, clock: float,
 def record_event(top: Path, item: str, event: str, **fields: Any) -> str:
     """Write an occurrence once; consumers use its random id, never its text or timestamp."""
     identity = str(uuid.uuid4())
-    line = {"id": identity, "item": item, "event": event, "at": now(),
-            "round": (read_state(item, top) or {}).get("round", 0), **fields}
+    if "round" not in fields:
+        fields["round"] = (read_state(item, top) or {}).get("round", 0)
+    line = {"id": identity, "item": item, "event": event, "at": now(), **fields}
     from forge import event_log
     event_log.append(top, line)
     return identity
@@ -585,14 +587,14 @@ VERSION = re.compile(r"v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.]+)?")
 # effort is optional); build, fix, lite and explore may add their subagents' model and effort,
 # as a pair.
 # The cold read and design work have one entry per family.
-KINDS = ("build", "fix", "lite", "explore", "grill", "design", "review", "light_review")
+KINDS = ("build", "fix", "lite", "explore", "grill", "design", "review", "light_review", "ask")
 SUBAGENTS = ("subagents", "subagent_effort")
 FAMILIES = ("codex", "claude")
 # A worker's models when forge.toml has no entry for its family, so Forge always names them.
 WORKER_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "low"},
-                   "codex": {"model": "gpt-6.1-sol", "effort": "low"}}
+                   "codex": {"model": "gpt-6.2-sol", "effort": "low"}}
 DESIGN_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "xhigh"},
-                   "codex": {"model": "gpt-6.1-sol", "effort": "high"}}
+                   "codex": {"model": "gpt-6.2-sol", "effort": "high"}}
 CLAUDE_GRILL_DEFAULT = {"model": "claude-opus-5-5", "effort": "high"}
 TOP_EFFORT = {"codex": "high", "claude": "xhigh"}
 SUBAGENT_DEFAULT = {"model": "claude-haiku-5-5", "effort": "high"}

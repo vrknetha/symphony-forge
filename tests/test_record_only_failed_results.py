@@ -1,12 +1,12 @@
 """A record-only commit keeps a failed CI result instead of rerunning or hiding it.
 
 Test-audit for the record-history cases below:
-1. They protect the generated workflow's test-reuse decision.
-2. Reusing arbitrary code under plans/, choosing by run ID, or querying each ancestor
-   can skip changed code, hide a later retry, or exceed GitHub's request budget.
-3. Existing coverage checks a few record ancestors and distinct run IDs; it does not
-   cover plans/models.py, retry metadata, or a long record chain. This extends that
-   command-boundary owner with those cases.
+1. They protect the generated workflow's test-reuse decision, including whether the
+   completed run checked the same effective Done-when proof list.
+2. Reusing arbitrary code under plans/, choosing by run ID, ignoring retry state, or
+   reusing a changed proof list can skip changed code or a new test obligation.
+3. Existing coverage checks record ancestors and retry metadata; it does not cover a
+   changed proof list with the same tree or the review rule that skips record-only commits.
 4. The tests call the copied .forge/review-tests.py and fake only GitHub's API edge.
    They need no production seam.
 """
@@ -163,7 +163,8 @@ def _run_workflow_step(script, client, variables):
 @pytest.mark.platform
 @pytest.mark.parametrize("history", [
     "all-records", "pending-ancestor", "merge-second-parent", "business-code",
-    "retry-success", "retry-failure", "retry-in-progress",
+    "retry-success", "retry-failure", "retry-in-progress", "proof-changed",
+    "record-proof-changed",
 ])
 def test_6_record_history_reuses_the_newest_finished_same_code_run(
         env, tmp_path, monkeypatch, history):
@@ -176,8 +177,11 @@ def test_6_record_history_reuses_the_newest_finished_same_code_run(
     fix_record = ".factory/fixes/record-history.json"
     state = {"branch": "fix/record-history", "kind": "fix", "why": "Keep CI stable",
              "done_when": "Record history reuses finished tests", "status": "working"}
+    worker_message = "Build code"
+    if history in {"proof-changed", "record-proof-changed"}:
+        worker_message += "\n\nProof list:\n1: tests/test_old.py::test_old"
     _commit(env.repo, client, {fix_record: json.dumps(state),
-                               "ci-visible-code.py": "value = 1\n"}, "Build code")
+                               "ci-visible-code.py": "value = 1\n"}, worker_message)
     parent = env.repo.git("rev-parse", "HEAD", cwd=client)
     base = env.repo.git("rev-parse", "HEAD^", cwd=client)
 
@@ -234,6 +238,20 @@ def test_6_record_history_reuses_the_newest_finished_same_code_run(
                        "Save close record after code")
         rows = [_parent_run(1, parent, base, "success")]
         expected_conclusion = ""
+    elif history == "proof-changed":
+        # An empty commit changes the Done-when proof named by this unchanged tree.
+        env.repo.git("commit", "-q", "--allow-empty", "-m",
+                     "Update proof list\n\nProof list:\n1: tests/test_new.py::test_new", cwd=client)
+        head = env.repo.git("rev-parse", "HEAD", cwd=client)
+        rows = [_parent_run(1, parent, base, "success")]
+        expected_conclusion = ""
+    elif history == "record-proof-changed":
+        # The reviewer skips proof text on a records-only commit, so its new text
+        # cannot change the effective worker proof for the same tree.
+        head = _commit(env.repo, client, {fix_record: json.dumps(state | {"round": 2})},
+                       "Save close records\n\nProof list:\n1: tests/test_new.py::test_new")
+        rows = [_parent_run(1, parent, base, "success")]
+        expected_conclusion = "success"
     elif history.startswith("retry-"):
         record_head = _commit(env.repo, client, {fix_record: json.dumps(state | {"round": 2})},
                               "Save first retry record")

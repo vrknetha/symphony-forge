@@ -63,8 +63,9 @@ def test_2_upgrade_is_not_ready_while_synced_files_are_out_of_date(env):
     base = env.repo.git("merge-base", "origin/main", head, cwd=where)
     done = env.repo.forge("hook", "pr-check", "--base", base, "--head", head,
                           "--branch", "fix/tidy-readme", cwd=where)
-    assert (done.returncode, done.stdout) == (0, "forge-pr-check passed for fix/tidy-readme.\n"), \
-        done.stderr
+    assert (done.returncode, done.stdout) == (
+        0, "Done-when proof: Forge's own settings or generated files only; no Done-when test needed.\n"
+           "forge-pr-check passed for fix/tidy-readme.\n"), done.stderr
 
     # A file sync deletes counts too: an old Forge-only CLAUDE.md that sync removed in the folder
     # but that is still committed stays in the pull request.

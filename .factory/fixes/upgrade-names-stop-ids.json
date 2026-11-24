@@ -1,0 +1,140 @@
+{
+  "base": "d381088d345e8e2be291755e4482531d48f0b963",
+  "branch": "fix/upgrade-names-stop-ids",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a20405-5687-7091-8d49-82a9890b14c1",
+    "head": null,
+    "start": "54c5da8e325d63b5e122962a05ff09e15dd09dc7"
+  },
+  "done_when": "When forge upgrade refuses, it lists each blocking run with its id, kind and item and the exact forge stop --id <id> command for the person, and a handback that Forge refuses as stopped or replaced also ends that round's lane entry; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "upgrade() in src/forge/upgrade.py",
+      "file": "src/forge/upgrade.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 109,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as known issues: runs from very old releases with an old process identity cannot be ended by the printed forge stop --id; the refused-handback test does not prove the new lane cleanup on its own",
+      "round": 1,
+      "security": false,
+      "title": "Not done: When forge upgrade refuses, it lists each blocking run with its id, kind and item and the exact forge stop --id <id> command",
+      "work": 2
+    },
+    {
+      "area": "test_2_refused_handback_releases_its_round_lane() in tests/test_upgrade_run_recovery.py",
+      "file": "tests/test_upgrade_run_recovery.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 50,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as known issues: runs from very old releases with an old process identity cannot be ended by the printed forge stop --id; the refused-handback test does not prove the new lane cleanup on its own",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_2_refused_handback_releases_its_round_lane",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "ff846c2a2fd43df293e713517f37852de93ed33bacb2d1e402fbd5a3e0eb97d5",
+    "changed": "0633313c1694f04469794c2dad1d0415d67873e5e844a95489aa0ce371893daf",
+    "commit": "ff470bdae351d0e87545f1375cbecf37ba9835aa",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as known issues: runs from very old releases with an old process identity cannot be ended by the printed forge stop --id; the refused-handback test does not prove the new lane cleanup on its own",
+        "finding": 1
+      },
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as known issues: runs from very old releases with an old process identity cannot be ended by the printed forge stop --id; the refused-handback test does not prove the new lane cleanup on its own",
+        "finding": 2
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 3, Work 3, Harm 3\nRaise: Not done\nCase: normal use - repos pinned to different Forge releases have runs active on the same machine when an upgrade is requested.\nThe advertised stop command cannot end a genuine pre-ID work run on POSIX. For example, v1.2.6 records a five-word local-time process identity (`v1.2.6:src/forge/codex.py:562`); current `src/forge/codex.py:910` treats that identity as unverifiable, so `src/forge/machine.py:648` refuses the printed stop command and the run continues to block upgrade. The legacy test copies identities from a current worker (`tests/test_upgrade_run_recovery.py:93`), so it misses this. Also, v1.2.46 CI events have no command field (`v1.2.46:src/forge/checks.py:138`), so `src/forge/upgrade.py:233` still identifies an earlier-release merge or merge-train wait as a close and gives the wrong resume command after ending it.",
+        "file": "src/forge/upgrade.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 119,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: When forge upgrade refuses, it lists each blocking run with its id, kind and item and the exact forge stop --id <id> command",
+        "work": 3
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a stopped intake returns its result while the coordinating session remains open.\nThe replacement test still does not prove that a refused handback releases a lane entry. Its preceding `forge stop --id` calls `native.cancel`, which already removes that entry (`src/forge/native.py:189-196`). Consequently, every assertion still passes if the new cleanup in `src/forge/native.py:216-221` is removed: the handback is refused with no entry left for it to release. The test therefore cannot catch the regression it names.",
+        "file": "tests/test_upgrade_run_recovery.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 67,
+        "priority": "P1",
+        "title": "Gate: test_2_refused_handback_releases_its_round_lane",
+        "work": 2
+      }
+    ],
+    "id": "9011c4ce-4d42-45ad-9da1-900e8a0408cb",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T16:08:56.986483+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T16:09:46.262368+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T16:49:04.715857+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T16:50:15.567925+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T17:07:59.788062+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T17:07:59.819256+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T17:10:15.750439+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 2,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-22T17:07:59.819256+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/upgrade.py",
+    "reason": "Owner accepted on 22 Nov 2026 as known issues: runs from very old releases with an old process identity cannot be ended by the printed forge stop --id; the refused-handback test does not prove the new lane cleanup on its own",
+    "wait_id": "d4f1576e-d873-4b40-85f5-c868380023c5",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "7fa60156-2b3e-4951-a542-b872cb32a8a7",
+    "head": "e703378ebcc6665a14fb02f4d245c1e843b48479",
+    "keys": {},
+    "round": 1
+  },
+  "why": "forge upgrade refuses with a list of runs but does not name how to end one, and a refused handback leaves its intake lane entry live (issue 1761)",
+  "worker": "codex"
+}

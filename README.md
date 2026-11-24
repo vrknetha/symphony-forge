@@ -232,7 +232,7 @@ where things are in one sentence and gives the exact next step.
 ### Install
 
 ```sh
-uv tool install --python 3.11 "git+https://github.com/knacklabs/symphony-forge@v1.2.45"
+uv tool install --python 3.11 "git+https://github.com/knacklabs/symphony-forge@v1.2.48"
 ```
 
 Check it worked with `forge --version`. Each project pins the Forge version it uses, and Forge
@@ -295,7 +295,7 @@ Your agent runs these for you. You'll see them in its messages.
 | `forge work` | Has the worker build a task or fix, or fix what the review found |
 | `forge close` | Runs the review, waits for the tests, and marks the pull request ready |
 | `forge merge` | Merges a ready pull request, when the project allows the agent to merge |
-| `forge ask` | Asks Codex a quick read-only question about the code |
+| `forge ask "<question>" [--model <model>]` | Asks Codex a quick read-only question about the code |
 | `forge doctor` | Checks your setup and says how to fix each problem |
 
 The full command list is in the [Forge guide](docs/guide.md#commands).

@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/proof.py\tFunctional: Bound an old-code run that hangs\tFORGE-TESTQUAL-1/REPLAY",
+      "kind": "bug",
+      "path": "src/forge/proof.py",
+      "line": 278,
+      "text": "Functional: Bound an old-code run that hangs",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/REPLAY",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tsrc/forge/proof.py\tFunctional: Do not treat a test-output ignore as a code change\tFORGE-TESTQUAL-1/REPLAY",
+      "kind": "bug",
+      "path": "src/forge/proof.py",
+      "line": 309,
+      "text": "Functional: Do not treat a test-output ignore as a code change",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/REPLAY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/proof.py\tFunctional: Include the old-code base in the replay cache key\tFORGE-TESTQUAL-1/REPLAY",
+      "kind": "bug",
+      "path": "src/forge/proof.py",
+      "line": 317,
+      "text": "Functional: Include the old-code base in the replay cache key",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/REPLAY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_fix_tests_fail_before_the_fix.py\tGate: proof list\tFORGE-TESTQUAL-1/REPLAY",
+      "kind": "bug",
+      "path": "tests/test_fix_tests_fail_before_the_fix.py",
+      "line": 67,
+      "text": "Gate: proof list",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/REPLAY",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

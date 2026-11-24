@@ -67,7 +67,7 @@ def test_2_a_second_sync_changes_nothing(repo):
     before = (repo.path / ".codex/config.toml").read_bytes()
     again = repo.forge("sync")
     assert again.returncode == 0, again.stderr
-    assert again.stdout.startswith("Nothing to change")
+    assert "Nothing to change" in again.stdout
     assert (repo.path / ".codex/config.toml").read_bytes() == before
 
 

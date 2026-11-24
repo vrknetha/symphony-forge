@@ -17,7 +17,7 @@ reader while available. A native read uses a separate `reader` subagent.
 Install the release a repo pins (uv brings Python 3.11 or later if you don't have it):
 
 ```
-uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.45
+uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.48
 ```
 
 `forge --version` prints the installed version. Each repo pins its release in `forge.toml`, and
@@ -407,7 +407,7 @@ build, fix or lite kind has no Claude entry, Forge uses `claude-sonnet-5-5` at l
 Claude plan reads default to `claude-opus-5-5` at high effort, including when Claude is the only
 installed tool. Claude planner and architect roles use that plan-read entry; debugger,
 security and performance use Opus 5.5 at high effort. Codex build, fix and lite workers with
-no entry use Forge's `gpt-6.1-sol` at low effort; Codex design uses its design default.
+no entry use Forge's `gpt-6.2-sol` at low effort; Codex design uses its design default.
 Ask your agent to change these settings in a fix.
 
 `forge init` writes low effort for Codex and Claude build, fix and lite.
@@ -455,7 +455,7 @@ uses its selected tool's design entry: `[models.design.codex]` on Codex and
 `claude-sonnet-5-5` at xhigh effort. With `tools = "both"` and `workers = "split"`, the
 fallback applies only to Claude design rounds run through its kit. If the `claude` command
 is missing, or Claude fails before changing the checkout,
-Forge uses `[models.design.codex]` instead: `gpt-6.1-sol` at high effort by default. Forge prints
+Forge uses `[models.design.codex]` instead: `gpt-6.2-sol` at high effort by default. Forge prints
 and logs the fallback reason. If Claude changed the checkout before failing, Forge reports the
 failure without a Codex retry. When Claude Code coordinates without the SDK, design work runs as
 its native `frontend` subagent; a failed native round gets no automatic Codex retry.
@@ -489,6 +489,8 @@ If that round fails or is interrupted, answer again with `--note`; the question 
 
 For a quick read-only question about this checkout, hand it to the session's `explorer`
 subagent role. It uses the explore entry in `forge.toml`; no separate Forge command is needed.
+To ask Codex itself (for example a stronger model), run `forge ask "<question>" [--model <model>]`.
+It runs one read-only turn in an agent place and prints the answer.
 
 New repos get explore on Claude with `claude-haiku-5-5` at high effort and on Codex with the
 initial lite settings. Upgrading and syncing an existing repo preserves its settings: without
@@ -693,23 +695,30 @@ Publish within 30 minutes of the cut, without a separate owner yes.
 Skip the day when nothing merged since the last release or main is red.
 Hold merges from the cut until you push the tag and check the installed version.
 
-1. In a fix, set `__version__` in `src/forge/__init__.py` to the new version (without the `v`),
-   close it and merge it before the nightly runs.
-2. Before the cut, reuse passed nightly runs on the version-bump commit or a later main commit.
+1. In a fix, set `__version__` in `src/forge/__init__.py` to the new version (without the `v`)
+   and add `src/forge/release-notes/v<version>.md` for everything merged since the previous
+   release. Merge it last: the cut commit is this fix's merge commit. A fix that must join the
+   release after it (a fix without which the release is unsafe) also updates that notes file.
+2. Before the cut, reuse passed nightly runs on the bump's merge commit (or the last joining fix's).
    If a run is missing, start it with `gh workflow run forge.yml --ref main` (Linux) or
    `gh workflow run forge-next.yml --ref main` (Windows). Both must pass before the cut.
-   At 05:00 UTC, select the newest main commit whose Linux full run and Windows run passed.
-   Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
+   At 05:00 UTC, select the bump's merge commit (or the last joining fix's), once its Linux full
+   run and Windows run passed. Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
    If current main is ahead of that commit, skip the day: the release gate requires current main.
    Reuse the passed nightly runs on that exact commit. Do not start them again.
    The Linux workflow posts the full-run status that sign-off and release read.
    If an essential fix must join, repeat both runs and record its tested commit before the tag.
-3. Tag the exact cut commit with `git tag vX.Y.Z <full cut SHA>`, then `git push origin vX.Y.Z`.
+3. Before you create the tag, run `uv run --frozen --python 3.11 python
+   .github/release-notes-check.py vX.Y.Z <full cut SHA>`. When it fails, do not tag: add the
+   missing change to the notes in a fix, merge it, and use its merge commit as the cut.
+   Tag the exact cut commit with `git tag vX.Y.Z <full cut SHA>`, then `git push origin vX.Y.Z`.
    Use the recorded full SHA, never `origin/main`. Check the tag's tree against the cut with
    `git diff --quiet vX.Y.Z <full cut SHA>`.
    The tag push runs the Windows checks again or reuses passed proof for the same tree.
    Confirm that run is green too.
 4. Install from the tag and check that `forge --version` prints `vX.Y.Z`. Then allow merges again.
+   Publish the GitHub release from the cut commit's notes file, not the local one:
+   `git show <full cut SHA>:src/forge/release-notes/vX.Y.Z.md | gh release create vX.Y.Z --notes-file -`.
 5. Score the release. Nothing else starts this, a pull request never does, and it never holds the
    release. Use Claude only, in your own Claude Code session. Use no model whose id contains
    `fable` or `astra`.

@@ -34,7 +34,7 @@ SERVER: list[int] = []  # the app-server's process id once it has started, for e
 RECORDED = threading.Semaphore(0)  # a release per line Forge sends once it has recorded an id
 # The fields of a hooks/list entry that say where the hook is and its state, not what it runs.
 PLACE = {"key", "sourcePath", "source", "pluginId", "displayOrder", "enabled", "isManaged",
-         "currentHash", "trustStatus"}
+         "currentHash", "trustStatus", "environmentId"}
 RETRIES = 3  # the times a turn Codex ends as at capacity is sent again, each wait twice the last
 # ponytail: the tests' seam, like FORGE_CHECKS_WAIT
 RETRY_WAIT = float(os.environ.get("FORGE_CODEX_RETRY_WAIT", "30"))

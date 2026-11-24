@@ -117,6 +117,13 @@ result in the pull request. Any other name is marked `not run` or `not checked` 
 exist: `not run` means close ran no such test, and `not checked` means close could not match the
 line to its run, so judge it by reading it:
 
+$proof_checked For each line, read the
+named test: report a test whose assertions would still pass if the line were false as a P1
+`Test: <the line>`, and a `check:` entry for an item that changes runtime behaviour the same
+way. A new test's line names the closest existing test, or none, and the outcome no existing
+test proves; a missing choice is part of `Gate: proof list`, and a new test whose outcome the
+closest test already proves is a P2 `Follow-up: duplicate test`.
+
 $proof_list
 
 On the first round, check the whole list, not a sample. Check every entry against the code and its

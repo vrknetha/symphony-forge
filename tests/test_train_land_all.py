@@ -139,13 +139,12 @@ if args[:1] == ["api"] and "/commits/" in endpoint and train_sha(sha_of(endpoint
 fresh = cfg.get("fresh")
 if fresh and args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"] and sha_of(endpoint) not in fresh["closed"]:
     sha = sha_of(endpoint)
-    own = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
     ok = {"name": "forge-pr-check", "status": "completed", "conclusion": "success"}
     if not (here / ("pending-" + sha)).exists():
         (here / ("pending-" + sha)).touch()
         append_json(here / "gh-calls.jsonl", ["check-pending", sha, str(time.time())])
         answer(lines([{"name": "tests", "status": "in_progress", "conclusion": None}, ok]))
-    if own == "fix/%s" % fresh.get("red"):
+    if heads().get("refs/heads/fix/%s" % fresh.get("red")) == sha:
         if not (here / ("red-" + sha)).exists():
             (here / ("red-" + sha)).touch()
             append_json(here / "gh-calls.jsonl", ["check-red", sha, str(time.time())])
@@ -159,8 +158,10 @@ if fresh and args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"] and sha_
 if cfg.get("late") and args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"]:
     if (here / "acted").exists() and not (here / "late").exists():
         (here / "late").touch()
-        own = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
-        push("main" if cfg["late"] == "main" else own, "late.py", "x = 2\n")
+        branch = "main" if cfg["late"] == "main" else next(
+            ref.removeprefix("refs/heads/") for ref, head in heads().items()
+            if ref.startswith("refs/heads/fix/") and head == sha_of(endpoint))
+        push(branch, "late.py", "x = 2\n")
 if args[:4] == ["api", "--paginate", "--jq", ".workflow_runs[]"] and any(a.startswith("head_sha=") for a in args):
     runs = [{"id": 1, "check_suite_id": 1, "event": "pull_request_target", "path": ".github/workflows/forge.yml@refs/heads/main"},
             {"id": 2, "check_suite_id": 2, "event": "pull_request", "path": ".github/workflows/forge.yml@refs/pull/1/merge"}]
@@ -257,7 +258,8 @@ def _ready(env, monkeypatch, slugs, first=1, files=None) -> dict[str, str]:
     heads = {}
     for day, slug in enumerate(slugs, first):
         changed = (files or {}).get(slug, {f"{slug}.py": f"print('{slug}')\n"})
-        where = _fix(env, monkeypatch, slug, day, changed, status="working")
+        where = _fix(env, monkeypatch, slug, day, changed, status="working",
+                     message=f"Worker round\n\nProof list:\n- Done when: check: {slug} is changed")
         if "forge.toml" in changed:  # close accepts a settings change only when the fix says so
             amended = env.repo.forge("fix", "amend", slug, "--done", "forge.toml sets cold_read_rounds",
                                      "--because", "The fix changes a setting", cwd=where)
@@ -416,11 +418,13 @@ def _on_main(env, path: str, text: str) -> None:
 def _stacked(env, monkeypatch, base_merged: bool) -> None:
     """A fix built on another fix, closed ready. The base's pull request merges before the run (the
     fix is then closed ready again) or stays open."""
-    base = _fix(env, monkeypatch, "jb", 7, {"jb.py": "print('jb')\n"}, status="working")
+    base = _fix(env, monkeypatch, "jb", 7, {"jb.py": "print('jb')\n"}, status="working",
+                message="Worker round\n\nProof list:\n- Done when: check: jb is changed")
     assert env.repo.forge("close", "jb").returncode == 0
     main, env.repo.path = env.repo.path, base
     try:
-        _fix(env, monkeypatch, "jj", 8, {"jj.py": "print('jj')\n"}, status="working")
+        _fix(env, monkeypatch, "jj", 8, {"jj.py": "print('jj')\n"}, status="working",
+             message="Worker round\n\nProof list:\n- Done when: check: jj is changed")
     finally:
         env.repo.path = main
     assert env.repo.forge("close", "jj").returncode == 0

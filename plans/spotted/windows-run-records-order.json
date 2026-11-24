@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_run_records.py\tNot done: Windows branch jobs have no passing proof\twindows-run-records-order",
+      "kind": "bug",
+      "path": "tests/test_run_records.py",
+      "line": 114,
+      "text": "Not done: Windows branch jobs have no passing proof",
+      "from": "blocking",
+      "item": "windows-run-records-order",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_run_records.py\tNot done: tests/test_run_records.py::test_3_run_and_question_occurrences passes on Windows and Linux\twindows-run-records-settings",
+      "kind": "bug",
+      "path": "tests/test_run_records.py",
+      "line": 288,
+      "text": "Not done: tests/test_run_records.py::test_3_run_and_question_occurrences passes on Windows and Linux",
+      "from": "blocking",
+      "item": "windows-run-records-settings",
+      "status": "done",
+      "closed_by": "windows-run-records-order"
+    },
+    {
+      "key": "edge\ttests/test_run_records.py\tFollow-up: complete the named repository-rules run",
+      "kind": "edge",
+      "path": "tests/test_run_records.py",
+      "line": 288,
+      "text": "Follow-up: complete the named repository-rules run",
+      "from": "review",
+      "item": "windows-run-records-settings",
+      "status": "done",
+      "closed_by": "windows-run-records-order"
+    }
+  ]
+}

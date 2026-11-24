@@ -109,11 +109,11 @@ def test_7_live_status_in_both_machine_views(env, monkeypatch, request, case):
             else:
                 # Codex reports a null configured effort. Its matching model's default
                 # is on the second catalog page, after a different model's high default.
-                stub.write_text(stub.read_text("utf-8").replace('"stub-model"', '"gpt-6.1-sol"'), "utf-8")
+                stub.write_text(stub.read_text("utf-8").replace('"stub-model"', '"gpt-6.2-sol"'), "utf-8")
             monkeypatch.setenv("STUB_SAY", "No findings.")
             model = "gpt-6-sol"
         if "default" in case:
-            model, effort = ("gpt-6.1-sol", "medium") if case.endswith("codex") else ("claude-opus-5-5", "high")
+            model, effort = ("gpt-6.2-sol", "medium") if case.endswith("codex") else ("claude-opus-5-5", "high")
         assert repo.forge("read", item).returncode == 0
         (folder / "plans/SHOP.md").write_text(DOC.replace("come back", "return"), "utf-8")
     elif case == "codex":
@@ -315,6 +315,9 @@ def test_7_live_status_in_both_machine_views(env, monkeypatch, request, case):
                 json.dumps(f'"{sys.executable}" -m pytest -vv{parallel} test_progress.py')))
             repo.git("push", "-q", "origin", "main")
             repo.git("merge", "--no-edit", "origin/main", cwd=folder)
+            repo.git("add", "test_progress.py", cwd=folder)
+            repo.git("commit", "-q", "-m", "Add the live progress cases", "-m",
+                     "Proof list:\n- Done when: check: The readme opens with a greeting", cwd=folder)
         process = subprocess.Popen([sys.executable, str(repo.bin / "forge"),
                                    "read" if case.startswith("read") else "close" if case.startswith(("progress", "ci", "review")) else "work", item], cwd=repo.path,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)

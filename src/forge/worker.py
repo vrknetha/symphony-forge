@@ -17,7 +17,7 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
-from forge import claude_sdk, codex, doctor, machine, merge_timings, native, repo, roles, story, task
+from forge import claude_sdk, codex, design, doctor, machine, merge_timings, native, repo, roles, routing, story, task
 from forge.repo import git, refuse
 
 HERE = Path(__file__).parent
@@ -170,7 +170,7 @@ def _work(args: argparse.Namespace) -> bool:
         refuse(REFUSALS["empty_note"], item=item)
     match, top, merge_first = prepare(item)
     repo.command_fact("prepared work", top, dict).pop(item)
-    config = repo.config(top)  # the item's own forge.toml, not the caller's
+    config = routing.routed(top, repo.config(top))  # the item's own forge.toml, but workers, tools and models from the default branch
     state = repo.read_state(item, top) or {}
     from forge import close, nextstep, review, time_records  # close imports story, which imports this module
     # GitHub is read only when this round answers or ends a wait on a person, never just to queue.
@@ -507,7 +507,9 @@ def _approval(key: str, item: str, top: Path) -> str:
     if planning and approved != task.approval_hash(story._text(planning / doc)):  # pyright: ignore[reportPrivateUsage]
         refuse(task.REFUSALS["changed"], key=key)
     if approved != task.approval_hash(story._text(top / doc)):  # pyright: ignore[reportPrivateUsage]
-        refuse(REFUSALS["brief"], item=item, key=key, top=top, base=base, doc=doc)
+        if design.kept_plan(top, key) != story._text(top / doc):  # a design part's redraw keeps the approval
+            refuse(REFUSALS["brief"], item=item, key=key, top=top, base=base, doc=doc)
+        return task.approval_hash(story._text(top / doc)) or approved
     return approved
 
 

@@ -7,7 +7,7 @@ import shutil
 
 from forge import repo, sync
 
-SDK_PIN = "0.2.161"
+SDK_PIN = "0.2.187"
 READY = "forge-sdk-ready"
 TURN = Path(__file__).with_name("claude_turn.py")
 PROBE = ("import importlib.metadata as m; from claude_agent_sdk import ClaudeAgentOptions, query; "

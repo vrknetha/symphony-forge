@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_parallel_worker_crash_keeps_failed_names.py\tGate: test_1_parallel_worker_crash_keeps_failed_test_names\tstable-flaky-tests",
+      "kind": "bug",
+      "path": "tests/test_parallel_worker_crash_keeps_failed_names.py",
+      "line": 79,
+      "text": "Gate: test_1_parallel_worker_crash_keeps_failed_test_names",
+      "from": "blocking",
+      "item": "stable-flaky-tests",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

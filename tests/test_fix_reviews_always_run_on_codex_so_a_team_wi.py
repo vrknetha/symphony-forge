@@ -5,6 +5,7 @@ import os
 import shutil
 from pathlib import Path
 
+from conftest import _claude_sdk_env
 from test_close import PIN, ROOT, env  # noqa: F401  (env is a fixture)
 from test_setup import _executable, _fresh_client
 
@@ -26,6 +27,11 @@ def _claude_only(tmp_path: Path, monkeypatch, bin_dir: Path, helper: str = "") -
     monkeypatch.setenv("PATH", os.pathsep.join(
         [str(tools), *(folder for folder in os.environ["PATH"].split(os.pathsep)
                        if not shutil.which("codex", path=folder))]))
+    # The default repo fixture has both SDKs. A Claude-only machine has no
+    # Codex SDK either, even when there is no standalone codex command.
+    data = tmp_path / "claude-only-data"
+    _claude_sdk_env(data)
+    monkeypatch.setenv("XDG_DATA_HOME", str(data))
     monkeypatch.delenv("CODEX_BIN", raising=False)
     monkeypatch.delenv("AUTOREVIEW", raising=False)
     home = tmp_path / "home"

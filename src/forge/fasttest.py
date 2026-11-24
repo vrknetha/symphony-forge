@@ -347,12 +347,14 @@ def test(args) -> int:
         top = repo.root()
         cfg = repo.config(top)
         if not (cfg["fast_test"] or cfg["test"]):
-            if repo.sample_data(top, cfg):
-                print("This is a sample-data prototype, so tests are off until client sign-off.\n"
-                      "After sign-off, ask the coordinator to set sample_data = false in forge.toml.")
-            else:
-                print("forge.toml names no test command, so forge test ran none.")
-            return 0
+            sample = repo.sample_data(top, cfg)
+            if not args.change or sample:
+                if sample:
+                    print("This is a sample-data prototype, so tests are off until client sign-off.\n"
+                          "After sign-off, ask the coordinator to set sample_data = false in forge.toml.")
+                else:
+                    print("forge.toml names no test command, so forge test ran none.")
+                return 0
         base = f"origin/{repo.default_branch(top)}"
         if repo.run("git", "rev-parse", "--verify", base, cwd=top).returncode:
             raise repo.Refused(f"Fetch {base} first: run git fetch origin, then forge test.", "")
@@ -501,7 +503,7 @@ def report_workers(config):
 # and fail the run when an entry ran no test. xdist forwards each test's report to the controller.
 SELECTION = """import os, pathlib, pytest, re
 """ + WORKER_REPORT + """
-IGNORE, PICKED, ALWAYS, REQUIRED, TASKS = {}, {}, {}, {}, {}
+IGNORE, PICKED, ALWAYS, REQUIRED, TASKS, FILES = {}, {}, {}, {}, {}, {}
 RAN, ROOT = set(), []
 def pytest_sessionstart(session):
     if not session.config.pluginmanager.hasplugin("_forge_test_results"):
@@ -509,9 +511,11 @@ def pytest_sessionstart(session):
 def pytest_configure(config):
     config.option.ignore = (config.option.ignore or []) + IGNORE
     ROOT.append(pathlib.Path(str(config.rootdir)))
+    config.args = [*config.args, *FILES]  # beside the command's own test paths, never instead of them
 def name(nodeid):  # relative to the repo, as forge.toml names it, whatever pytest's rootdir
     file, _, rest = nodeid.partition("::")
-    return pathlib.Path(os.path.relpath(ROOT[0] / file)).as_posix() + ("::" + rest if rest else "")
+    root = os.environ.get("FORGE_TEST_REPO", os.curdir)
+    return pathlib.Path(os.path.relpath(ROOT[0] / file, root)).as_posix() + ("::" + rest if rest else "")
 def runs(nodeid, entry):
     return nodeid == entry or nodeid.startswith((entry + "::", entry + "["))
 def task_runs(nodeid, entry):
@@ -615,31 +619,36 @@ def pytest_runtest_logreport(report):
         CRASH_ITEMS.add(report.nodeid)
     if not FILE or report.outcome == "rerun" or report.when != "call" and report.passed:
         return
+    slow = False
     FINISHED.add(report.nodeid)
     if report.failed and report.when != "???":
         message = getattr(getattr(report.longrepr, "reprcrash", None), "message", "")
-        if report.when != "call" or not re.fullmatch(
-                r"Failed: Timeout (?:>[^\\s]+s|\\(>[^\\s]+s\\) from pytest-timeout\\.)", message):
+        slow = report.when == "call" and bool(re.fullmatch(
+                r"Failed: Timeout (?:>[^\\s]+s|\\(>[^\\s]+s\\) from pytest-timeout\\.)", message))
+        if not slow:
             PRODUCT_FAILURES.add(report.nodeid)
     if report.when == "call":
         outcome = (("xfail" if report.skipped else "xpass") if hasattr(report, "wasxfail")
                    else report.outcome)
     else:
         outcome = "skipped" if report.skipped else "error"
-    _write_result(outcome, report.nodeid)
+    _write_result(outcome, report.nodeid, slow)
 def pytest_collectreport(report):
     if FILE and report.failed:
         PRODUCT_FAILURES.add(report.nodeid)
         _write_result("error", report.nodeid)
-def _write_result(outcome, nodeid):
+def _write_result(outcome, nodeid, slow=False):
     file, _, rest = nodeid.partition("::")
     if outcome in ("failed", "error"):
         FAILED.add((ROOT[0] / file).resolve().as_posix())
-    nodeid = pathlib.Path(os.path.relpath(ROOT[0] / file)).as_posix() + ("::" + rest if rest else "")
+    root = os.environ.get("FORGE_TEST_REPO", os.curdir)
+    nodeid = pathlib.Path(os.path.relpath(ROOT[0] / file, root)).as_posix() + ("::" + rest if rest else "")
     if outcome == "passed":
         PASSED.add(nodeid)
     with FILE[0].open("a", encoding="utf-8") as results:
         results.write(outcome + " " + nodeid + "\\n")
+        if slow:
+            results.write("# timeout " + nodeid + "\\n")
 @pytest.hookimpl(hookwrapper=True)
 def pytest_sessionfinish(session):
     yield  # Capture the final status, including always_test validation.
@@ -828,6 +837,14 @@ def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
     picked, tests, shared_changed, missed = related(base)
     # Tests that run the program from outside never name its files, so say what local runs miss.
     from forge import review  # imported late: review's imports lead back here
+    if not worker:
+        from forge import proof
+
+        top = Path.cwd()
+        item = review.branch_item(review.pull_request_branch(top), top)
+        if item:
+            named = list(dict.fromkeys(name for names in proof.entries(top, item[0], "HEAD", base).values()
+                                       for name in names if proof.TEST_NAME.fullmatch(name)))
     print("".join(f"{review.GAP}{source}. The nightly full run covers it.\n" for source in missed),
           end="", flush=True)
     if worker and len(picked) * 3 > len(tests):
@@ -871,9 +888,10 @@ def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
     with tempfile.TemporaryDirectory(prefix="forge-pytest-") as folder:
         node_worker_environment(environment, folder)
         selection = Path(folder) / "_forge_pytest_selection.py"
+        files = list(dict.fromkeys((Path.cwd() / name.split("::", 1)[0]).as_posix() for name in named))
         selection.write_text(SELECTION.format(repr(excluded), repr(None if shared_changed else picked),
-                                              repr(always), repr(required), repr(named)), "utf-8")
+                                              repr(always), repr(required), repr(named), repr(files)),
+                             "utf-8")
         environment["PYTHONPATH"] = os.pathsep.join(
             [folder, environment.get("PYTHONPATH", "")])
-        arguments = always + list(dict.fromkeys(name.split("::", 1)[0] for name in named))
-        return run_logged(narrow_command(command, excluded, workers, arguments), environment, entry)
+        return run_logged(narrow_command(command, excluded, workers, always), environment, entry)

@@ -10,6 +10,9 @@ on:
     paths:
       - src/forge/codex.py
       - src/forge/codex_turn.py
+      - src/forge/claude_sdk.py
+      - src/forge/claude_turn.py
+      - tests/test_claude_agent_sdk_smoke.py
       - tests/test_codex_smoke.py
       - tests/test_worker_approval_requests.py
       - tests/test_fix_codex_test_home.py
@@ -30,17 +33,20 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       FORGE_LIVE_CODEX: "1"
+      XDG_DATA_HOME: ${{ runner.temp }}/forge-sdk-data
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
-      # Forge's own install, as forge doctor --fix runs it: the pinned SDK in its own environment.
-      - run: uv run --python 3.11 python -c "import sys; sys.path.insert(0, 'src'); from forge import codex; codex.install()"
+      # Forge's own installs, as forge doctor --fix runs them: the pinned SDKs in their own environments.
+      - run: uv run --python 3.11 python -c "import sys; sys.path.insert(0, 'src'); from forge import claude_sdk, codex; codex.install(); claude_sdk.install()"
       - if: env.OPENAI_API_KEY == ''
         run: echo "::notice::No OPENAI_API_KEY secret here, so the Codex smoke test didn't run."
       # The SDK's own Codex program, logged in with the key.
       - if: env.OPENAI_API_KEY != ''
         run: |
-          python="$HOME/.local/share/forge/codex-sdk/openai-codex-0.159.2/bin/python"
+          python="$XDG_DATA_HOME/forge/codex-sdk/openai-codex-0.171.0/bin/python"
           printenv OPENAI_API_KEY | "$("$python" -c 'import codex_cli_bin; print(codex_cli_bin.bundled_codex_path())')" login --with-api-key
+      # Uses the real pinned Python SDK and a fake local Claude executable; it makes no API request.
+      - run: uv run --python 3.11 pytest tests/test_claude_agent_sdk_smoke.py -v -s
       - if: env.OPENAI_API_KEY != ''
         run: uv run --python 3.11 pytest tests/test_codex_smoke.py tests/test_fix_codex_test_home.py tests/test_worker_approval_requests.py::test_2_builder_runs_forge_test_and_observes_its_failure -v -s

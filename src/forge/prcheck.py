@@ -522,6 +522,7 @@ def pr_check(args: argparse.Namespace) -> int:
         if not task._merged(f"origin/{default}", parent, top):
             repo.refuse(REFUSALS["stacked"], item=item, parent=parent, default=default)
     changed = repo.git("diff", "--name-only", f"{base}...{head}", cwd=top).splitlines()
+    proof_base = base
     if "/" not in item:
         missing = [line for line, key in (("Why:", "why"), ("Done when:", "done_when"))
                    if not str(state.get(key) or "").strip()]
@@ -529,7 +530,7 @@ def pr_check(args: argparse.Namespace) -> int:
             repo.refuse(REFUSALS["fix_line"], branch=branch, line=" or ".join(missing))
         from forge import githooks
 
-        fix_base = githooks.fix_base(top, state, base, head)
+        fix_base = proof_base = githooks.fix_base(top, state, base, head)
         own = repo.git("diff", "--name-only", "--no-renames", fix_base, head, cwd=top).splitlines()
         problem = "" if state.get("allow_large") else promote_problem(
             own, cfg["interfaces"], top, fix_base, head)
@@ -541,6 +542,19 @@ def pr_check(args: argparse.Namespace) -> int:
     if doc_problem:
         repo.refuse(REFUSALS["story_doc"], problem=doc_problem)
     _check_specs(top, head, changed)
+    if repo.test_place(cfg) == "ci":
+        from forge import docskip, proof
+
+        passed, lines = proof.check(top, item, proof_base, "", ran=False, head=head)
+        for line in lines:
+            print(line, flush=True)
+        if not passed:
+            return 1
+        if "tests" in cfg.get("checks", []):
+            head_cfg = repo._config_text(story.show(top, head, "forge.toml") or "")
+            if docskip.only_docs(top, base, review.DOC_EXCLUDES,
+                                 allow_settings=not head_cfg["always_test"], head=head):
+                print(f"Done-when proof: {proof.CI_DOCS_ONLY}", flush=True)
     result = state.get("review")
     if isinstance(result, dict) and isinstance(result.get("findings"), list):
         review.bound_review(top, item, state, result, head)

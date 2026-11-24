@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_ten_closes_wait_for_no_quota.py\tTest: Ten closes at once with GitHub's core budget at 4,300 or more print no quota wait line\twith-ten-closes-and-github-s-core-budget",
+      "kind": "bug",
+      "path": "tests/test_ten_closes_wait_for_no_quota.py",
+      "line": 49,
+      "text": "Test: Ten closes at once with GitHub's core budget at 4,300 or more print no quota wait line",
+      "from": "blocking",
+      "item": "with-ten-closes-and-github-s-core-budget",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

@@ -118,10 +118,9 @@ def test_4_new_and_existing_repos_get_the_rendered_check_and_the_phone_question(
         assert "Record a yes to a phone view as `Phone view: desktop and phone`" in skill, host
         assert "A missing `Phone view` answer means desktop width only and refuses nothing" in skill, host
         assert "list the prototype's screens in the app's browser tests" in skill, host
-        # The approved browser policy moved rendered checks from change runs to nightly runs.
         assert ("Keep browser tests and each screen's rendered check in the full test command and nightly "
-                "full run, not in `fast_test` or pull request CI, including shared-settings changes."
-                in skill), host
+                "full run, outside `fast_test`, including shared-settings changes." in skill), host
+        assert "Pull request CI runs the desktop Playwright project. Nightly runs all projects." in skill, host
     if adopted:
         # Sync changes no app file, adds no doctor warning, and a missing answer lists no new topic.
         assert {rel: (client / rel).read_text("utf-8") for rel in APPS} == APPS
@@ -144,8 +143,8 @@ def test_4_new_and_existing_repos_get_the_rendered_check_and_the_phone_question(
     # A recorded yes counts as the phone answer, and any other answer leaves phone width out.
     assert "Set `phone: true` when the brief's `## Answers` has `Phone view: desktop and phone` (or `yes`)" in brief
     assert "The rendered check runs with browser tests in the full test command and nightly full run." in brief
-    assert ("Keep browser tests outside `fast_test` and pull request CI, even when shared settings select "
-            "all other tests." in brief)
+    assert "Keep all browser projects in the nightly full command and outside `fast_test`." in brief
+    assert "Pull request CI runs the desktop Playwright project. Nightly runs all projects." in brief
     assert "When you add a sample-data prototype's first tests, list every screen" in brief
     env.reviews(CLEAN)
     env.open_pr("")
@@ -192,6 +191,9 @@ def test_5_a_sample_data_prototype_runs_no_rendered_check_before_signoff(env, tm
             _settings(where / "forge.toml", **settings)
         for rel, text in files.items():
             env.commit(where, rel, text, "Add a screen")
+        if name == "First tests":
+            repo.git("commit", "--allow-empty", "-q", "-m", "Record the browser test proof", "-m",
+                     f"Proof list:\n- Done when: check: {done}", cwd=where)
         env.reviews(CLEAN)
         env.open_pr("")
         env.checks(GREEN)

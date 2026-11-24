@@ -1,0 +1,91 @@
+{
+  "allow_large": "A release version change updates every file that names the current release (about 20 files), as the v1.2.46 release fix did",
+  "base": "f0639fa2f8e92ce71b40d4ff085fd70f510baf0d",
+  "branch": "fix/release-v1-2-47",
+  "chat": {
+    "approval": null,
+    "claude": {
+      "id": "ddee8f42-cbbc-45ed-aaf2-ff3a1e4c5d84",
+      "rounds": 0,
+      "start": "c1c31a4e51ffe44742c38cfdea4178c98d3a0be7"
+    },
+    "conversation": null,
+    "head": null,
+    "start": null
+  },
+  "done_when": "Every version reference that names the current release says v1.2.47 (as the v1.2.46 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.47.md exists, the release version tests and the release notes tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/release-notes/v1.2.47.md",
+      "file": "src/forge/release-notes/v1.2.47.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 22,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: The post-upgrade sync instruction is refused on main",
+      "work": 1
+    },
+    {
+      "area": "test_1_forge_version_is_1_2_27_everywhere_it_is_recorded() in tests/test_release_version.py",
+      "file": "tests/test_release_version.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 20,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: proof list",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "a71e4773cfa8be5ceff332511d96fe412037a69d99be021e31c685e43b0e4566",
+    "changed": "1c3ba715ff844f9b55fa1d6fb803d543c870f9b8d583577021dd5156b9714b4e",
+    "commit": "a3bff53c9a4a51fbbc8cd9040831b87973ca8876",
+    "dismissals": [],
+    "findings": [],
+    "id": "b6b2365d-b3a1-4548-8233-ee4556a31e71",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T16:02:28.607923+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T16:04:10.572408+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T16:23:57.657947+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T16:24:36.943765+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T16:32:48.296590+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "f55ba066-6d0a-49be-bd33-8b78ec166c12",
+    "head": "65811b44b324cf30a280adbe7e0b6f1969c3095d",
+    "keys": {},
+    "round": 1
+  },
+  "why": "Release v1.2.47: publish what merged since v1.2.46 (release notes inside Forge and shown after upgrade, Done-when tests checked at close, fix tests must fail on old code, proof list from handback, quota wait lines, settings from the default branch, reprinted intake prompt, resolve refusal next step, design redraw keeps approval, playwright skill, SDK and model updates, upgrade ends CI waits and lists blocking runs, close ends its process tree, forge ask)",
+  "worker": "claude"
+}

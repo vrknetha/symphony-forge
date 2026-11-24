@@ -1,0 +1,135 @@
+{
+  "base": "c10935c6643bec99aa3f0cd97c9ec51192210abf",
+  "branch": "fix/guide-catchup-1-2-40-to-46",
+  "done_when": "skill.md and brief.md state the missing items found by the 22 Nov 2026 audit: the workarounds for issues 1674, 1675, 1699 and 1712, forge land --all reporting Merged only when the pull request merged, one forge work --note round clearing each answered worker question with its known limits, the Vitest name-filter limit, and the close restart step when the review check fails to start; the issue 1699 line is corrected; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 2486,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: skill.md and brief.md state the missing items found by the 22 Nov 2026 audit",
+      "work": 2
+    },
+    {
+      "area": "test_1_guides_state_the_audit_items() in tests/test_guide_catchup_1_2_40_to_46.py",
+      "file": "tests/test_guide_catchup_1_2_40_to_46.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 17,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_guides_state_the_audit_items",
+      "work": 1
+    },
+    {
+      "area": "test_1_guides_state_the_audit_items() in tests/test_guide_catchup_1_2_40_to_46.py",
+      "file": "tests/test_guide_catchup_1_2_40_to_46.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 10,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: proof list",
+      "work": 1
+    },
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 1,
+      "harm": 1,
+      "line": 45,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Simpler: unrecorded approach \u2192 record the decisions",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "1efd639bce8a6ed58866791f43473e0a92973103bc9adbff0ceb7cc6143fe876",
+    "changed": "3ded077d1af860bebc031630a5a1690be0f4c4718233ebdc04cf03768c950f47",
+    "commit": "acd1f22fb301506e18f725628ec2e98faaba30a1",
+    "dismissals": [],
+    "findings": [],
+    "id": "e1b66716-7e9c-472c-829b-56253b85b5c6",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T17:13:50.928023+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T19:18:30.619601+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T19:31:21.429764+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T19:34:37.584710+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T19:43:53.603796+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T19:43:53.630590+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T19:44:23.177947+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-22T19:58:09.531258+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T20:03:33.791497+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-22T19:43:53.630590+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "src/forge/templates/skill.md",
+    "reason": "Owner asleep on 23 Nov 2026 and asked for the recommended choice: one more round, because a wrong guide sentence misleads agents; the fix is wording plus its test",
+    "wait_id": "d447291f-6dc4-4763-a169-58243e17f1ca",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "238d3063-be29-47d3-9772-6e19c31ba5dc",
+    "head": "bab4a43aeddc658baf00c848e94a3b84d9bc8557",
+    "keys": {},
+    "round": 2
+  },
+  "why": "The guide and worker brief miss agent-facing items from releases v1.2.40 to v1.2.46, and one guide line wrongly implies that close reviews the amended Done-when (issue 1699)",
+  "worker": "claude"
+}

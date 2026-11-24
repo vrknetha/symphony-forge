@@ -33,10 +33,10 @@ STORY = "FIX-MERGE-RETESTS-COMBINED-CHANGE"
     (False, "dirty-untracked", True), (True, "dirty-unstaged", True),
     (False, "late-test", True), (False, "no-wait", True), (True, "late-test", True),
     (False, "review", True), (True, "review", True),
-    (True, "no-wait", True),
+    (True, "no-wait", True), (False, "proof-history", True),
 ], ids=["new-red", "adopted-red", "fallback-green", "dirty-unstaged",
         "dirty-staged", "dirty-untracked", "adopted-dirty", "late-test", "no-wait", "adopted-late",
-        "review-new", "review-adopted", "adopted-no-wait"])
+        "review-new", "review-adopted", "adopted-no-wait", "proof-history"])
 def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previous, case, fast):
     _client(env, tmp_path, previous, fast_test=False)
     env.repo.git("fetch", "-q", "origin", "main")
@@ -59,6 +59,8 @@ def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previ
     # fallback contract; app-test CI routing is owned by test_merge_uses_ci_tests.
     config = config.replace('checks = ["tests", "forge-pr-check"]',
                             'checks = ["forge-pr-check"]')
+    if case == "proof-history":
+        config = config.replace('test_place = "ci"', 'test_place = "local"')
     if fast:
         config = 'fast_test = ' + json.dumps(command + ' {base}') + '\n' + config
     env.commit(setup, "forge.toml", config)
@@ -85,17 +87,29 @@ def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previ
     env.repo.git("fetch", "-q", "origin", "main")
     app = "print('hello')\n" + ("\n\nLIMIT = 0\n" if case == "review" else "")
     item, where = env.start_fix({"left.txt": "1\n", "app.py": app})
+    if case == "proof-history":
+        # The existing merge cases have synthetic check entries. This case needs
+        # the fix's real pytest proof after the retest base becomes its old head.
+        env.repo.git("commit", "--allow-empty", "-qm", "Name the combined-limit test",
+                     "-m", "Proof list:\n- Done when: tests/test_limits.py::test_combined_limit (reuse)",
+                     cwd=where)
     env.open_pr("")
     closed = env.close(item)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     reviews = len(env.review_calls())
     original = env.repo.git("rev-parse", "HEAD", cwd=where)
-    assert not log.exists()  # CI owns close; merge must explicitly enter the test lane.
+    if case == "proof-history":
+        assert len(log.read_text("utf-8").splitlines()) == 1
+        log.unlink()
+    else:
+        assert not log.exists()  # CI owns close; merge must explicitly enter the test lane.
     env.repo.git("clone", "-q", remote, str(other))
     if case == "review":
         env.commit(other, "app.py", "print('original')\n\n\nLIMIT = 1\n")
     else:
-        env.commit(other, "right.txt" if case == "red" or case.startswith("dirty") else "other.txt", "1\n")
+        env.commit(other, "right.txt" if case == "red" or case.startswith("dirty") else "other.txt", "1\n",
+                   "Another task\n\nProof list:\n- 1: check: The incoming value is present."
+                   if case == "proof-history" else "Another change lands")
     env.repo.git("push", "-q", "origin", "main", cwd=other)
     advanced = env.repo.git("rev-parse", "main", cwd=remote)
     _github_moves_default(env, False, "CLEAN")

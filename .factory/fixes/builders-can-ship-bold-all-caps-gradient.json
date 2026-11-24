@@ -1,0 +1,155 @@
+{
+  "base": "d68b2284a746600b50fb05afa7981d365407f876",
+  "branch": "fix/builders-can-ship-bold-all-caps-gradient",
+  "chat": {
+    "approval": null,
+    "claude": {
+      "id": "55f6e6da-ec75-4b1a-9809-ee303032f706",
+      "rounds": 0,
+      "start": "4256b314116b18180c7a39d121bf4c3371562c96"
+    },
+    "conversation": null,
+    "head": null,
+    "start": null
+  },
+  "done_when": "Close refuses a changed screen file that uses bold text, all-caps text, a background gradient, a hex colour outside the theme file, or motion of 300 ms or more, and the app baseline lists the rest of the owner's rules.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/templates/design/ui-checks.js",
+      "file": "src/forge/templates/design/ui-checks.js",
+      "gain": 4,
+      "harm": 3,
+      "line": 61,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Close misses some bold text, raw hex colours and motion of 300 ms or more",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/design/ui-checks.js",
+      "file": "src/forge/templates/design/ui-checks.js",
+      "gain": 4,
+      "harm": 3,
+      "line": 54,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Restrict the new rules to changed screens",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/design/ui-checks.js",
+      "file": "src/forge/templates/design/ui-checks.js",
+      "gain": 4,
+      "harm": 3,
+      "line": 56,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Do not refuse screen content and delays as design violations",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/design/ui-checks.js",
+      "file": "src/forge/templates/design/ui-checks.js",
+      "gain": 4,
+      "harm": 3,
+      "line": 57,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Keep the existing design-check suite passing",
+      "work": 1
+    },
+    {
+      "area": "test_1_close_refuses_a_changed_screen_with_bold_caps_gradient_hex_or_slow_motion() in tests/test_close_refuses_owner_design_rules.py",
+      "file": "tests/test_close_refuses_owner_design_rules.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 54,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Close refuses a changed screen file that uses bold, all caps, gradient, hex or 300 ms motion",
+      "work": 2
+    },
+    {
+      "area": "test_2_the_app_baseline_lists_the_owners_design_rules() in tests/test_close_refuses_owner_design_rules.py",
+      "file": "tests/test_close_refuses_owner_design_rules.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 82,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The app baseline lists the rest of the owner's rules",
+      "work": 1
+    },
+    {
+      "area": "test_1_close_refuses_a_changed_screen_with_bold_caps_gradient_hex_or_slow_motion() in tests/test_close_refuses_owner_design_rules.py",
+      "file": "tests/test_close_refuses_owner_design_rules.py",
+      "gain": 4,
+      "harm": 1,
+      "line": 47,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: proof list",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "9e35d448c323876f7655a0ba0ee2ab5a717f7c91cb832b071f959b30d61702b7",
+    "changed": "4b7603e36914d9cb5da7a918ee9a03e35e64157649c120e27fbdec75265c0ab9",
+    "commit": "666217c88a6c03219dbbfa8c5776787e9bc366ef",
+    "dismissals": [],
+    "findings": [],
+    "id": "18cb8462-168e-46ca-99f6-2a3ab3d32c4b",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T16:58:01.789368+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T16:58:18.803881+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T17:11:25.250220+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T17:12:56.730154+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T17:31:42.318352+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "26c2969f-87e7-4ec4-a068-aaf641a9a11e",
+    "head": "f96c60fef598fc8295270dcc7e56d41fd063e007",
+    "keys": {},
+    "round": 1
+  },
+  "why": "Builders can ship bold, all-caps, gradient, hex-coloured or slow-motion screens that close does not catch, because the owner's rules are not in the app baseline or in Forge's checker; the impeccable detector covers only some of them (gradient text, glow shadows, bounce easing).",
+  "worker": "claude"
+}

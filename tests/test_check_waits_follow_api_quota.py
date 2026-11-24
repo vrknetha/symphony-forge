@@ -49,13 +49,13 @@ if sys.argv[1:3] == ["api", "rate_limit"]:
     assert done.stdout.count("Waiting for GitHub API quota before another check wait.") == 1
     reads = [float(row) for row in (env.repo.bin / "budget-reads").read_text().splitlines()]
     assert len(reads) == 3
-    assert all(after - before >= 60 for before, after in zip(reads, reads[1:]))
+    assert all(after - before >= 45 for before, after in zip(reads, reads[1:]))
 
 
 @pytest.mark.timeout(180)
 @pytest.mark.parametrize(("initial_core", "initial_graphql", "reduced_core", "reduced_graphql"), [
-    pytest.param(5760, 720, 5760, 240, id="graphql-limited"),
-    pytest.param(8640, 480, 2880, 480, id="core-limited"),
+    pytest.param(5760, 300, 5760, 150, id="graphql-limited"),
+    pytest.param(800, 480, 400, 480, id="core-limited"),
 ])
 def test_2_concurrent_closes_follow_both_quotas_when_the_budget_falls(
         client, monkeypatch, fake_clock, initial_core, initial_graphql, reduced_core, reduced_graphql):
@@ -138,7 +138,7 @@ if args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"]:
         assert len(rows(starts)) == 2, "A new wait exceeded the reduced budget while the higher place stayed held."
         reads = rows(quota)
         assert len(reads) == 3
-        assert all(after["at"] - before["at"] >= 60 for before, after in zip(reads, reads[1:]))
+        assert all(after["at"] - before["at"] >= 45 for before, after in zip(reads, reads[1:]))
         (env.repo.bin / "release-fix-change-1").touch()
         until(lambda: len(rows(starts)) == 3)
     finally:

@@ -1,0 +1,165 @@
+{
+  "amendments": [
+    {
+      "at": "2026-11-22T18:56:20.947169+00:00",
+      "because": "Owner chose on 23 Nov 2026 to fold the Windows upgrade failure into this fix",
+      "done_when": "Killing a close, by forge stop or by ending its process, also ends its review subprocess tree, so no review run stays alive afterwards; new repos get it at init and existing repos on upgrade"
+    }
+  ],
+  "base": "c10935c6643bec99aa3f0cd97c9ec51192210abf",
+  "branch": "fix/killed-close-ends-review",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a2043f-7528-7c30-bf09-0f79954b032f",
+    "head": null,
+    "start": "b924f174ba4ff7a05df4aff4f5cd16411657595c"
+  },
+  "done_when": "Killing a close, by forge stop, by forge upgrade or by ending its process, also ends its whole process tree including its review subprocess, so no review run stays alive and forge upgrade can install on Windows after it ends a close that waits for CI; forge-next.yml's Windows jobs pass on this branch; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "main() in src/forge/review_process.py",
+      "file": "src/forge/review_process.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 53,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Killing a close, by forge stop or by ending its process, also ends its review subprocess tree, so no review run stays alive on",
+      "work": 2
+    },
+    {
+      "area": "test_1_close_ends_its_review_tree_and_releases_upgrade() in tests/test_close_ends_review_processes.py",
+      "file": "tests/test_close_ends_review_processes.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 38,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_close_ends_its_review_tree_and_releases_upgrade[normal]",
+      "work": 2
+    },
+    {
+      "area": "tests/test_close_ends_review_processes.py",
+      "file": "tests/test_close_ends_review_processes.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 20,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner asleep on 23 Nov 2026 and asked for the recommended choice. forge-next.yml run 45060458531 on 02f3f730b shows this fix's Windows tests passing (test_close_ends_review_processes and test_upgrade_during_ci_wait); its one failure, tests/test_windows_stdin_bytes.py (sitecustomize Popen._save_input missing), is outside this fix and is checked on main separately",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Windows execution of test_1_close_ends_its_review_tree_and_releases_upgrade",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "2c3f2542de20998b1fe142058528a21cf8cae23cb7ac4a2283413d8174cfe838",
+    "changed": "6f966e1d5b7f21fd651bcbadd48585ece45e2844ab208fb587f0df1af6903b8f",
+    "commit": "e0a530dfde63b5ad9c0ecbe22722056fb79c02cc",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner asleep on 23 Nov 2026 and asked for the recommended choice. forge-next.yml run 45060458531 on 02f3f730b shows this fix's Windows tests passing (test_close_ends_review_processes and test_upgrade_during_ci_wait); its one failure, tests/test_windows_stdin_bytes.py (sitecustomize Popen._save_input missing), is outside this fix and is checked on main separately",
+        "finding": 1
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - stopping a review on Windows from a virtual environment.\nThe test is marked for Windows, but `.github/workflows/forge-next.yml:81` runs the Windows matrix only on a schedule or manual dispatch, while the pull request tests run on Linux at `.github/workflows/forge.yml:61`. The recorded Windows dispatch, 45055052826, failed the CI-wait upgrade test, and the supplied evidence gives no successful Windows run for the current revision. A completed passing Windows run or a pull request check is still needed to establish the lifecycle proof for this revision.",
+        "file": "tests/test_close_ends_review_processes.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 20,
+        "priority": "P1",
+        "title": "Gate: Windows execution of test_1_close_ends_its_review_tree_and_releases_upgrade",
+        "work": 2
+      }
+    ],
+    "id": "2055ea3a-41b6-4f57-a602-be9873aba97b",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T17:10:31.306847+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T17:13:16.143124+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T17:30:14.706296+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T17:50:13.285113+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T18:25:28.719628+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T18:25:28.734775+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T18:56:08.942942+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-22T18:58:20.056479+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T19:22:54.527173+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T19:22:54.547787+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T19:59:03.455730+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 3,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-22T19:22:54.547787+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "tests/test_close_ends_review_processes.py",
+    "reason": "Owner asleep on 23 Nov 2026 and asked for the recommended choice. forge-next.yml run 45060458531 on 02f3f730b shows this fix's Windows tests passing (test_close_ends_review_processes and test_upgrade_during_ci_wait); its one failure, tests/test_windows_stdin_bytes.py (sitecustomize Popen._save_input missing), is outside this fix and is checked on main separately",
+    "wait_id": "6aa3702f-4d5d-4fc8-ad84-bcc9775454de",
+    "worker_round": 3
+  },
+  "stuck": {
+    "close": "9d825f0b-d260-45da-ac8d-cfa8f5d33cc9",
+    "head": "cfa8ad2978f682a1222dd1bf0f64e43782981354",
+    "keys": {},
+    "round": 2
+  },
+  "why": "When a close is killed, its review subprocess (the Autoreview helper and its Codex or Claude child) keeps running, so a review run stays alive and blocks forge upgrade",
+  "worker": "claude"
+}

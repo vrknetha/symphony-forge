@@ -228,8 +228,22 @@ class Forge:
         where = self.tmp / branch.replace("/", "-")
         self.repo.git("worktree", "add", "-q", "-b", branch, str(where))
         self.commit(where, rel, json.dumps({"branch": branch, "status": "working", **state}), "Start")
+        if "/" in item:
+            key, task = item.split("/", 1)
+            plan = (where / "plans" / f"{key}.md").read_text("utf-8")
+            done = plan.partition("## Done when")[2].partition("\n## ")[0]
+            descriptions = {number: text.strip() for number, text in
+                            re.findall(r"(?m)^\s*(\d+)\.\s*(.+)$", done)}
+            row = next((line for line in plan.splitlines()
+                        if line.startswith("|") and line.split("|")[1].strip() == task), "")
+            covers = row.split("|")[4].strip() if row else "1"
+            numbers = re.findall(r"\d+", covers) or ["1"]
+            proof = "\n".join(f"- {number}: check: {descriptions.get(number, number)}"
+                               for number in numbers)
+        else:
+            proof = f"- Done when: check: {state.get('done_when', 'the fix is done')}"
         for path, text in changes.items():
-            self.commit(where, path, text, "Work")
+            self.commit(where, path, text, f"Work\n\nProof list:\n{proof}")
         return item, where
 
     def start_fix(self, changes: dict[str, str] | None = None, **state: str) -> tuple[str, Path]:
@@ -255,8 +269,12 @@ class Forge:
         started = self.repo.forge("task", "start", f"SHOP/{task}")
         assert started.returncode == 0, started.stderr
         where = Path(started.stdout.splitlines()[0].rsplit(" in ", 1)[1])
+        row = next(line for line in doc.splitlines()
+                   if line.startswith("|") and line.split("|")[1].strip() == task)
+        proof = "\n".join(f"- {number}: check: Covered Done-when {number}"
+                          for number in re.findall(r"\d+", row.split("|")[4]))
         for path, text in (changes or {"app.py": "print('saved')\n", "other.py": "x = 1\n"}).items():
-            self.commit(where, path, text, "Work")
+            self.commit(where, path, text, f"Work\n\nProof list:\n{proof}")
         return f"SHOP/{task}", where
 
     def close(self, item: str, *extra: str):

@@ -14,9 +14,9 @@ const CUT = 120
 const BLUE = '#1d4ed8'
 const SOFT = '#7f7f7f1f'
 const TRACK = '#7f7f7f40'
-const GROUPS: Record<string, string> = { work: 'Building', test: 'Tests', review: 'Review', read: 'Review' }
+const GROUPS: Record<string, string> = { work: 'Building', test: 'Tests', review: 'Review', read: 'Review', ask: 'Questions' }
 // A run Forge started with no item (a test run on the default branch) still shows, under a plain name.
-const PLAIN: Record<string, string> = { work: 'A build', test: 'A test run', review: 'A review', read: 'A plan read' }
+const PLAIN: Record<string, string> = { work: 'A build', test: 'A test run', review: 'A review', read: 'A plan read', ask: 'A question' }
 const OLDER = "This laptop's Forge is older than the pane. Update Forge to see what needs you."
 const MODELS = [/claude-([a-z]+)/, /gpt-[\d.]+-([a-z]+)/]
 
@@ -213,7 +213,7 @@ function rowsOf(c: Ctx, have: Answer, now: number, main: string): Row[] {
 function view(c: Ctx, now: number, main: string) {
   const needs = (c.answer?.lanes.needs ?? []).map(n => (n.repoName && !same(n.repoRoot, main) ? `${n.title} in ${n.repoName}` : n.title))
   const rows = c.answer ? rowsOf(c, c.answer, now, main) : []
-  const groups = ['Building', 'Tests', 'Review'].map(name => ({ name, rows: rows.filter(row => row.group === name) })).filter(group => group.rows.length)
+  const groups = ['Building', 'Tests', 'Review', 'Questions'].map(name => ({ name, rows: rows.filter(row => row.group === name) })).filter(group => group.rows.length)
   return {
     rows, groups, busy: c.answer?.lanes.busy === true, loading: !c.answer && !c.failed, attention: needs.length > 0 && !c.answer?.lanes.older,
     needs: !c.answer ? [] : c.answer.lanes.older ? [OLDER] : !needs.length ? ['Nothing needs you.'] : needs.length === 1 ? [`${needs[0]} needs you.`] : [`${needs.length} items need you.`, `First: ${needs[0]}.`],

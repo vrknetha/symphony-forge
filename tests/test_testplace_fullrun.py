@@ -449,6 +449,10 @@ def test_5_release_and_signoff_wait_for_a_green_full_run(repo, gh, tmp_path, mon
     # nightly result; test_nightly_result_controls_merges.py owns that separate rule.
     # Each flow owns its repository; GitHub alone supplies the external status.
     tagged_repo = _adopted_repo(repo, tmp_path / "release-client")
+    # Forge's own repo needs the release's notes file before a tag can be pushed.
+    tagged_repo.write("src/forge/release-notes/v1.0.0.md", "# Forge v1.0.0\n")
+    tagged_repo.git("add", "-A")
+    tagged_repo.git("commit", "-q", "-m", "Add the release notes")
     hooked(tagged_repo)
     main = tagged_repo.git("rev-parse", "origin/main")
     older = tagged_repo.git("rev-parse", f"{main}^")

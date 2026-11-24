@@ -1,0 +1,79 @@
+{
+  "base": "7bdf89567fdbce8112648932a5e1577e24f76be7",
+  "branch": "fix/land-all-wait-timeout",
+  "done_when": "tests/test_queue_land_all.py passes on main again with its rules unchanged, and the rate-limit and quota wait tests still pass; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "check_wait.admit.ready() in src/forge/github.py",
+      "file": "src/forge/github.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 111,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Disputed keep floor of one poll per second: fast polls can exhaust the quota",
+      "work": 2
+    },
+    {
+      "area": "check_wait.admit.ready() in src/forge/github.py",
+      "file": "src/forge/github.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 111,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: proof list",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "f5a7c7775e49cf74087a49fb9194a685dd14faeaf6f7162b60b5f20dea97abf6",
+    "changed": "317edbdfcd1d6ed0ea21d55a3fcf9c8135f9cdacbcaf4fd8509d3382cfe7e75f",
+    "commit": "e94a0f24820221aa593f40d32ba8c080c06a9f98",
+    "dismissals": [],
+    "findings": [],
+    "id": "cdd22563-f2a1-4ec0-a32a-15a63f73df93",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T08:48:02.445218+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T08:48:10.605126+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T09:09:54.049752+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T09:11:05.741204+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T09:16:09.972367+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "95044ec1-7136-440f-8004-c10c93629679",
+    "head": "3dc143a0369f95583c0628c00cb6bed4e8b66528",
+    "keys": {},
+    "round": 1
+  },
+  "why": "Main is broken again: tests/test_queue_land_all.py::test_1_one_run_starts_changes_oldest_first_and_merges_each[new] times out on main (locally after 10 minutes and in CI on five branches), most likely since the quota wait changes in src/forge/github.py",
+  "worker": "claude"
+}

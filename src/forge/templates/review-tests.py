@@ -164,6 +164,34 @@ def small_change(base: str, excludes: list[str], tests_only: bool) -> bool:
         return False
 
 
+def effective_proof(base: str | None, head: str) -> str:
+    """The newest Proof list after base, using close's record-only commit rule."""
+    revision = f"{base}..{head}" if base else head
+    commits = run("git", "rev-list", "--no-merges", revision).splitlines()
+    if not commits:
+        return ""
+    records = subprocess.run(
+        [shutil.which("git") or "git", "log", "--no-walk",
+         "--format=%x00%x00%H%x00m%B", "--name-only", "-z", *commits],
+        check=True, capture_output=True, text=True).stdout
+    history = {}
+    for record in records.split("\0\0"):
+        if not record:
+            continue
+        sha, message, *paths = record.lstrip("\0").split("\0", 2)
+        files = [path for path in (paths[0].removeprefix("\n").split("\0") if paths else [])
+                 if path]
+        history[sha] = (message.removeprefix("m"), files)
+    for commit in commits:
+        message, files = history[commit]
+        if files and all(path.startswith((".factory/", "plans/")) for path in files):
+            continue
+        found = re.search(r"^Proof list\b[^\n]*?:.*", message, re.M | re.S)
+        if found:
+            return found[0].strip()
+    return ""
+
+
 def reuse() -> str:
     if int(os.environ.get("GITHUB_RUN_ATTEMPT", "1")) > 1:
         return ""
@@ -192,6 +220,7 @@ def reuse() -> str:
                      and base and any(pr.get("base", {}).get("sha") == base
                                       and pr.get("head", {}).get("sha") == r.get("head_sha")
                                       for pr in r.get("pull_requests", [])))]
+    current_proof = effective_proof(base, head)
     same_code_heads, inspected = set(), set()
     for result in matching:
         candidate = result.get("head_sha")
@@ -205,7 +234,8 @@ def reuse() -> str:
         except subprocess.CalledProcessError:
             continue
         paths = run("git", "diff", "--name-only", "--no-renames", candidate, head).splitlines()
-        if all(path.startswith((".factory/", "plans/spotted/")) for path in paths):
+        if (all(path.startswith((".factory/", "plans/spotted/")) for path in paths)
+                and effective_proof(base, candidate) == current_proof):
             same_code_heads.add(candidate)
     same_code = [result for result in matching if result.get("head_sha") in same_code_heads]
     # GitHub returns a run ID's latest attempt and conclusion. An active retry means the

@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from forge import (__version__, approval, board, board_facts, close, codex, gaps, githooks, machine, migration_warnings,
-                   journey, land, native, owner_choices, records, repo, review, spotted, story, score, task, time_records, upgrade)
+                   intake, journey, land, native, owner_choices, records, release_notes, repo, review, routing, spotted, story, score, task, time_records, upgrade)
 from forge.task import _merged, _started, can_start, developer, github_login, owner, sections, start_base, unbuilt_fix, waits_for
 from forge.task import rows as task_rows
 
@@ -151,7 +151,8 @@ def next_step(args: Any) -> int:
         except repo.Refused as refusal:
             if refusal.entry == repo.REFUSALS["added_work_min_gain"]:
                 raise
-    notice = upgrade.release_notice(top) + fullrun.notices(top)
+    shown, version = release_notes.once(top)
+    notice = upgrade.release_notice(top) + fullrun.notices(top) + shown
     # Populate shared facts before concurrent readers can race on their first lookup.
     repo.forge_dir(top)
     repo.default_branch(top)
@@ -180,6 +181,8 @@ def next_step(args: Any) -> int:
     step = ([journey.step_line(top, _report_config(top, {}), history, idle=_idle(top)[0] in lines)]
             if (top / "forge.toml").is_file() else [])
     print("\n".join(owner_choices.first(top, step + notice + lines, (facts["github"] or {}).get("open", []))))
+    if version:
+        release_notes.mark(top, version)
     return 0
 
 
@@ -342,7 +345,7 @@ def _report(top: Path, history: dict[str, Any] | None = None,
                 lines += found
     lines += owner_choices.documents(top, trees)
     quiet = not lines and not pinned
-    lines = _refresh(top, trees) + (lines or ([] if pinned else _idle(top)))
+    lines = _refresh(top, trees) + (lines or ([] if pinned else _idle(top))) + intake.offer_lines(top)
     if (top / "forge.toml").is_file():
         cfg = _report_config(top, refusals)
         if cfg["repo"] == "client":
@@ -499,7 +502,7 @@ def _needs_demo_address(top: Path) -> bool:
 
 def _report_config(path: Path, refusals: dict[Path, str]) -> dict[str, Any]:
     try:
-        return repo.command_fact(("report config", path.resolve()), path, lambda: repo.config(path))
+        return repo.command_fact(("report config", path.resolve()), path, lambda: routing.routed(path, repo.config(path)))
     except repo.Refused as refusal:
         refusals[path] = str(refusal).splitlines()[0]
         return repo.DEFAULTS
@@ -752,7 +755,7 @@ def _story(top: Path, key: str, path: Path | None, text: str,
             settings = (story.show(top, base, "forge.toml") if history is None
                         else history["docs"].get(f"{base}:forge.toml"))
             try:
-                cfg = (repo._config_text(settings, top) if settings  # pyright: ignore[reportPrivateUsage]
+                cfg = (routing.routed(top, repo._config_text(settings, top), base) if settings  # pyright: ignore[reportPrivateUsage]
                        else _report_config(top, refusals))
             except repo.Refused:  # unreadable there: what forge next reads here
                 cfg = _report_config(top, refusals)
@@ -1149,6 +1152,16 @@ def _item(item: str, label: str, state: dict[str, Any], top: Path,
                              pr, checks, "build")
     return answered + [sentence.format(**values), *([wait] if wait else []),
                        f"Next: {step.format(**values)}{built}"]
+
+
+def resolve_refusal(item: str, state: dict[str, Any], top: Path, stuck: bool) -> tuple[str, str]:
+    """The refusal of --resolve on an item with no open stop; its next step is the one forge next gives."""
+    stop = state.get("stop")
+    if stop and not stop.get("choice"):
+        return (close.REFUSALS["bad_choice"][0], close.REFUSALS["stuck"][1]) if stuck else close.REFUSALS["bad_choice"]
+    lines = _item(item, item, state, top, top, {}, {})
+    step = (lines[-1].removeprefix("Next: ").split("  # ")[0]) if lines else "forge next"
+    return (close.REFUSALS["chosen_already" if stop else "no_stop"][0], step)
 
 
 def _builder(item: str, state: dict[str, Any], folder: Path, refusals: dict[Path, str]) -> str:

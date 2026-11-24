@@ -1,4 +1,4 @@
-"""This repo uses split workers since 18 Nov 2026: Codex for code, Claude for user-facing parts.
+"""This repo's work runs on Codex (the owner's choice on 24 Nov 2026), with Terra reviews.
 
 Build, fix and lite use low effort; design keeps high. Cold reads and reviews use Terra max.
 """
@@ -21,10 +21,10 @@ pytestmark = pytest.mark.platform
 
 STORY = "the-owner-moved-this-repo-s-workers-from"
 # Audit: these existing command tests own this repo's model settings and synced
-# roles accepted by doctor. The owner changed the worker contract on 2026-11-18;
+# roles accepted by doctor. The owner changed the worker contract on 2026-11-24;
 # retain literal expectations so a model regression cannot validate itself.
 # No new test, duplicate boundary coverage or production seam is needed.
-SOL = {"model": "gpt-6.1-sol", "effort": "low"}
+SOL = {"model": "gpt-6.2-sol", "effort": "low"}
 SONNET = {"model": "claude-sonnet-5-5", "effort": "low"}
 CLAUDE_BUILD = {**SONNET, "subagents": "claude-haiku-5-5", "subagent_effort": "high"}
 
@@ -43,11 +43,10 @@ def _codex(repo, monkeypatch, sdk_data):
     return repo.bin / "codex-app-server.jsonl"
 
 
-def test_1_this_repo_works_on_claude_low_and_reviews_on_codex(repo, monkeypatch, sdk_data):
+def test_1_this_repo_works_on_codex_low_and_reviews_on_terra(repo, monkeypatch, sdk_data):
     text = (ROOT / "forge.toml").read_text(encoding="utf-8")
     config = tomllib.loads(text)
-    assert config["workers"] == "split"
-    # Both tools start implementation at low effort; split sends code work to Codex.
+    # Both tools keep their low-effort models for implementation.
     assert config["models"]["build"] == config["models"]["fix"] == {
         "codex": SOL, "claude": CLAUDE_BUILD}
     assert config["models"]["lite"] == {
@@ -56,28 +55,30 @@ def test_1_this_repo_works_on_claude_low_and_reviews_on_codex(repo, monkeypatch,
     for kind in ("design", "grill"):
         assert config["models"][kind] == {
             "codex": ({"model": "gpt-6.1-terra", "effort": "max"} if kind == "grill" else
-                      {"model": "gpt-6.1-sol", "effort": "high"}),
+                      {"model": "gpt-6.2-sol", "effort": "high"}),
             "claude": {**SONNET, "effort": "high"}}
     assert config["models"]["review"] == {"model": "gpt-6.1-terra", "effort": "max"}
     assert "stage" not in config and "signoff" not in config
 
     claude_log = install_claude(repo)
-    log = _codex(repo, monkeypatch, sdk_data)
+    codex_log = _codex(repo, monkeypatch, sdk_data)
     repo.write("forge.toml", text)
     repo.git("add", "forge.toml")
     repo.git("commit", "--allow-empty", "-q", "-m", "Configure Forge")
     repo.git("push", "-q", "origin", "main")
-    started = repo.forge("fix", "start", "Move code work to Codex", "--done", "Codex builds it")
+    started = repo.forge("fix", "start", "Fix a typo", "--done", "The spelling is correct")
     assert started.returncode == 0, started.stderr
 
-    worked = repo.forge("work", "move-code-work-to-codex")
+    worked = repo.forge("work", "fix-a-typo")
 
     assert worked.returncode == 0, worked.stdout + worked.stderr
+    assert "Building fix-a-typo with Codex (gpt-6.2-sol, low) because workers = codex" in worked.stdout
+    assert config["workers"] == "codex"
     # A fix's first turn uses lite, which this repo sets to Sol at low effort.
-    [start] = _sent(log, "thread/start")
+    [start] = _sent(codex_log, "thread/start")
     assert (start["config"]["model"], start["config"]["model_reasoning_effort"]) == (
-        "gpt-6.1-sol", "low")
-    assert len(_sent(log, "turn/start")) == 1
+        "gpt-6.2-sol", "low")
+    assert len(_sent(codex_log, "turn/start")) == 1
     assert calls(claude_log) == []
 
 
@@ -99,7 +100,7 @@ def test_2_forge_doctor_passes_on_this_repos_forge_toml(repo, gh, tmp_path, monk
             ("claude-sonnet-5-5", "high" if name == "frontend" else "low")), name
     # Explorer uses read-only explore settings; implementation roles use Sonnet.
     assert _settings(repo.path, "explorer") == (
-        ("gpt-6.1-sol", "medium"), ("claude-haiku-5-5", "high"))
+        ("gpt-6.2-sol", "medium"), ("claude-haiku-5-5", "high"))
     # Codex replaces the Claude executable and UI skills prerequisites with the pinned SDK.
     gh.respond("auth", "status")
     _autoreview(tmp_path, monkeypatch)
@@ -113,5 +114,5 @@ def test_2_forge_doctor_passes_on_this_repos_forge_toml(repo, gh, tmp_path, monk
 
     assert done.returncode == 0, done.stdout + done.stderr
     assert "Everything checks out for Forge " in done.stdout, done.stdout
-    # This repo uses Codex for code and reviews, so doctor names the Codex hook approval.
+    # This repo uses Codex for builds and reviews, so doctor names the Codex hook approval.
     assert "approve Forge's hooks" in done.stdout

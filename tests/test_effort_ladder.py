@@ -163,6 +163,11 @@ def test_1_a_failed_round_runs_at_top_effort_in_the_same_thread(
     assert first.returncode == 0, first.stdout + first.stderr
     if family == "claude":
         assert f"Building BOARD/HELP with Claude ({model}, {effort})" in first.stdout
+    if failure != "note":
+        # These cases test close outcomes. Give each synthetic worker commit the
+        # proof entry needed to reach that outcome.
+        repo.git("commit", "--allow-empty", "-q", "-m", "Record the covered check", "-m",
+                 "Proof list:\n- 1: check: synthetic worker fixture", cwd=folder)
     if failure == "note":
         monkeypatch.delenv("STUB_CLAUDE_RESULT" if family == "claude" else "STUB_CODEX_TEXT",
                            raising=False)
@@ -271,7 +276,8 @@ def test_3_reviews_reads_and_design_keep_their_effort(
             [call] = calls(repo.bin / "claude-sdk-calls.jsonl")
             assert call["options"]["effort"] == "medium"
     elif phase == "review":
-        env.commit(folder, "fail_test.py", "raise SystemExit(0)\n", "Repair the failed test")
+        env.commit(folder, "fail_test.py", "raise SystemExit(0)\n", "Repair the failed test\n\n"
+                   "Proof list:\n- 1: check: synthetic fixed-effort review fixture")
         closed = env.close("BOARD/HELP")
         assert closed.returncode == 0, closed.stdout + closed.stderr
         [call] = env.review_calls()
@@ -392,7 +398,8 @@ def test_8_native_round_names_the_requested_effort(
     (folder / "fail_test.py").write_text("print('intentional native close failure')\n"
                                          "raise SystemExit(1)\n", encoding="utf-8")
     repo.git("add", "-A", cwd=folder)
-    repo.git("commit", "-q", "-m", "Prepare a native worker round", cwd=folder)
+    repo.git("commit", "-q", "-m", "Prepare a native worker round", "-m",
+             "Proof list:\n- 1: check: synthetic native worker fixture", cwd=folder)
 
     host = Session(repo, tmp_path / f"{family}-host", host_name)
     try:

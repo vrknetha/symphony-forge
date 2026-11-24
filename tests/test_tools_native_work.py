@@ -41,7 +41,6 @@ def test_3_build_rounds_run_as_session_subagents(repo, gh, monkeypatch, tmp_path
     # Claude's native fallback needs no SDK; Codex keeps Claude's SDK for the design fallback below.
     data = tmp_path / ("without-claude-sdk" if tool == "claude" else "data")
     data.mkdir(exist_ok=True)
-    monkeypatch.setenv("XDG_DATA_HOME", str(data))
     if tool == "claude":
         monkeypatch.delenv("CODEX_THREAD_ID", raising=False)
         monkeypatch.setenv("CLAUDECODE", "1")
@@ -64,6 +63,9 @@ def test_3_build_rounds_run_as_session_subagents(repo, gh, monkeypatch, tmp_path
         "why": "Choose the tools", "done_when": "forge.toml names the tools"}))
     synced = repo.forge("sync")
     assert synced.returncode == 0, synced.stdout + synced.stderr
+    # Sync prepares SDKs; select the missing-SDK machine only afterward so
+    # Claude's worker still uses the native fallback this test owns.
+    monkeypatch.setenv("XDG_DATA_HOME", str(data))
     repo.git("add", "-A")
     repo.git("commit", "--allow-empty", "-q", "-m", "Pin Forge")
     repo.git("switch", "-q", "main")
@@ -171,7 +173,7 @@ def test_3_build_rounds_run_as_session_subagents(repo, gh, monkeypatch, tmp_path
         given, _, number = handout("BOARD/HELP", "worker")
         model = {("claude", "new"): "sonnet, medium", ("codex", "new"): "gpt-6-sol, high",
                  ("claude", "adopted"): "claude-sonnet-5-5, low",
-                 ("codex", "adopted"): "gpt-6.1-sol, low"}[tool, history]
+                 ("codex", "adopted"): "gpt-6.2-sol, low"}[tool, history]
         assert f"({model} requested)" in given.stdout
         short = Path(re.search(r"Continue subagent w1 with: Read (.+) and follow it", given.stdout)[1])
         assert "The earlier brief in this conversation still applies." in short.read_text("utf-8")

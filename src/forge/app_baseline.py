@@ -143,6 +143,8 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                               "skills/app-baseline/SKILL.md")
     database = (sync.TEMPLATES / "skills/database/SKILL.md").read_text(encoding="utf-8")
     agents = (sync.TEMPLATES / "skills/agents/SKILL.md").read_text(encoding="utf-8")
+    playwright = (sync.TEMPLATES / "skills/playwright-tests/SKILL.md").read_text(encoding="utf-8")
     return {f"{host}/skills/{name}/SKILL.md": text
             for host in (".claude", ".codex")
-            for name, text in (("app-baseline", skill), ("database", database), ("agents", agents))}
+            for name, text in (("app-baseline", skill), ("database", database), ("agents", agents),
+                               ("playwright-tests", playwright))}

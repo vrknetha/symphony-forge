@@ -75,8 +75,11 @@ def _source(env):
     repo.git("merge", "-q", "--ff-only", "fix/setup-guides")
     repo.git("push", "-q", "origin", "main")
     rel = "src/forge/templates/skill.md"
-    expected = (repo.path / rel).read_text("utf-8") + "\nWorker guide instruction.\n"
+    template = (repo.path / rel).read_text("utf-8")
+    expected = template + "\nWorker guide instruction.\n"
+    # The synced guide is the template plus the release's open known issues.
+    guide = (repo.path / ".codex/skills/forge/SKILL.md").read_text("utf-8")
     item, where = env.start_fix({rel: expected})
     (repo.bin / "forge").write_text(
         FORGE_SHIM.format(python=sys.executable, src=str(where / "src")), encoding="utf-8")
-    return item, where, expected
+    return item, where, expected.rstrip("\n") + guide[len(template.rstrip("\n")):]

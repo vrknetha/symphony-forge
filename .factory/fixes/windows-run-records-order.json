@@ -1,0 +1,77 @@
+{
+  "base": "d68b2284a746600b50fb05afa7981d365407f876",
+  "branch": "fix/windows-run-records-order",
+  "chat": {
+    "approval": null,
+    "claude": {
+      "id": "c9b52ba8-ef3a-4743-8e12-392e1a9009fc",
+      "rounds": 0,
+      "start": "3e3b5f332dc0b74c227100a130cd7b1d8b41e216"
+    },
+    "conversation": null,
+    "head": null,
+    "start": null
+  },
+  "done_when": "tests/test_run_records.py::test_2 checks each round's worker, test and review rows without depending on which of the parallel test run and review ends first, and passes on Linux and in forge-next.yml's Windows jobs on the fix branch",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "test_2_each_round_records_worker_tests_review_and_ci_times() in tests/test_run_records.py",
+      "file": "tests/test_run_records.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 114,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Windows branch jobs have no passing proof",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "9537960924d9413386e51300e8c9587170068f61f5ad5469481678ec874cf321",
+    "changed": "618d1c60d65bc9d0977e1dcd56f0e09f58c6bff68d7ca6df4c6bfbef90d0153c",
+    "commit": "afc82c07b057234b0356ec2e26ea1ae9a53fb8f6",
+    "dismissals": [],
+    "findings": [],
+    "id": "1e3357ba-8872-4b81-a8cd-33737d210cb7",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T17:42:58.381778+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T17:43:18.690759+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T17:49:28.921052+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T02:05:03.668352+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T02:08:25.642166+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "eff2eca6-7323-46fd-a51f-3e59104c7030",
+    "head": "905b2f454ba33fa275df8d1502c3172a796efe57",
+    "keys": {},
+    "round": 1
+  },
+  "why": "The v1.2.47 Windows release check fails in tests/test_run_records.py::test_2_each_round_records_worker_tests_review_and_ci_times[claude]: close runs the tests alongside the review and records each when it ends, so on a slow Windows runner the fix's test run (with its replay on the old code) ends after the review and the timing rows come in a different order than the test expects",
+  "worker": "claude"
+}

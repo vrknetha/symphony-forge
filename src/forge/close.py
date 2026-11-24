@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from forge.close_remote import push_replay, reconcile, replay_baseline, save_replay, squash_replay
-from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, repo, review, review_skip, score, spotted, story, sync, task, time_records
+from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
 
 REFUSALS = {
     "not_started": ("Forge has not started {item} in any worktree of this repo.", "forge next"),
@@ -84,7 +84,7 @@ def close(args: argparse.Namespace) -> int:
 
 
 def _close(args: argparse.Namespace, top: Path) -> int:
-    from forge import backfill, records
+    from forge import backfill, nextstep, records
     from forge.merge import ENABLE
 
     item = args.item
@@ -108,8 +108,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
                                           and state["stop"].get("by") != "default") or
                 args.dismiss or args.because or
                 (choice in ("accept", "more") if stuck else choice in ("switch", "same", "narrow"))):
-            repo.refuse((REFUSALS["bad_choice"][0], REFUSALS["stuck"][1]) if stuck
-                        else REFUSALS["bad_choice"], item=item)
+            repo.refuse(nextstep.resolve_refusal(item, state, top, stuck), item=item)
         if not continued:
             plan_updated = False
             if choice in ("narrow", "split") and "/" in item:
@@ -241,7 +240,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         _refresh_record(top, item, state, pr)
     if "/" in item:
         key = item.split("/")[0]
-        design.check(top, story.show(top, story.plan_ref(top, key), f"plans/{key}.md") or "", "HEAD", required=False)
+        design.check(top, design.kept_plan(top, key), "HEAD", required=False)
         excluded = list(review.DOC_EXCLUDES)
         excluded += [path.replace(":(glob)", ":(exclude,glob)") for path in repo.TEST_PATHS]
         stats = repo.git("diff", "--numstat", "-z", "--no-renames", f"{review_ref}...HEAD",
@@ -337,7 +336,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     evidence = ("\n\n".join(part for part in (
                     review.before_coding(top, base, head),
                     review.commit_paragraph(top, review_ref, "Functional check:")) if part),
-                review.proof_list(top, review_ref))
+                done_when_proof.proof_list(top, review_ref))
     repo.record_event(top, item, "close result")  # a stuck worker counts failures once per close
     failed = 0
     if not fresh:
@@ -382,7 +381,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
                 if testing is not None:
                     failed, tested = testing.result()
                     print(tested, flush=True)
-                    evidence = (evidence[0], review.proof_list(top, review_ref, tested))
+                    evidence = (evidence[0], done_when_proof.proof_list(top, review_ref, tested))
                     if failed:
                         state["tests"] = tested
                         if outcome == "failed":
@@ -395,7 +394,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         command = review.close_test(top, review_ref)
         failed, tested = review.test_run(top, command, review_ref, always=switch)
         print(tested, flush=True)
-        evidence = (evidence[0], review.proof_list(top, review_ref, tested))
+        evidence = (evidence[0], done_when_proof.proof_list(top, review_ref, tested))
         if failed:
             state["tests"] = tested
         else:
