@@ -72,12 +72,20 @@ def save(found, **change):
     (here / ("pr-%d.json" % found["number"])).write_text(json.dumps(found))
 
 
-if args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"]:  # a branch's own checks, if set
-    branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True,
-                            text=True).stdout.strip()
-    own = here / ("checks-" + branch.replace("/", "-") + ".txt")
-    if own.exists():
-        answer(own.read_text())
+def checks_file(key):
+    return here / ("checks-" + key.replace("/", "-") + ".txt")
+
+
+if args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"]:  # a commit's own checks, if set
+    if any(here.glob("checks-*.txt")):
+        sha = args[-1].split("/commits/")[1].split("/")[0]
+        own = checks_file(sha)
+        if own.exists():
+            answer(own.read_text())
+        for ref, head in heads().items():
+            own = checks_file(ref.removeprefix("refs/heads/"))
+            if head == sha and own.exists():
+                answer(own.read_text())
 if args[:2] == ["api", "graphql"]:
     # The board's open pull requests.
     nodes = []
@@ -85,7 +93,9 @@ if args[:2] == ["api", "graphql"]:
         found = pr(json.loads(path.read_text("utf-8"))["headRefName"])
         if found["state"] != "OPEN":
             continue
-        own = here / ("checks-" + found["headRefName"].replace("/", "-") + ".txt")
+        own = checks_file(found["headRefOid"])
+        if not own.exists():
+            own = checks_file(found["headRefName"])
         rows = ([json.loads(line) for line in own.read_text().splitlines()] if own.exists() else
                 [{"name": name, "status": "completed", "conclusion": "success"} for name in ("tests", "forge-pr-check")])
         contexts = [{"__typename": "CheckRun", "name": row["name"], "status": row["status"].upper(),
@@ -266,9 +276,11 @@ def _in_close(env, *slugs: str) -> dict[str, tuple[float, float]]:
             for slug in slugs}
 
 
-def _red(env, slug: str, status: str = "completed", conclusion: str | None = "failure") -> None:
-    """This fix's own checks on GitHub: tests in the given state."""
-    (env.repo.bin / f"checks-fix-{slug}.txt").write_text("".join(json.dumps(row) + "\n" for row in (
+def _red(env, slug: str, status: str = "completed", conclusion: str | None = "failure",
+         *, head: str | None = None) -> None:
+    """This fix's own checks on GitHub, optionally limited to one pushed commit."""
+    key = head or f"fix-{slug}"
+    (env.repo.bin / f"checks-{key}.txt").write_text("".join(json.dumps(row) + "\n" for row in (
         run("tests", conclusion, status), run("forge-pr-check"))), "utf-8")
 
 

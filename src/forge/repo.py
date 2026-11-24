@@ -460,10 +460,11 @@ def work_log(top: Path, item: str) -> Path:
 
 
 def record_timing(top: Path, item: str, step: str, start: str, clock: float,
-                  outcome: str, model: dict[str, str] | None = None) -> None:
+                  outcome: str, model: dict[str, str] | None = None, *, worker_round: int | None = None) -> None:
     """Append a best-effort timing in the shared, uncommitted Git directory."""
-    line = {"item": item, "round": (read_state(item, top) or {}).get("round", 0),
-            "step": step, "start": start,
+    if worker_round is None:
+        worker_round = (read_state(item, top) or {}).get("round", 0)
+    line = {"item": item, "round": worker_round, "step": step, "start": start,
             "seconds": round(time.monotonic() - clock, 3), "outcome": outcome}
     if model:
         line.update({key: model[key] for key in ("model", "effort") if key in model})
@@ -477,8 +478,9 @@ def record_timing(top: Path, item: str, step: str, start: str, clock: float,
 def record_event(top: Path, item: str, event: str, **fields: Any) -> str:
     """Write an occurrence once; consumers use its random id, never its text or timestamp."""
     identity = str(uuid.uuid4())
-    line = {"id": identity, "item": item, "event": event, "at": now(),
-            "round": (read_state(item, top) or {}).get("round", 0), **fields}
+    if "round" not in fields:
+        fields["round"] = (read_state(item, top) or {}).get("round", 0)
+    line = {"id": identity, "item": item, "event": event, "at": now(), **fields}
     from forge import event_log
     event_log.append(top, line)
     return identity

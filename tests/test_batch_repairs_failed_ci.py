@@ -3,7 +3,6 @@
 import json
 import pytest
 
-from conftest import _install
 from test_close import env  # noqa: F401
 from test_land import COMMITS
 from test_queue_land_all import client, _all, _fix, _number, _red  # noqa: F401
@@ -27,23 +26,11 @@ def test_1_batch_gives_failed_ci_one_round_on_the_builder_thread(client, monkeyp
     # Publish the first build, then let GitHub report a failure for that pushed head.
     closed = env.repo.forge("close", "repair")
     assert closed.returncode == 0, closed.stdout + closed.stderr
-    _red(env, "repair")
+    failed_head = env.repo.git("rev-parse", "HEAD", cwd=where) if heals else None
+    _red(env, "repair", head=failed_head)
     env.gh.respond("pr", "checks", "fix/repair", exit=1, stdout=json.dumps([{
         "name": "tests", "bucket": "fail", "link": "https://github.com/acme/shop/actions/runs/5/job/95"}]))
     env.gh.respond("run", "view", "--job", "95", stdout="FAILED repair.py: wrong result\n")
-    if heals:
-        # GitHub reports success for a new pushed commit, never for the original failed head.
-        failed_head = env.repo.git("rev-parse", "HEAD", cwd=where)
-        gh = env.repo.bin / "gh"
-        code = gh.read_text("utf-8")
-        code = code.replace('    if own.exists():\n        answer(own.read_text())',
-            '    if own.exists():\n'
-            '        head = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()\n'
-            f'        if head != {failed_head!r}:\n'
-            '            own.unlink()\n'
-            '        else:\n'
-            '            answer(own.read_text())', 1)
-        _install(env.repo.bin, "gh", code)
     done = _all(env)
     calls = [json.loads(line) for line in (env.repo.bin / "claude-sdk-calls.jsonl").read_text("utf-8").splitlines()]
     assert len(calls) == 2, done.stdout + done.stderr

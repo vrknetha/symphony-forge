@@ -124,9 +124,11 @@ def required(top: Path, default: str, head: str = "HEAD") -> list[str] | None:
 
 def wait(top: Path, item: str, sha: str, names: list[str], *, branch: str,
          progress: bool = False, slot: Callable[[bool], None] | None = None, train: bool = False,
-         command: str = "close") -> None:
+         command: str = "close", home: Path | None = None) -> None:
     """Wait for green checks on sha; land renews its deadline on observed check progress. A merge
     train's draft pull request stays red on Forge's own review on purpose, so that check never counts."""
+    home = home or top  # where the item's own state file lives; top runs the gh and git calls
+    worker_round = (repo.read_state(item, home) or {}).get("round", 0)
     shared = required(top, repo.default_branch(top), sha)
     if shared is not None:
         names = shared
@@ -136,7 +138,8 @@ def wait(top: Path, item: str, sha: str, names: list[str], *, branch: str,
 
     from forge import codex  # codex imports what imports checks
     # The waiting process: forge land --all leaves out a change only while that process runs.
-    with repo.record_run(top, item, "ci", process=codex.identity(os.getpid()), command=command) as result:
+    with repo.record_run(top, item, "ci", process=codex.identity(os.getpid()), command=command,
+                         round=worker_round) as result:
         result.update(outcome="unknown", state="unknown")
         try:
             from forge import github
@@ -160,7 +163,7 @@ def wait(top: Path, item: str, sha: str, names: list[str], *, branch: str,
                 from forge import citime
                 citime.report(top, branch, current=failed)
             repo.record_event(top, item, "CI result", commit=sha, start=start, **result)
-            repo.record_timing(top, item, "CI wait", start, clock, result["outcome"])
+            repo.record_timing(top, item, "CI wait", start, clock, result["outcome"], worker_round=worker_round)
 
 
 def let_finish(top: Path, item: str, sha: str, names: list[str], branch: str,
