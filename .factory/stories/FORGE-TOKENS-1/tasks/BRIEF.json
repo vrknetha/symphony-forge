@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-TOKENS-1-BRIEF",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T06:12:56.348361+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T06:13:22.299623+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "51d8d3666fc7047f4fa9f76ee10aac89a3ed3747",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
