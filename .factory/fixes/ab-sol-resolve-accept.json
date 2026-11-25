@@ -4,12 +4,25 @@
   "done_when": "After forge close --resolve accept, close records the choice and goes on to the checks without asking the round-limit question again.",
   "fix_kind": "backend",
   "kind": "fix",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T08:37:50.109251+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T08:38:36.486974+00:00",
+      "round": 1,
+      "step": "resume"
     }
   ],
-  "why": "forge close --resolve accept records the owner's choice, then prints the same round-limit question again, so it looks as if the choice was not taken (issue #1805)."
+  "stuck": {
+    "close": null,
+    "head": "954b632984ff2be31bdd9dfaa897eca9442e6bde",
+    "keys": {},
+    "round": null
+  },
+  "why": "forge close --resolve accept records the owner's choice, then prints the same round-limit question again, so it looks as if the choice was not taken (issue #1805).",
+  "worker": "antigravity"
 }
