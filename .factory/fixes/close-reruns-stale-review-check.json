@@ -11,8 +11,90 @@
   "done_when": "When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it.",
   "fix_kind": "backend",
   "kind": "fix",
+  "known": [
+    {
+      "area": "_retry_old_review() in src/forge/checks.py",
+      "file": "src/forge/checks.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 509,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Retry and wait for the only failed required review from an older commit",
+      "work": 3
+    },
+    {
+      "area": "_retry_old_review() in src/forge/checks.py",
+      "file": "src/forge/checks.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 518,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: A current-head review can be mistaken for an old review",
+      "work": 2
+    },
+    {
+      "area": "test_1_close_retries_the_only_failed_review_from_an_older_commit() in tests/test_close_reruns_old_review.py",
+      "file": "tests/test_close_reruns_old_review.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 22,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Retry and wait for the only failed required review from an older commit",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "bee8e066d976f136f2f8a28ab38aacff3ab8bf4bfc47683b88d796eec74432c0",
+    "changed": "9279f70cb515268c3bf61c28697f6dcdcd0f28cdf4672bc5fb25fbcfa37daccb",
+    "commit": "5e50492bf19ba22cd7991453b4857eaf804acf5e",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 5, Work 3, Harm 3\nRaise: Not done - When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it.\nCase: normal use - a review of commit A fails, then a CI fix is pushed as commit B.\nFollowing a status on B back to A cannot produce the current-head result that close requires. GitHub reruns use the original event, and `.github/workflows/forge.yml:153-166` compares that event's A against the now-current PR ref B, so the rerun fails; the reporter at lines 176-195 then posts its result to A, not B. The coordinator's ruling to follow the original run did not account for those workflow steps. The wait also stops inspecting the rerun as soon as the current-head status becomes green, even if that rerun is still in progress. Separately, `checks.py:500-503` counts red optional checks, so an optional lint failure prevents the retry even when the review is the only failed required check. [GitHub's rerun documentation](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs) describes the original-event behavior.",
+        "file": "src/forge/checks.py",
+        "gain": 5,
+        "harm": 3,
+        "line": 509,
+        "priority": "P1",
+        "title": "Not done: Retry and wait for the only failed required review from an older commit",
+        "work": 3
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - the current commit's review fails and its status is the only observed failure.\nThe older-run guard compares the workflow run's `head_sha` with the PR head, but a `pull_request_target` run can report the base-side SHA in that field. When that base is an ancestor of the PR, a review that actually ran on the current commit passes the older-run guard and is rerun, delaying the failure that close previously reported. GitHub's own [checkout implementation](https://github.com/actions/checkout/blob/main/src/unsafe-pr-checkout-helper.ts) documents this distinction.",
+        "file": "src/forge/checks.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 518,
+        "priority": "P1",
+        "title": "Functional: A current-head review can be mistaken for an old review",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test - When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it.\nCase: normal use - the current-head status becomes green while the requested rerun is still running.\nThe fake supplies `in_progress` as its last workflow response, which repeats according to `tests/test_land.py:75-78`, and then independently supplies a green commit status. The assertions pass even though close returns without observing that the rerun finished. The fake also makes the older run's retry produce a green current-head status, so it misses the workflow's event-SHA behavior described above.",
+        "file": "tests/test_close_reruns_old_review.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 22,
+        "priority": "P1",
+        "title": "Test: Retry and wait for the only failed required review from an older commit",
+        "work": 2
+      }
+    ],
+    "id": "8c070702-3f2b-44bd-8724-312b2eda002b",
+    "status": "blocked"
+  },
   "round": 2,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T16:08:14.765442+00:00",
@@ -27,6 +109,10 @@
       "at": "2026-11-25T16:12:16.601464+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:50:10.412002+00:00",
+      "step": "review"
     }
   ],
   "stuck": {

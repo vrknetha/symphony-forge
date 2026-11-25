@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/checks.py\tFunctional: A current-head review can be mistaken for an old review\tclose-reruns-stale-review-check",
+      "kind": "bug",
+      "path": "src/forge/checks.py",
+      "line": 518,
+      "text": "Functional: A current-head review can be mistaken for an old review",
+      "from": "blocking",
+      "item": "close-reruns-stale-review-check",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/checks.py\tNot done: Retry and wait for the only failed required review from an older commit\tclose-reruns-stale-review-check",
+      "kind": "bug",
+      "path": "src/forge/checks.py",
+      "line": 509,
+      "text": "Not done: Retry and wait for the only failed required review from an older commit",
+      "from": "blocking",
+      "item": "close-reruns-stale-review-check",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_close_reruns_old_review.py\tTest: Retry and wait for the only failed required review from an older commit\tclose-reruns-stale-review-check",
+      "kind": "bug",
+      "path": "tests/test_close_reruns_old_review.py",
+      "line": 22,
+      "text": "Test: Retry and wait for the only failed required review from an older commit",
+      "from": "blocking",
+      "item": "close-reruns-stale-review-check",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
