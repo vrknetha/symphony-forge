@@ -1,0 +1,15 @@
+{
+  "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
+  "branch": "fix/abb-sol-prcheck",
+  "done_when": "A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T08:40:59.289871+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "When forge-pr-check fails on GitHub, the job log printed by the Report review status step is empty, so the real reason is hidden and close suggests a new build round (issue #1803)."
+}
