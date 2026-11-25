@@ -17,7 +17,7 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
-from forge import claude_sdk, codex, design, doctor, machine, merge_timings, native, repo, review_process, roles, routing, story, task
+from forge import claude_sdk, codex, design, doctor, machine, merge_timings, native, owner_choices, repo, review_process, roles, routing, story, task
 from forge.repo import git, refuse
 
 HERE = Path(__file__).parent
@@ -294,7 +294,7 @@ def _work(args: argparse.Namespace) -> bool:
         from forge import close  # close imports story, which imports this module
 
         close.stuck_round(top, item, state, config)
-        if close.policy_pending(state):
+        if owner_choices.policy_pending(state):
             note = ((note + "\n") if note else "") + (
                 "The owner's policy authorized this repair round. Continue with the open functional findings.")
         if "round" in state:

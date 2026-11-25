@@ -2217,8 +2217,9 @@ In `forge.toml`, `cold_read_rounds` sets the cold-read limit and `task_review_ro
 The owner can set `auto_more_round = true` in `forge.toml` to permit one more review round per item.
 At the review limit, close applies this policy only when all open blocking findings are P0 or P1
 with `Raise: Functional`. Close reports the policy when it applies it. The setting is off by default.
-P0 findings already return to the worker and do not use this permission. The permitted round ends
-when the next worker turn starts, even when that turn changes no reviewed file.
+P0 findings already return to the worker and do not use this permission. The next worker turn
+uses the permission even if it changes no reviewed file. Land starts the authorized round even
+if local tests also fail, so the worker can address both problems.
 All other choices still wait for the owner. New and existing repos can use this setting after upgrade.
 
 For a fix, close also runs its new or changed pytest Done-when tests on the code before the fix, in a temporary copy of the repo, and refuses a test that passes there; when the test cannot start there, close warns and the review judges it.

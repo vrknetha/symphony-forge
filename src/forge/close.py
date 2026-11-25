@@ -422,23 +422,10 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     if serious and "/" not in item:
         blocked_rounds = sum(bool(review.blocking(old)) for old in
                              review._history(top, item, review_ref, result, state=state))  # pyright: ignore[reportPrivateUsage]
-    policy_round = False
-    at_limit = blocked_rounds >= cfg["task_review_rounds"]
-    if (serious and at_limit and cfg["auto_more_round"] and
-            not any(score.holds(f, "P0") for _, f in serious) and
-            all(score.priority(f) in ("P0", "P1") and
-                re.search(r"^[ \t]*Raise:[ \t]*Functional\b", f["body"], re.I | re.M)
-                for _, f in serious)):
-        if not state.get("auto_more_round"):
-            state["auto_more_round"] = {"review": result["id"], "round": state.get("round", 0)}
-            refreshed = True
-            print("Applied the owner's policy: one more round for functional findings.", flush=True)
-        policy_round = policy_pending(state, result)
-    if (serious and at_limit and not policy_round and
-            not any(score.holds(f, "P0") for _, f in serious) and (not fresh or not state.get("stop"))):
-        stopped = {"file": serious[0][1]["file"], "at": repo.now(),
-                   "wait_id": repo.record_event(top, item, "owner wait start", reason="review loop")}
-        state["stop"] = stopped
+    if serious and blocked_rounds >= cfg["task_review_rounds"]:
+        stopped, granted = owner_choices.review_limit(top, item, state, result, serious,
+                                                     fresh=fresh, auto_more=cfg["auto_more_round"])
+        refreshed = refreshed or granted
     noted = (spotted.own_path(item),) if not switch and spotted.record(
         top, item, state, review_ref, result) else ()
     if not fresh or dismissals or refreshed or stopped:
@@ -569,12 +556,6 @@ def _start_follow_up(top: Path, state: dict[str, Any], why: str, done: str) -> s
     finally:
         os.chdir(here)
     return re.search(r"Started fix (\S+)", out.getvalue())[1]
-
-
-def policy_pending(state: dict[str, Any], result: dict[str, Any] | None = None) -> bool:
-    """The grant covers this review only until the next worker turn starts."""
-    return state.get("auto_more_round") == {
-        "review": (result or state.get("review") or {}).get("id"), "round": state.get("round", 0)}
 
 
 def check_stop(item: str, state: dict[str, Any], top: Path | None = None) -> None:

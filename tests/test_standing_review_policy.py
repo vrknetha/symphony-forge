@@ -1,4 +1,8 @@
 """One standing permission buys one functional repair round through close."""
+import json
+import sys
+from pathlib import Path
+
 import pytest
 
 from test_close import CLEAN, STORY_DOC, blocked, env  # noqa: F401
@@ -10,22 +14,23 @@ STORY = "FIX-STANDING-OWNER-POLICY"
 
 
 @pytest.mark.parametrize("case", ["enabled", "task", "p0", "off", "false", "other", "mixed",
-                                  "unchanged", "indented"])
+                                  "unchanged", "indented", "answered"])
 def test_1_standing_policy_grants_only_one_functional_round(env, case):
     # The owner can pre-authorize one functional repair, not other choices.
     # Existing limit tests cover only explicit choices. No production seam is needed.
     client(env, False)
+    path = env.repo.path / "forge.toml"
+    settings = "" if case in ("task", "p0") else "task_review_rounds = 1\n"
     if case != "off":
-        path = env.repo.path / "forge.toml"
         value = "false" if case == "false" else "true"
-        env.commit(env.repo.path, "forge.toml", f"auto_more_round = {value}\n" + path.read_text("utf-8"),
-                   "Authorize one functional round")
-        env.repo.git("push", "-q", "origin", "main")
+        settings += f"auto_more_round = {value}\n"
+    env.commit(env.repo.path, "forge.toml", settings + path.read_text("utf-8"), "Set review policy")
+    env.repo.git("push", "-q", "origin", "main")
     entry = note("P0" if case == "p0" else "P1", "Saving loses quantities")
     entry["body"] += "\n  Raise: Functional" if case == "indented" else "\nRaise: Functional"
     other = note("P1", "Missing proof")
     other["body"] += "\nRaise: Standard"
-    findings = [other] if case == "other" else [entry, other] if case == "mixed" else [entry]
+    findings = [other] if case == "other" else [entry, other] if case in ("mixed", "answered") else [entry]
     if case == "p0":
         critical = note("P0", "Saving deletes the basket")
         critical["body"] += "\nRaise: Functional"
@@ -34,7 +39,7 @@ def test_1_standing_policy_grants_only_one_functional_round(env, case):
         findings = [critical, entry]
     env.reviews(blocked(*findings))
     item, where = env.start_approved_task(STORY_DOC) if case == "task" else env.start_fix()
-    if case == "unchanged":
+    if case in ("unchanged", "answered"):
         log = install_claude(env.repo)
         worked = env.repo.forge("work", item)
         assert worked.returncode == 0, worked.stdout + worked.stderr
@@ -50,6 +55,16 @@ def test_1_standing_policy_grants_only_one_functional_round(env, case):
         assert "One more round, split or accept?" in output
         assert "Applied the owner's policy" not in output
         return
+    if case == "answered":
+        assert "One more round, split or accept?" in output
+        chosen = env.close(item, "--resolve", "more", "--reason", "Repair the proof")
+        assert chosen.returncode == 0, chosen.stdout + chosen.stderr
+        worked = env.repo.forge("work", item)
+        assert worked.returncode == 0, worked.stdout + worked.stderr
+        env.commit(where, "app.py", "print('proof repaired')\n", "Repair the proof")
+        env.reviews(blocked(entry))
+        first = env.close(item)
+        output = first.stdout + first.stderr
     if case == "p0":
         assert "Applied the owner's policy" not in output
         env.commit(where, "app.py", "print('repair critical saving')\n", "Repair critical saving")
@@ -66,7 +81,7 @@ def test_1_standing_policy_grants_only_one_functional_round(env, case):
     again = env.close(item)
     assert "One more round, split or accept?" not in again.stdout + again.stderr
     assert "Applied the owner's policy" not in again.stdout + again.stderr
-    if case == "unchanged":
+    if case in ("unchanged", "answered"):
         worked = env.repo.forge("work", item)
         assert worked.returncode == 0, worked.stdout + worked.stderr
         resumed = calls(log)[-1]
@@ -76,17 +91,29 @@ def test_1_standing_policy_grants_only_one_functional_round(env, case):
     second = env.close(item)
     assert "One more round, split or accept?" in second.stdout + second.stderr
     assert "Applied the owner's policy" not in second.stdout + second.stderr
-    if case == "unchanged":
+    if case in ("unchanged", "answered"):
         assert "The owner's policy authorized this repair round. Continue with the open functional findings." in resumed["brief"]
+        held = env.repo.forge("work", item)
+        assert held.returncode == 1, held.stdout + held.stderr
+        assert "One more round, split or accept?" in held.stderr
 
 
 @pytest.mark.parametrize("queued", [False, True])
-def test_2_land_runs_the_policy_round_after_its_normal_repair(land, monkeypatch, queued):
+@pytest.mark.parametrize("local_red", [False, True], ids=["review-only", "local-tests-red"])
+def test_2_land_runs_the_policy_round_after_its_normal_repair(land, monkeypatch, queued, local_red):
     # Land owns dispatch and queue limits, which a close-only test cannot reach.
     # A grant must dispatch once after the ordinary repair. No new test seam is needed.
     env = land
     path = env.repo.path / "forge.toml"
-    env.commit(env.repo.path, "forge.toml", "auto_more_round = true\n" + path.read_text("utf-8"))
+    settings = "auto_more_round = true\n"
+    if local_red:
+        command = f'"{Path(sys.executable).as_posix()}" client-tests.py'
+        settings += f'test_place = "local"\nfast_test = {json.dumps(command)}\n'
+        env.commit(env.repo.path, "client-tests.py",
+                   "from pathlib import Path\n"
+                   "if Path('work-1.txt').exists() and not Path('work-2.txt').exists():\n"
+                   "    raise SystemExit('The first repair breaks local tests.')\n")
+    env.commit(env.repo.path, "forge.toml", settings + path.read_text("utf-8"))
     env.repo.git("push", "-q", "origin", "main")
     entry = note("P1", "Saving loses quantities")
     entry["body"] += "\nRaise: Functional"
@@ -95,11 +122,13 @@ def test_2_land_runs_the_policy_round_after_its_normal_repair(land, monkeypatch,
         env.reviews(blocked(entry))
         early = env.close(item)
         assert "The review left serious findings open" in early.stderr
-        env.commit(where, "app.py", "print('first repair')\n", "First repair")
+        env.commit(where, "work-1.txt", "worked\n", "First repair")
         monkeypatch.setenv("FORGE_LAND_QUEUED", "1")
         monkeypatch.setenv("FORGE_LAND_ROUNDS", "1")
     env.reviews(blocked(entry), CLEAN) if queued else env.reviews(blocked(entry), blocked(entry), CLEAN)
     done = env.repo.forge("land", item)
+    if local_red:
+        assert "The first repair breaks local tests." in done.stdout
     assert done.returncode == 0, done.stdout + done.stderr
     assert "Applied the owner's policy: one more round for functional findings." in done.stdout
     assert len(_workers(env)) == (1 if queued else 2)

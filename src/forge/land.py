@@ -16,7 +16,7 @@ from functools import partial
 from graphlib import TopologicalSorter
 from pathlib import Path
 
-from forge import board, checks, close, codex, machine, merge, nextstep, repo, review, score, spotted, story, task, worker
+from forge import board, checks, close, codex, machine, merge, nextstep, owner_choices, repo, review, score, spotted, story, task, worker
 
 NEEDS_CHOICE = 3
 REFUSALS = {
@@ -143,8 +143,7 @@ def land(args: argparse.Namespace) -> int:
                         else "the failing checks" if red and (queued or failing) else "")
                 if not what:
                     raise
-                policy = (error.entry is close.REFUSALS["blocked"] and
-                          close.policy_pending(repo.read_state(item, top) or {}))
+                policy = (not red and owner_choices.policy_pending(repo.read_state(item, top) or {}))
                 if queued and not policy and not (red and failing):
                     raise repo.Refused(str(error).split("\nNext: ")[0], f"forge land {item}",
                                        error.code, error.entry) from None

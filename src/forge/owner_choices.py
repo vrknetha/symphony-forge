@@ -1,11 +1,41 @@
-"""Ask before a large fix starts; keep unanswered choices above routine advice."""
+"""Handle owner choices and show unanswered choices before routine advice."""
 import json
 import re
 import shlex
 from fnmatch import fnmatchcase
 from pathlib import Path
 
-from forge import repo, time_records
+from forge import repo, score, time_records
+
+
+def policy_pending(state: dict, result: dict | None = None) -> bool:
+    """The grant covers this review only until the next worker turn starts."""
+    return state.get("auto_more_round") == {
+        "review": (result or state.get("review") or {}).get("id"), "round": state.get("round", 0)}
+
+
+def review_limit(top: Path, item: str, state: dict, result: dict, serious: list[tuple[int, dict]],
+                 *, fresh: bool, auto_more: bool) -> tuple[dict | None, bool]:
+    """At the review limit, return the new stop or record a standing grant."""
+    if any(score.holds(f, "P0") for _, f in serious):
+        return None, False
+    if auto_more and all(score.priority(f) in ("P0", "P1") and
+                         re.search(r"^[ \t]*Raise:[ \t]*Functional\b", f["body"], re.I | re.M)
+                         for _, f in serious):
+        if not state.get("auto_more_round"):
+            state["auto_more_round"] = {"review": result["id"], "round": state.get("round", 0)}
+            if (state.get("stop") or {}).get("choice"):
+                state.pop("stop")  # An answer to the old stop cannot release the next one.
+            print("Applied the owner's policy: one more round for functional findings.", flush=True)
+            return None, True
+        if policy_pending(state, result):
+            return None, False
+    if fresh and state.get("stop"):
+        return None, False
+    stopped = {"file": serious[0][1]["file"], "at": repo.now(),
+               "wait_id": repo.record_event(top, item, "owner wait start", reason="review loop")}
+    state["stop"] = stopped
+    return stopped, False
 
 
 def size_choice(top: Path, item: str, state: dict, files: list[str]) -> None:
