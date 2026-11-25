@@ -118,7 +118,7 @@
     "id": "0f1dfea1-d9b5-4200-ab78-48062a0d3c14",
     "status": "blocked"
   },
-  "round": 2,
+  "round": 3,
   "status": "fixing",
   "steps": [
     {
@@ -137,6 +137,11 @@
     {
       "at": "2026-11-25T16:58:00.462225+00:00",
       "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:13:40.302953+00:00",
+      "round": 3,
       "step": "resume"
     }
   ],
