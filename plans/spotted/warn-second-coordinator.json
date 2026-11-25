@@ -12,6 +12,17 @@
       "closed_by": null
     },
     {
+      "key": "bug\tsrc/forge/native.py\tFunctional: Existing Codex coordinators become invisible after upgrade\twarn-second-coordinator",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 141,
+      "text": "Functional: Existing Codex coordinators become invisible after upgrade",
+      "from": "blocking",
+      "item": "warn-second-coordinator",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "bug\tsrc/forge/native.py\tFunctional: Native workers can be recorded as other coordinators\twarn-second-coordinator",
       "kind": "bug",
       "path": "src/forge/native.py",
