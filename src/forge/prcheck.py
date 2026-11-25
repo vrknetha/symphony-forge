@@ -32,6 +32,7 @@ REFUSALS = {
     "not_reviewed": ("The committed review at the head of {branch} is {problem}.",
                      "forge close {item}"),
     "story_doc": ("{problem}", "fix the story doc, then forge read <KEY>"),
+    "proof": ("{problem}", "forge close {item}"),
     "stacked": ("{item} builds on {parent}; Forge checks its pull request once it targets {default}.",
                 "forge close {item}"),
 }
@@ -546,10 +547,10 @@ def pr_check(args: argparse.Namespace) -> int:
         from forge import docskip, proof
 
         passed, lines = proof.check(top, item, proof_base, "", ran=False, head=head)
+        if not passed:
+            repo.refuse(REFUSALS["proof"], problem="\n".join(lines), item=item)
         for line in lines:
             print(line, flush=True)
-        if not passed:
-            return 1
         if "tests" in cfg.get("checks", []):
             head_cfg = repo._config_text(story.show(top, head, "forge.toml") or "")
             if docskip.only_docs(top, base, review.DOC_EXCLUDES,
