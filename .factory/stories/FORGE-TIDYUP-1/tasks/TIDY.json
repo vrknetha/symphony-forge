@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-TIDYUP-1-TIDY",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T08:24:48.054512+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T08:25:09.580029+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "d1fd9f900c9cb1f97d698dd01bd3a9b8f109f17e",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
