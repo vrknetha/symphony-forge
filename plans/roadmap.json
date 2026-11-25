@@ -714,6 +714,12 @@
       "title": "Google Antigravity as a third coding agent",
       "status": "pending",
       "order": 128
+    },
+    {
+      "key": "FORGE-CHATHANDOVER-1",
+      "title": "Hand a long coordinator chat over to a fresh chat",
+      "status": "pending",
+      "order": 130
     }
   ],
   "epics": [
