@@ -1,0 +1,15 @@
+{
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/proof-list-failure-says-why",
+  "done_when": "A Done-when proof failure says that test names must be in backticks and that a Proof list on a merge commit is not read.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T16:08:09.533374+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "forge-pr-check reads a Proof list only when its test names are in backticks and ignores one on a merge commit, but its failure message says neither, so coordinators keep rewriting the list."
+}
