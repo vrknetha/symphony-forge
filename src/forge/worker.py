@@ -648,7 +648,8 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
                 "<!-- sample-data-proof -->\n", 1)[0].strip()
     if user_facing:
         on.add("user-facing")
-    values["design_context"], owned_design = design_context(top, design_text, user_facing)
+    values["design_context"], owned_design = design_context(
+        top, design_text, user_facing, inline_project_design=user_facing or continued)
     values["theme_file"] = " (`apps/web/src/index.css`)" if (top / "apps/web/src/index.css").is_file() else ""
     if owned_design:
         on.add("screen-design")
@@ -712,8 +713,8 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
             brief += (f"\n## Fix round\n\n### Open serious findings\n\n{values['findings']}\n"
                       f"\n### Failing checks\n\n{values['checks']}\n")
         return brief + changes + "\n" + values["handover"] + "\n" + values["prototype_proof"] + "\n", subject
-    on.add("standards")
-    values["standards"] = (HERE / "standards.md").read_text(encoding="utf-8").strip()
+    values["standards"] = (HERE / "standards.md").as_posix()
+    values["release_notes"] = (HERE / "release-notes").as_posix()
     values["conventions"] = str(CONVENTIONS)
     text = (HERE / "templates" / "brief.md").read_text(encoding="utf-8")
     text = text.split("<!-- prototype-proof -->\n", 1)[0]
@@ -737,7 +738,8 @@ def commit_nudge(top: Path) -> str:
     return prompt + ("\n" + sample_proof() + "\n" if sample else "")
 
 
-def design_context(top: Path, text: str, user_facing: bool, *, review_base: str = "") -> tuple[str, str]:
+def design_context(top: Path, text: str, user_facing: bool, *, review_base: str = "",
+                   inline_project_design: bool = True) -> tuple[str, str]:
     """The same design and short skill guidance on both hosts; only an owned canvas sets a gate."""
     from forge import autoreview, roles, sync
 
@@ -757,7 +759,11 @@ def design_context(top: Path, text: str, user_facing: bool, *, review_base: str 
         files = sorted(path.relative_to(top).as_posix() for path in (top / folder).rglob("*") if path.is_file())
         parts.append("Screens, images and design files (open the images when checking screens):\n"
                      + "\n".join(f"- `{path}`" for path in files))
-    names = ["PRODUCT.md", "DESIGN.md", *([folder + "SCREENS.md"] if folder else [])]
+    names = ["PRODUCT.md", "DESIGN.md"] if inline_project_design else []
+    if not inline_project_design:
+        parts.append("Open `PRODUCT.md` for product goals and `DESIGN.md` for design rules if your work needs them.")
+    if folder:
+        names.append(folder + "SCREENS.md")
     generated = autoreview.generated_paths(top, review_base, "HEAD", [
         name for name in names if (top / name).is_file()]) if review_base else set()
     for name in names:

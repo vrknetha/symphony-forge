@@ -84,7 +84,7 @@ def test_17_worker(repo, gh, monkeypatch):
     assert "Fix round" not in brief and "$" not in brief.split("## Standards")[0]
     standards = ROOT / "src" / "forge" / "standards.md"
     if standards.is_file():
-        assert standards.read_text(encoding="utf-8").strip() in brief
+        assert f"`{standards.as_posix()}`" in brief
     # The existing tests that name the Scope, and the shipped conventions the worker may read.
     assert ("Existing tests that name a file or folder in your Scope, which must still pass: "
             "`tests/test_old_board.py`, `web/test_board.py`.") in brief
