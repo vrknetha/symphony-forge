@@ -32,7 +32,7 @@
       "gain": null,
       "harm": null,
       "line": 1028,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -45,7 +45,7 @@
       "gain": null,
       "harm": null,
       "line": 28,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -81,48 +81,23 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "cbf5e125aa4fd6fe740e1d671768fdf010be29e984da68d35648c7e8e6b84251",
-    "changed": "e413325677ff80ff9e6d811d15b765433bcac99abcd6a2ab941e6163101db6de",
-    "commit": "56bfca0963f4455fcdcd155dcea0c15e2ca1e889",
+    "branch_diff": "1392e142124beea031875135df5232f97747c0da55a32a2ec658530e98864e7f",
+    "changed": "3ffd435c67da1a58ac71c2ae6b413da378427a8656ba77ad937acc5a5caf9bbd",
+    "commit": "c41f51a436b2f1860ecd51cb742fa68cc70019d2",
     "dismissals": [],
     "findings": [
       {
-        "body": "An existing client\u2019s upgrade PR cannot pass its required review check. The new package is installed here, but `forge upgrade` refreshes the workflow only on the upgrade branch. The `pull_request_target` check runs the workflow from the default branch (`src/forge/prcheck.py:141\u2013174`), which, for a client synced by v1.2.48, still installs Forge from the disabled knacklabs repository. The check fails before it can approve the PR that would replace it. `tests/test_upgrade_check.py:21\u201328` models the old release with the current checkout\u2019s source, so it misses this transition.",
+        "body": "Gain 5, Work 2, Harm 3\nRaise: Functional\nCase: normal use - an existing client uses Forge's default branch protection.\nThe new refusal directs the owner to land an install-only workflow repair first, but that repair cannot pass the existing review check. Forge v1.2.48 requires `forge-pr-check` and enforces branch protection for administrators as well (`src/forge/init.py:373\u2013375`). A repair pull request still runs the old `pull_request_target` workflow, which fetches the disabled repository; a direct push is also blocked. The recovery test commits and pushes to an unprotected test remote (`tests/test_upgrade_command.py:128\u2013139`), so it does not exercise this bootstrap. Provide a recovery path that works with the default protection.",
         "file": "src/forge/upgrade.py",
-        "line": 246,
+        "gain": 5,
+        "harm": 3,
+        "line": 134,
         "priority": "P1",
-        "title": "Provide a bootstrap path for existing clients' upgrade checks"
-      },
-      {
-        "body": "The pinned runner now always requests the exact version from PyPI, but the [release history](https://pypi.org/project/symphony-forge/) currently contains only v1.2.44 through v1.2.48. A client pinned to an older supported release, such as the v1.2.2 client in `tests/fixtures/adopted-v1.2.2/client/forge.toml`, cannot resolve its pinned package on a fresh machine. Normal commands that `check_pin` dispatches therefore fail before the pinned Forge runs. Publish the needed historical releases or provide a working recovery path for those clients.",
-        "file": "src/forge/repo.py",
-        "line": 1028,
-        "priority": "P1",
-        "title": "Make historical pinned releases available on PyPI"
-      },
-      {
-        "body": "The unversioned `forge upgrade` path still calls `gh release view` through `_newest` at line 412, but the new repository has no GitHub release even though PyPI has published versions. Consequently, `forge upgrade` without a version refuses instead of selecting the newest package, and the same lookup prevents `forge next` from announcing it. The explicit-version path does not repair either default behavior.",
-        "file": "src/forge/upgrade.py",
-        "line": 28,
-        "priority": "P1",
-        "title": "Find the newest release from a source that publishes releases"
-      },
-      {
-        "body": "For the usual user-scoped installation, removing the old marketplace also uninstalls its plugins and deletes their saved options, according to [Claude Code\u2019s marketplace documentation](https://code.claude.com/docs/en/plugins/cli-reference#plugin-marketplace-remove). Forge\u2019s plugin has a saved `pane` option (`src/forge/mod/.claude-plugin/plugin.json:8\u201317`), so a user who selected `always` loses that choice and the reinstalled plugin returns to the `typed` default. If adding the replacement fails, the cached plugin is also gone until a retry succeeds. Preserve the existing state across the move.",
-        "file": "src/forge/sync.py",
-        "line": 793,
-        "priority": "P2",
-        "title": "Preserve the user's plugin settings when moving the marketplace"
-      },
-      {
-        "body": "Publishing this README as the package description also publishes its relative links, including `docs/start-a-prototype.md`, `docs/guide.md`, and the specs links in `README.md:39, 181, 301\u2013309`. On PyPI those URLs resolve relative to the PyPI project page and lead to missing pages rather than the repository documentation. Use links that resolve from the published description.",
-        "file": "pyproject.toml",
-        "line": 9,
-        "priority": "P2",
-        "title": "Make README documentation links work on the PyPI page"
+        "title": "Provide a bootstrap path for existing clients' upgrade checks",
+        "work": 2
       }
     ],
-    "id": "cefaff28-5a20-46d2-8c0a-8450e82017ab",
+    "id": "d45cab36-403d-411a-a74e-3b0ae5d123b9",
     "status": "blocked"
   },
   "round": 3,
@@ -150,6 +125,10 @@
       "at": "2026-11-25T15:37:04.916894+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T15:50:57.385318+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
