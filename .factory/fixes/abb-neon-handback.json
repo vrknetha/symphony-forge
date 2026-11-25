@@ -11,7 +11,7 @@
       "gain": 5,
       "harm": 4,
       "line": 260,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -24,7 +24,7 @@
       "gain": 3,
       "harm": 3,
       "line": 258,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -37,7 +37,7 @@
       "gain": 4,
       "harm": 3,
       "line": 262,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -50,7 +50,7 @@
       "gain": 3,
       "harm": 3,
       "line": 32,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -60,58 +60,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "794416ec856257eb7e622540aa0effa8a79630726ce524416cf7ffd5f3374634",
-    "changed": "1603441eb3fa3cd5066e46194f325f90e92f0febdff2e89c6d67bc71500f3eca",
-    "commit": "55e389ce1283aade7d1ea70d3609d2fe8c76f9dc",
+    "branch_diff": "54e87f5d34c4ff100fa4052d66670d75936fceaaee132806aebb920e5acc4abd",
+    "changed": "11ca5abb7880146386c0a60a32f2a46a5dacd3147cc0af562a021bef77a5c858",
+    "commit": "53efb27267c5288f2030ac66fb435554f095537e",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 5, Work 1, Harm 4\nRaise: Data loss - The suggested command copies the subagent ID from the rejected handback and asks for its last message, even when that subagent belonged to the stopped round.\nCase: normal use - A reader is stopped, the plan is amended, a replacement read starts, and the old reader's result arrives afterward.\nFollowing the suggested retry submits the old result under the replacement round. A stale `No findings.` can then pass the amended plan: `src/forge/story.py:398` accepts it as the replacement read, and `src/forge/native.py:291` clears the replacement's pending round. The real replacement result can no longer be handed back to that round. The guidance must distinguish the open round's result from the rejected stale result.",
-        "file": "src/forge/native.py",
-        "gain": 5,
-        "harm": 4,
-        "line": 260,
-        "priority": "P1",
-        "title": "Do not submit a stopped reader's result as the replacement round",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Not done - The promised item is: \"A handback whose round number is not the open round names the open round and prints the exact handback command; with no open round it prints the next step.\"\nCase: normal use - A coordinator session ends while a read is pending, and a later session attempts handback with the wrong round.\nThe pending record can remain after its owner exits. `src/forge/nextstep.py:1036` checks for a live lane before treating that record as an open round, but this branch treats any pending record as open. It suggests a handback to the dead round, which then fails the ownership check at `src/forge/native.py:267`, instead of giving the no-open-round next step. A live round owned by another session likewise gets a command that the current session cannot execute.",
-        "file": "src/forge/native.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 258,
-        "priority": "P1",
-        "required_done_when": true,
-        "title": "Not done: Handback must distinguish a live round from an abandoned one",
-        "work": 1
-      },
-      {
-        "body": "Gain 4, Work 1, Harm 3\nRaise: Gate - The full test suite still requires the message removed by this change.\nCase: normal use - Running the repository's full test suite.\n`tests/test_tools_session_hold.py:265` starts a replacement read and hands back the stopped round. Its assertion at line 270 requires `That round was stopped or replaced, so Forge recorded nothing.`, but the new pending-round branch emits a different message. All three configurations of that test will fail when run. Update the assertion while retaining its check that the replacement round stays open.",
-        "file": "src/forge/native.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 262,
-        "priority": "P1",
-        "title": "Gate: Update the existing session-hold test for the new refusal",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test - The named proof does not catch the current failures of the promised handback guidance.\nCase: normal use - A stopped reader returns after a replacement starts, or its coordinator session ends before handback.\nThe test supplies a fabricated future round to a live intake and checks the printed command as text, then explicitly stops the intake before checking the no-open case. It still passes when the command uses a stopped subagent's ID for a replacement round or when an abandoned pending record is reported as open. Exercise those recovery outcomes through `forge handback`.",
-        "file": "tests/test_handback_wrong_round.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 32,
-        "priority": "P1",
-        "title": "Test: Prove recovery for replaced and abandoned handback rounds",
-        "work": 1
-      }
-    ],
-    "id": "b19a1bc5-9d03-4843-bf0d-214601465807",
-    "status": "blocked"
+    "findings": [],
+    "id": "b7500c52-7fc8-4908-9b6e-eee865c503f3",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T08:40:37.770287+00:00",
@@ -130,6 +88,10 @@
       "at": "2026-11-25T08:55:43.443140+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T09:06:30.291704+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
