@@ -4,12 +4,25 @@
   "done_when": "forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
   "fix_kind": "backend",
   "kind": "fix",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T16:08:04.571939+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T16:09:33.701772+00:00",
+      "round": 1,
+      "step": "resume"
     }
   ],
-  "why": "Two or more coordinator chats on the same repo each reread their own long conversation and act on the same items, which multiplied a client's token use."
+  "stuck": {
+    "close": null,
+    "head": "9f7573081ccdfa3c59126f5b05ef95a13fb4e776",
+    "keys": {},
+    "round": null
+  },
+  "why": "Two or more coordinator chats on the same repo each reread their own long conversation and act on the same items, which multiplied a client's token use.",
+  "worker": "codex"
 }
