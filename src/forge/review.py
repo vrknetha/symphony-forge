@@ -989,6 +989,7 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                 argv += [f"--{engine}-bin", str(launcher)]
         argv[1:1] = [str(Path(__file__).with_name("review_process.py")),
                      str(tree),
+                     str(top),
                      str(launcher) if os.name == "nt" and launcher else "",
                      "parallel" if signoff_prompt else "serial"]
         with machine.agent_slot(top, "review", item):

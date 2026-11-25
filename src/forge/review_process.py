@@ -77,8 +77,8 @@ def main() -> None:
     print(os.getpid(), flush=True)
     if sys.stdin.buffer.read(1) != b"1":
         return
-    tree, launcher, mode, helper, *args = sys.argv[1:]
-    roots = [Path(tree), Path(tree).resolve()]
+    tree, top, launcher, mode, helper, *args = sys.argv[1:]
+    roots = [root for path in (Path(tree), Path(top)) for root in (path, path.resolve())]
     class EngineProcess(subprocess.Popen):
         def __init__(self, command, *positional, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] == launcher:
@@ -107,7 +107,7 @@ def main() -> None:
         implementation["terminate_process_group"] = terminate_engine
 
     def validate_paths(report: Any, repo: Path, *args: Any) -> None:
-        # Translate our disposable checkout paths before the helper rejects absolute paths.
+        # The model can cite the source checkout or the review copy.
         if isinstance(report, dict) and isinstance(report.get("findings"), list):
             for finding in report["findings"]:
                 location = finding.get("code_location") if isinstance(finding, dict) else None
