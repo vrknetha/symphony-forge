@@ -220,8 +220,7 @@ def check(top: Path, item: str, base: str, results: str, *, ran: bool = True,
         if missing:
             wanted = "Done when" if missing == ["Done when"] else ", ".join(missing)
             messages.append(f'Done-when proof: Add a line "- {wanted}: `<test>`" to the Proof list '
-                            'in a commit message. Put each test name in backticks. '
-                            'Forge skips Proof lists on merge commits.')
+                            'in a commit message.')
     if ran:
         files = _tree(top, head)
         outcomes = _results(results)
@@ -234,6 +233,9 @@ def check(top: Path, item: str, base: str, results: str, *, ran: bool = True,
                 messages.append(f"Done-when proof: {name} was skipped in this test run. Name the case that proves the line.")
             elif not matches and int(os.environ.get("FORGE_GROUPS", "1")) == 1:
                 messages.append(f"Done-when proof: {name} did not run in this test run.")
+    if messages:
+        messages.append("Done-when proof: Put each test name in backticks. "
+                        "Forge skips Proof lists on merge commits.")
     return not messages, messages
 
 
