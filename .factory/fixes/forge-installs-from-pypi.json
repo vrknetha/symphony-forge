@@ -12,8 +12,121 @@
   "done_when": "Every install, upgrade, hook fallback and pinned-release command Forge prints or generates uses symphony-forge==<version> from PyPI and no command names the knacklabs GitHub repo, the plugin marketplace points at vrknetha/symphony-forge, and the package metadata carries the README and the project links so the PyPI page shows them.",
   "fix_kind": "backend",
   "kind": "fix",
+  "known": [
+    {
+      "area": "upgrade() in src/forge/upgrade.py",
+      "file": "src/forge/upgrade.py",
+      "gain": null,
+      "harm": null,
+      "line": 246,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Provide a bootstrap path for existing clients' upgrade checks",
+      "work": null
+    },
+    {
+      "area": "run_release() in src/forge/repo.py",
+      "file": "src/forge/repo.py",
+      "gain": null,
+      "harm": null,
+      "line": 1028,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Make historical pinned releases available on PyPI",
+      "work": null
+    },
+    {
+      "area": "src/forge/upgrade.py",
+      "file": "src/forge/upgrade.py",
+      "gain": null,
+      "harm": null,
+      "line": 28,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Find the newest release from a source that publishes releases",
+      "work": null
+    },
+    {
+      "area": "install_mod() in src/forge/sync.py",
+      "file": "src/forge/sync.py",
+      "gain": null,
+      "harm": null,
+      "line": 793,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Preserve the user's plugin settings when moving the marketplace",
+      "work": null
+    },
+    {
+      "area": "pyproject.toml",
+      "file": "pyproject.toml",
+      "gain": null,
+      "harm": null,
+      "line": 9,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Make README documentation links work on the PyPI page",
+      "work": null
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "cbf5e125aa4fd6fe740e1d671768fdf010be29e984da68d35648c7e8e6b84251",
+    "changed": "e413325677ff80ff9e6d811d15b765433bcac99abcd6a2ab941e6163101db6de",
+    "commit": "56bfca0963f4455fcdcd155dcea0c15e2ca1e889",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "An existing client\u2019s upgrade PR cannot pass its required review check. The new package is installed here, but `forge upgrade` refreshes the workflow only on the upgrade branch. The `pull_request_target` check runs the workflow from the default branch (`src/forge/prcheck.py:141\u2013174`), which, for a client synced by v1.2.48, still installs Forge from the disabled knacklabs repository. The check fails before it can approve the PR that would replace it. `tests/test_upgrade_check.py:21\u201328` models the old release with the current checkout\u2019s source, so it misses this transition.",
+        "file": "src/forge/upgrade.py",
+        "line": 246,
+        "priority": "P1",
+        "title": "Provide a bootstrap path for existing clients' upgrade checks"
+      },
+      {
+        "body": "The pinned runner now always requests the exact version from PyPI, but the [release history](https://pypi.org/project/symphony-forge/) currently contains only v1.2.44 through v1.2.48. A client pinned to an older supported release, such as the v1.2.2 client in `tests/fixtures/adopted-v1.2.2/client/forge.toml`, cannot resolve its pinned package on a fresh machine. Normal commands that `check_pin` dispatches therefore fail before the pinned Forge runs. Publish the needed historical releases or provide a working recovery path for those clients.",
+        "file": "src/forge/repo.py",
+        "line": 1028,
+        "priority": "P1",
+        "title": "Make historical pinned releases available on PyPI"
+      },
+      {
+        "body": "The unversioned `forge upgrade` path still calls `gh release view` through `_newest` at line 412, but the new repository has no GitHub release even though PyPI has published versions. Consequently, `forge upgrade` without a version refuses instead of selecting the newest package, and the same lookup prevents `forge next` from announcing it. The explicit-version path does not repair either default behavior.",
+        "file": "src/forge/upgrade.py",
+        "line": 28,
+        "priority": "P1",
+        "title": "Find the newest release from a source that publishes releases"
+      },
+      {
+        "body": "For the usual user-scoped installation, removing the old marketplace also uninstalls its plugins and deletes their saved options, according to [Claude Code\u2019s marketplace documentation](https://code.claude.com/docs/en/plugins/cli-reference#plugin-marketplace-remove). Forge\u2019s plugin has a saved `pane` option (`src/forge/mod/.claude-plugin/plugin.json:8\u201317`), so a user who selected `always` loses that choice and the reinstalled plugin returns to the `typed` default. If adding the replacement fails, the cached plugin is also gone until a retry succeeds. Preserve the existing state across the move.",
+        "file": "src/forge/sync.py",
+        "line": 793,
+        "priority": "P2",
+        "title": "Preserve the user's plugin settings when moving the marketplace"
+      },
+      {
+        "body": "Publishing this README as the package description also publishes its relative links, including `docs/start-a-prototype.md`, `docs/guide.md`, and the specs links in `README.md:39, 181, 301\u2013309`. On PyPI those URLs resolve relative to the PyPI project page and lead to missing pages rather than the repository documentation. Use links that resolve from the published description.",
+        "file": "pyproject.toml",
+        "line": 9,
+        "priority": "P2",
+        "title": "Make README documentation links work on the PyPI page"
+      }
+    ],
+    "id": "cefaff28-5a20-46d2-8c0a-8450e82017ab",
+    "status": "blocked"
+  },
   "round": 2,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T15:18:45.279830+00:00",
@@ -28,6 +141,10 @@
       "at": "2026-11-25T15:20:24.501714+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T15:36:43.559547+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
