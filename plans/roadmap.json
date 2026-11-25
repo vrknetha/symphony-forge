@@ -708,6 +708,12 @@
       "title": "Make agent-written tests prove real behaviour",
       "status": "pending",
       "order": 128
+    },
+    {
+      "key": "FORGE-READCHURN-1",
+      "title": "Cold reads stop churning after round one",
+      "status": "pending",
+      "order": 129
     }
   ],
   "epics": [

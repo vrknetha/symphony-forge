@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-READCHURN-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-25T06:12:50.595629+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Cold reads stop churning after round one",
+  "touches": 0
+}
