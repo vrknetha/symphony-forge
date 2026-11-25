@@ -1,12 +1,33 @@
 {
+  "approval": {
+    "at": "2026-11-25T06:15:21.767159+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_016ipktpzWgi1MwQKkKWcTb1",
+    "hash": "251f75941bcebf9bb839f0eb0f3bcf71164ad646d5fda5e917da44446f770d00",
+    "round": 2,
+    "runtime": "claude",
+    "session": "d657efa8-39f4-4695-91d7-c193e1a5ba69"
+  },
   "doc": "plans/FORGE-LANDDEFAULT-1.md",
-  "status": "planning",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-25T05:32:55.171307+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T05:43:55.117843+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T05:49:43.359937+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T06:15:21.767367+00:00",
+      "step": "approved"
     }
   ],
   "title": "Land is the default way to run each change",
-  "touches": 0
+  "touches": 1
 }
