@@ -1,6 +1,13 @@
 {
   "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
   "branch": "fix/abb-sol-handback",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a211e0-282b-7941-8fe7-87333b7ea2d9",
+    "head": null,
+    "start": "64db7e355cf0c1810763a3cbdfaf6104e1c9a9f1"
+  },
   "done_when": "A handback whose round number is not the open round names the open round and prints the exact handback command; with no open round it prints the next step.",
   "fix_kind": "backend",
   "kind": "fix",
