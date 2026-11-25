@@ -4,8 +4,68 @@
   "done_when": "A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
   "fix_kind": "backend",
   "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/prcheck.py",
+      "file": "src/forge/prcheck.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 35,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
+      "work": 1
+    },
+    {
+      "area": "test_1_failed_pr_check_prints_refusal_and_next_step_in_job_log() in tests/test_pr_check_refusal_log.py",
+      "file": "tests/test_pr_check_refusal_log.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 58,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "09047a823ba604c52c4391ff0c3ac00ca55ffbafd34ccc2c59b98a2249960539",
+    "changed": "7f94898b5e7866055424471d618df1cc4d3768f50797aa0230d37d584f5810b4",
+    "commit": "5b698332db4a7d7628c273ed0bd2d845eb77547f",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Not done\nCase: normal use - A proof list names a test that is not on the branch. The log reports the missing test but tells the user to run `forge close` without first correcting the proof or adding the test. Closing does not repair the proof; when it reaches the failed check, it instead directs the user to `forge work` (`src/forge/close.py:477`, `src/forge/checks.py:27`). The advertised next step therefore cannot clear this refusal and leads through another close round.",
+        "file": "src/forge/prcheck.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 35,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
+        "work": 1
+      },
+      {
+        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - A proof list contains more than one missing test, or has no test mapping and produces both a refusal and its repair instruction. The named test creates and checks only one reason, and it asserts the ineffective `forge close` next step. `proof.check` can return multiple messages (`src/forge/proof.py:203` and `src/forge/proof.py:218`), so an implementation that logs only the first reason would still pass this test. The test should check all reasons and an actionable next step for a failed check.",
+        "file": "tests/test_pr_check_refusal_log.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 58,
+        "priority": "P1",
+        "title": "Test: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
+        "work": 1
+      }
+    ],
+    "id": "6103067d-ebc4-4f47-b9b1-a83d5315ed14",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T08:40:44.005460+00:00",
@@ -15,6 +75,10 @@
       "at": "2026-11-25T08:46:46.219741+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T08:59:18.099857+00:00",
+      "step": "review"
     }
   ],
   "stuck": {

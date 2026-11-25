@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/prcheck.py\tNot done: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.\tabb-neon-prcheck",
+      "kind": "bug",
+      "path": "src/forge/prcheck.py",
+      "line": 35,
+      "text": "Not done: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
+      "from": "blocking",
+      "item": "abb-neon-prcheck",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_pr_check_refusal_log.py\tTest: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.\tabb-neon-prcheck",
+      "kind": "bug",
+      "path": "tests/test_pr_check_refusal_log.py",
+      "line": 58,
+      "text": "Test: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
+      "from": "blocking",
+      "item": "abb-neon-prcheck",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
