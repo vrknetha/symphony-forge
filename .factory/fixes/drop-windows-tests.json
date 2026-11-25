@@ -29,8 +29,8 @@
     "id": "9e9df3b3-e847-4e3e-bc7d-394f4e538456",
     "status": "clean"
   },
-  "round": 1,
-  "status": "waiting for checks",
+  "round": 2,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T16:52:01.246727+00:00",
@@ -44,13 +44,18 @@
     {
       "at": "2026-11-25T17:02:59.358349+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T17:47:28.838960+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "74df95ba40a2e7c364773692e4ebadc5ac5c3491",
+    "close": "a3d789f8-4833-45f1-8b5b-c88dc69d00f0",
+    "head": "11e9871d2fa56e66162d7adb87450886dfb6a39f",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "Windows test jobs caused 48 of about 1,000 Forge fixes since 1 Oct (14 in November, about half only test-harness problems), and the Windows release check delayed four releases in a row; the owner chose on 25 Nov 2026 to stop testing Forge on Windows.",
   "worker": "codex"
