@@ -128,6 +128,33 @@ def _coordinator_repo(top: Path) -> str:
     return f"{host}:{port or ''}/{path.lower() if host == 'github.com' else path}"
 
 
+def _saved_codex_coordinator(chat: str) -> bool:
+    """Recognize an open Codex chat whose start hook ran before this Forge release."""
+    try:
+        thread = uuid.UUID(chat)
+    except ValueError:
+        return False
+    home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+    # shortcut: read Codex's local metadata header until the host exposes the thread role to tools.
+    for path in (home / "sessions").glob(f"*/*/*/rollout-*-{thread}*.jsonl"):
+        try:
+            with path.open(encoding="utf-8") as transcript:
+                record = json.loads(transcript.readline())
+        except (OSError, ValueError):
+            continue
+        if not isinstance(record, dict) or record.get("type") != "session_meta":
+            continue
+        meta = record.get("payload")
+        if not isinstance(meta, dict) or meta.get("id") != chat:
+            continue
+        if meta.get("parent_thread_id") or meta.get("session_id", chat) != chat:
+            continue
+        source = meta.get("source")
+        if source in ("cli", "vscode") or (isinstance(source, dict) and isinstance(source.get("custom"), str)):
+            return True
+    return False
+
+
 def coordinator_warnings(top: Path) -> list[str]:
     """Name other local chats that ran next for this repository and are still live."""
     tool = repo.coordinator()
@@ -137,10 +164,12 @@ def coordinator_warnings(top: Path) -> list[str]:
     if not chat:
         return []
     directory = _coordinator_directory(chat)
-    # Codex sends SessionStart to main chats and SubagentStart to their workers.
-    if tool == "codex" and not (directory / "started").is_file():
-        return []
+    started = directory / "started"
+    # When the start hook predates this feature, check the saved role before enrolling a chat.
+    recover_start = tool == "codex" and not started.is_file()
     try:
+        if recover_start and not _saved_codex_coordinator(chat):
+            return []
         owner = session()["process"]
         key = hashlib.sha256(_coordinator_repo(top).encode()).hexdigest() + ".json"
     except (repo.Refused, OSError, ValueError, subprocess.CalledProcessError):
@@ -151,8 +180,10 @@ def coordinator_warnings(top: Path) -> list[str]:
     current = directory / key
     warnings = []
     try:
-        if tool == "claude":
+        if tool == "claude" or recover_start:
             directory.mkdir(parents=True, exist_ok=True)
+        if recover_start:
+            started.touch()
         pending = tempfile.NamedTemporaryFile(dir=directory, delete=False)
         path = Path(pending.name)
         try:
