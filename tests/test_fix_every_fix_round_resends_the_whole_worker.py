@@ -49,7 +49,9 @@ def test_1_continued_fix_round_is_short_and_fresh_conversation_has_full_brief(
     assert "earlier brief" in prompt
     assert "## The fix" not in prompt and "## Tests first" not in prompt
     assert "Build the page" not in prompt and "+BUILT = True" not in prompt
-    assert "+Coordinator change" in prompt
+    assert "Coordinator change" in prompt  # commit subject
+    assert "A\tcoordinator.txt" in prompt.splitlines()
+    assert "+Coordinator change" not in prompt
     assert _sent(calls, "thread/resume")
 
     def new_finding(title):  # a new finding each round, so no round is stuck on the same one
