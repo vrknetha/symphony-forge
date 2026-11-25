@@ -172,7 +172,7 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
-        run: forge hook pr-check --base "$BASE_SHA" --head "$HEAD_SHA" --branch "$HEAD_REF" 2> "$RUNNER_TEMP/forge-pr-check.log"
+        run: forge hook pr-check --base "$BASE_SHA" --head "$HEAD_SHA" --branch "$HEAD_REF" > "$RUNNER_TEMP/forge-pr-check.log" 2>&1
       - name: Report review status
         if: always()
         env:
