@@ -282,8 +282,8 @@ def stop_question(top: Path, item: str, state: dict[str, Any], *, accept: str = 
 def instructions(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                  base: str, previous: dict[str, Any], tested: str, prototype: bool = False) -> str:
     """The plain review instructions for this task or fix, from templates/review.md."""
-    from forge import story, worker  # story imports review indirectly
-    design_text = ""
+    from forge import antigravity, story, worker  # story imports review indirectly
+    doc_text = ""
     user_facing = state.get("fix_kind") == "ui"
     text = (Path(__file__).parent / "templates" / "review.md").read_text(encoding="utf-8")
     parts = re.split(r"^<!-- ([a-z-]+) -->\r?\n", text, flags=re.M)
@@ -317,7 +317,6 @@ def instructions(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any
                   "named test ran and passed.")}
     if "/" in item:
         doc_text, doc, row = task(top, item)
-        design_text = doc_text
         user_facing = row.get("user-facing", "").lower() in ("yes", "true")
         parsed = story.parse(doc_text)
         covers = {int(n) for n in re.findall(r"\d+", row.get("covers", ""))}
@@ -343,10 +342,10 @@ def instructions(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any
         if not cfg["interfaces"] and not state.get("allow_large"):
             chosen.insert(1, "promote")
     has_web = any((top / path / "package.json").is_file() for path in ("apps/web", "web", "frontend"))
-    chosen += (["screens"] if cfg["repo"] == "client" and has_web else []) + ["app-rules"]
-    values["design_context"], owned_design = worker.design_context(top, design_text, user_facing,
-                                                                 review_base=previous.get("commit") or base)
-    chosen.append("design-context")
+    chosen += (["screens"] if cfg["repo"] == "client" and has_web else []) + ["app-rules", "design-context"]
+    values["design_context"], owned_design = (antigravity.review_design_context(
+        top, cfg, values.get("changes", ""), user_facing) if cfg.get("reviews") == "antigravity"
+        else worker.design_context(top, doc_text, user_facing, review_base=previous.get("commit") or base))
     if owned_design:
         values["design_folder"] = owned_design
         chosen.append("design-screens")
@@ -848,7 +847,7 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
         signoff_prompt: str = "", light: bool = False, tested: str = "",
         images: set[str] | None = None, only: set[str] | None = None) -> dict[str, Any]:
     """Review the branch head once, retrying once when a run doesn't finish. Returns the result."""
-    selected_engine = require_engine(
+    engine = require_engine(
         {**cfg, "reviews": ""} if signoff_prompt and cfg.get("reviews") == "antigravity" else cfg, state, item)
     from forge import antigravity, design, records, story  # story imports review indirectly
     prototype = (light and not signoff_prompt and state.get("kind") == "fix"
@@ -871,7 +870,7 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                         or name in images)]
     _sweep()
     with (tempfile.TemporaryDirectory(prefix="forge-review-", ignore_cleanup_errors=True) as folder,
-          antigravity.clean_git(Path(folder)) if selected_engine == "antigravity" else contextlib.nullcontext() as hooks):
+          antigravity.clean_git(Path(folder)) if engine == "antigravity" else contextlib.nullcontext() as hooks):
         tmp = Path(folder)
         tree, out = tmp / "tree", tmp / "review.json"
         saved = repo.forge_dir(top) / f"review-{item.replace('/', '-')}.json"
@@ -963,23 +962,31 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                        prompt + "\n\n" + string.Template(rules).substitute(
                            standards=(Path(__file__).parent / "standards.md").read_text(
                                encoding="utf-8").strip()))
-        engine = selected_engine
         argv = [sys.executable, str(helper()), "--mode", "branch", "--base", review_base,
-                "--engine", engine,
+                "--engine", "claude" if engine == "antigravity" else engine,
                 "--max-priority", "P3",  # the P0-only level applies after scoring
                 "--prompt-file", STANDARDS,
                 "--json-output", str(out)]
-        model = repo.models(cfg, "review", engine)
-        if prototype:
+        model = repo.models(cfg, "light_review" if light and engine == "antigravity" else "review", engine)
+        if prototype and engine != "antigravity":
             chosen = repo.models(cfg, "light_review", engine)
             model = {**model, **chosen, "effort": chosen.get("effort") or "medium"}
-        if model.get("model"):
-            argv += ["--model", f"{engine}={model['model']}"]
-        if effort := model.get("effort"):
-            argv += ["--thinking", f"{engine}={effort}"]
-        launcher = _launcher(tmp / "bin", tree, engine)
-        if launcher:
-            argv += [f"--{engine}-bin", str(launcher)]
+        env = launcher = None
+        if engine == "antigravity":
+            argv += ["--claude-bin", sys.executable]
+            env = {**os.environ, "FORGE_REVIEW_ENGINE": engine,
+                   "FORGE_REVIEW_CONTEXT": json.dumps({
+                       "top": str(top), "item": item, "spent": str(tmp / SPENT),
+                       "model": model.get("model") or "default", "effort": model.get("effort") or "",
+                   })}
+        else:
+            if model.get("model"):
+                argv += ["--model", f"{engine}={model['model']}"]
+            if effort := model.get("effort"):
+                argv += ["--thinking", f"{engine}={effort}"]
+            launcher = _launcher(tmp / "bin", tree, engine)
+            if launcher:
+                argv += [f"--{engine}-bin", str(launcher)]
         argv[1:1] = [str(Path(__file__).with_name("review_process.py")),
                      str(tree),
                      str(launcher) if os.name == "nt" and launcher else "",
@@ -989,7 +996,7 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
             while attempt <= (1 if signoff_prompt else 2):
                 with repo.record_run(top, item, "review", family=engine) as ran:
                     findings, reason = autoreview.attempt(argv, tree, out, selected, top, item, ran["run_id"],
-                                                         strict=bool(signoff_prompt))
+                                                         strict=bool(signoff_prompt), env=env)
                     if out.is_file():
                         shutil.copyfile(out, saved)
                     ran["outcome"] = "failed" if reason else "completed"

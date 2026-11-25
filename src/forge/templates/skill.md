@@ -2141,6 +2141,10 @@ from the other tool is omitted so the Codex role uses the session's model. Claud
 roles use their implementation entry or Sonnet low; Claude planning uses grill or Opus high,
 and Claude diagnosing always uses Opus high.
 
+Set a model explicitly on every ad-hoc subagent you start outside Forge's roles,
+including the built-in general-purpose agent. In Claude Code, use Sonnet for analysis and
+research, and Haiku for sorting and search.
+
 The explorer role uses the read-only `explore` kind; `lite` keeps a fix's first
 build round. New repos get `[models.explore.claude]` with `claude-haiku-5-5` at high effort and
 `[models.explore.codex]` with `gpt-6.2-sol` at medium effort. Existing repos
@@ -2158,6 +2162,11 @@ repo's tracked attributes only name the roadmap, without enabling excluded git h
 
 Read [standards.md](standards.md) beside this skill for Forge's principles, the client's app
 rules and the build-simple ladder. Apply its rules in every phase.
+
+The first worker brief points to the standards and release notes. It includes the product and
+design notes for screen work and for a fix started without a kind. For work marked as non-screen,
+it points to the design files. New and existing repos get this brief when they run the release
+that includes it.
 
 **Finding forms.** `Simpler: <cut> → <replacement>` is P2, or P1 when a new moving part isn't
 named in the story. Untraced work: `Cut or defer: <item>`. An unmet Done-when item:
