@@ -1,0 +1,10 @@
+{
+  "branch": "task/FORGE-SLOWTEST-1-NIGHTLY",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T17:54:12.442869+00:00",
+      "step": "start"
+    }
+  ]
+}
