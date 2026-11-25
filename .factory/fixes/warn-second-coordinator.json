@@ -1,0 +1,15 @@
+{
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/warn-second-coordinator",
+  "done_when": "forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T16:08:04.571939+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Two or more coordinator chats on the same repo each reread their own long conversation and act on the same items, which multiplied a client's token use."
+}
