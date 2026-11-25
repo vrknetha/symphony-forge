@@ -1,6 +1,13 @@
 {
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/warn-second-coordinator",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21378-3acd-7e51-b1ce-7e7fece49baa",
+    "head": null,
+    "start": "5504e0de57c98c9d1f3834b2f5aef8b232052737"
+  },
   "done_when": "forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
   "fix_kind": "backend",
   "kind": "fix",
