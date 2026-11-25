@@ -49,8 +49,8 @@
     "id": "7d65025b-f7e2-4263-b1b1-4b5a74439704",
     "status": "clean"
   },
-  "round": 2,
-  "status": "waiting for checks",
+  "round": 3,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T08:40:59.289871+00:00",
@@ -73,13 +73,18 @@
     {
       "at": "2026-11-25T08:59:44.510386+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T09:25:40.498984+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": "6c11d86e-8492-45ca-8c2a-a9643d0792b3",
-    "head": "9589b151ea7212903a0b8c6ab67d25c053abe099",
+    "close": "1c5c2ea8-abff-4334-b254-bdee4e41f172",
+    "head": "0f923c83aeb14bd56be9621364df0ce4fd17ed72",
     "keys": {},
-    "round": 1
+    "round": 2
   },
   "why": "When forge-pr-check fails on GitHub, the job log printed by the Report review status step is empty, so the real reason is hidden and close suggests a new build round (issue #1803).",
   "worker": "codex"
