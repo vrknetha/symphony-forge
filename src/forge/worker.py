@@ -36,8 +36,7 @@ REVIEW_LOOP = (
     "forge read <target> --resolve <accept|more|split> --reason \"<human's choice>\".")
 LIVE_RUN = ("Before review round two, run the real flow once (not tests or stubs). "
             "Add `Live run: <what you ran> - <what you saw>` to your `Functional check:` paragraph.")
-# The bytes of change a continued conversation is shown in full; a larger one is listed by file.
-LARGE = 200 * 1024
+RELATED_TEST_LIST_LIMIT = 2_000
 NUDGING = "The worker left changes uncommitted, so Forge asks it once to follow its test instructions and commit."
 SETTINGS = ("Workers never edit `forge.toml`. Never edit it even temporarily. It belongs to the "
             "coordinator, through a settings fix the owner asked for. Report a needed settings "
@@ -522,12 +521,12 @@ def _approval(key: str, item: str, top: Path) -> str:
 
 
 def _changes(top: Path, start: str) -> str:
-    """For a continued conversation: the commits since its last turn ended, and every change git
+    """For a continued conversation: the commits since its last turn ended, and every changed file git
     sees in the checkout since then, untracked files included through a temporary index, so git's
-    own index stays as it is. A very large change is listed by file."""
+    own index stays as it is."""
     if repo.run("git", "cat-file", "-e", f"{start}^{{commit}}", cwd=top).returncode:
         start = git("hash-object", "-w", "-t", "tree", "--stdin", cwd=top)
-        commits = "The previous commit is unavailable, so the full current checkout follows."
+        commits = "The previous commit is unavailable, so the list covers the entire checkout."
     else:
         commits = git("log", "--oneline", f"{start}..HEAD", cwd=top) or "None."
     with tempfile.TemporaryDirectory() as folder:
@@ -539,13 +538,10 @@ def _changes(top: Path, start: str) -> str:
             return subprocess.run(["git", *args], cwd=top, env=env, capture_output=True, text=True,
                                   encoding="utf-8", errors="replace", check=True).stdout
         cached("add", "-A")
-        diff = cached("diff", "--cached", start)
-        if len(diff.encode("utf-8")) > LARGE:
-            diff = ("The change is over 200 KB, so here are the files it touches:\n"
-                    + cached("diff", "--cached", "--name-status", start))
-    return (f"\n## Since your last turn\n\nThe new commits:\n\n{commits}\n\nEvery change in "
+        files = cached("diff", "--cached", "--name-status", start)
+    return (f"\n## Since your last turn\n\nThe new commits:\n\n{commits}\n\nChanged files in "
             "the checkout since your last turn ended, new files included:\n\n"
-            f"```diff\n{diff}```\n")
+            f"```text\n{files}```\n")
 
 
 def _fix_round(state: dict[str, Any]) -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
@@ -626,7 +622,8 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
             row="\n".join(f"| {' | '.join(cells)} |" for cells in (
                 list(row), ["---"] * len(row), list(row.values()))),
             covers=row.get("Covers", ""), scope=row.get("Scope", ""), tests=row.get("Tests", ""),
-            existing_tests=_existing_tests(top, task.cell_list(row.get("Scope", ""))))
+            existing_tests=_existing_tests(top, f"{match['key']}/{match['task']}",
+                                           task.cell_list(row.get("Scope", ""))))
     else:
         on.add("fix")
         fix_kind = state.get("fix_kind")
@@ -792,7 +789,7 @@ def design_context(top: Path, text: str, user_facing: bool, *, review_base: str 
     return "\n\n".join(parts), owned
 
 
-def _existing_tests(top: Path, scope: list[str]) -> str:
+def _existing_tests(top: Path, item: str, scope: list[str]) -> str:
     """The checkout's test files that name a Scope file or folder, listed for the brief."""
     # ponytail: a whole-word match on each entry's last plain name (`board` for `web/board.py`), so
     # a common name such as `index` lists more tests than it should; match imports if that's noisy.
@@ -801,7 +798,12 @@ def _existing_tests(top: Path, scope: list[str]) -> str:
     patterns = [arg for name in names for arg in ("-e", name)]
     found = repo.run("git", "grep", "-l", "-w", "-F", *patterns, "--", *TEST_PATHS,
                      cwd=top).stdout.splitlines() if names else []
-    return ", ".join(f"`{path}`" for path in found) or "none found"
+    listed = ", ".join(f"`{path}`" for path in found)
+    if len(listed) > RELATED_TEST_LIST_LIMIT:
+        path = codex._item_file(top, item, ".related-tests.txt", "Build")
+        path.write_text("\n".join(found) + "\n", encoding="utf-8")
+        return f"{len(found)} files listed in `{path.as_posix()}`"
+    return listed or "none found"
 
 
 def _agy_turn(item: str, top: Path, brief: str, chosen: dict[str, str],
