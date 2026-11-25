@@ -248,25 +248,30 @@ def handback(args: Any) -> int:
     with codex._one_at_a_time(lock):
         pending = codex._json(path).get("pending")
         held = codex._json(lock)
-        if not pending or args.round != pending["result"]["round"]:
+        number = pending["result"]["round"] if pending else None
+        if args.round != number:
             root = machine.main_checkout(top).as_posix()
             for entry in machine.entries():
                 if (entry.get("native") and entry.get("session") == owner["id"]
                         and entry.get("repo_root") == root and entry.get("item") == args.item
                         and entry.get("round") == args.round):
                     machine.leave(entry)
-            if pending:
-                number = pending["result"]["round"]
-                raise repo.Refused(
-                    f"Round {number} is open. Use the result of that round on stdin.",
-                    f"forge handback {repo.quote(args.item)} --round {number} "
-                    f"--subagent {repo.quote(args.subagent)}")
+        owns_round = pending and pending["session"] == owner["id"] and all(
+            held.get(key) == owner["process"][key] for key in ("pid", "started"))
+        if not pending or (not owns_round and lock_alive(lock) is False):
             raise repo.Refused("There is no open round for this target.", "forge next")
-        if pending["session"] != owner["id"] or any(
-                held.get(key) != owner["process"][key] for key in ("pid", "started")):
+        if not owns_round:
+            if args.round != number:
+                raise repo.Refused(f"Round {number} is open in another session. "
+                                   "Hand it back from that session.", "forge next")
             what, command = ("build round", "work") if "role" in pending else ("read", "read")
             raise repo.Refused(f"This session has no pending {what} for that target.",
                                f"forge {command} {args.item}")
+        if args.round != number:
+            raise repo.Refused(
+                f"Round {number} is open. Replace <id> with that round's subagent ID. "
+                "Give its last message on stdin.",
+                f'forge handback {repo.quote(args.item)} --round {number} --subagent "<id>"')
         if not args.subagent.strip():
             raise repo.Refused("Give the subagent's id with its result.", "")
         said = (args.text if args.text is not None else sys.stdin.read()).strip()
