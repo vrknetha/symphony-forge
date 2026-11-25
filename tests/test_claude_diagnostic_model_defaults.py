@@ -7,13 +7,19 @@ from test_claude_subagents import _new_claude_task
 from test_codex_worker import sdk_data  # noqa: F401
 from test_setup import _fresh_client
 from test_story import DOC, GRILL, new_story, setup
-from test_subagent_roles import _claude
 from test_worker import calls
 
 STORY = "FIX-NO-OPUS-OUTSIDE-COORDINATOR"
 
 DIAGNOSTICS = ("debugger", "security", "performance")
 SONNET = {"model": "claude-sonnet-5-5", "effort": "high"}
+
+
+def _role_budget(client, name):
+    text = (client / ".claude" / "agents" / f"{name}.md").read_text("utf-8")
+    front = text.split("---\n", 2)[1]
+    return {key: value.strip().strip("\"'")
+            for key, value in re.findall(r"(?m)^(model|effort):([^\n]+)", front)}
 
 
 def test_1_claude_diagnostics_and_grill_default_to_sonnet_high(repo, gh, tmp_path):
@@ -23,8 +29,7 @@ def test_1_claude_diagnostics_and_grill_default_to_sonnet_high(repo, gh, tmp_pat
     initial = settings.read_text("utf-8")
     assert tomllib.loads(initial)["models"]["grill"]["claude"] == SONNET
     for name in DIAGNOSTICS:
-        fields, _ = _claude(client, name)
-        assert (fields["model"], fields["effort"]) == (SONNET["model"], SONNET["effort"]), name
+        assert _role_budget(client, name) == SONNET, name
 
     repo.git("checkout", "-qb", "fix/model-defaults", cwd=client)
     without_grill = re.sub(r'(?ms)^\[models\.grill\.claude\]\n.*?(?=^\[|\Z)', "", initial)
@@ -35,8 +40,7 @@ def test_1_claude_diagnostics_and_grill_default_to_sonnet_high(repo, gh, tmp_pat
         settings.write_text(config, "utf-8")
         synced = repo.forge("sync", cwd=client)
         assert synced.returncode == 0, synced.stdout + synced.stderr
-        fields, _ = _claude(client, "reader")
-        assert (fields["model"], fields["effort"]) == (model or SONNET["model"], effort)
+        assert _role_budget(client, "reader") == {"model": model or SONNET["model"], "effort": effort}
         assert settings.read_text("utf-8") == config
 
 
