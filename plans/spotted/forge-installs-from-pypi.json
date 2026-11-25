@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "key": "bug\tdocs/guide.md\tPersist the recovery release before merging the upgrade\tforge-installs-from-pypi",
+      "kind": "bug",
+      "path": "docs/guide.md",
+      "line": 696,
+      "text": "Persist the recovery release before merging the upgrade",
+      "from": "blocking",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "bug\tsrc/forge/repo.py\tMake historical pinned releases available on PyPI\tforge-installs-from-pypi",
       "kind": "bug",
       "path": "src/forge/repo.py",
