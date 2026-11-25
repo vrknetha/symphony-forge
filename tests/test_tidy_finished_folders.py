@@ -71,25 +71,47 @@ def test_2_closed_folders_need_the_same_remote_head(repo, gh, tmp_path):
     assert _gone(repo, clean, "fix/on-remote")
 
 
-def test_3_cleanup_preserves_an_edit_during_the_sweep(repo, gh, tmp_path):
+@pytest.mark.parametrize("late_file, lock_change", [
+    ("notes.txt", False), ("notes.txt", True), (".env", False),
+], ids=["untracked", "after-lockfile", "ignored"])
+def test_3_cleanup_preserves_an_edit_during_the_sweep(repo, gh, tmp_path, late_file, lock_change):
     _client(repo)
+    repo.write(".gitignore", ".env\n")
+    repo.write("uv.lock", "version = 1\n")
+    repo.git("add", ".gitignore", "uv.lock")
+    repo.git("commit", "-qm", "Track the lockfile and ignore local settings")
     first, first_head = _work(repo, tmp_path, "fix/a-first")
     second, second_head = _work(repo, tmp_path, "fix/b-second")
+    if lock_change:
+        (first / "uv.lock").write_text("version = 2\n", encoding="utf-8")
     _prs(gh, ("fix/a-first", first_head, "MERGED"), ("fix/b-second", second_head, "MERGED"))
-    notes = first / "notes.txt"
-    # Run real Git. An editor writes just before Git tries the first removal.
+    target = tmp_path / "first-removal-path"
+    # Run real Git and write at the first opportunity after Forge's status check.
     _install(repo.bin, "git", f"""#!{sys.executable}
-import pathlib, subprocess, sys
-if "remove" in sys.argv[1:-1] and pathlib.Path(sys.argv[-1]).resolve() == pathlib.Path({first.as_posix()!r}).resolve():
-    pathlib.Path({notes.as_posix()!r}).write_text("New work", encoding="utf-8")
-sys.exit(subprocess.call([{shutil.which("git")!r}, *sys.argv[1:]]))
+from pathlib import Path
+import subprocess, sys
+args = sys.argv[1:]
+first = Path({first.as_posix()!r}).resolve()
+target = Path({target.as_posix()!r})
+late_file = {late_file!r}
+if args[:2] == ["worktree", "move"] and Path(args[-2]).resolve() == first:
+    target.write_text(Path(args[-1]).as_posix(), encoding="utf-8")
+    if late_file == ".env":
+        (first / late_file).write_text("New work", encoding="utf-8")
+if "remove" in args[:-1]:
+    checkout = Path(args[-1]).resolve()
+    moved = Path(target.read_text(encoding="utf-8")).resolve() if target.exists() else first
+    if checkout == moved and (not {lock_change!r} or "--force" in args
+                              or "version = 1" in (checkout / "uv.lock").read_text(encoding="utf-8")):
+        (checkout / late_file).write_text("New work", encoding="utf-8")
+sys.exit(subprocess.call([{shutil.which("git")!r}, *args]))
 """)
 
     done = repo.forge("next")
 
     assert _gone(repo, second, "fix/b-second"), done.stdout + done.stderr
     assert _kept(repo, first, "fix/a-first"), done.stdout + done.stderr
-    assert notes.read_text(encoding="utf-8") == "New work"
+    assert (first / late_file).read_text(encoding="utf-8") == "New work"
 
 
 def test_4_cleanup_keeps_a_legacy_worker_waiting_for_a_slot(repo, gh, tmp_path):

@@ -7,7 +7,9 @@ import os
 import re
 import shutil
 import subprocess
+import tempfile
 import tomllib
+from contextlib import suppress
 from datetime import datetime, timedelta
 from itertools import islice
 from pathlib import Path
@@ -151,6 +153,39 @@ def _removable(path: Path, ref: str, head: str) -> bool:
             and not task.worktree_files(path))
 
 
+def _remove_finished(main: Path, path: Path, ref: str, head: str, report) -> subprocess.CompletedProcess[str] | None:
+    from forge import githooks
+
+    # Git's removal check skips ignored files. Move away from the editor's path before checking them again.
+    scratch = Path(tempfile.mkdtemp(prefix=".forge-tidy-", dir=path.parent))
+    moved = scratch / "worktree"
+    try:
+        done = repo.run("git", "worktree", "move", str(path), str(moved), cwd=main)
+        if done.returncode: return done
+        if not _removable(moved, ref, head): return None
+
+        if repo.run("git", "diff", "--cached", "--quiet", "--", "uv.lock", cwd=moved).returncode:
+            return None  # Tests do not stage their lockfile changes.
+        if repo.run("git", "diff", "--quiet", "--", "uv.lock", cwd=moved).returncode == 1:
+            repo.git("checkout", "--", "uv.lock", cwd=moved)
+
+        untracked = {moved / name for name in repo.git(
+            "ls-files", "--others", "--exclude-standard", "-z", cwd=moved).split("\0")}
+        for shim, expected in githooks.shims(moved, repo.config(moved)).items():
+            if shim in untracked and not shim.is_symlink() and sync.read(shim) == expected:
+                shim.unlink()
+        if not _removable(moved, ref, head): return None
+        return repo.run("git", "-c", "status.showUntrackedFiles=all", "worktree", "remove", str(moved), cwd=main)
+    finally:
+        if moved.exists():
+            restored = repo.run("git", "worktree", "move", str(moved), str(path), cwd=main)
+            if restored.returncode and report is not None:
+                report(f"Forge kept the worktree at {moved}: {_last(restored)}",
+                       f"git worktree move {repo.quote(str(moved))} {repo.quote(str(path))}")
+        with suppress(OSError):
+            scratch.rmdir()  # Never delete files if Git could not move the worktree back.
+
+
 def tidy_finished(top: Path, *, inspect: bool = False, report=None) -> int:
     """Remove only worktrees whose exact local work is available on GitHub."""
     from forge import board
@@ -174,11 +209,8 @@ def tidy_finished(top: Path, *, inspect: bool = False, report=None) -> int:
             if inspect:
                 clean.append(str(path))
                 continue
-            removed = repo.run("git", "-c", "status.showUntrackedFiles=all", "worktree", "remove", str(path), cwd=main)
-            if removed.returncode:
-                # Git refuses lockfile changes and generated hooks. Recheck before allowing those exceptions.
-                if not _removable(path, ref, head): continue
-                removed = repo.run("git", "worktree", "remove", "--force", str(path), cwd=main)
+            removed = _remove_finished(main, path, ref, head, report)
+            if removed is None: continue
             if removed.returncode:
                 if report is not None:
                     report(f"Forge couldn't remove {path}: {_last(removed)}",
