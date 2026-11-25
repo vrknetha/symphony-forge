@@ -1,6 +1,13 @@
 {
   "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
   "branch": "fix/abb-sol-accept",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a211df-b250-77b1-ab35-591d7c99f690",
+    "head": null,
+    "start": "ea64f0d96372b1009b1777c97eed26e919e8d572"
+  },
   "done_when": "After forge close --resolve accept, close records the choice and goes on to the checks without asking the round-limit question again.",
   "fix_kind": "backend",
   "kind": "fix",
