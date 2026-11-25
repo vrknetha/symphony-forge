@@ -45,6 +45,11 @@ say = partial(print, flush=True)
 def land(args: argparse.Namespace) -> int:
     if bool(args.item) == bool(getattr(args, "all", False)):
         repo.refuse(REFUSALS["one_or_all"])
+    if os.environ.get(QUEUED) != "1":
+        from forge import doctor
+
+        if removed := doctor.tidy_finished(repo.root()):
+            say(f"Removed {removed} finished folders.")
     if len(args.item) != 1:  # --all, or several named items: the same queue, the named ones only
         if getattr(args, "note", None) is not None:
             repo.refuse(REFUSALS["note_all"])

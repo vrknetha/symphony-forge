@@ -69,22 +69,101 @@ def _files_fix_finished(top: Path, branch: str) -> bool:
 def _open_files_fix(top: Path) -> str: return next((branch for branch in repo.git("for-each-ref", "--format=%(refname:short)",
                  "refs/heads/fix/forge-files-*", cwd=top).splitlines() if not _files_fix_finished(top, branch)), "")
 def _finished(top: Path, main: Path) -> list[tuple[Path, str, str]]:
-    if not shutil.which("gh"): return []
-    open_fix = _open_files_fix(top)
+    gh = shutil.which("gh")
+    if not gh: return []
+    trees = {branch: path for branch, path in story.worktrees(top).items()
+             if branch.startswith(("story/", "task/", "fix/", "forge/"))
+             and path.resolve() not in (main, top.resolve()) and path.is_dir()
+             and not (path / ".gitmodules").exists()}
+    if not trees: return []
+
+    limit = 1000
+    while True:
+        # Cleanup needs a fresh answer and must not enter land's quota wait.
+        done = subprocess.run([gh, "pr", "list", "--state", "all", "--limit", str(limit),
+                               "--json", "headRefName,headRefOid,state"], cwd=top,
+                              stdin=subprocess.DEVNULL, capture_output=True, timeout=10)
+        prs = json.loads(done.stdout) if not done.returncode else None
+        if not isinstance(prs, list) or not all(
+                isinstance(pr, dict) and isinstance(pr.get("headRefName"), str)
+                and isinstance(pr.get("headRefOid"), str)
+                and pr.get("state") in ("OPEN", "MERGED", "CLOSED") for pr in prs):
+            return []
+        if len(prs) < limit: break
+        limit *= 2
+
+    open_branches = {pr["headRefName"] for pr in prs if pr["state"] == "OPEN"}
+    by_head = {(pr["headRefName"], pr["headRefOid"], pr["state"]) for pr in prs}
+    reported = {pr["headRefName"] for pr in prs}
+    live = {Path(run["checkout_root"]).resolve() for run in machine.entries() if run.get("checkout_root")}
+    closed = {}
     found = []
-    for branch, path in story.worktrees(top).items():
-        if (not branch.startswith(("story/", "task/", "fix/", "forge/")) or branch == open_fix or path.resolve() in (main, top.resolve())
-                or (path / ".gitmodules").exists()): continue
-        prs = _prs(top, branch, "--limit", "100", "--json", "headRefOid,state")
-        if not isinstance(prs, list) or len(prs) >= 100 or not all(isinstance(pr, dict) for pr in prs): continue
+    for branch, path in trees.items():
+        if branch not in reported or branch in open_branches or path.resolve() in live: continue
         head = repo.git("rev-parse", f"refs/heads/{branch}", cwd=top)
-        states = {pr.get("state") for pr in prs if pr.get("headRefOid") == head}
-        state = "merged" if "MERGED" in states else "closed" if "CLOSED" in states else ""
-        if not state or any(pr.get("state") == "OPEN" for pr in prs): continue
-        try: kept = task.worktree_files(path)
-        except subprocess.CalledProcessError: continue
-        if not kept: found.append((path, branch, state))
-    return found
+        if (branch, head, "MERGED") in by_head:
+            found.append((path, branch, "merged"))
+        elif (branch, head, "CLOSED") in by_head:
+            closed[f"refs/heads/{branch}"] = (head, path, branch)
+    if closed:
+        heads = repo.run("git", "ls-remote", "--heads", "origin", *closed, cwd=top, timeout=10)
+        if not heads.returncode:
+            for line in heads.stdout.splitlines():
+                head, _, ref = line.partition("\t")
+                if ref in closed and head == closed[ref][0]:
+                    _, path, branch = closed[ref]
+                    found.append((path, branch, "closed"))
+
+    from forge import board
+    events = board._event_history(top)[1] if found else {}
+    clean = []
+    for path, branch, state in found:
+        item = task.branch_item(branch, path)
+        if item and board.active_runs(path, item[0], events.get(item[0], [])): continue
+        try:
+            if not task.worktree_files(path):
+                clean.append((path, branch, state))
+        except (OSError, ValueError, subprocess.SubprocessError, repo.Refused):
+            continue
+    return clean
+
+
+def tidy_finished(top: Path, *, inspect: bool = False, report=None) -> int:
+    """Remove only worktrees whose exact local work is available on GitHub."""
+    try:
+        if repo._pin(sync.read(top / "forge.toml")) != __version__: return 0
+        main = machine.main_checkout(top)
+        finished = _finished(top, main)
+    except (OSError, ValueError, subprocess.SubprocessError, repo.Refused):
+        return 0
+    if inspect:
+        if finished and report is not None:
+            report(f"{len(finished)} folders hold finished work: "
+                   f"{', '.join(str(path) for path, _, _ in finished)}.")
+        return 0
+
+    count = 0
+    for path, branch, state in finished:
+        try:
+            removed = repo.run("git", "worktree", "remove", "--force", str(path), cwd=main)
+            if removed.returncode:
+                if report is not None:
+                    report(f"Forge couldn't remove {path}: {_last(removed)}",
+                           f"unlock it or close programs using it, then {REPAIR}")
+                continue
+            count += 1
+            deleted = repo.run("git", "branch", "-D", branch, cwd=main)
+        except (OSError, repo.Refused):
+            continue
+        if report is not None:
+            if deleted.returncode:
+                report(f"Removed {path}, but its branch {branch} is still here: "
+                       f"{_last(deleted).rstrip('.')}.", f"git branch -D {branch}")
+            else:
+                print(f"- Fixed: removed {path}, whose pull request is {state}.")
+    return count
+
+
 def _unbuilt(top: Path) -> list[tuple[str, str]]:
     rows = []
     landed = story.landed_ref(top)
@@ -435,19 +514,8 @@ def doctor(args: argparse.Namespace) -> int:
             except repo.Refused as refused:
                 problem, _, fix = str(refused).partition("\nNext: ")
                 add(problem, fix)
-    main = Path(repo.git("rev-parse", "--path-format=absolute", "--git-common-dir", cwd=top)).resolve().parent
     rows += _unbuilt(top)
-    finished = _finished(top, main)
-    if finished and not args.fix: add(f"{len(finished)} folders hold finished work: " f"{', '.join(str(path) for path, _, _ in finished)}.")
-    for path, branch, state in finished if args.fix else []:
-        removed = repo.run("git", "worktree", "remove", "--force", str(path), cwd=main)
-        if removed.returncode:
-            add(f"Forge couldn't remove {path}: {_last(removed)}", f"unlock it or close programs using it, then {REPAIR}")
-            continue
-        deleted = repo.run("git", "branch", "-D", branch, cwd=main)
-        if deleted.returncode: add(f"Removed {path}, but its branch {branch} is still here: "
-                         f"{_last(deleted).rstrip('.')}.", f"git branch -D {branch}")
-        else: print(f"- Fixed: removed {path}, whose pull request is {state}.")
+    tidy_finished(top, inspect=not args.fix, report=add)
     rows += _files(top, cfg, wanted, args.fix and pinned == f"v{__version__}")
     if not shutil.which("sh"): add("sh isn't on PATH, so no host hook can run.", "install Git, which brings sh, and put it on PATH")
     elif wanted and sync.read(top / sync.LAUNCHER) != wanted.get(sync.LAUNCHER):
