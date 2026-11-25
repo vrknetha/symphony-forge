@@ -76,23 +76,23 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "24e1f68bacfb32ca0ea2a9e307220614709d82b42543bb47a6904642e74df2a7",
-    "changed": "05451e35a811c535edee198e3c7589e9e44c7f12e0de681c665ec6e1fe9ca35b",
-    "commit": "b6c5a8679973e5ff70b37b5588ed80e589dbeb98",
+    "branch_diff": "ec6de22fed98d8f76d8c5ea03bb782682f52c2eeb9462029e09d8499a57aa7fa",
+    "changed": "ff1538d70224278c4abc1829be2c6eb0b9101e9b0cd65e3c27286794e24a79cb",
+    "commit": "363ef33420f284a94451ace9b4cd5ed11ff8a305",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 5, Work 2, Harm 5\nRaise: Data loss\nCase: normal use - While `forge next` cleans a merged folder, a shell already in that folder creates an ignored `.env` by relative path after the final `_removable` check. The move does not prevent this: the shell's working directory follows the renamed folder. Git's [ordinary removal check](https://github.com/git/git/blob/v2.47.0/builtin/worktree.c#L1190-L1268) ignores `.env`, then recursively deletes it. `src/forge/task.py:957` checks ignored files only before that window, and the test at `tests/test_tidy_finished_folders.py:99` creates its ignored file before the move. The already-open working directory is evidence the move ruling did not address, so the previous data-loss finding remains open.",
+        "body": "Gain 5, Work 2, Harm 5\nRaise: Data loss\nCase: normal use - On macOS, a developer starts a root shell from the main checkout, changes into a finished worktree, and runs `forge next` as their regular user in another terminal. The new `lsof -u` filter excludes the root-owned shell, even though that shell follows the worktree when it moves. If it creates an ignored `.env` after the final `_removable` scan at `src/forge/doctor.py:202`, Git's ordinary worktree removal deletes the new file. The revised test starts its shell under Forge's own user ID, so it does not cover this case.",
         "file": "src/forge/doctor.py",
         "gain": 5,
         "harm": 5,
-        "line": 178,
+        "line": 161,
         "priority": "P1",
         "title": "Not done: A folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have",
         "work": 2
       }
     ],
-    "id": "99afade2-7264-48ae-92f0-805d877ffca0",
+    "id": "e8c67d64-33a6-4acd-8a95-26bfdd750eb8",
     "status": "blocked"
   },
   "round": 4,
@@ -157,6 +157,10 @@
       "at": "2026-11-25T15:21:35.946053+00:00",
       "round": 4,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T15:33:14.008232+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
