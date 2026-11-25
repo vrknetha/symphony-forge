@@ -890,7 +890,10 @@ def _models_problem(table: Any) -> str:
                     return f"models.{name} can't set {key}"
                 if not isinstance(value, str):
                     return f"models.{name}.{key} must be a string"
-            for key in ("model",) if kind in ("review", "light_review") else ("model", "effort"):
+            required = ("model",) if kind in ("review", "light_review") else ("model", "effort")
+            if name in ("review.antigravity", "light_review.antigravity") and "effort" in entry:
+                required = ()
+            for key in required:
                 if key not in entry:
                     return f"models.{name} has no {key}"
             if (SUBAGENTS[0] in entry) != (SUBAGENTS[1] in entry):

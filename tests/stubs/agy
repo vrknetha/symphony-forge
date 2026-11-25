@@ -133,7 +133,9 @@ for line in sys.stdin:
             Path("antigravity.txt").write_text(f"{session} {effort}\n", encoding="utf-8")
             subprocess.run(["git", "add", "antigravity.txt"], check=True)
             subprocess.run(["git", "commit", "--allow-empty", "-qm", "Build with Antigravity"], check=True)
-        update(sessionUpdate="agent_message_chunk", content={"type": "text", "text": "Built it."})
+        update(sessionUpdate="agent_message_chunk", content={
+            "type": "text", "text": os.environ.get("STUB_AGY_REVIEW", "Built it."),
+        })
         usage = {"inputTokens": 200, "outputTokens": 300, "thoughtTokens": 120}
         if not os.environ.get("STUB_AGY_NO_CACHE"):
             usage["cachedReadTokens"] = 1000

@@ -13,7 +13,7 @@ import subprocess
 import sys
 from tempfile import TemporaryDirectory
 from threading import Timer
-from typing import Any
+from typing import Any, Callable
 
 from forge import __version__, codex, deny, machine, repo
 
@@ -191,6 +191,58 @@ def copy_for_reading(source: Path, dest: Path, paths: list[str], drop: set[str])
         shutil.copy2(resolved, target, follow_symlinks=False)
 
 
+def review_design_context(top: Path, cfg: dict, changes: str, user_facing: bool) -> tuple[str, str]:
+    """Point reviewers to design files only after the review copy has been filtered."""
+    from forge import roles, story, sync
+
+    owned = ""
+    if named := re.search(r"^Design: (docs/design/[^/\s]+/) \(", changes, re.M):
+        owned = named[1]
+    elif not changes and repo.is_prototype(top, cfg, ("HEAD", story.landed_ref(top))):
+        owned = "docs/design/prototype/"
+    parts = ["## Design context",
+             "Read `PRODUCT.md` and `DESIGN.md` in the review copy if present."]
+    if owned:
+        parts.append(f"Approved design: read the screens and images in `{owned}` in the review copy.")
+    elif re.search(r"^Design: none \(", changes, re.M):
+        parts.append("Use `docs/design/prototype/` for context if present. Its components add no requirement.")
+    if user_facing:
+        parts.append("### Frontend\n\nUse impeccable for layout and copy and emil-design-eng for motion "
+                     "and interactions. " + roles.ROLES["frontend"][2].removeprefix(roles.BUILD).strip())
+    audit = sync._synced_text(".codex/skills/test-audit/SKILL.md", "skills/test-audit/SKILL.md")
+    parts.append("### test-audit\n\n" + audit.split("## Authoring gate\n", 1)[1].split("## Junk patterns", 1)[0].strip())
+    return "\n\n".join(parts), owned
+
+
+def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
+                  sensitive: Callable[[list[str]], set[str]], model: str, effort: str,
+                  spent: Path) -> str:
+    paths = list(filter(None, repo.git("ls-files", "-z", cwd=checkout).split("\0")))
+    copy_for_reading(checkout, copy, paths, sensitive(paths))
+    ran = {"model_kind": "review"}
+    try:
+        result = turn(top, item, prompt, cwd=copy, mode="read", model=model, effort=effort,
+                      again=f"forge close {item}", ran=ran, group=False)
+    except repo.Refused as error:
+        problem, _, next_step = str(error).partition("\n")
+        if next_step:
+            print(next_step, file=sys.stderr, flush=True)
+        raise SystemExit(problem) from None
+    print(f"model: {ran['model']}", flush=True)
+    if ran["effort"]:
+        print(f"thinking: {ran['effort']}", flush=True)
+    tokens = result["tokens"]
+    if tokens["input_tokens"] is not None:
+        cached = tokens["cached_input_tokens"] or 0
+        spent.mkdir(exist_ok=True)
+        (spent / f"{copy.name}.jsonl").write_text(json.dumps({
+            "type": "result", "session_id": result["session"],
+            "usage": {"input_tokens": tokens["input_tokens"] - cached,
+                      "cache_read_input_tokens": cached, "output_tokens": tokens["output_tokens"]},
+        }) + "\n", encoding="utf-8")
+    return result["text"]
+
+
 def require_unfiltered(top: Path, paths: list[str]) -> None:
     """Do not publish a file whose filter might change what Git is allowed to store."""
     names = [name for name in paths if not (top / name).is_dir()]
@@ -342,11 +394,11 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                         if update.get("sessionUpdate") == "tool_call":
                             raw = update.get("rawInput") or {}
                             action = update.get("kind")
-                            if not probe and action in ("execute", "edit", "read"):
+                            if not probe and (run_id := ran.get("run_id")) and action in ("execute", "edit", "read"):
                                 step = repo.worker_step("Edit" if action == "edit" else action,
                                     {"command": raw.get("CommandLine"), "path": raw.get("Path") or
                                      next(iter(update.get("locations", [])), {}).get("path")})
-                                repo.record_progress(top, item, ran["run_id"], step=step)
+                                repo.record_progress(top, item, run_id, step=step)
                     elif message.get("id") == serial:
                         if "error" not in message:
                             return message.get("result") or {}
@@ -406,9 +458,9 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                                 model=model, values=", ".join(offered("model")), kind=kind, again=again)
                 select("model", model)
             current = options["model"]["currentValue"]
-            if effort in offered("thought_level"):
+            if effort and effort in offered("thought_level"):
                 select("thought_level", effort)
-            else:
+            elif effort:
                 print(f"Antigravity's {current} has no thinking level {effort}; it runs at its own level.")
             level = options.get("thought_level", {}).get("currentValue")
             print(f"Antigravity runs {current} at {level or 'its own level'}.", flush=True)

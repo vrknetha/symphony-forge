@@ -78,7 +78,7 @@ def main() -> None:
     if sys.stdin.buffer.read(1) != b"1":
         return
     tree, launcher, mode, helper, *args = sys.argv[1:]
-    roots = (Path(tree), Path(tree).resolve())
+    roots = [Path(tree), Path(tree).resolve()]
     class EngineProcess(subprocess.Popen):
         def __init__(self, command, *positional, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] == launcher:
@@ -121,6 +121,25 @@ def main() -> None:
         validate(report, repo, *args)
 
     implementation["validate_report"] = validate_paths
+    if os.environ.get("FORGE_REVIEW_ENGINE") == "antigravity":
+        from forge import antigravity
+        context = json.loads(os.environ["FORGE_REVIEW_CONTEXT"])
+        top, item = Path(context["top"]), context["item"]
+        pass_number = 0
+
+        def run_engine(_args: Any, checkout: Path, prompt: str) -> str:
+            nonlocal pass_number
+            pass_number += 1
+            # On Windows, Python 3.11 looks in its current directory before PATH.
+            # Resolve Forge's tools from the private parent of the review clone.
+            with contextlib.chdir(Path(tree).parent):
+                copy = antigravity.home(top) / "review" / item / str(pass_number)
+                roots.append(copy)
+                return antigravity.review_engine(
+                    top, item, checkout, copy, prompt, implementation["tracked_sensitive_paths"],
+                    context["model"], context["effort"], Path(context["spent"]))
+
+        implementation["run_engine"] = run_engine
     if mode == "serial":
         raise SystemExit(entry())
 
@@ -145,11 +164,11 @@ def main() -> None:
 
 
 @contextlib.contextmanager
-def owned(argv: list[str], cwd: Path) -> Iterator[subprocess.Popen[bytes]]:
+def owned(argv: list[str], cwd: Path, *, env: dict[str, str] | None = None) -> Iterator[subprocess.Popen[bytes]]:
     """Close owns the review group or job, including across exceptions and signals."""
     from forge import codex
     process = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                               stderr=subprocess.STDOUT, env={**os.environ, "FORGE_WORKER": "1"},
+                               stderr=subprocess.STDOUT, env={**(os.environ if env is None else env), "FORGE_WORKER": "1"},
                                **codex.GROUP)
     recorded = codex.identity(process.pid) or {"pid": process.pid}
     job, watcher, monitor = None, None, None

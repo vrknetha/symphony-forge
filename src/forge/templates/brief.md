@@ -143,6 +143,9 @@ Normal reviews, reviews of docs and assets, and sign-off reviews use the selecte
 uses Autoreview's default. New and earlier-adopted repos get this behaviour on the current release.
 When `reviews` names a family in `forge.toml`, Forge uses that family for cold reads and code reviews.
 If that family built the change, close asks the owner to choose another reviewer.
+Antigravity code reviews use `[models.review.antigravity]`, or `[models.light_review.antigravity]`
+for light reviews. If you leave either model or effort unset, Antigravity uses its own default.
+Client sign-off reviews use Codex or Claude.
 Open work folders follow that change after Forge sees it on the default branch, unless they set their own review family.
 Antigravity cold reads need plans and notes that Git can store without a filter.
 Over SSH, `forge task start` checks the new Antigravity work folder and gives its sign-in step if needed.
