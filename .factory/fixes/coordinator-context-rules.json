@@ -70,7 +70,7 @@
     "id": "abe839b7-6c5b-4cd1-8b74-db2ef15463a3",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -85,13 +85,18 @@
     {
       "at": "2026-11-25T16:46:51.910268+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T16:47:11.943644+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "cf614b3e7be987fd003dfd9967923decfc0c5cc4",
+    "close": "aaa1abc1-3d3c-48aa-88d7-234d4a8771e3",
+    "head": "99a784ff9fe30a307eaf1fdbbfd77adf50769e0e",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "A client used about 593M Claude tokens in one day, mostly from long coordinator chats that reread the whole conversation on every tool call, overlapping coordinator chats and repeating flow-check timers (about 40M alone); session timers also survive /clear.",
   "worker": "codex"
