@@ -32,7 +32,7 @@ Risks: none one-way. Each part reverts with its pull request.
 
 Accepted limits:
 - A builder may skip a standard that is now a file reference. If review findings or rounds per item rise after the release, the coordinator says so and the rule moves back into the brief.
-- A repair builder sees file names, not the change itself, so it may open some files again. Most of those changes it made itself earlier in the same conversation; changes from the default branch or the coordinator are new to it, and it opens those files when it needs them.
+- A repair builder sees file names, not the change itself, so it may open some files again. It made those changes itself earlier in the same conversation.
 - Builders and cold readers that run as native subagents of the coordinating session (Claude or Codex) record no token counts today, and Codex's host settings cannot be applied to them. The measure covers only runs that Forge starts through the Codex app server, and the report states the share of native runs in each week, so a shift to native runs cannot look like a saving.
 
 ## For the builders
