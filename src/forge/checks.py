@@ -276,7 +276,7 @@ def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progres
     previous = None
     queued_since = None
     requested: set[int] = set()
-    retried_reviews: set[str] = set()
+    review_retry = None
     cache = (repo.forge_dir(top) / f"check-wait-{repo.blob_hash(branch + sha)}.json"
              if progress else None)
     while True:
@@ -305,24 +305,37 @@ def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progres
             if not any(name == "forge-pr-check" or name == "Review pull request" and state != SKIPPED
                        for name, state in seen):  # the pull_request workflow skips its own job of that name
                 _no_start(top, item, sha, branch)  # before a red or timed-out test can hide it
+            review_state = None
+            if review_retry:
+                run = _review_workflow(top, item, review_retry)
+                if run.get("run_attempt") == 2 and run.get("status") == "completed":
+                    review_retry = None
+                else:
+                    review_state = QUEUED if run.get("status") == "queued" else PENDING
+            elif retry_review and not train and pr.get("headRefOid") == sha:
+                review_retry = _retry_old_review(top, item, sha, names, seen, statuses)
+                if review_retry:
+                    review_state = PENDING
             if train:
                 # The train reads failed-job logs and owns its one retry in land._red.
                 _tests_timeout(top, item, sha, names, check_runs, seen)
+            elif review_state:
+                if cache is not None:
+                    cache.unlink(missing_ok=True)
+            elif _recover(top, item, sha, names, check_runs, seen) and cache is not None:
+                cache.unlink(missing_ok=True)  # Read the new attempt instead of cached failures.
+            if review_state:
+                # A fresh result on the current head can arrive before the old job finishes.
+                reason = _pending(item, [], [("forge-pr-check", review_state)])
             else:
-                recovered = (retry_review and pr.get("headRefOid") == sha
-                             and _retry_old_review(top, item, sha, names, seen, statuses, retried_reviews))
-                if not recovered:
-                    recovered = _recover(top, item, sha, names, check_runs, seen)
-                if recovered and cache is not None:
-                    cache.unlink(missing_ok=True)  # Read the new attempt instead of cached failures.
-            reason = _pending(item, names, seen)  # Report failures even while siblings are active.
-            active = [(name, state) for name, state in seen if state in (PENDING, QUEUED)]
-            if active:
-                reason = _pending(item, [], active)
+                reason = _pending(item, names, seen)  # Report failures even while siblings are active.
+                active = [(name, state) for name, state in seen if state in (PENDING, QUEUED)]
+                if active:
+                    reason = _pending(item, [], active)
             if mergeable == "UNKNOWN":
                 reason = reason or "GitHub has not determined whether this pull request can merge"
-            queued = any(state == QUEUED for _, state in seen)
-            running = any(state == PENDING for _, state in seen)
+            queued = review_state == QUEUED or any(state == QUEUED for _, state in seen)
+            running = review_state == PENDING or any(state == PENDING for _, state in seen)
             result["state"] = "running" if running else "queued" if queued else "unknown"
         except repo.Refused as error:
             if cache is not None and error.entry is not REFUSALS["not_green"]:
@@ -494,46 +507,46 @@ def _action_job(top: Path, item: str, run: dict[str, Any]) -> dict[str, Any] | N
     return jobs[0] if jobs else None
 
 
+def _review_workflow(top: Path, item: str, run_id: str) -> dict[str, Any]:
+    runs = _ask(top, item, "[.]", f"repos/{{owner}}/{{repo}}/actions/runs/{run_id}")
+    return runs[0] if runs else {}
+
+
 def _retry_old_review(top: Path, item: str, sha: str, names: list[str],
-                      seen: list[tuple[str, str]], statuses: list[dict[str, Any]],
-                      retried: set[str]) -> bool:
+                      seen: list[tuple[str, str]], statuses: list[dict[str, Any]]) -> str | None:
     failed = [i for i, (name, state) in enumerate(seen)
-              if state == RED or state == SKIPPED and any(
+              if state in (RED, SKIPPED) and any(
                   name == want or name.startswith(want + " (") for want in names)]
-    if len(failed) != 1 or "forge-pr-check" not in names:
-        return False
+    if len(failed) != 1:
+        return None
     index = failed[0]
     first_status = len(seen) - len(statuses)
     if index < first_status or seen[index] != ("forge-pr-check", RED):
-        return False
+        return None
     url = str(statuses[index - first_status].get("target_url", ""))
     match = re.search(r"/actions/runs/(\d+)/job/\d+(?:\?|$)", url)
     if not match:
-        return False
+        return None
     run_id = match[1]
-    runs = _ask(top, item, "[.]", f"repos/{{owner}}/{{repo}}/actions/runs/{run_id}")
-    if not runs:
-        return False
-    run = runs[0]
-    old = str(run.get("head_sha", ""))
-    if (run.get("event") != "pull_request_target"
-            or str(run.get("path", "")).partition("@")[0] != ".github/workflows/forge.yml"
+    workflow = _review_workflow(top, item, run_id)
+    old = str(workflow.get("head_sha", ""))
+    if (workflow.get("event") != "pull_request_target"
+            or str(workflow.get("path", "")).partition("@")[0] != ".github/workflows/forge.yml"
             or not re.fullmatch(r"[a-f0-9]{40}", old) or old == sha
             or repo.run("git", "merge-base", "--is-ancestor", old, sha, cwd=top).returncode):
-        return False
-    if run.get("status") == "completed":
-        if run.get("run_attempt") == 1 and run_id in retried:
-            pass  # GitHub can still report the first attempt just after accepting the retry.
-        elif run.get("run_attempt") == 1 and run.get("conclusion") == "failure":
-            if repo.run("gh", "run", "rerun", run_id, "--failed", cwd=top, timeout=60).returncode:
-                return False
-            retried.add(run_id)
-        else:
-            return False
-    elif run.get("run_attempt") != 2 and run_id not in retried:
-        return False
-    seen[index] = ("forge-pr-check", QUEUED if run.get("status") == "queued" else PENDING)
-    return True
+        return None
+    # A pull_request_target workflow can report the base SHA. The review itself
+    # posts its job URL on the commit it checked.
+    previous = _ask(top, item, ".statuses", f"repos/{{owner}}/{{repo}}/commits/{old}/status?per_page=100")
+    if not any(status.get("context") == "forge-pr-check" and status.get("target_url") == url
+               for status in previous):
+        return None
+    if workflow.get("status") != "completed":
+        return run_id if workflow.get("run_attempt") == 2 else None
+    if workflow.get("run_attempt") == 1 and workflow.get("conclusion") == "failure":
+        if repo.run("gh", "run", "rerun", run_id, "--failed", cwd=top, timeout=60).returncode == 0:
+            return run_id
+    return None
 
 
 def _recover(top: Path, item: str, sha: str, names: list[str],

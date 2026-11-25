@@ -164,7 +164,7 @@ $delegation
   commit and stop instead of asking the coordinator to push or run CI. CI is the merge gate. Commit
   your local proof in the `Proof list:` without waiting for CI results or timings.
 - Close and doctor cancel only this pull request's older forge.yml runs when they block its newest queued run. Client workflows stay untouched. If a run stays active after cancellation, Forge prints GitHub's force-cancel command for the operator. It never calls that command automatically. Close keeps waiting for the new run.
-- When the required Forge review is the only failed check and links to a run on an earlier commit, close retries the failed job once and waits for the result. New and existing repos get this behavior on upgrade.
+- When the Forge review is the only required check that failed and links to a run on an earlier commit, close retries the failed job once and waits for it to finish. GitHub reruns the job on its original commit. Close still needs a passing review on the current commit. New repos get this at init. Existing repos get it on upgrade.
 - On new and upgraded repos, close and merge retry failed CI test jobs once only after runner
   loss, cancellation or timeout. Assertion failures get no retry. They wait for that attempt.
   Cancelled runs use the same retry limit.

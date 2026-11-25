@@ -1,34 +1,56 @@
 """A stale required review gets one retry through close, then close waits for CI."""
 import json
 
-from test_close import GREEN, env  # noqa: F401
+import pytest
+
+from test_close import GREEN, env, run  # noqa: F401
 from test_land import _queue, land  # noqa: F401
 
 STORY = "FIX-CLOSE-RERUNS-STALE-REVIEW-CHECK"
 
 
-def test_1_close_retries_the_only_failed_review_from_an_older_commit(land, monkeypatch):
-    # The cancellation retry test covers test jobs on the current commit. This
-    # case follows the required review status to an earlier commit through GitHub.
+@pytest.mark.parametrize("case", ["head-recovers", "head-stays-red", "optional-red", "base-sha"])
+def test_1_close_retries_the_only_failed_review_from_an_older_commit(land, monkeypatch, case):
+    # Prove both the retry lifecycle and the current-head gate through close.
+    # A rerun reports against its original commit. A separate job can finish on
+    # the new head before that rerun ends. No production test seam is needed.
     monkeypatch.setenv("FORGE_CHECKS_WAIT", "20")
     env = land
     item, where = env.start_fix()
-    older = env.repo.git("rev-parse", "HEAD", cwd=where)
+    older = env.repo.git("rev-parse", "origin/main" if case == "base-sha" else "HEAD", cwd=where)
     env.commit(where, ".github/workflows/forge.yml", "name: Fixed CI\n")
     url = "https://github.com/acme/shop/actions/runs/77/job/701"
     red = json.dumps({"context": "forge-pr-check", "state": "failure", "target_url": url})
-    green = json.dumps({"context": "forge-pr-check", "state": "success"})
-    env.checks([row for row in GREEN if row["name"] != "forge-pr-check"])
-    _queue(env, ["api", "--paginate", "--jq", ".statuses[]"], red, red, green)
+    green = json.dumps({"context": "forge-pr-check", "state": "success",
+                        "target_url": "https://github.com/acme/shop/actions/runs/78/job/702"})
+    checks = [row for row in GREEN if row["name"] not in ("forge-pr-check", "lint")]
+    env.checks(checks + [run("lint", "failure" if case == "optional-red" else "success")])
+    status_api = ["api", "--paginate", "--jq", ".statuses[]"]
+    _queue(env, [*status_api, f"repos/{{owner}}/{{repo}}/commits/{older}/status?per_page=100"],
+           "" if case == "base-sha" else red)
+    _queue(env, status_api, red, green if case in ("head-recovers", "optional-red") else red)
     endpoint = ["api", "--paginate", "--jq", "[.][]", "repos/{owner}/{repo}/actions/runs/77"]
     workflow = {"head_sha": older, "path": ".github/workflows/forge.yml", "event": "pull_request_target"}
     _queue(env, endpoint,
            json.dumps({**workflow, "run_attempt": 1, "status": "completed", "conclusion": "failure"}),
-           json.dumps({**workflow, "run_attempt": 2, "status": "in_progress"}))
+           json.dumps({**workflow, "run_attempt": 2, "status": "in_progress"}),
+           json.dumps({**workflow, "run_attempt": 2, "status": "completed", "conclusion": "failure"}))
     env.gh.respond("run", "rerun", "77", "--failed")
 
     done = env.close(item)
 
+    if case == "base-sha":
+        assert not env.gh_calls("run", "rerun"), done.stdout
+        assert done.returncode == 1 and "forge-pr-check." in done.stderr
+        return
+
     assert env.gh_calls("run", "rerun") == [["run", "rerun", "77", "--failed"]], done.stderr
+    # The three answers are the original failure, an active retry, and its
+    # completion. A green status on the new head must not end the active wait.
+    assert len(env.gh_calls(*endpoint)) >= 3, done.stdout + done.stderr
     assert "Waiting: forge-pr-check is still running." in done.stdout
-    assert done.returncode == 0, done.stdout + done.stderr
+    if case == "head-recovers":
+        assert done.returncode == 0, done.stdout + done.stderr
+    else:
+        failure = "lint" if case == "optional-red" else "forge-pr-check"
+        assert done.returncode == 1 and f"Checks failed on the pull request: {failure}." in done.stderr
