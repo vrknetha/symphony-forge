@@ -56,6 +56,17 @@
       "closed_by": null
     },
     {
+      "key": "edge\tdocs/guide.md\tPublish each new release to PyPI before using its pin",
+      "kind": "edge",
+      "path": "docs/guide.md",
+      "line": 761,
+      "text": "Publish each new release to PyPI before using its pin",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "edge\tpyproject.toml\tMake README documentation links work on the PyPI page",
       "kind": "edge",
       "path": "pyproject.toml",
@@ -72,6 +83,17 @@
       "path": "src/forge/sync.py",
       "line": 793,
       "text": "Preserve the user's plugin settings when moving the marketplace",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/upgrade.py\tHandle incomplete PyPI responses as lookup failures",
+      "kind": "edge",
+      "path": "src/forge/upgrade.py",
+      "line": 432,
+      "text": "Handle incomplete PyPI responses as lookup failures",
       "from": "review",
       "item": "forge-installs-from-pypi",
       "status": "open",

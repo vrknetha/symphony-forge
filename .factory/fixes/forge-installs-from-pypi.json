@@ -84,37 +84,69 @@
       "gain": 5,
       "harm": 4,
       "line": 696,
-      "outcome": "open",
+      "outcome": "fixed in round 4",
       "reason": "",
       "round": 3,
       "security": false,
       "title": "Persist the recovery release before merging the upgrade",
       "work": 2
+    },
+    {
+      "area": "docs/guide.md",
+      "file": "docs/guide.md",
+      "gain": null,
+      "harm": null,
+      "line": 761,
+      "outcome": "follow-up",
+      "reason": "Follow-up: new finding below P0 in a repair review",
+      "round": 4,
+      "security": false,
+      "title": "Publish each new release to PyPI before using its pin",
+      "work": null
+    },
+    {
+      "area": "_newest() in src/forge/upgrade.py",
+      "file": "src/forge/upgrade.py",
+      "gain": null,
+      "harm": null,
+      "line": 432,
+      "outcome": "follow-up",
+      "reason": "Follow-up: new finding below P0 in a repair review",
+      "round": 4,
+      "security": false,
+      "title": "Handle incomplete PyPI responses as lookup failures",
+      "work": null
     }
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "b87e5707b044f8a8f805c12f58f569359f27ca1245061ffdd52a47f0fdb55b97",
-    "changed": "15e66ec66c7a6a618e0fa16f19ac5f02bfd179ffb6d9da68fb9017a21bd3a8b7",
-    "commit": "2183e91a0764155e2742e7193a26bb70db47bc91",
+    "branch_diff": "02ee6a78d330e2e60b1a0236612bffacb794745106c42c7a8de6dd51b67e9122",
+    "changed": "1f1cdb4ff3c29281b87d825d8b97f5258243e836ddba1be07d26a6fd7f593df4",
+    "commit": "77be8cce9f55d6760f89c20b263d502af557167a",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 5, Work 2, Harm 4\nRaise: Functional\nCase: normal use - a client with Forge v1.2.48 installed follows the recovery steps.\nThe documented `uvx` command runs Forge from a disposable environment whose executable directory is placed first on PATH by [uv's tool runner](https://github.com/astral-sh/uv/blob/0.12.0/crates/uv/src/commands/tool/run.rs#L334-L344). Consequently, `_on_path()` sees the requested release and `src/forge/upgrade.py:101,235\u2013236` skips the persistent install. After `uvx` exits, the old Forge remains installed. Once the owner merges and updates the default branch, that CLI routes state-changing commands through the disabled GitHub source for the new pin (`v1.2.48:src/forge/repo.py:983\u2013991,1015\u20131019`), so normal Forge work fails. This PATH behavior is new evidence against the ruling that the newer release recovers old pins. The recovery test starts Forge directly and then manually installs a new launcher (`tests/test_package_installs_from_pypi.py:80,100`), so it misses the failure.",
+        "body": "The documented release procedure tags the cut commit and creates a GitHub release, but it does not publish the new version to PyPI. Following those steps on a clean machine leaves this command unable to resolve the just-cut version. Generated client installs have the same problem, and the PyPI-based release lookup continues to report the previous version. Add a PyPI publication and verification step before the release is used.",
         "file": "docs/guide.md",
-        "gain": 5,
-        "harm": 4,
-        "line": 696,
-        "priority": "P0",
-        "title": "Persist the recovery release before merging the upgrade",
-        "work": 2
+        "follow_up": "Follow-up: new finding below P0 in a repair review",
+        "line": 761,
+        "priority": "P1",
+        "title": "Publish each new release to PyPI before using its pin"
+      },
+      {
+        "body": "If a proxy or network interruption truncates a PyPI response, reading it can raise `http.client.IncompleteRead`. That exception is an `HTTPException`, not one of the types caught here or by `release_notice`. Consequently, the first `forge next` release check of the day exits with a traceback instead of treating the notice as optional; unversioned `forge upgrade` also exits without its normal refusal. The exception is documented in the [Python HTTP client reference](https://docs.python.org/3/library/http.client.html#http.client.IncompleteRead).",
+        "file": "src/forge/upgrade.py",
+        "follow_up": "Follow-up: new finding below P0 in a repair review",
+        "line": 432,
+        "priority": "P2",
+        "title": "Handle incomplete PyPI responses as lookup failures"
       }
     ],
-    "id": "67b7f7d1-d5ea-4e73-8e25-48449108aa22",
-    "status": "blocked"
+    "id": "bf032e81-dde1-40b8-98e5-a425ab107fa6",
+    "status": "clean"
   },
   "round": 5,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T15:18:45.279830+00:00",
@@ -156,6 +188,10 @@
       "at": "2026-11-25T16:59:40.455345+00:00",
       "round": 5,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:12:14.290729+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
