@@ -144,7 +144,8 @@ def wait(top: Path, item: str, sha: str, names: list[str], *, branch: str,
         try:
             from forge import github
             with github.check_wait(top, slot) as (admit, waiting):
-                _wait(top, item, sha, names, branch, progress, result, waiting, admit, train)
+                _wait(top, item, sha, names, branch, progress, result, waiting, admit, train,
+                      retry_review=command == "close")
             report_time = True
         except repo.Refused as error:
             report_time = error.entry in (REFUSALS["red"], REFUSALS["timeout"])
@@ -188,7 +189,7 @@ def _let_finish(top: Path, item: str, sha: str, names: list[str], branch: str,
     try:
         while True:
             admit()
-            seen, _, runs = _seen(top, item, sha)
+            seen, _, runs, _ = _seen(top, item, sha)
             # This head predates the review record. Its review cannot be green yet.
             seen = [(name, PASS if name in ("forge-pr-check", "Review pull request") else state)
                     for name, state in seen]
@@ -268,13 +269,14 @@ def after_code_ci(top: Path, item: str, branch: str, cfg: dict[str, Any],
 
 def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progress: bool,
           result: dict[str, Any], waiting: Callable[[bool], None], admit: Callable[[], None],
-          train: bool = False) -> None:
+          train: bool = False, *, retry_review: bool = False) -> None:
     # ponytail: an env override is the whole wait seam (tests set 0 to look once).
     timeout = float(os.environ.get("FORGE_CHECKS_WAIT", "1800" if progress else "600"))
     deadline = time.monotonic() + timeout
     previous = None
     queued_since = None
     requested: set[int] = set()
+    retried_reviews: set[str] = set()
     cache = (repo.forge_dir(top) / f"check-wait-{repo.blob_hash(branch + sha)}.json"
              if progress else None)
     while True:
@@ -282,7 +284,7 @@ def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progres
         queued = False
         running = False
         try:
-            seen, snapshot, check_runs, pr = _status(top, item, sha, branch, cache, requested)
+            seen, snapshot, check_runs, statuses, pr = _status(top, item, sha, branch, cache, requested)
             if train:  # keep every entry's place, so the timeout reader still lines up with the runs
                 # Forge's own review is exactly the "Review pull request" run of forge.yml's
                 # pull_request_target workflow and the forge-pr-check status; _seen lists runs first.
@@ -306,8 +308,13 @@ def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progres
             if train:
                 # The train reads failed-job logs and owns its one retry in land._red.
                 _tests_timeout(top, item, sha, names, check_runs, seen)
-            elif _recover(top, item, sha, names, check_runs, seen) and cache is not None:
-                cache.unlink(missing_ok=True)  # Read the new attempt instead of cached failures.
+            else:
+                recovered = (retry_review and pr.get("headRefOid") == sha
+                             and _retry_old_review(top, item, sha, names, seen, statuses, retried_reviews))
+                if not recovered:
+                    recovered = _recover(top, item, sha, names, check_runs, seen)
+                if recovered and cache is not None:
+                    cache.unlink(missing_ok=True)  # Read the new attempt instead of cached failures.
             reason = _pending(item, names, seen)  # Report failures even while siblings are active.
             active = [(name, state) for name, state in seen if state in (PENDING, QUEUED)]
             if active:
@@ -390,7 +397,7 @@ def _own_review(top: Path, item: str, sha: str) -> set[Any]:
 def _status(top: Path, item: str, sha: str, branch: str, cache: Path | None,
             requested: set[int]) -> list[Any]:
     def read() -> list[Any]:
-        seen, snapshot, runs = _seen(top, item, sha)
+        seen, snapshot, runs, statuses = _seen(top, item, sha)
         shown = repo.run("gh", "pr", "view", branch, "--json",
                          "mergeable,headRefOid,number,headRefName", cwd=top, timeout=60)
         try:
@@ -403,7 +410,7 @@ def _status(top: Path, item: str, sha: str, branch: str, cache: Path | None,
         elif pr.get("headRefOid") == sha and pr.get("mergeable") != "CONFLICTING":
             _cancel_superseded(top, item, runs, number=pr.get("number"), branch=branch,
                                requested=requested)
-        return [seen, snapshot, runs, pr]
+        return [seen, snapshot, runs, statuses, pr]
 
     if cache is None:
         return read()
@@ -423,7 +430,8 @@ def _status(top: Path, item: str, sha: str, branch: str, cache: Path | None,
             value = None
             try:
                 saved = json.loads(cache.read_text(encoding="utf-8"))
-                if 0 <= time.monotonic() - saved["at"] < min(POLL, 60):
+                if (0 <= time.monotonic() - saved["at"] < min(POLL, 60)
+                        and (isinstance(saved["status"], str) or len(saved["status"]) == 5)):
                     value = saved["status"]
             except (OSError, ValueError, KeyError, TypeError):
                 pass
@@ -484,6 +492,48 @@ def _action_job(top: Path, item: str, run: dict[str, Any]) -> dict[str, Any] | N
         return None
     jobs = _ask(top, item, "[.]", f"repos/{{owner}}/{{repo}}/actions/jobs/{job_id[1]}")
     return jobs[0] if jobs else None
+
+
+def _retry_old_review(top: Path, item: str, sha: str, names: list[str],
+                      seen: list[tuple[str, str]], statuses: list[dict[str, Any]],
+                      retried: set[str]) -> bool:
+    failed = [i for i, (name, state) in enumerate(seen)
+              if state == RED or state == SKIPPED and any(
+                  name == want or name.startswith(want + " (") for want in names)]
+    if len(failed) != 1 or "forge-pr-check" not in names:
+        return False
+    index = failed[0]
+    first_status = len(seen) - len(statuses)
+    if index < first_status or seen[index] != ("forge-pr-check", RED):
+        return False
+    url = str(statuses[index - first_status].get("target_url", ""))
+    match = re.search(r"/actions/runs/(\d+)/job/\d+(?:\?|$)", url)
+    if not match:
+        return False
+    run_id = match[1]
+    runs = _ask(top, item, "[.]", f"repos/{{owner}}/{{repo}}/actions/runs/{run_id}")
+    if not runs:
+        return False
+    run = runs[0]
+    old = str(run.get("head_sha", ""))
+    if (run.get("event") != "pull_request_target"
+            or str(run.get("path", "")).partition("@")[0] != ".github/workflows/forge.yml"
+            or not re.fullmatch(r"[a-f0-9]{40}", old) or old == sha
+            or repo.run("git", "merge-base", "--is-ancestor", old, sha, cwd=top).returncode):
+        return False
+    if run.get("status") == "completed":
+        if run.get("run_attempt") == 1 and run_id in retried:
+            pass  # GitHub can still report the first attempt just after accepting the retry.
+        elif run.get("run_attempt") == 1 and run.get("conclusion") == "failure":
+            if repo.run("gh", "run", "rerun", run_id, "--failed", cwd=top, timeout=60).returncode:
+                return False
+            retried.add(run_id)
+        else:
+            return False
+    elif run.get("run_attempt") != 2 and run_id not in retried:
+        return False
+    seen[index] = ("forge-pr-check", QUEUED if run.get("status") == "queued" else PENDING)
+    return True
 
 
 def _recover(top: Path, item: str, sha: str, names: list[str],
@@ -775,7 +825,8 @@ def _cancel_superseded(top: Path, item: str, checks: list[dict[str, Any]], *,
     return bool(pending)
 
 
-def _seen(top: Path, item: str, sha: str) -> tuple[list[tuple[str, str]], list[str], list[dict[str, Any]]]:
+def _seen(top: Path, item: str, sha: str
+          ) -> tuple[list[tuple[str, str]], list[str], list[dict[str, Any]], list[dict[str, Any]]]:
     """Check outcomes on sha and the fields that show a run starting, ending or being replaced."""
     # Every page: a failed matrix job on page two must still count.
     endpoint = f"repos/{{owner}}/{{repo}}/commits/{sha}"
@@ -798,7 +849,7 @@ def _seen(top: Path, item: str, sha: str) -> tuple[list[tuple[str, str]], list[s
              for run in runs]
             + [(str(status.get("context")), {"success": PASS, "pending": PENDING}.get(
                 status.get("state"), RED)) for status in statuses])
-    return seen, snapshot, runs
+    return seen, snapshot, runs, statuses
 
 
 def _ask(top: Path, item: str, field: str, endpoint: str, *options: str,
