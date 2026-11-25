@@ -110,7 +110,7 @@
     "id": "b19a1bc5-9d03-4843-bf0d-214601465807",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -125,13 +125,20 @@
     {
       "at": "2026-11-25T08:55:07.529897+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T08:55:43.443140+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "df117b3f8ce330a769de66b75e4afa7f09d6aa1e",
-    "keys": {},
-    "round": null
+    "close": "8859718b-e199-4adb-952c-1d1a273c2db0",
+    "head": "4561ab0c836f3fc4c092cc26ae1f4a373780aa66",
+    "keys": {
+      "the open P0 do not submit a stopped reader's result as the replacement round in src/forge/native.py": 1
+    },
+    "round": 1
   },
   "why": "A handback with a wrong round number says the round was stopped or replaced and gives no next step, so the work looks lost (issue #1791).",
   "worker": "antigravity"
