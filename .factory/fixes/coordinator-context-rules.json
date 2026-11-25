@@ -1,6 +1,13 @@
 {
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/coordinator-context-rules",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21378-3acd-7ea0-863c-1ecf6f876830",
+    "head": null,
+    "start": "9985dc6da7374a92eb00b471c3f3bb4f54275789"
+  },
   "done_when": "The coordinator guide says to hand over at 20 to 30% of context and never past 40%, at a quiet moment (after a merge or while waiting on CI), to delete session timers before /clear, and to use no repeating flow-check timers (CronCreate or /loop) but Forge's step-end events and one-shot waits.",
   "fix_kind": "mechanical",
   "kind": "fix",
