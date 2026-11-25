@@ -18,7 +18,7 @@
       "gain": 4,
       "harm": 3,
       "line": 263,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -31,7 +31,7 @@
       "gain": 4,
       "harm": 3,
       "line": 258,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -44,7 +44,7 @@
       "gain": 3,
       "harm": 3,
       "line": 23,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -54,48 +54,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "7fb156289bcd044189604e4c2a649c6ee7221dc22a3c45e6e34b48b53d5f3451",
-    "changed": "9d65fb704d6cae6f60d9184e6d1cce25029b4beca93c66c0faa7bd019a7fbf4a",
-    "commit": "baca92f16b5b8ea5ca8cfc1c1629a9897f03943d",
+    "branch_diff": "51e23af69cceb9299af0104ed50319b2879461c3da4096fed3c7a48ecae1056f",
+    "changed": "f3ef6f9060d628be6a9fedc6c80186bfda36a4f29c8f3e8ebeee40b82dae2756",
+    "commit": "577ebac9b2fe0781716500b9510f481532b834ec",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a completed round's handback arrives after its hold was stopped and a replacement subagent started in the same session.\nThe Done-when item is: \"A handback whose round number is not the open round names the open round and prints the exact handback command; with no open round it prints the next step.\" The printed retry retains `args.subagent` from the old handback, even though the replacement can have a different ID. Supplying the replacement's result with that command can send a commit nudge to the old subagent (`src/forge/native.py:348`) or record the old ID for a later continuation (`src/forge/native.py:168` and `:366`). The printed command therefore is not the correct handback for the open round.",
-        "file": "src/forge/native.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 263,
-        "priority": "P1",
-        "required_done_when": true,
-        "title": "Not done: A handback whose round number is not the open round names the open round and prints the exact handback command; \u2026",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - a coordinator exits with a handout outstanding and a later session attempts a handback with the wrong round number; a replacement round can also belong to another live coordinator.\nThis branch treats any persisted `pending` record as an open round without checking its owner. A dead session's pending record survives queue pruning (`src/forge/machine.py:727`), although `src/forge/native.py:202` treats its lock as no longer live. The refusal nevertheless claims that round is open and prints a retry instead of the no-open next step. For a live round held by another session, it likewise prints a retry that the session check at `src/forge/native.py:265` immediately refuses.",
-        "file": "src/forge/native.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 258,
-        "priority": "P1",
-        "title": "Functional: Recovery treats dead or foreign pending records as usable rounds",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a stopped round is replaced with a different subagent, or the coordinating session ends while a handout is outstanding.\nThe named proof invents a different round number in one live session and reaches the no-open case only after a successful handback. It therefore passes despite the stale-subagent retry and dead-session failures. The replaced-round test at `tests/test_tools_session_hold.py:196` also uses the same subagent ID for both rounds and does not run the printed retry. Extend the command-level proof to cover these cases.",
-        "file": "tests/test_handback_round_recovery.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 23,
-        "priority": "P1",
-        "title": "Test: A handback whose round number is not the open round names the open round and prints the exact handback command; \u2026",
-        "work": 2
-      }
-    ],
-    "id": "18498f68-69ca-401a-a405-5548bd189a39",
-    "status": "blocked"
+    "findings": [],
+    "id": "aa3504da-7a66-4275-8989-bb9af74c74cd",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T08:40:54.244406+00:00",
@@ -114,6 +82,10 @@
       "at": "2026-11-25T08:54:24.208562+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T09:01:41.155875+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
