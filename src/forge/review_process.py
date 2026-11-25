@@ -77,8 +77,8 @@ def main() -> None:
     print(os.getpid(), flush=True)
     if sys.stdin.buffer.read(1) != b"1":
         return
-    tree, launcher, mode, helper, *args = sys.argv[1:]
-    roots = [Path(tree), Path(tree).resolve()]
+    tree, checkout, launcher, mode, helper, *args = sys.argv[1:]
+    roots = [Path(tree), Path(tree).resolve(), Path(checkout), Path(checkout).resolve()]
     class EngineProcess(subprocess.Popen):
         def __init__(self, command, *positional, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] == launcher:
@@ -107,16 +107,19 @@ def main() -> None:
         implementation["terminate_process_group"] = terminate_engine
 
     def validate_paths(report: Any, repo: Path, *args: Any) -> None:
-        # Translate our disposable checkout paths before the helper rejects absolute paths.
+        # Translate checkout and disposable review-tree paths before the helper rejects absolute paths.
         if isinstance(report, dict) and isinstance(report.get("findings"), list):
             for finding in report["findings"]:
                 location = finding.get("code_location") if isinstance(finding, dict) else None
                 file = location.get("file_path") if isinstance(location, dict) else None
                 if isinstance(file, str):
+                    posix = file.replace("\\", "/")
+                    folded = posix.casefold() if os.name == "nt" else posix
                     for root in roots:
                         prefix = root.as_posix().rstrip("/") + "/"
-                        if file.replace("\\", "/").startswith(prefix):
-                            location["file_path"] = file.replace("\\", "/")[len(prefix):]
+                        match = prefix.casefold() if os.name == "nt" else prefix
+                        if folded.startswith(match):
+                            location["file_path"] = posix[len(prefix):]
                             break
         validate(report, repo, *args)
 
@@ -134,7 +137,7 @@ def main() -> None:
             # Resolve Forge's tools from the private parent of the review clone.
             with contextlib.chdir(Path(tree).parent):
                 copy = antigravity.home(top) / "review" / item / str(pass_number)
-                roots.append(copy)
+                roots.extend((copy, copy.resolve()))
                 return antigravity.review_engine(
                     top, item, checkout, copy, prompt, implementation["tracked_sensitive_paths"],
                     context["model"], context["effort"], Path(context["spent"]))
