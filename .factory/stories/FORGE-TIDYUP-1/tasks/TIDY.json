@@ -1,5 +1,12 @@
 {
   "branch": "task/FORGE-TIDYUP-1-TIDY",
+  "chat": {
+    "approval": "3103f31bc91f1cbcbdb4673804ce7346fb0d8c0d8e91eb4c48399a4ac8566d32",
+    "claude": null,
+    "conversation": "01a211cf-1013-7ae2-94d6-360a4a9b4b42",
+    "head": null,
+    "start": "2ad14ce9204d350d038afec2c320c159c679954f"
+  },
   "round": 1,
   "status": "working",
   "steps": [
