@@ -71,7 +71,7 @@
       "gain": 5,
       "harm": 4,
       "line": 141,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 2,
       "security": false,
@@ -81,27 +81,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "cc35420ef4a832a1bc675a67ab55681a7732f03b906a6e96caaeb0736d32db07",
-    "changed": "9ff1c93611b0dd6d2a3f982c91a847475dcc3d06aadc960fc00120fcddb508b1",
-    "commit": "37fffeac345d8afcb99390f87c1092381a63f4d5",
+    "branch_diff": "550f34bfb0b5fd4904636a12b3880039f8fd025ff217c43a92751a7533d9afb1",
+    "changed": "08ff972aa6831dd8ed02bfea446ddaf46c9c2d5c390df81b5596bef137ac9d4f",
+    "commit": "a5218faed29ae4a7613f167a8a92362f32ca46dd",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 5, Work 2, Harm 4\nRaise: Functional\nCase: normal use - a Codex coordinator remains open while its repository upgrades Forge.\nThe new marker is written only by the SessionStart hook, so a chat that started before the upgrade has no marker. This return then makes every `forge next` in that chat skip both registration and the search for other coordinators. A second chat can therefore coordinate the same repo without either chat receiving the promised warning until the older chat receives another SessionStart event. The named proof always sends SessionStart before calling `forge next`, so it misses this upgrade case.",
-        "file": "src/forge/native.py",
-        "gain": 5,
-        "harm": 4,
-        "line": 141,
-        "priority": "P0",
-        "title": "Functional: Existing Codex coordinators become invisible after upgrade",
-        "work": 2
-      }
-    ],
-    "id": "15930ef2-5ec3-4840-a905-484eec9b3b21",
-    "status": "blocked"
+    "findings": [],
+    "id": "1896fb4e-aaa9-4ad6-b1a3-30ca55edad24",
+    "status": "clean"
   },
   "round": 4,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T16:08:04.571939+00:00",
@@ -134,6 +123,10 @@
       "at": "2026-11-25T17:23:12.395926+00:00",
       "round": 4,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:30:18.822610+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
