@@ -76,33 +76,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "ec6de22fed98d8f76d8c5ea03bb782682f52c2eeb9462029e09d8499a57aa7fa",
-    "changed": "ff1538d70224278c4abc1829be2c6eb0b9101e9b0cd65e3c27286794e24a79cb",
-    "commit": "363ef33420f284a94451ace9b4cd5ed11ff8a305",
-    "dismissals": [
-      {
-        "because": "src/forge/doctor.py:161 Owner accepts as a known issue: a root shell in another terminal creating an ignored file at the exact moment of removal is very rare; keep the simple rule (merged, nothing uncommitted, never force).",
-        "finding": 1,
-        "from_base": false
-      }
-    ],
-    "findings": [
-      {
-        "body": "Gain 5, Work 2, Harm 5\nRaise: Data loss\nCase: normal use - On macOS, a developer starts a root shell from the main checkout, changes into a finished worktree, and runs `forge next` as their regular user in another terminal. The new `lsof -u` filter excludes the root-owned shell, even though that shell follows the worktree when it moves. If it creates an ignored `.env` after the final `_removable` scan at `src/forge/doctor.py:202`, Git's ordinary worktree removal deletes the new file. The revised test starts its shell under Forge's own user ID, so it does not cover this case.",
-        "file": "src/forge/doctor.py",
-        "gain": 5,
-        "harm": 5,
-        "line": 161,
-        "priority": "P1",
-        "title": "Not done: A folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have",
-        "work": 2
-      }
-    ],
-    "id": "e8c67d64-33a6-4acd-8a95-26bfdd750eb8",
+    "branch_diff": "0d17879aa60f3dde1ee56b7ce391e920e807669c85c2ff625c33bbbcf02d5fd8",
+    "changed": "0c7a34f556f8a2ff22edca00ec444eea2bda6966968cc4c3d698d71335ba7de5",
+    "commit": "f0cf14c8404df71b1e06f9fa20d34b2818f9155c",
+    "dismissals": [],
+    "findings": [],
+    "id": "f93f4df3-6514-44cb-9f8c-c46766a8ac93",
     "status": "clean"
   },
   "round": 5,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T08:24:48.054512+00:00",
@@ -172,6 +155,10 @@
       "at": "2026-11-25T16:43:05.275650+00:00",
       "round": 5,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:46:45.147123+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
