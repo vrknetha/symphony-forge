@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-11T10:46:16.918243+00:00
-seconds: 468.586
-read_hash: 1ecf52668875e4e576ece43d0f44a717f1eeb89a
-round: 2
+read_at: 2026-11-11T10:59:24.566913+00:00
+seconds: 504.567
+read_hash: 450d38fd78e77ccc39bd43f94a5b5d247a9f38f3
+round: 3
 passed: no
-doc_seen: 1ecf52668875e4e576ece43d0f44a717f1eeb89a
+doc_seen: 450d38fd78e77ccc39bd43f94a5b5d247a9f38f3
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 61485ed6ecb476234a1bcef8901b015685a589f7
+notes_seen: 0f2d090adc0c7f284481f2ff787e427c628d78e8
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a1ca23-d19c-7f91-abac-ec3333a0b580
 session:
-loop_choice:
-loop_reason:
+loop_choice: more
+loop_reason: Owner chose one more round: fix the 4 normal-use cases (17-20) in the plan
 ---
 # Cold read notes
 
@@ -146,3 +146,36 @@ Only a genuine trade-off goes to the human, as a question with options.
     The existing [cache](/src/forge/board_facts.py:178) can return the old failure record without `full_run`, the run URL or its date. The [plan](/plans/FORGE-SLOWTEST-1.md:191) accounts for the per-attempt cache but not this outer cache, and its upgrade case does not exercise a populated old cache.  
     Gain 3, Work 2, Harm 2
     Disposition: cut - a schedule cache from an earlier release whose entries lack full_run is treated as stale and read again (detail 4).
+
+## Round 3
+
+17. Blocking: Not done: a non-full run can clear a failed full test run.  
+    Raise: Not done  
+    Case: normal use - A configured workflow runs full tests nightly and a shorter check on pushes to main.  
+    The [plan](/plans/FORGE-SLOWTEST-1.md:170) removes the event filter and treats runs from that workflow as full runs. A successful push check can therefore remove the failed-nightly row even though no later full test passed. Forge’s [generated workflow](/src/forge/prcheck.py:293) also shows that a full-suite job can be limited to specific events.  
+    Gain 5, Work 2, Harm 3
+
+18. Advisory: Not done: skipping a browser script can also skip its setup.  
+    Raise: Not done  
+    Case: normal use - `npm run test:e2e` runs Playwright, its `pretest:e2e` script builds the app, and a later API-test step needs that build.  
+    The [browser classifier](/plans/FORGE-SLOWTEST-1.md:105) checks the script body but not its lifecycle scripts. On Windows it removes the whole invocation, including the [npm pre-script](/opt/homebrew/lib/node_modules/npm/docs/content/using-npm/scripts.md:16), so the later API tests can fail.  
+    Gain 3, Work 2, Harm 3
+
+19. Advisory: Plan gap: the workflow request change breaks an existing test outside the task’s scope.  
+    Raise: Plan gap  
+    Case: normal use - The full-run test suite runs after NIGHTLY is built.  
+    The [plan](/plans/FORGE-SLOWTEST-1.md:174) removes `event=workflow_dispatch`, but [test_testplace_fullrun.py](/tests/test_testplace_fullrun.py:431) requires that field on a workflow request. The test is absent from [NIGHTLY’s scope](/plans/FORGE-SLOWTEST-1.md:265).  
+    Gain 4, Work 1, Harm 2
+
+20. Advisory: Not done: a quoted test pattern is mistaken for a combined script.  
+    Raise: Not done  
+    Case: normal use - A package script runs `jest --testNamePattern="login|signup"`.  
+    The [new rule](/plans/FORGE-SLOWTEST-1.md:60) treats any `|` in the script body as a combined command. This pipe is inside a quoted pattern; [quicktest.py](/src/forge/quicktest.py:59) currently recognizes the single Jest command and suggests a quick test. The planned rule removes that existing suggestion.  
+    Gain 3, Work 2, Harm 3
+
+21. Advisory: Functional: a browser-only setting is reported as missing.  
+    Raise: Functional  
+    Case: normal use - On Windows, a repo’s test setting is only `npm run test:e2e`, which runs Playwright.  
+    The [planned skip](/plans/FORGE-SLOWTEST-1.md:113) leaves an empty command. [review.test_run](/src/forge/review.py:402) then says `forge.toml` names no test command, although it does.  
+    Gain 2, Work 1, Harm 1
+   Disposition: keep - below the bar (live with)
