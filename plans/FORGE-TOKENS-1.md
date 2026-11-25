@@ -17,7 +17,7 @@ Design: none (no screen changes)
 
 Forge is using up its token budget faster than planned. The 93 items that finished from 18 to 25 Nov 2026 used a median of 11.0M input tokens and a mean of 28.5M each. Builds used about 75% of all input, reviews about 19% and cold reads about 6%.
 
-Astra's audit and the advisor's review found the causes. A build turn makes 20 to 46 model calls, and each call reads the whole conversation again, so every token in a brief is paid for many times. Every call also carries about 21k tokens of Codex's own context. The brief inlines the 25.5 KB standards file and design notes even for backend work, and a repair round can paste up to 200 KB of change into the conversation. This story removes those costs quickly; the second story deals with the number of rounds.
+Astra's audit and the advisor's review found the causes. A build turn makes 20 to 46 model calls, and each call reads the whole conversation again, so every token in a brief is paid for many times. Every call also carries about 21k tokens of Codex's own context. The brief inlines the 25.5 KB standards file and design notes even for backend work, and a repair round can paste up to 200 KB of change into the conversation. This story removes the brief and repair costs quickly. Codex's own context stays, by the owner's choice on 25 Nov 2026, because it is small after caching. The second story deals with the number of rounds.
 
 ## Done when
 
