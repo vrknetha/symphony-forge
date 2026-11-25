@@ -75,6 +75,7 @@ Only a genuine trade-off goes to the human, as a question with options.
    Case: normal use - a pytest failure needs its assertion message in the repair brief.  
    The newly named [test-results report](/src/forge/fasttest.py:640) records only outcomes and test names. The [CI named-failure report](/src/forge/review.py:576) likewise lists names and a log path. Neither supplies the promised per-test failure lines, so finding 5 remains open.  
    Gain 3, Work 2, Harm 3
+   Disposition: cut (the owner split the story; repair briefs keep today's failing-check details and promise no per-test failure lines; assertion details move to the second story)
 
 7. Advisory: The required live Codex check has no planned CI runner.
    Raise: Test  
