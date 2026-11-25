@@ -248,10 +248,20 @@ def _work(repo, tmp_path, branch: str = "fix/done", commit: bool = True) -> tupl
     return folder, repo.git("rev-parse", "HEAD", cwd=folder)
 
 
+FINISHED_PR_QUERY = ("api", "graphql", "-F", "query=@-")
+
+
+def _pr_page(*prs: tuple[str, str, str], more: str | None = None) -> str:
+    pages = {}
+    for branch, head, state in prs:
+        page = pages.setdefault("head_" + branch.encode().hex(), {"nodes": [], "pageInfo": {
+            "hasNextPage": more is not None, "endCursor": more}})
+        page["nodes"].append({"headRefOid": head, "state": state, "a_new_field": 1})
+    return json.dumps({"data": {"repository": pages}})
+
+
 def _prs(gh, *prs: tuple[str, str, str], stdout: str = "", exit: int = 0) -> None:
-    gh.respond("pr", "list", "--state", "all", exit=exit, stdout=stdout or json.dumps(
-        [{"headRefName": branch, "headRefOid": head, "state": state, "a_new_field": 1}
-         for branch, head, state in prs]))
+    gh.respond(*FINISHED_PR_QUERY, exit=exit, stdout=stdout or _pr_page(*prs))
 
 
 def _gone(repo, folder: Path, branch: str) -> bool:
@@ -345,12 +355,13 @@ def _an_unusable_github_answer_removes_nothing(repo, gh, tmp_path, monkeypatch, 
     if answer == "fails":
         _prs(gh, ("fix/done", head, "MERGED"), exit=1)
     elif answer == "not a list":
-        _prs(gh, stdout=json.dumps({"headRefOid": head, "state": "MERGED"}))
+        response = json.loads(_pr_page(("fix/done", head, "MERGED")))
+        next(iter(response["data"]["repository"].values()))["nodes"] = {}
+        _prs(gh, stdout=json.dumps(response))
     elif answer == "bad row":
-        _prs(gh, stdout=json.dumps([{"headRefName": "fix/done", "headRefOid": head, "state": "MERGED"}, {}]))
+        _prs(gh, ("fix/done", head, "MERGED"), ("fix/done", head, "UNKNOWN"))
     else:
-        _prs(gh, *[("fix/done", head, "MERGED")] * 1000)
-        gh.respond("pr", "list", "--state", "all", "--limit", "2000", exit=1)
+        _prs(gh, stdout=_pr_page(("fix/done", head, "MERGED"), more="repeated-cursor"))
     for args in (("doctor",), ("doctor", "--fix")):
         assert "folders hold finished work" not in repo.forge(*args).stdout
     assert _kept(repo, folder, "fix/done")

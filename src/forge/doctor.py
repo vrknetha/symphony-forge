@@ -9,6 +9,7 @@ import shutil
 import subprocess
 import tomllib
 from datetime import datetime, timedelta
+from itertools import islice
 from pathlib import Path
 from typing import Any
 
@@ -68,7 +69,47 @@ def _files_fix_finished(top: Path, branch: str) -> bool:
     return isinstance(prs, list) and any(isinstance(pr, dict) and pr.get("state") in ("MERGED", "CLOSED") for pr in prs)
 def _open_files_fix(top: Path) -> str: return next((branch for branch in repo.git("for-each-ref", "--format=%(refname:short)",
                  "refs/heads/fix/forge-files-*", cwd=top).splitlines() if not _files_fix_finished(top, branch)), "")
-def _finished(top: Path, main: Path) -> list[tuple[Path, str, str]]:
+def _cleanup_prs(gh: str, top: Path, branches: dict[str, Path]) -> list[tuple[str, str, str]]:
+    pending: dict[str, str | None] = dict.fromkeys(branches)
+    prs = []
+    while pending:
+        batch = {f"head_{branch.encode().hex()}": (branch, cursor)
+                 for branch, cursor in islice(pending.items(), 150)}
+        fields = [
+            f"{alias}: pullRequests(first: 25, headRefName: {json.dumps(branch, ensure_ascii=False)}, "
+            f"after: {json.dumps(cursor)}) {{ nodes {{ headRefOid state }} "
+            "pageInfo { hasNextPage endCursor } }"
+            for alias, (branch, cursor) in batch.items()
+        ]
+        query = ("query FinishedFolders($owner: String!, $name: String!) { "
+                 "repository(owner: $owner, name: $name) { " + " ".join(fields) + " } }")
+        # A fresh, branch-filtered query avoids reading unrelated history or waiting for land's quota.
+        done = subprocess.run([gh, "api", "graphql", "-F", "query=@-", "-F", "owner={owner}", "-F", "name={repo}"],
+                              cwd=top, input=query.encode("utf-8"), capture_output=True, timeout=10)
+        if done.returncode: return []
+        response = json.loads(done.stdout)
+        if response.get("errors"): return []
+        pages = response["data"]["repository"]
+        for alias, (branch, cursor) in batch.items():
+            page = pages[alias]
+            nodes, info = page["nodes"], page["pageInfo"]
+            if not isinstance(nodes, list) or not all(
+                    isinstance(pr, dict) and isinstance(pr.get("headRefOid"), str)
+                    and pr.get("state") in ("OPEN", "MERGED", "CLOSED") for pr in nodes):
+                return []
+            if info["hasNextPage"] is True:
+                after = info["endCursor"]
+                if not isinstance(after, str) or not after or after == cursor: return []
+                pending[branch] = after
+            elif info["hasNextPage"] is False:
+                del pending[branch]
+            else:
+                return []
+            prs.extend((branch, pr["headRefOid"], pr["state"]) for pr in nodes)
+    return prs
+
+
+def _finished(top: Path, main: Path) -> list[tuple[Path, str, str, str]]:
     gh = shutil.which("gh")
     if not gh: return []
     trees = {branch: path for branch, path in story.worktrees(top).items()
@@ -77,32 +118,19 @@ def _finished(top: Path, main: Path) -> list[tuple[Path, str, str]]:
              and not (path / ".gitmodules").exists()}
     if not trees: return []
 
-    limit = 1000
-    while True:
-        # Cleanup needs a fresh answer and must not enter land's quota wait.
-        done = subprocess.run([gh, "pr", "list", "--state", "all", "--limit", str(limit),
-                               "--json", "headRefName,headRefOid,state"], cwd=top,
-                              stdin=subprocess.DEVNULL, capture_output=True, timeout=10)
-        prs = json.loads(done.stdout) if not done.returncode else None
-        if not isinstance(prs, list) or not all(
-                isinstance(pr, dict) and isinstance(pr.get("headRefName"), str)
-                and isinstance(pr.get("headRefOid"), str)
-                and pr.get("state") in ("OPEN", "MERGED", "CLOSED") for pr in prs):
-            return []
-        if len(prs) < limit: break
-        limit *= 2
-
-    open_branches = {pr["headRefName"] for pr in prs if pr["state"] == "OPEN"}
-    by_head = {(pr["headRefName"], pr["headRefOid"], pr["state"]) for pr in prs}
-    reported = {pr["headRefName"] for pr in prs}
-    live = {Path(run["checkout_root"]).resolve() for run in machine.entries() if run.get("checkout_root")}
+    by_head = set(_cleanup_prs(gh, top, trees))
+    open_branches = {branch for branch, _, state in by_head if state == "OPEN"}
+    reported = {branch for branch, _, _ in by_head}
+    # Old lane entries recorded the checkout as "repo", including while they waited for a place.
+    live = {Path(folder).resolve() for run in machine.entries()
+            if (folder := run.get("checkout_root") or run.get("repo"))}
     closed = {}
     found = []
     for branch, path in trees.items():
         if branch not in reported or branch in open_branches or path.resolve() in live: continue
         head = repo.git("rev-parse", f"refs/heads/{branch}", cwd=top)
         if (branch, head, "MERGED") in by_head:
-            found.append((path, branch, "merged"))
+            found.append((path, branch, head, "merged"))
         elif (branch, head, "CLOSED") in by_head:
             closed[f"refs/heads/{branch}"] = (head, path, branch)
     if closed:
@@ -112,48 +140,54 @@ def _finished(top: Path, main: Path) -> list[tuple[Path, str, str]]:
                 head, _, ref = line.partition("\t")
                 if ref in closed and head == closed[ref][0]:
                     _, path, branch = closed[ref]
-                    found.append((path, branch, "closed"))
+                    found.append((path, branch, head, "closed"))
+    return found
 
-    from forge import board
-    events = board._event_history(top)[1] if found else {}
-    clean = []
-    for path, branch, state in found:
-        item = task.branch_item(branch, path)
-        if item and board.active_runs(path, item[0], events.get(item[0], [])): continue
-        try:
-            if not task.worktree_files(path):
-                clean.append((path, branch, state))
-        except (OSError, ValueError, subprocess.SubprocessError, repo.Refused):
-            continue
-    return clean
+
+def _removable(path: Path, ref: str, head: str) -> bool:
+    return (not (path / ".gitmodules").exists()
+            and repo.git("symbolic-ref", "--quiet", "HEAD", cwd=path) == ref
+            and repo.git("show-ref", "--hash", "--verify", "HEAD", cwd=path) == head
+            and not task.worktree_files(path))
 
 
 def tidy_finished(top: Path, *, inspect: bool = False, report=None) -> int:
     """Remove only worktrees whose exact local work is available on GitHub."""
+    from forge import board
+
     try:
         if repo._pin(sync.read(top / "forge.toml")) != __version__: return 0
         main = machine.main_checkout(top)
         finished = _finished(top, main)
-    except (OSError, ValueError, subprocess.SubprocessError, repo.Refused):
-        return 0
-    if inspect:
-        if finished and report is not None:
-            report(f"{len(finished)} folders hold finished work: "
-                   f"{', '.join(str(path) for path, _, _ in finished)}.")
+        events = board._event_history(top)[1] if finished else {}
+    except (AttributeError, KeyError, TypeError, OSError, ValueError, subprocess.SubprocessError, repo.Refused):
         return 0
 
     count = 0
-    for path, branch, state in finished:
+    clean = []
+    for path, branch, head, state in finished:
+        ref = f"refs/heads/{branch}"
         try:
-            removed = repo.run("git", "worktree", "remove", "--force", str(path), cwd=main)
+            item = task.branch_item(branch, path)
+            if item and board.active_runs(path, item[0], events.get(item[0], [])): continue
+            if not _removable(path, ref, head): continue
+            if inspect:
+                clean.append(str(path))
+                continue
+            removed = repo.run("git", "-c", "status.showUntrackedFiles=all", "worktree", "remove", str(path), cwd=main)
+            if removed.returncode:
+                # Git refuses lockfile changes and generated hooks. Recheck before allowing those exceptions.
+                if not _removable(path, ref, head): continue
+                removed = repo.run("git", "worktree", "remove", "--force", str(path), cwd=main)
             if removed.returncode:
                 if report is not None:
                     report(f"Forge couldn't remove {path}: {_last(removed)}",
                            f"unlock it or close programs using it, then {REPAIR}")
                 continue
             count += 1
+            if repo.git("show-ref", "--hash", "--verify", ref, cwd=main) != head: continue
             deleted = repo.run("git", "branch", "-D", branch, cwd=main)
-        except (OSError, repo.Refused):
+        except (OSError, ValueError, subprocess.SubprocessError, repo.Refused):
             continue
         if report is not None:
             if deleted.returncode:
@@ -161,6 +195,8 @@ def tidy_finished(top: Path, *, inspect: bool = False, report=None) -> int:
                        f"{_last(deleted).rstrip('.')}.", f"git branch -D {branch}")
             else:
                 print(f"- Fixed: removed {path}, whose pull request is {state}.")
+    if clean and report is not None:
+        report(f"{len(clean)} folders hold finished work: {', '.join(clean)}.")
     return count
 
 
