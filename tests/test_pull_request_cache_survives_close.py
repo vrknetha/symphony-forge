@@ -116,6 +116,9 @@ def test_2_next_fetches_default_settings_once_and_fetches_again_on_the_next_run(
         assert fetches == [["fetch", "-q", "--prune", "origin",
                             "+refs/heads/*:refs/remotes/origin/*"]], fetches
         assert len(calls) <= 180
-        # The full run's own scheduled-runs list is one more request than before.
-        assert len(env.gh.calls()) - before[1] <= 13
+        # Allow one fresh cleanup lookup per run. Keep the budget for all other reads.
+        github_calls = env.gh.calls()[before[1]:]
+        cleanup = ["api", "graphql", "-F", "query=@-"]
+        assert sum(call[:len(cleanup)] == cleanup for call in github_calls) == 1, github_calls
+        assert len(github_calls) - 1 <= 13, github_calls
         assert elapsed < (90 if os.name == "nt" else 30), elapsed

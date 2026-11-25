@@ -692,6 +692,12 @@
       "order": 127
     },
     {
+      "key": "FORGE-ANTIGRAVITY-1",
+      "title": "Google Antigravity as a third coding agent",
+      "status": "pending",
+      "order": 128
+    },
+    {
       "key": "FORGE-RELNOTES-1",
       "title": "Tell clients what each Forge release changed",
       "status": "pending",
@@ -704,16 +710,16 @@
       "order": 128
     },
     {
-      "key": "FORGE-TOKENS-1",
-      "title": "Builder rounds send fewer input tokens",
+      "key": "FORGE-TIDYUP-1",
+      "title": "Finished work is cleaned up every time, and leftover work is listed with one next step",
       "status": "pending",
       "order": 129
     },
     {
-      "key": "FORGE-ANTIGRAVITY-1",
-      "title": "Google Antigravity as a third coding agent",
+      "key": "FORGE-TOKENS-1",
+      "title": "Builder rounds send fewer input tokens",
       "status": "pending",
-      "order": 128
+      "order": 129
     }
   ],
   "epics": [
