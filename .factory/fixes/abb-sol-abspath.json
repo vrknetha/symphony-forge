@@ -48,7 +48,7 @@
     "id": "eb407436-094c-49e4-a0e6-6d993ca8ae24",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -63,13 +63,18 @@
     {
       "at": "2026-11-25T08:51:07.702344+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T08:51:30.433511+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "63d8ee07f7f8bb3602de2c9878e75754b0c035f4",
+    "close": "52a63c3b-bac4-477a-a122-c1795834abce",
+    "head": "20d989ec7c950439021f83a4661037e487907f16",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "A review finding that names a file by its absolute path makes the review helper discard the whole review, so its tokens (about 3M once) are wasted and the review runs again.",
   "worker": "codex"
