@@ -100,7 +100,7 @@
     "id": "d45cab36-403d-411a-a74e-3b0ae5d123b9",
     "status": "blocked"
   },
-  "round": 3,
+  "round": 4,
   "status": "fixing",
   "steps": [
     {
@@ -129,13 +129,20 @@
     {
       "at": "2026-11-25T15:50:57.385318+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T16:42:54.555697+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": "b60a5648-945c-4091-a60e-170854c81182",
-    "head": "bfed6798b2dc81b0895141bdb5e405116da9f056",
-    "keys": {},
-    "round": 2
+    "close": "93810653-e7c8-4f3c-91de-215d9dd6f85a",
+    "head": "69f424e0da46d4848c5991911d33a5ccc8a0b779",
+    "keys": {
+      "the open P0 provide a bootstrap path for existing clients' upgrade checks in src/forge/upgrade.py": 1
+    },
+    "round": 3
   },
   "why": "GitHub disabled the knacklabs repo, so every Forge install and upgrade line that points at git+https://github.com/knacklabs/symphony-forge@<version> fails in client CI, hooks and the pinned-release runner; Forge is now published on PyPI as symphony-forge, and its PyPI page shows no description.",
   "worker": "codex"
