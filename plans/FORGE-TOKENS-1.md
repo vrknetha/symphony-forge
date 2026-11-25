@@ -52,6 +52,8 @@ Accepted limits:
 | HOST | Codex runs leave out host memory and skill list | The Codex request config keys for Forge's runs | 3 | `src/forge/codex.py` | `tests/test_codex_runs_skip_host_context.py` (new) | | no | |
 | TESTLIST | Long related-test lists go to a file | Count and path in the brief for long lists | 4 | `src/forge/worker.py` | `tests/test_long_test_list_goes_to_a_file.py` (new) | FRESH | no | |
 
+New moving parts: none
+
 ## Notes
 
 - Baseline (18 to 25 Nov 2026, run-end events, counted after the accounting fix): median 13.2M input tokens per merged item, mean 30.0M; 3.4 build runs and 3.3 review runs per item. Earlier records undercount 241 of 750 medium runs; do not use them.
