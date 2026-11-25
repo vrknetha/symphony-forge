@@ -94,7 +94,7 @@
     "id": "18498f68-69ca-401a-a405-5548bd189a39",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -109,13 +109,18 @@
     {
       "at": "2026-11-25T08:53:59.411323+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T08:54:24.208562+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "4a39f15f2182d5e5106a48c4d143bcafdb204e92",
+    "close": "ba1d9bec-0600-4b5c-a70f-ec83f4009150",
+    "head": "d75cf12eed480217b60e992e8cc4bb909456ff29",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "A handback with a wrong round number says the round was stopped or replaced and gives no next step, so the work looks lost (issue #1791).",
   "worker": "codex"
