@@ -43,13 +43,13 @@ effort = "low"
 
 @pytest.mark.parametrize("models,planning,implementation_effort", [
     (None, ("claude-sonnet-5-5", "high"), "low"),
-    (CODEX_MODELS, ("claude-opus-5-5", "high"), "low"),
+    (CODEX_MODELS, ("claude-sonnet-5-5", "high"), "low"),
     (CODEX_MODELS + CLAUDE_MODELS, ("custom-opus", "medium"), "xhigh"),
 ], ids=["new-repo", "missing-claude-entries", "configured-grill-and-old-review"])
 def test_5_init_and_sync_write_claude_role_defaults_and_preserve_codex_settings(
         repo, gh, tmp_path, models, planning, implementation_effort):
     # Building stays on Sonnet. Planning follows grill rather than design, while diagnostic
-    # roles use Opus independently of obsolete review pins owned by the external reviewer.
+    # roles use Sonnet independently of review pins owned by the external reviewer.
     top = repo.path
     if models is None:
         top, initialized = _fresh_client(repo, gh, tmp_path)
@@ -78,7 +78,7 @@ def test_5_init_and_sync_write_claude_role_defaults_and_preserve_codex_settings(
     for name in ("planner", "architect"):
         assert _settings(top, name)[1] == planning, name
     for name in ("debugger", "security", "performance"):
-        assert _settings(top, name)[1] == ("claude-opus-5-5", "high"), name
+        assert _settings(top, name)[1] == ("claude-sonnet-5-5", "high"), name
 
     if models is None:
         # Init pins both tools' reviews. Codex diagnostic roles use its review entry.
