@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-25T05:43:55.100738+00:00
-seconds: 594.45
-read_hash: eefb602d9052dcfa0bee755555fba71924e815f9
-round: 1
+read_at: 2026-11-25T05:49:43.344407+00:00
+seconds: 301.827
+read_hash: 4bdd9419e3ac380bbc914713aa88ddbf92a605cf
+round: 2
 passed: no
-doc_seen: eefb602d9052dcfa0bee755555fba71924e815f9
+doc_seen: 4bdd9419e3ac380bbc914713aa88ddbf92a605cf
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 709f52f2bbe258e40b103a8f70307e602d05b242
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21132-5e37-7533-8ab4-34c5b31dac38
 session:
@@ -76,4 +76,37 @@ Only a genuine trade-off goes to the human, as a question with options.
 9. Blocking: The guide test does not prove the promised restriction on notes.
    Raise: Test. Case: normal use - a coordinator consults the guide before giving guidance for a round. The planned test checks only that the skill names `forge land` for building; it can pass while [skill.md:1990](/src/forge/templates/skill.md:1990) still advises adding a note whenever a sentence would help, contrary to Done-when 2.
    Gain 3, Work 1, Harm 1
+   Disposition: keep - below the bar (follow-up)
+
+## Round 2
+
+10. Advisory: A worker can leave requested changes out of the pull request.
+    Raise: Functional. Case: normal use - a worker commits part of its work but leaves other changes uncommitted after its reminder. [worker.py:445](/src/forge/worker.py:445) only warns; [land.py:112](/src/forge/land.py:112) proceeds to close. In a CI-test repository, review and checks see the committed work, so a partial change can be published or merged while the rest remains in the checkout.
+    Adds work: pause before close when the worker leaves uncommitted changes; F 2 x H 2 = 4; 2 x C = 4.
+    Gain 4, Work 2, Harm 3
+    Disposition: keep known issue: pre-existing land behaviour, separate fix (owner, 25 Nov 2026)
+
+11. Advisory: The guide conflicts with the repair steps the plan preserves.
+    Raise: Plan gap. Case: normal use - a review repair passes review but the checks then fail. [test_land.py:358](/tests/test_land.py:358) shows land stopping after one repair and printing `forge work`, without a person’s decision. The amended plan keeps that step but says to use `forge work` only when a person requests one round.
+    Gain 4, Work 1, Harm 2
+    Disposition: cut (guide now says to run forge work or forge close when land prints it)
+
+12. Advisory: A newly started item from another machine still points to `forge work`.
+    Raise: Not done. Case: normal use - a teammate starts and publishes a fix before its builder runs, and this machine has no checkout for it. [nextstep.py:1075](/src/forge/nextstep.py:1075) returns `forge work` before reaching the `started` status the plan changes. A test using only a local checkout would pass.
+    Gain 3, Work 2, Harm 1
+   Disposition: keep - below the bar (follow-up)
+
+13. Advisory: Repeating task start still gives the old next step.
+    Raise: Not done. Case: normal use - a coordinator repeats `forge task start` after the task was created but before its builder ran. [task.py:460](/src/forge/task.py:460) uses the unchanged “already started” refusal, which names `forge work` at [task.py:28](/src/forge/task.py:28). The planned first-start test does not cover that response.
+    Gain 3, Work 1, Harm 1
+   Disposition: keep - below the bar (follow-up)
+
+14. Advisory: The specified fix-start edit points to the allowance command.
+    Raise: Plan gap. Case: normal use - a coordinator starts a fix. [task.py:806](/src/forge/task.py:806) prints the fix-start step; the plan instead names [task.py:835](/src/forge/task.py:835), which prints after an allowance answers a question. Following that location leaves fix start unchanged and changes a stop response the plan says to preserve.
+    Gain 3, Work 1, Harm 1
+   Disposition: keep - below the bar (follow-up)
+
+15. Advisory: The start rule does not state the size-choice exception.
+    Raise: Plan gap. Case: normal use - intake predicts that one fix needs more than five code files. [task.py:797](/src/forge/task.py:797) starts the fix with an owner choice, then prints the allowance step before any builder runs. Done-when 1 instead says every such started fix prints `forge land`.
+    Gain 3, Work 1, Harm 1
    Disposition: keep - below the bar (follow-up)

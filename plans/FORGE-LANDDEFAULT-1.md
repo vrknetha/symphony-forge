@@ -6,7 +6,7 @@
 
 - When a task or fix has just started and its builder has not run yet, the next step Forge prints is `forge land <item>`, run in the background. Today it is `forge work <item>`, and the agent then runs `forge close` by hand and starts each repair round itself. `forge land` already builds, closes, sends review findings and failed checks back to the builder and merges in one run, so a blocked review goes straight to the next repair round instead of waiting for the agent's next turn. After a story is approved, the next step stays `forge task start`, and its next step is then `forge land`. (Source: the owner's choice, 25 Nov 2026)
 - `forge land` still stops where a person decides today: at the round limit, when an item is stuck, and when a round asks a question. The next steps Forge prints at those stops do not change. In a repo where a person merges, land stops at Ready and asks the person to merge, as it does today.
-- The Forge guide and the repo instructions that Forge ships say to run each item with `forge land` in the background after it starts, and to use `forge work` and `forge close` only when a person asks for one build round or one close.
+- The Forge guide and the repo instructions that Forge ships say to run each item with `forge land` in the background after it starts, and to run `forge work` or `forge close` when a land run prints it as its next step or a person asks for one build round or one close.
 - What each repo gets: a new repo and an existing repo get the new next step and guide text on upgrade to the release that has this story. No setting changes and no command is added.
 
 Design: none (no screen changes)
@@ -18,7 +18,7 @@ From 18 to 25 Nov 2026, a blocked review waited a median of 3.8 minutes, and one
 ## Done when
 
 1. **When a task or fix has started and its builder has not run, the next step that task start, fix start and forge next print is `forge land <item>`.**
-2. **The coordinator guide and the repo instructions that Forge ships tell coordinators to run each started item with `forge land` in the background, and keep `forge work` and `forge close` for a person's request for one round or one close.**
+2. **The coordinator guide and the repo instructions that Forge ships tell coordinators to run each started item with `forge land` in the background, and to run `forge work` or `forge close` when land prints it or a person asks for one round or one close.**
 
 ## Risks
 
@@ -33,8 +33,8 @@ Accepted limits:
 
 ### Done-when details
 
-1. `src/forge/task.py` (task start at :521, fix start at :835) and `src/forge/nextstep.py` (the `started` status at :52; keep the builder-name suffix at :1148-1149 working for the new step) name `forge land {item}`. Nothing else changes: the next steps in `close.py`, `checks.py`, `merge.py`, `native.py`, `worker.py` and the other `nextstep.py` states stay as they are (cold read round 1, findings 1-5). Tests: task start, fix start and forge next for a started item each print `Next: forge land <item>`.
-2. `src/forge/templates/skill.md` (the "Build it" row at :182 and the flow text), `src/forge/templates/adapters/AGENTS.md` (flow steps 3-4 at :16-18) name `forge land <item>` in the background after the start; `forge work` and `forge close` stay in the table for one round or one close. The note paragraph at skill.md :1990 says a note goes with `forge land <item> --note` when a land run stopped for a person, and with `forge work` only for a single requested round. `run-reference.md` :172 describes a status that land does not produce and stays. Run `forge sync` so `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` and this repo's AGENTS.md block follow. Test: the shipped skill and AGENTS.md template name `forge land` for building a started item.
+1. `src/forge/task.py` (task start at :521, fix start at :806, and the "already started" refusal at :28 when the builder has not run; the allowance step at :835 and the size-choice start at :797 stay) and `src/forge/nextstep.py` (the `started` status at :52; keep the builder-name suffix at :1148-1149 working for the new step) name `forge land {item}`. Nothing else changes: the next steps in `close.py`, `checks.py`, `merge.py`, `native.py`, `worker.py` and the other `nextstep.py` states stay as they are (cold read round 1, findings 1-5). Tests: task start, fix start and forge next for a started item each print `Next: forge land <item>`.
+2. `src/forge/templates/skill.md` (the "Build it" row at :182 and the flow text), `src/forge/templates/adapters/AGENTS.md` (flow steps 3-4 at :16-18) name `forge land <item>` in the background after the start; `forge work` and `forge close` stay in the table for one round or one close, and for when a land run prints them as its next step. The note paragraph at skill.md :1990 says a note goes with `forge land <item> --note` when a land run stopped for a person, and with `forge work` only for a single requested round. `run-reference.md` :172 describes a status that land does not produce and stays. Run `forge sync` so `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` and this repo's AGENTS.md block follow. Test: the shipped skill and AGENTS.md template name `forge land` for building a started item.
 
 ## Tasks
 
