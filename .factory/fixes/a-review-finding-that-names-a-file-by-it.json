@@ -4,8 +4,68 @@
   "done_when": "A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path with no second review run.",
   "fix_kind": "backend",
   "kind": "fix",
+  "known": [
+    {
+      "area": "main.validate_paths() in src/forge/review_process.py",
+      "file": "src/forge/review_process.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 121,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Checkout paths cited through a symlink alias are discarded",
+      "work": 2
+    },
+    {
+      "area": "test_1_close_keeps_a_finding_citing_an_absolute_checkout_path() in tests/test_close_keeps_checkout_absolute_paths.py",
+      "file": "tests/test_close_keeps_checkout_absolute_paths.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 30,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Checkout paths cited through a symlink alias are kept in one review",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "4d057257f4653ca91dd00f7d027f5a0a6c968e9233c2961081dbfdd500372651",
+    "changed": "4abc33d8197bd34420926056f00d40e023edcb3b026214eed0cddb254524e0ed",
+    "commit": "407c65e2214a4a7c19b372488d0f187574c1a0ee",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a macOS checkout under /var/folders is cited using that system alias.\nThe unmet item is: \u201cA review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path with no second review run.\u201d Git can report the worktree as /private/var/folders/... (the worktree path comes from src/forge/story.py:822-824), while /var/folders/... names the same files. Both checkout roots then use the /private spelling, so this prefix comparison misses the valid alias. Autoreview rejects the still-absolute path at tests/fixtures/autoreview-ce14dcca/scripts/autoreview:6811, discarding the report and triggering another review. Different valid casing on a case-insensitive macOS volume is also missed because the comparison folds case only on Windows.",
+        "file": "src/forge/review_process.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 121,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: Checkout paths cited through a symlink alias are discarded",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - CI passes while a macOS review discards a finding that uses the /var checkout alias.\nThe tested item is: \u201cA review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path with no second review run.\u201d The test derives both spellings from the same worktree and never creates an alias. On the Linux pull-request runner with a non-symlink temporary directory, the raw and resolved spellings are identical, so both cases pass despite the current failure for a valid alias. The test also does not exercise a different valid spelling on a case-insensitive filesystem.",
+        "file": "tests/test_close_keeps_checkout_absolute_paths.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 30,
+        "priority": "P1",
+        "title": "Test: Checkout paths cited through a symlink alias are kept in one review",
+        "work": 2
+      }
+    ],
+    "id": "f92e7dad-86da-45c7-8a7b-61a5e0dc5f14",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T08:12:58.875500+00:00",
@@ -15,6 +75,10 @@
       "at": "2026-11-25T08:14:49.296775+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T08:27:33.588401+00:00",
+      "step": "review"
     }
   ],
   "stuck": {

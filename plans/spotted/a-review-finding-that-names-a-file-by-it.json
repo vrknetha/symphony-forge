@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/review_process.py\tNot done: Checkout paths cited through a symlink alias are discarded\ta-review-finding-that-names-a-file-by-it",
+      "kind": "bug",
+      "path": "src/forge/review_process.py",
+      "line": 121,
+      "text": "Not done: Checkout paths cited through a symlink alias are discarded",
+      "from": "blocking",
+      "item": "a-review-finding-that-names-a-file-by-it",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_close_keeps_checkout_absolute_paths.py\tTest: Checkout paths cited through a symlink alias are kept in one review\ta-review-finding-that-names-a-file-by-it",
+      "kind": "bug",
+      "path": "tests/test_close_keeps_checkout_absolute_paths.py",
+      "line": 30,
+      "text": "Test: Checkout paths cited through a symlink alias are kept in one review",
+      "from": "blocking",
+      "item": "a-review-finding-that-names-a-file-by-it",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
