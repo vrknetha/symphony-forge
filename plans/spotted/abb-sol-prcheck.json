@@ -12,6 +12,17 @@
       "closed_by": null
     },
     {
+      "key": "bug\ttests/test_close_runs_only_related_tests.py\tThe shared pyproject test exceeded its one-minute limit in CI and left a test shell running.",
+      "kind": "bug",
+      "path": "tests/test_close_runs_only_related_tests.py",
+      "line": 75,
+      "text": "The shared pyproject test exceeded its one-minute limit in CI and left a test shell running.",
+      "from": "worker",
+      "item": "abb-sol-prcheck",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "bug\ttests/test_pr_check_failure_log.py\tTest: A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.\tabb-sol-prcheck",
       "kind": "bug",
       "path": "tests/test_pr_check_failure_log.py",
