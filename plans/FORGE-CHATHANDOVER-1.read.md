@@ -91,7 +91,7 @@ Only a genuine trade-off goes to the human, as a question with options.
    Gain 3, Work 4, Harm 2
 
 Automatic approval review rejected `forge next` because it requires approval and this session does not allow approval requests. The read used the plan and source directly instead.
-   Disposition: keep - below the bar (follow-up)
+   Disposition: cut no new entry; the existing Bash PreToolUse hook runs the check (detail 1).
 
 ## Round 2
 
@@ -100,46 +100,55 @@ Automatic approval review rejected `forge next` because it requires approval and
    Case: normal use - the owner asks to hand over the current chat.
    The [amended plan](/plans/FORGE-CHATHANDOVER-1.md:39) renames the machine-handover section, but the preceding [handoff paragraph](/src/forge/templates/skill.md:645) still says to copy notes to `docs/handover.md` at handover. That conflicts with the fresh-chat flow’s promise of no second file.
    Gain 4, Work 2, Harm 3
+   Disposition: cut the Handoff sentence about docs/handover.md now applies only to a hand over to another machine or person (detail 2).
 
 10. Blocking: The proposed hook output will not reach the coordinator.
     Raise: Functional.
     Case: normal use - a Claude or Codex coordinator passes half its context window during a tool call.
     The [plan](/plans/FORGE-CHATHANDOVER-1.md:38) says to print a plain line from a tool hook. Both [Claude Code](https://code.claude.com/docs/en/hooks) and [Codex](https://learn.chatgpt.com/docs/hooks) require structured `additionalContext` for the coordinator to receive it; plain output from these tool hooks is ignored. The proposed direct-command test would still see the printed line.
     Gain 5, Work 2, Harm 3
+   Disposition: cut the line goes out as structured additionalContext, and the tests check that field (detail 1).
 
 11. Advisory: The proposed additional tool hook does not fit the existing hook registration.
     Raise: Plan gap.
     [Forge’s host table](/src/forge/githooks.py:20) has one entry per event, and `PostToolUse` already records approvals. [Sync](/src/forge/sync.py:224) and [Codex’s trusted-hook list](/src/forge/codex.py:73) both assume that shape. Replacing the entry loses approval recording; adding another requires changes outside the task’s stated scope. Existing [hook tests](/tests/test_setup.py:444) also expect exactly eight commands.
     Gain 4, Work 3, Harm 3
-   Disposition: keep - below the bar (follow-up)
+   Disposition: cut no new entry; the existing Bash PreToolUse hook runs the check (detail 1).
 
 12. Advisory: The planned code has only three lines of space under the module limit.
     Raise: Gate.
     [nextstep.py](/src/forge/nextstep.py:1197) already has 1,197 lines. The plan puts the transcript check, startup change and handoff change there, while [the required check](/tests/test_rules.py:62) refuses modules over 1,200 lines. The plan does not say where existing code can move.
     Gain 4, Work 2, Harm 2
+   Disposition: cut the check goes in a new module (detail 1).
 
 13. Advisory: The Claude fallback can miss the threshold for a supported smaller window.
     Raise: Functional.
     When the host does not report a window, the [plan](/plans/FORGE-CHATHANDOVER-1.md:38) assumes one million tokens. [Claude Haiku 4.5 has a 200,000-token window](https://platform.claude.com/docs/en/models/haiku-4-5/overview), so a coordinator using it can compact before the planned 500,000-token warning.
     Gain 3, Work 2, Harm 3
+   Disposition: cut the window falls back to 1M only for Opus and Sonnet, else 200K; a Haiku test is added (detail 1).
 
 14. Advisory: The Claude calculation omits generated tokens from the current context.
     Raise: Functional.
     The [plan](/plans/FORGE-CHATHANDOVER-1.md:38) adds the three input counters but excludes output tokens. [Claude’s context-window documentation](https://platform.claude.com/docs/en/build-with-claude/context-windows) says generated output also occupies the window. For example, 480,000 input tokens plus 30,000 output tokens crosses half of a one-million-token window, but the planned calculation remains below it.
     Gain 3, Work 2, Harm 3
+   Disposition: cut output tokens are counted (detail 1).
 
 15. Advisory: Unproven: item 1: a worker can receive the coordinator’s handover warning.
     Raise: Test.
     The planned hook applies to all tools, including those run by [Forge workers](/src/forge/claude_turn.py:32). Its message directs the recipient to the coordinator guide, while the [worker brief](/src/forge/worker.py:60) tells workers not to read it. The proposed test does not exercise a worker.
     Gain 3, Work 2, Harm 3
+   Disposition: cut no line for a subagent or a task or fix worktree; tested (detail 1).
 
 16. Advisory: Unproven: item 1: a fresh chat may not get its first warning.
     Raise: Test.
     The [test](/plans/FORGE-CHATHANDOVER-1.md:38) checks suppression only by calling twice at the same size. It would pass with a marker shared by the whole repo: after one chat warns at 60%, a fresh chat reaching 60% could receive no warning.
     Gain 3, Work 2, Harm 3
+   Disposition: cut the marker is per chat; a second chat at 60% is tested (detail 1).
 
 17. Advisory: Unproven: item 1: the Codex test does not distinguish current context from cumulative usage.
     Raise: Test.
     A Codex token-count event has both counters: [the latest usage is the active context, while the total is accumulated session usage](https://github.com/openai/codex/blob/main/codex-rs/tui/src/token_usage.rs). The [plan’s test](/plans/FORGE-CHATHANDOVER-1.md:38) supplies only Claude transcripts, so it would pass if Codex warned from the cumulative counter after several small requests.
     Live host hook delivery was not tested.
     Gain 3, Work 2, Harm 3
+
+   Disposition: cut Codex uses the latest request, not the session total; tested (detail 1).
