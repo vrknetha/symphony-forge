@@ -5,7 +5,7 @@ import subprocess
 import pytest
 
 from test_close import env  # noqa: F401
-from test_done_when_tests import _start_fix_without_proof
+from test_done_when_tests import _proof, _start_fix_without_proof
 from test_runner_without_gh import read_job
 from test_testplace_workflow import _jobs
 from test_two_round_limit import client
@@ -15,14 +15,28 @@ STORY = "FIX-ABB-SOL-PRCHECK"
 
 @pytest.mark.platform
 @pytest.mark.skipif(os.name == "nt", reason="The trusted review job runs in bash on Linux")
-def test_1_review_report_prints_refusal_and_next_step(env, gh, tmp_path):
+@pytest.mark.parametrize(("proof_name", "reason", "next_step"), [
+    (None, "The fix's Done-when line names no test in the Proof list.",
+     'Add a line "Done when: <test>" to the Proof list in your last commit message.'),
+    ("tests/test_greeting.py::test_old_greeting",
+     "tests/test_greeting.py::test_old_greeting is not on this branch.",
+     "Correct the test name in the Proof list or commit the missing test."),
+], ids=["missing-entry", "outdated-name"])
+def test_1_review_report_prints_refusal_and_next_step(env, gh, tmp_path, proof_name, reason, next_step):
     client(env, adopted=False)
     repo = env.repo
     workflow = repo.git("show", "main:.github/workflows/forge.yml")
     _, steps = read_job(_jobs(workflow)["forge-pr-check"])
     check = next(step for step in steps if step.get("id") == "review")
     report = next(step for step in steps if step.get("name") == "Report review status")
-    _, where = _start_fix_without_proof(env, {"app.py": "print('Hello')\n"})
+    _, where = _start_fix_without_proof(env, {
+        "app.py": "print('Hello')\n",
+        "tests/test_greeting.py": "def test_new_greeting(capsys):\n"
+        "    import app\n"
+        "    assert capsys.readouterr().out == 'Hello\\n'\n",
+    })
+    if proof_name:
+        _proof(env, where, f"- Done when: {proof_name}")
 
     head = repo.git("rev-parse", "HEAD", cwd=where)
     jobs = "repos/acme/shop/actions/runs/123/jobs"
@@ -41,5 +55,5 @@ def test_1_review_report_prints_refusal_and_next_step(env, gh, tmp_path):
                               capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert reported.returncode == 1, reported.stdout + reported.stderr
     log = reported.stdout + reported.stderr
-    assert "The fix's Done-when line names no test in the Proof list." in log, log
-    assert 'Add a line "Done when: <test>" to the Proof list in your last commit message.' in log
+    assert reason in log, log
+    assert next_step in log, log

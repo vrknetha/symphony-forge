@@ -212,7 +212,8 @@ def check(top: Path, item: str, base: str, results: str, *, ran: bool = True,
             if name == "check:":
                 continue
             if not ran and not _on_branch(top, head, name):
-                messages.append(f"Done-when proof: {name} is not on this branch.")
+                messages.append(f"Done-when proof: {name} is not on this branch. "
+                                "Correct the test name in the Proof list or commit the missing test.")
             if name.lower().endswith(".py") or ".py::" in name:
                 names.append(name)
     if not ran and any("names no test" in message for message in messages):
