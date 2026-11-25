@@ -14,7 +14,7 @@
       "gain": 4,
       "harm": 3,
       "line": 716,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -53,7 +53,7 @@
       "gain": 3,
       "harm": 3,
       "line": 31,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -63,59 +63,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "cb8f34ef2a3f0479cdfef740e3d81e35708e64721edecba9028980e1846b6591",
-    "changed": "f2c2b45cc2253094887d6a191172bf6a5e9d33ed017b4bdbc3180037a44e43a8",
-    "commit": "bd9920c0104860eb4a53c1b5101b010f0bfb7dce",
+    "branch_diff": "5d60ad41fccfc5293c168a1de1aab03f9094732c698d92747da5deb96981faaf",
+    "changed": "e42dd4b667c5018aa66f4ccadb9f10c0367515291a5e09228f9caa68aa5846cf",
+    "commit": "b2d32aee73f4be1c5dda91551a49515f57a29717",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - a pull request runs Forge's related tests.\nReplacing the standards text with a path breaks existing assertions. `tests/test_client_rules_apply_to_every_repo.py:73`, `tests/test_build_only_what_is_needed.py:150`, `tests/test_agent_ready_guide.py:103`, and `tests/test_request_log_guide.py:134` still require passages from that page in the brief. `tests/test_worker_and_reader_chats_survive_rounds.py:764` requires the entire page. These tests import the changed `test_worker.py` and are selected as its readers by `src/forge/docskip.py:93`; the pull-request workflow runs that selection at `.github/workflows/forge.yml:105`. Update the affected assertions to check the referenced guidance.",
-        "file": "src/forge/worker.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 716,
-        "priority": "P1",
-        "title": "Related tests still require the inlined standards page",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a live repo starts a screen fix with the documented `forge fix start ... --done ...` command and omits the optional `--kind`.\n`src/forge/task.py:790` records that fix as mechanical, and `src/forge/worker.py:631` treats only an explicit UI kind as user-facing. This line therefore stops inlining `PRODUCT.md` and `DESIGN.md` for the screen fix's first brief, although those files were previously included. The worker now receives only conditional file references for screen work.",
-        "file": "src/forge/worker.py",
-        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
-        "gain": 3,
-        "harm": 3,
-        "line": 652,
-        "priority": "P1",
-        "title": "Not done: screen work keeps its design rules inline",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 2\nRaise: Not done\nCase: normal use - a backend task belongs to a story with a design folder, or a `Design: none` task runs in a repo with a prototype design.\nThe first brief still adds the folder's `SCREENS.md` regardless of whether the work is user-facing. The loop at `src/forge/worker.py:769` reads and includes its full contents, so non-screen work still receives inline design context instead of just a file reference. The backend case in `tests/test_design_context.py:67` currently requires that content.",
-        "file": "src/forge/worker.py",
-        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
-        "gain": 3,
-        "harm": 2,
-        "line": 766,
-        "priority": "P1",
-        "title": "Not done: the design notes for non-screen work",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a screen fix uses the default command, or a backend task has a screen-design file.\nThe named proof checks only an untyped backend fix and a user-facing task. It never checks a screen fix started without `--kind`, and its backend fix has no `SCREENS.md`. It therefore passes despite the two current design-context failures: the default screen fix loses its inline design, while a non-screen task still receives the screen file's contents.",
-        "file": "tests/test_brief_names_reference_files.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 31,
-        "priority": "P1",
-        "title": "Test: screen work keeps its design rules inline",
-        "work": 2
-      }
-    ],
-    "id": "0461a515-5959-46ac-81b6-5aa7b77d54e3",
-    "status": "blocked"
+    "findings": [],
+    "id": "dc662945-1343-4a1a-a6a0-6a3051351802",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T06:12:56.348361+00:00",
@@ -134,6 +91,10 @@
       "at": "2026-11-25T06:29:59.665089+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T06:39:22.894791+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
