@@ -5,14 +5,36 @@ import contextlib
 import json
 import os
 import runpy
+import shutil
 import signal
 import subprocess
 import sys
+import tempfile
 import threading
 from collections.abc import Iterator
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Any
+
+
+def snapshot(top: Path, *, isolated: bool = False) -> str:
+    """Hash the worktree without changing its index or saving unfiltered blobs."""
+    from forge import repo
+    index = Path(repo.git("rev-parse", "--path-format=absolute", "--git-path", "index", cwd=top))
+    with tempfile.TemporaryDirectory() as tmp:
+        temp = Path(tmp) / "index"
+        if index.is_file():
+            shutil.copyfile(index, temp)
+        env = {**os.environ, "GIT_INDEX_FILE": str(temp)}
+        if isolated:
+            objects = repo.git("rev-parse", "--path-format=absolute", "--git-path", "objects", cwd=top)
+            (temp.parent / "objects").mkdir()
+            env["GIT_OBJECT_DIRECTORY"] = str(temp.parent / "objects")
+            env["GIT_ALTERNATE_OBJECT_DIRECTORIES"] = os.pathsep.join(filter(None, (
+                json.dumps(objects, ensure_ascii=False), env.get("GIT_ALTERNATE_OBJECT_DIRECTORIES"))))
+        for args in (["add", "-A"], ["write-tree"]):
+            done = subprocess.run(["git", *args], cwd=top, env=env, capture_output=True, text=True, check=True)
+    return done.stdout + repo.run("git", "rev-parse", "-q", "--verify", "HEAD", cwd=top).stdout
 
 # Ported from the old tree's review launcher: the helper starts the reviewer in an empty folder,
 # where it can't open the code a finding depends on. Each launcher starts the real one in the
@@ -227,7 +249,12 @@ def windows_job(pid: int) -> Any:
 
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    if sys.argv[1:2] == ["--watch"]:
+    if sys.argv[1:2] == ["sensitive"]:
+        helper = Path(sys.argv[2])
+        sys.path[0] = str(helper.parent)
+        namespace = runpy.run_path(str(helper), run_name="forge_autoreview")
+        print(json.dumps(sorted(namespace["tracked_sensitive_paths"](json.load(sys.stdin)))))
+    elif sys.argv[1:2] == ["--watch"]:
         from forge import codex
         recorded = json.loads(sys.argv[2])
         sys.stdin.buffer.read()
