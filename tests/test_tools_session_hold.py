@@ -267,7 +267,7 @@ def test_4_session_holds_handed_out_reads(repo, gh, monkeypatch, tmp_path, tool,
         assert f"Round {replacement['round']}" in replacement["prompt"]
         stale = back(fresh_owner, fresh)
         assert stale.returncode == 1
-        assert "That round was stopped or replaced, so Forge recorded nothing." in stale.stderr
+        assert f"Round {replacement['round']} is open." in stale.stderr
         assert [row["item"] for row in lanes()] == ["SHOP"]
         success(back(fresh_owner, replacement))
         assert lanes() == []

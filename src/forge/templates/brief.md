@@ -114,6 +114,8 @@ $delegation
   passes. The worker's settings restore uses the incoming side while a merge is open. Workers can commit those incoming settings
   unchanged. Initial migration and adoption keep their new settings until their first pull request merges.
 - A subagent never runs `forge handback`, `forge work` or `forge stop` itself.
+- If the handback names the wrong round, use the printed command with the result of the open round.
+  If there is no open round, run `forge next`.
 - A recorded builder result or item merge frees its builder place, even if the coordinator
   session stays open. Waiting work can then start. This applies to new and upgraded repos.
   A pending hand-back still works after its place is freed.

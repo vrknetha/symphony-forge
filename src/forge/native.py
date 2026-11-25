@@ -255,7 +255,13 @@ def handback(args: Any) -> int:
                         and entry.get("repo_root") == root and entry.get("item") == args.item
                         and entry.get("round") == args.round):
                     machine.leave(entry)
-            raise repo.Refused("That round was stopped or replaced, so Forge recorded nothing.", "")
+            if pending:
+                number = pending["result"]["round"]
+                raise repo.Refused(
+                    f"Round {number} is open. Use the result of that round on stdin.",
+                    f"forge handback {repo.quote(args.item)} --round {number} "
+                    f"--subagent {repo.quote(args.subagent)}")
+            raise repo.Refused("There is no open round for this target.", "forge next")
         if pending["session"] != owner["id"] or any(
                 held.get(key) != owner["process"][key] for key in ("pid", "started")):
             what, command = ("build round", "work") if "role" in pending else ("read", "read")

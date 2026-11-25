@@ -69,7 +69,7 @@ def test_2_refused_handback_releases_its_round_lane(up, intake, person):
     refused = owner.forge("handback", target, "--round", str(number),
                           "--subagent", "explorer", "--text", "No findings.")
     assert refused.returncode == 1, refused.stdout + refused.stderr
-    assert "That round was stopped or replaced" in refused.stderr
+    assert "There is no open round for this target." in refused.stderr
     lanes = owner.forge("lanes", "--json")
     assert lanes.returncode == 0, lanes.stderr
     assert json.loads(lanes.stdout)["agents"]["entries"] == []
