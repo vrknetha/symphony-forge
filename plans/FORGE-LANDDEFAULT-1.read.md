@@ -2,7 +2,7 @@
 reader: codex (gpt-6.1-terra)
 read_at: 2026-11-25T05:49:43.344407+00:00
 seconds: 301.827
-read_hash: 4bdd9419e3ac380bbc914713aa88ddbf92a605cf
+read_hash: 727b0e2f91c9afd2b7a269d45b6b0deb2ba405d2
 round: 2
 passed: no
 doc_seen: 4bdd9419e3ac380bbc914713aa88ddbf92a605cf
@@ -11,8 +11,8 @@ notes_seen: 709f52f2bbe258e40b103a8f70307e602d05b242
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21132-5e37-7533-8ab4-34c5b31dac38
 session:
-loop_choice:
-loop_reason:
+loop_choice: accept
+loop_reason: Owner accepted on 25 Nov 2026: guide wording and builder notes fixed; uncommitted-changes case kept as a known issue for a separate fix
 ---
 # Cold read notes
 
