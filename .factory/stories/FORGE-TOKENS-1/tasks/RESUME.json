@@ -1,12 +1,25 @@
 {
   "base": "92865a83ee7f1de5c4173694f403104731189e66",
   "branch": "task/FORGE-TOKENS-1-RESUME",
+  "round": 1,
   "stacked_on": "FORGE-TOKENS-1/BRIEF",
-  "status": "started",
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T07:38:04.175149+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T07:38:16.702803+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "a9bccab15a2c86216234f14c0a4b26fb9905c598",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
