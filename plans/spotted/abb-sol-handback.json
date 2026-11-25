@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/native.py\tFunctional: Recovery treats dead or foreign pending records as usable rounds\tabb-sol-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 258,
+      "text": "Functional: Recovery treats dead or foreign pending records as usable rounds",
+      "from": "blocking",
+      "item": "abb-sol-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tNot done: A handback whose round number is not the open round names the open round and prints the exact handback command; \u2026\tabb-sol-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 263,
+      "text": "Not done: A handback whose round number is not the open round names the open round and prints the exact handback command; \u2026",
+      "from": "blocking",
+      "item": "abb-sol-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_handback_round_recovery.py\tTest: A handback whose round number is not the open round names the open round and prints the exact handback command; \u2026\tabb-sol-handback",
+      "kind": "bug",
+      "path": "tests/test_handback_round_recovery.py",
+      "line": 23,
+      "text": "Test: A handback whose round number is not the open round names the open round and prints the exact handback command; \u2026",
+      "from": "blocking",
+      "item": "abb-sol-handback",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
