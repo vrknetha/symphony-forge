@@ -1,6 +1,13 @@
 {
   "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
   "branch": "fix/abb-sol-abspath",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a211df-79c6-7171-bf1d-27c19f33638a",
+    "head": null,
+    "start": "7cf39f7c4b83fd3f0e0e80e9a16bda4ddb23da3a"
+  },
   "done_when": "A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path with no second review run.",
   "fix_kind": "backend",
   "kind": "fix",
