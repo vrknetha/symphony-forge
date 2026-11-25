@@ -1,6 +1,28 @@
 {
   "items": [
     {
+      "key": "bug\tforge.toml\tGate: this repo's worker-selection tests\tworkers-codex-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Gate: this repo's worker-selection tests",
+      "from": "blocking",
+      "item": "workers-codex-2",
+      "status": "done",
+      "closed_by": "standing-owner-policy"
+    },
+    {
+      "key": "bug\tforge.toml\tTest: forge.toml says workers = \"codex\", nothing else in it changes, and forge work names Codex as the builder\tworkers-codex-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Test: forge.toml says workers = \"codex\", nothing else in it changes, and forge work names Codex as the builder",
+      "from": "blocking",
+      "item": "workers-codex-2",
+      "status": "done",
+      "closed_by": "standing-owner-policy"
+    },
+    {
       "key": "bug\tsrc/forge/close.py\tFunctional: Carry the granted round through forge land\tstanding-owner-policy",
       "kind": "bug",
       "path": "src/forge/close.py",
