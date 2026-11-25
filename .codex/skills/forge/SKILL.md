@@ -2038,8 +2038,9 @@ Codex build, fix and lite default to `gpt-6.2-sol` at low effort; design uses it
 New repos pin Codex reviews, including working-prototype reviews, and cold reads to
 `gpt-6.1-terra` at max effort. Upgrade and sync keep existing model settings unchanged.
 Claude build, fix and lite accept a `subagents` and `subagent_effort` pair, or use
-`claude-haiku-5-5` at high when neither is set. The SDK's `general-purpose` helper
-gets the same pair. These options affect only the Claude builder's turn, not other
+`claude-haiku-5-5` at high when neither is set. With that stock pair, SDK debugger, security
+and performance helpers use `claude-sonnet-5-5` at high. A different pair applies to every
+SDK helper, including `general-purpose`. These options affect only the Claude builder's turn, not other
 Claude sessions or settings. Codex helpers keep their configured pair, defaulting
 to `gpt-6-luna` at max. Neither tool's helpers change effort after a failure.
 
