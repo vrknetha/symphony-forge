@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/native.py\tFunctional: A shared Codex daemon keeps closed chats in the warning\twarn-second-coordinator",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 105,
+      "text": "Functional: A shared Codex daemon keeps closed chats in the warning",
+      "from": "blocking",
+      "item": "warn-second-coordinator",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tFunctional: Native workers can be recorded as other coordinators\twarn-second-coordinator",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 76,
+      "text": "Functional: Native workers can be recorded as other coordinators",
+      "from": "blocking",
+      "item": "warn-second-coordinator",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tNot done: forge next warns, with the other session named, when another coordinator session is already running on the same repo.\twarn-second-coordinator",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 83,
+      "text": "Not done: forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+      "from": "blocking",
+      "item": "warn-second-coordinator",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_next_warns_about_other_coordinators.py\tTest: forge next warns, with the other session named, when another coordinator session is already running on the same repo.\twarn-second-coordinator",
+      "kind": "bug",
+      "path": "tests/test_next_warns_about_other_coordinators.py",
+      "line": 33,
+      "text": "Test: forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+      "from": "blocking",
+      "item": "warn-second-coordinator",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

@@ -11,8 +11,114 @@
   "done_when": "forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
   "fix_kind": "backend",
   "kind": "fix",
+  "known": [
+    {
+      "area": "coordinator_warnings() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 83,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+      "work": 2
+    },
+    {
+      "area": "coordinator_warnings() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 105,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: A shared Codex daemon keeps closed chats in the warning",
+      "work": 2
+    },
+    {
+      "area": "coordinator_warnings() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 76,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Native workers can be recorded as other coordinators",
+      "work": 2
+    },
+    {
+      "area": "test_1_next_names_the_other_live_coordinator() in tests/test_next_warns_about_other_coordinators.py",
+      "file": "tests/test_next_warns_about_other_coordinators.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 33,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "a68e462d0b8ae3ac6ef99a5d95321bcf2a37bfc35663526bd251464a8e0f2e4f",
+    "changed": "d63bcaf56e79803efadee3a8ba2d4ccbe78cff4e809d30a243eaece0c01ce4e5",
+    "commit": "45ef6f59d5aa1568a6649919125d7f86574c2061",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done\nCase: normal use - two Claude coordinators use one clone, or two coordinators use separate local clones of the same repository.\nClaude Code exports `CLAUDE_CODE_SESSION_ID` to its shell tools, but this line reads `CLAUDE_SESSION_ID`, so the warning falls back to a process number rather than naming the Claude conversation ([Claude Code environment variables](https://code.claude.com/docs/en/env-vars)). Separately, line 87 stores and searches records under `repo.forge_dir`; `src/forge/repo.py:449` resolves that directory from each clone's Git common directory. Two independent clones therefore never see each other's coordinators.",
+        "file": "src/forge/native.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 83,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - a person exits one Codex CLI chat and later opens another on the same repo.\nThe ruling tracks the native host for its lifetime. New evidence beyond that ruling is that current Codex CLI sessions can share a persistent background app server ([OpenAI maintainer explanation](https://github.com/openai/codex/issues/48043?timeline_page=1)). `native.py:55` finds that server as the host, and `src/forge/codex.py:916` checks only its process identity. Closing the first chat leaves the server alive, so this line continues to report the closed chat as another coordinator. The guide consequently tells a person with only one open chat to use one chat.",
+        "file": "src/forge/native.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 105,
+        "priority": "P1",
+        "title": "Functional: A shared Codex daemon keeps closed chats in the warning",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - a native Codex worker runs `forge next` while working in a linked checkout.\nNew evidence beyond the coordinator-lifetime ruling is that Forge hands native work to a host subagent without setting `FORGE_WORKER` (`src/forge/native.py:226`), while the shipped instructions say to run `forge next` when unsure (`src/forge/templates/adapters/AGENTS.md:4`). Codex supplies each thread's ID to its commands ([exec-server contract](https://github.com/openai/codex/blob/main/codex-rs/exec-server/README.md)). The worker therefore passes this guard and is registered under its own thread ID, causing the actual coordinator to be warned about its own worker.",
+        "file": "src/forge/native.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 76,
+        "priority": "P1",
+        "title": "Functional: Native workers can be recorded as other coordinators",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - Claude coordinates, coordinators use separate clones, or Codex chats share a server.\nThe named proof creates only Codex sessions in linked worktrees and gives each a separate host process. It still passes when Claude's actual session ID is omitted, separate clones cannot detect each other, a native worker is counted as a coordinator, or a closed chat remains reported by a shared daemon. Extend the command-level proof to cover these present failures.",
+        "file": "tests/test_next_warns_about_other_coordinators.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 33,
+        "priority": "P1",
+        "title": "Test: forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+        "work": 2
+      }
+    ],
+    "id": "0f1dfea1-d9b5-4200-ab78-48062a0d3c14",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T16:08:04.571939+00:00",
@@ -22,6 +128,10 @@
       "at": "2026-11-25T16:09:33.701772+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:57:41.999728+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
