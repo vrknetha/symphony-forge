@@ -59,7 +59,8 @@ no entry. -->
 
    **Detection only.** A part of the `test` setting is a combined script when it is a
    `npm|pnpm|yarn|bun [run] <script>` call whose package script body contains `&&`, `;` or `|`
-   (the test `fasttest.close_tests` already uses). When `fast_test` is empty and any part of
+   outside quotes (remove text inside single or double quotes first, so `jest --testNamePattern="login|signup"`
+   stays one runner command and keeps today's suggestion). When `fast_test` is empty and any part of
    `test` is a combined script, `suggest` prints no `fast_test` line and prints one line, for
    example
    `The test setting runs the combined script "ci", so Forge cannot limit its tests to the change. Write a fast_test for this repo as the Forge guide says, then ask the owner.`
@@ -79,8 +80,10 @@ no entry. -->
    (b) a body that calls `vitest` directly (today's wrong case): the line, no `fast_test =`;
    (c) an earlier-adopted repo (the `unsynced_up` fixture, as
    `tests/test_quick_test_suggestions.py::test_2` uses it): `forge upgrade` prints the line;
-   (d) adoption of a repo with history: `forge init` prints the line. Each case asserts
-   forge.toml has no `fast_test` afterwards.
+   (d) adoption of a repo with history: `forge init` prints the line; (e) a script that runs
+   `jest --testNamePattern="login|signup"`: today's `fast_test` suggestion, not the combined line.
+   Each case asserts forge.toml has no `fast_test` afterwards, except (e), which asserts it still
+   prints one.
 
 2. **Guide.** `skill.md` "Adopt a live app" step 9 (the paragraph at about line 1367, "When
    `fast_test` is missing, `forge doctor` and `forge upgrade` print one suggested ...") gains the
@@ -106,8 +109,10 @@ no entry. -->
    `--pytest` or `--full`, which `review.test_run` marks with `FORGE_WORKER_TESTS=1` for its
    child processes. Only on Windows (`os.name == "nt"`). Only a browser part: `test_parts`
    gains the kind `browser` for a Node part whose own words, or whose one-level script body,
-   name `playwright` or `cypress`, name no `vitest` or `jest`, and contain no `&&`, `;` or `|`.
-   A step whose script reaches Playwright through another file (for example the Python
+   name `playwright` or `cypress`, name no `vitest` or `jest`, contain no `&&`, `;` or `|` outside
+   quotes, and whose script has no `pre<script>` or `post<script>` script in `package.json` (so
+   `npm run test:e2e` with a `pretest:e2e` that builds the app is not a browser part and still
+   runs, setup included). A step whose script reaches Playwright through another file (for example the Python
    starter's `node scripts/test-browser.mjs`) is not recognised and still runs; the brief says so.
 
    **Every path agrees.** One helper in `fasttest.py`, for example `skip_browser(top, command)`,
@@ -150,9 +155,10 @@ no entry. -->
    `forge test --pytest {base} && npm run test:e2e` and `test` is
    `<pytest command> && npm run test:e2e`; (c) no `fast_test` and `test` is
    `<pytest command> && npm run test:e2e`; (d) `test` is one combined script that holds the
-   browser step. For (a) to (c): bare `forge test` on Windows writes no marker and prints the
+   browser step; (e) `fast_test` is `<a unit step> && npm run test:e2e && <an API step that needs
+   the build>`, where `pretest:e2e` builds the app: nothing is skipped and the build exists. For (a) to (c): bare `forge test` on Windows writes no marker and prints the
    skip line; on other platforms it writes the marker and prints no skip line;
-   `forge test --change` writes the marker on every platform. For (d) the marker is written on
+   `forge test --change` writes the marker on every platform. For (d) and (e) the marker is written on
    every platform. New repo for all cases, plus case (a) on an earlier-adopted repo. The test
    checks its own platform with `sys.platform` and does not import forge. Its Windows branch
    runs in the Windows test job (nightly and before release).
@@ -171,10 +177,12 @@ no entry. -->
      set, else `forge.yml` when `repo.test_place(cfg) == "ci"` (the generated workflow has its
      nightly job only then), else none. `failed_schedules` marks each entry with
      `full_run: true` when the run's file is that workflow. The row is found by this mark, not
-     by position in the shared list: the request for that workflow's own runs
-     (`actions/workflows/<file>/runs`, today limited to `event=workflow_dispatch`) drops the
-     event filter, so it returns that workflow's scheduled and manual runs and other frequent
-     jobs cannot push its newest result out; merge it with the all-workflow list by run id.
+     by position in the shared list: besides today's request for that workflow's manual runs
+     (`actions/workflows/<file>/runs` with `event=workflow_dispatch`, kept as it is), `fetch` makes
+     one more request to the same path with `event=schedule`, so other frequent jobs cannot push
+     the nightly result out; merge both with the all-workflow list by run id. Push and pull
+     request runs of that workflow are never read, so a passing short check cannot clear a failed
+     full run.
      Only `full_run` entries become Needs you entries and get the `Needs you: ` prefix in
      `forge next`. Other scheduled workflows keep today's `forge next` lines, with no prefix and
      no board entry.
@@ -195,7 +203,8 @@ no entry. -->
 
    **Test.** New file `tests/test_failed_nightly_needs_you.py`, `test_4`, on the gh fakes of
    `tests/test_next_names_a_failed_scheduled_run.py`. A failed latest `forge.yml` scheduled run
-   in a CI-test repo: `forge board --json` has the entry in `team.needs_you` with the run's
+   in a CI-test repo, followed by a newer successful push-event run of `forge.yml` that the fake
+   returns only for an unfiltered request: the entry stays: `forge board --json` has the entry in `team.needs_you` with the run's
    `url`, and `forge next` prints `Needs you: The latest scheduled ...`. A failed scheduled run
    of another workflow: today's `forge next` lines with no prefix, and no entry. A local-test
    repo with no `full_suite_workflow`: no entry. A repo whose `full_suite_workflow` names a
@@ -262,7 +271,7 @@ queue, background job or abstraction layer, with the Done-when item that needs i
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
 | QUICK | Name combined test scripts, guide the agent, and skip browser steps on Windows | The combined-script line in `suggest` with no suggested command; adoption calls `suggest`; the agent's steps in the guide; the `browser` part kind; one skip helper called on the three paths of a builder's own run on Windows; `browser` in the pytest picker's dropped kinds; the brief text. | 1, 2, 3 | `src/forge/quicktest.py`, `src/forge/fasttest.py`, `src/forge/init.py`, `src/forge/templates/skill.md`, `src/forge/templates/brief.md`, `tests/test_combined_script_quick_test.py`, `tests/test_windows_worker_skips_browser_tests.py` | `tests/test_combined_script_quick_test.py` (`test_1`, `test_2`, new); `tests/test_windows_worker_skips_browser_tests.py` (`test_3`, new) | | no | |
-| NIGHTLY | A failed full test run shows under Needs you | `full_run`, `url` and `created_at` on `failed_schedules` entries; the full run's own runs request without the event filter; the newest finished run decides; stale old cache; one Needs you entry per failed full test run, with the fix-in-progress label; the `Needs you: ` prefix in `forge next`; the row drawn by the existing row code, whose click opens the run; the run reference text. | 4, 5, 6 | `src/forge/board_facts.py`, `src/forge/nextstep.py`, `src/forge/board_app/now.js`, `src/forge/templates/run-reference.md`, `tests/test_failed_nightly_needs_you.py`, `tests/test_failed_run_row_opens_run.py`, `tests/test_next_names_a_failed_scheduled_run.py` | `tests/test_failed_nightly_needs_you.py` (`test_4`, `test_6`, new); `tests/test_failed_run_row_opens_run.py` (`test_5`, new); `tests/test_next_names_a_failed_scheduled_run.py` (`test_1`, only if its line text changes) | | yes | |
+| NIGHTLY | A failed full test run shows under Needs you | `full_run`, `url` and `created_at` on `failed_schedules` entries; one more request for the full run's own scheduled runs, keeping the manual one; the newest finished run decides; stale old cache; one Needs you entry per failed full test run, with the fix-in-progress label; the `Needs you: ` prefix in `forge next`; the row drawn by the existing row code, whose click opens the run; the run reference text. | 4, 5, 6 | `src/forge/board_facts.py`, `src/forge/nextstep.py`, `src/forge/board_app/now.js`, `src/forge/templates/run-reference.md`, `tests/test_failed_nightly_needs_you.py`, `tests/test_failed_run_row_opens_run.py`, `tests/test_next_names_a_failed_scheduled_run.py` | `tests/test_failed_nightly_needs_you.py` (`test_4`, `test_6`, new); `tests/test_failed_run_row_opens_run.py` (`test_5`, new); `tests/test_next_names_a_failed_scheduled_run.py` (`test_1`, only if its line text changes) | | yes | |
 
 New moving parts: none
 
@@ -280,7 +289,7 @@ New moving parts: none
   - Naming a combined script in one line: F 2, H 2 (a slow loop no one notices; a wrong suggestion today), C 1 (about 15 lines). 4 >= 2. Kept.
   - Windows skip on the three paths: F 3 (every builder test run on Windows in such a repo), H 2 (failed rounds for unrelated reasons), C 1 (one helper, three calls, about 20 lines). 6 >= 2. Kept.
   - Needs you entry and its click: F 1 to 2, H 2, C 2. Close; it stays because the owner decided it.
-  - Newest finished run decides, and the full run's own request: F 2 (each night a run is in progress for an hour; frequent jobs fill the shared list), H 2 (a failure disappears), C 1. 4 >= 2. Kept.
+  - Newest finished run decides, and the full run's own scheduled request: F 2 (each night a run is in progress for an hour; frequent jobs fill the shared list), H 2 (a failure disappears), C 1. 4 >= 2. Kept.
   - Recognising browser steps that go through another file: F 1, H 2, C 2. 2 < 4. Left out; the limit is stated.
   - A setting that keeps browser tests in the Windows builder run: F 1, H 1, C 3. Left out.
   - A failed local full run (repos without CI) under Needs you: F 1, H 2, C 2. 2 < 4. Left out; that run prints its fix line when it fails.

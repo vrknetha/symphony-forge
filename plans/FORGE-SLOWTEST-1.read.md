@@ -154,24 +154,28 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - A configured workflow runs full tests nightly and a shorter check on pushes to main.  
     The [plan](/plans/FORGE-SLOWTEST-1.md:170) removes the event filter and treats runs from that workflow as full runs. A successful push check can therefore remove the failed-nightly row even though no later full test passed. Forge’s [generated workflow](/src/forge/prcheck.py:293) also shows that a full-suite job can be limited to specific events.  
     Gain 5, Work 2, Harm 3
+   Disposition: cut - the full run's own request keeps its event filters: today's manual request stays and one `event=schedule` request is added, so push and pull request runs are never read and cannot clear a failure (detail 4).
 
 18. Advisory: Not done: skipping a browser script can also skip its setup.  
     Raise: Not done  
     Case: normal use - `npm run test:e2e` runs Playwright, its `pretest:e2e` script builds the app, and a later API-test step needs that build.  
     The [browser classifier](/plans/FORGE-SLOWTEST-1.md:105) checks the script body but not its lifecycle scripts. On Windows it removes the whole invocation, including the [npm pre-script](/opt/homebrew/lib/node_modules/npm/docs/content/using-npm/scripts.md:16), so the later API tests can fail.  
     Gain 3, Work 2, Harm 3
+   Disposition: cut - a script with a `pre<script>` or `post<script>` script is not classified as a browser part and still runs, setup included; a test case covers it (detail 3).
 
 19. Advisory: Plan gap: the workflow request change breaks an existing test outside the task’s scope.  
     Raise: Plan gap  
     Case: normal use - The full-run test suite runs after NIGHTLY is built.  
     The [plan](/plans/FORGE-SLOWTEST-1.md:174) removes `event=workflow_dispatch`, but [test_testplace_fullrun.py](/tests/test_testplace_fullrun.py:431) requires that field on a workflow request. The test is absent from [NIGHTLY’s scope](/plans/FORGE-SLOWTEST-1.md:265).  
     Gain 4, Work 1, Harm 2
+   Disposition: cut - the `event=workflow_dispatch` request stays, so `test_testplace_fullrun.py` passes unchanged and NIGHTLY's scope needs no change (detail 4).
 
 20. Advisory: Not done: a quoted test pattern is mistaken for a combined script.  
     Raise: Not done  
     Case: normal use - A package script runs `jest --testNamePattern="login|signup"`.  
     The [new rule](/plans/FORGE-SLOWTEST-1.md:60) treats any `|` in the script body as a combined command. This pipe is inside a quoted pattern; [quicktest.py](/src/forge/quicktest.py:59) currently recognizes the single Jest command and suggests a quick test. The planned rule removes that existing suggestion.  
     Gain 3, Work 2, Harm 3
+   Disposition: cut - the combined-script rule ignores text inside quotes, so `jest --testNamePattern="login|signup"` keeps today's suggestion; a test case covers it (details 1 and 3). The read file names a quoted `|` as the separator; the task text said `/`, and `|` is what the rule uses.
 
 21. Advisory: Functional: a browser-only setting is reported as missing.  
     Raise: Functional  
