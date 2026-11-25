@@ -1,0 +1,15 @@
+{
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/drop-windows-tests",
+  "done_when": "Forge's nightly full run and its before-release check run no Windows job, a release no longer waits on Windows, Linux tests on pull requests and the macOS tests stay, and the release notes say Windows is not supported for now.",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T16:52:01.246727+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Windows test jobs caused 48 of about 1,000 Forge fixes since 1 Oct (14 in November, about half only test-harness problems), and the Windows release check delayed four releases in a row; the owner chose on 25 Nov 2026 to stop testing Forge on Windows."
+}
