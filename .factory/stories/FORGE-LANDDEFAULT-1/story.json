@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-LANDDEFAULT-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-25T05:32:55.171307+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Land is the default way to run each change",
+  "touches": 0
+}
