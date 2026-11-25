@@ -96,7 +96,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-25T08:24:48.054512+00:00",
@@ -119,8 +119,19 @@
     {
       "at": "2026-11-25T09:01:38.992021+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T09:02:09.663010+00:00",
+      "round": 2,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-25T09:02:09.663010+00:00",
+    "question": "Finished work is cleaned up every time, and leftover work is listed with one next step: Finished folders clean themselves up is stuck. It should deliver: One shared removal used by doctor, next, start and land, with one GitHub request\nTwo rounds in a row left the open P0 not done: a folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have in src/forge/doctor.py.\nThe worker tried: Protect local work during finished-folder cleanup.\nChoose one: switch this item to Claude; keep Codex for one more round; or narrow or split it.",
+    "tool": "codex",
+    "wait_id": "1d024b8d-2940-4a1f-8132-470c4af2a8b8"
+  },
   "stuck": {
     "close": "b83cf1e1-5326-42b0-9edd-a11d179039e5",
     "head": "6075ac96be3490dbf59be617cf20b33d64e1ae23",
