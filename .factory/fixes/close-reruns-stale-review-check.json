@@ -4,12 +4,25 @@
   "done_when": "When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it.",
   "fix_kind": "backend",
   "kind": "fix",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T16:08:14.765442+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T16:09:32.309975+00:00",
+      "round": 1,
+      "step": "resume"
     }
   ],
-  "why": "A review check that failed before a CI fix stays failed until someone re-runs that job by hand, so close keeps reporting a failed check after the cause is fixed."
+  "stuck": {
+    "close": null,
+    "head": "b1b315813cb70dcc7ecc2048bc992cc2bec608b1",
+    "keys": {},
+    "round": null
+  },
+  "why": "A review check that failed before a CI fix stays failed until someone re-runs that job by hand, so close keeps reporting a failed check after the cause is fixed.",
+  "worker": "codex"
 }
