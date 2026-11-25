@@ -28,7 +28,7 @@
       "gain": 3,
       "harm": 3,
       "line": 13,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -51,49 +51,17 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "1617e914960ebc7d8a743b927876db0c53f6473805d8eba72d043cd096ad0e04",
-    "changed": "a4c2b407ae8279d082c08820b79f8a247fbbc9cc3e3205e30ee1be4802b9f3c3",
-    "commit": "14c2da42230737a151e0414d68f33b72fa862f9a",
+    "branch_diff": "2a0392674b2e9d701ceeaa63465b4dd244bcf5b4dcdaf1d10b1569db2e284045",
+    "changed": "5789793fb624ca9c4793ec839af9022062ca3d69c89e9686a0f1837f232f3c91",
+    "commit": "cff480bc5be0885dd1d5f9a8012e35d0e68ab7ba",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Not done\nCase: normal use - after a builder turn, the coordinator commits a change and the next merge of the default branch conflicts. `_changes` produces the file list here, but `worker.py:309-310` forces a full brief for the conflict, and `worker.py:717-725` appends the changes only to continued briefs. The resumed worker therefore receives neither the changed-file list nor the new commits. The fresh-brief fallback at `worker.py:313-314` has the same omission when a saved conversation cannot be resumed.",
-        "file": "src/forge/worker.py",
-        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
-        "gain": 3,
-        "harm": 3,
-        "line": 541,
-        "priority": "P1",
-        "title": "Not done: A repair round's brief lists the changed files since the last turn instead of their full change",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - a task has a related-test list between 2,001 and 3,000 characters long. The long fixture contains more than 3,000 characters, so changing the limit to 3,000 would leave that task's list inline while both test cases still pass. The proof does not establish the specified 2,000-character threshold; it needs a case just above that boundary.",
-        "file": "tests/test_repair_brief_lists_changed_files.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 13,
-        "priority": "P1",
-        "title": "Test: 2: tests/test_repair_brief_lists_changed_files.py",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 2\nRaise: Test\nCase: normal use - Forge changes the private location of its generated test-list file while continuing to give the worker a readable path and complete list. This assertion ties the file to the turn log's directory, so that behavior-preserving change fails the test. The boundary check should verify that the supplied path is readable and contains the list without requiring the internal thread-log location.",
-        "file": "tests/test_repair_brief_lists_changed_files.py",
-        "gain": 3,
-        "harm": 2,
-        "line": 34,
-        "priority": "P1",
-        "title": "Gate: tests/test_repair_brief_lists_changed_files.py",
-        "work": 1
-      }
-    ],
-    "id": "9354c4dc-affd-4e5f-bd37-8fc0f2bcb0b4",
-    "status": "blocked"
+    "findings": [],
+    "id": "557dbb2e-ce8c-4446-98a6-ec97c030c66f",
+    "status": "clean"
   },
   "round": 2,
   "stacked_on": "FORGE-TOKENS-1/BRIEF",
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T07:38:04.175149+00:00",
@@ -112,6 +80,10 @@
       "at": "2026-11-25T07:53:03.583465+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T07:57:05.160333+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
