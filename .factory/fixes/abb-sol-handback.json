@@ -62,8 +62,8 @@
     "id": "aa3504da-7a66-4275-8989-bb9af74c74cd",
     "status": "clean"
   },
-  "round": 2,
-  "status": "waiting for checks",
+  "round": 3,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T08:40:54.244406+00:00",
@@ -86,13 +86,18 @@
     {
       "at": "2026-11-25T09:01:41.155875+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T09:13:12.572281+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": "ba1d9bec-0600-4b5c-a70f-ec83f4009150",
-    "head": "d75cf12eed480217b60e992e8cc4bb909456ff29",
+    "close": "5fbca02a-1031-4140-b9a0-7dc0ce8b3d85",
+    "head": "a29304f5bbf8a6d43e2cc81df28f5e89627802c4",
     "keys": {},
-    "round": 1
+    "round": 2
   },
   "why": "A handback with a wrong round number says the round was stopped or replaced and gives no next step, so the work looks lost (issue #1791).",
   "worker": "codex"
