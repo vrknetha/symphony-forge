@@ -1,6 +1,7 @@
 """A cloned Forge checkout installs the same test tools CI uses."""
 
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -82,6 +83,6 @@ def test_2_ci_runs_the_documented_pytest_command():
             # The generated job installs Forge, then delegates test execution to it.
             assert 'run: "forge test --change"' in workflow
         else:
-            assert "uv run --python 3.11 pytest" in workflow
+            assert re.search(r"\buv run (?:--frozen )?--python 3\.11 pytest\b", workflow), name
         assert "--group dev" not in workflow
         assert "--with pytest" not in workflow
