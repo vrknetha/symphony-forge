@@ -100,6 +100,7 @@ def test_10_version_pin(repo, tmp_path, monkeypatch):
     shutil.copytree(ROOT / "src" / "forge", source / "src" / "forge",
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy(ROOT / "pyproject.toml", source)
+    shutil.copy(ROOT / "README.md", source)
     for rel in (".codex/skills/app-baseline/SKILL.md",
                 ".codex/skills/test-audit/SKILL.md", ".codex/skills/test-audit/NOTICE.md",
                 ".codex/skills/forge/fde.md", ".claude/skills/remote-approval/SKILL.md"):

@@ -2417,7 +2417,7 @@
     "tests/test_plan_edits_on_the_default_branch.py::test_2_identical_copies_are_not_flagged": 1.052386166999895,
     "tests/test_plan_edits_on_the_default_branch.py::test_3_a_later_dated_story_edit_still_lacks_independent_main_changes": 1.6462813759999335,
     "tests/test_platform_sensitive_selection.py::test_2_platform_sensitive_tests_are_marked": 5.809951041941531,
-    "tests/test_pr_check_install.py::test_1_sync_installs_forge_for_pr_check_by_repo_kind[-uv tool install git+https://github.com/knacklabs/symphony-forge@v]": 0.5258563759998651,
+    "tests/test_pr_check_install.py::test_1_sync_installs_forge_for_pr_check_by_repo_kind[-uv tool install symphony-forge==]": 0.5258563759998651,
     "tests/test_pr_check_install.py::test_1_sync_installs_forge_for_pr_check_by_repo_kind[repo = \"forge-source\"\\n-uv tool install .]": 0.7621745840001495,
     "tests/test_prcheck.py::test_24_pull_request_check[fix_allowed_large]": 0.3227524989997619,
     "tests/test_prcheck.py::test_24_pull_request_check[fix_done_when_changed_after_review]": 0.8795635839992428,

@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
@@ -56,9 +57,6 @@ REFUSALS = {
                   "forge upgrade <a release newer than {pinned}>"),
     "no_newest": ("Forge could not find its newest release: {reason}.",
                   "forge upgrade <release>, naming the release"),
-    "legacy_workflow": ("The default branch still installs Forge from the retired GitHub repository."
-                        " Its review check cannot pass this upgrade.",
-                        "Ask the repository owner to update the trusted workflow first. See " + RECOVERY),
     "other_open": ("The upgrade to Forge {other} is still open in fix {fix}.",
                    "forge upgrade {other} to finish it, or remove it: git worktree remove --force "
                    "{path} && git branch -D fix/{fix}"),
@@ -131,8 +129,6 @@ def upgrade(args: argparse.Namespace) -> int:
     if _numbers(release) <= _numbers(pinned):
         repo.refuse(REFUSALS["not_newer"], default=default, pinned=pinned, release=release)
     name, ref = PREFIX + release.replace(".", "-"), f"origin/{default}"
-    if LEGACY_SOURCE in (story.show(top, ref, ".github/workflows/forge.yml") or ""):
-        repo.refuse(REFUSALS["legacy_workflow"])
     repo.set_version(story.show(top, ref, "forge.toml") or "", release)  # refuses before anything
     trees = story.worktrees(top)
     for other, path in trees.items():
@@ -293,7 +289,12 @@ def upgrade(args: argparse.Namespace) -> int:
 
     # 7 and 8. The release's own close; its last line says who merges, and its exit code is ours.
     print(f"Running Forge {release}'s forge close {name}.", flush=True)
-    return repo.run_release(release, ["close", name], path)
+    status = repo.run_release(release, ["close", name], path)
+    if status and LEGACY_SOURCE in (story.show(top, ref, ".github/workflows/forge.yml") or ""):
+        print("The default branch still installs Forge from the retired GitHub repository. "
+              "If that broke the upgrade's review check, ask the repository owner to follow "
+              f"the recovery steps at {RECOVERY}", file=sys.stderr)
+    return status
 
 
 CODEX_INSTALL = ("irm https://chatgpt.com/codex/install.ps1 | iex" if os.name == "nt"

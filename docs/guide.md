@@ -690,24 +690,25 @@ If the default branch's `.github/workflows/forge.yml` still installs Forge from 
 GitHub repository, the review check fails before it can review an upgrade pull request.
 GitHub runs this check using the workflow it already trusts on the default branch.
 
-1. The repository owner reviews and applies an install-source-only change to the trusted
-   default branch using the repository's approved maintenance process. In
-   `.github/workflows/forge.yml`, replace the retired Forge package URLs in the install
-   steps with PyPI requirements. For a step that uses `FORGE_RELEASE`, use
-   `uv tool install symphony-forge==${FORGE_RELEASE#v}`. Keep the step that selects and validates
-   the release. For fixed install versions, use `symphony-forge==X.Y.Z` with the same version
-   digits. Keep the workflow's permissions and required review check in place.
-2. Update the local default branch. Choose a published Forge release newer than the repo's pin
+1. Choose a published Forge release newer than the repo's pin
    that includes the switch to PyPI. Run
    `uvx --from symphony-forge==X.Y.Z forge upgrade vX.Y.Z`, with that version in both places.
-   This command starts under the newer release even if the old pin has no PyPI package.
-   If the previous upgrade already opened a pull request, run the same command again so it
-   picks up the updated default branch.
-3. Let the normal checks run and merge the upgrade when it is ready. If another work branch
-   still pins an unpublished release, merge the upgraded default branch into it.
-
-Use the upgrade pull request first if the old pin has no PyPI package. Standalone runs that
-still use the unpublished pin need the upgrade to merge before they can install Forge.
+   This opens the upgrade pull request even if the old pin has no PyPI package.
+2. The repository owner reviews the exact pull request commit. Check that only the pin,
+   Forge-generated files and Forge records changed, that the new workflow installs from
+   PyPI, and that all other required checks pass. Confirm the Forge review check failed
+   because the retired install source is unavailable. If the pull request is a draft,
+   mark it ready after review.
+3. Pause other merges. In GitHub, open **Settings → Branches** and edit the protection rule
+   for the default branch. Record the source configured for `forge-pr-check`, then temporarily
+   remove only that check from the required list. If it is the sole required status check,
+   turn off the status check requirement for this merge. Keep the pull request requirement,
+   approvals, any other required checks and administrator protection in place. Merge only
+   the reviewed upgrade pull request. Immediately restore `forge-pr-check` with its original
+   source and settings, even if the merge fails.
+4. Check that the next pull request gets a green `forge-pr-check` from the upgraded default
+   branch. If another work branch still pins an unpublished release, merge the upgraded
+   default branch into it.
 
 ## Releasing Forge
 

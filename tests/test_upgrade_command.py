@@ -68,6 +68,10 @@ def put(path, text):
         path.with_name(path.name + ".cmd").write_text(f'@"{{sys.executable}}" "%~dp0{{path.name}}" %*\\n', "utf-8")
     return path
 
+def release_of(requirement):
+    # Historical fixtures still send their original Git requirement.
+    return requirement.replace("symphony-forge==", "v").rsplit("@", 1)[-1]
+
 if args[0] == "venv":
     subprocess.run([sys.executable, "-m", "venv", "--without-pip", args[-1]], check=True)
     sys.exit(0)
@@ -105,11 +109,11 @@ if args[:2] == ["pip", "install"]:
 if args[:2] == ["tool", "install"]:
     if (here / "uv-install-fails").exists():
         sys.exit("error: Failed to fetch the release: network is unreachable")
-    put(here.parent / "uvbin" / "forge", launcher("v" + args[-1].rsplit("==", 1)[1], "installed"))
+    put(here.parent / "uvbin" / "forge", launcher(release_of(args[-1]), "installed"))
     sys.exit(0)
 if args[:2] != ["tool", "run"]:
     sys.exit("stub uv: unsupported command: " + " ".join(args))
-release = args[3].replace("symphony-forge==", "v").rsplit("@", 1)[-1]
+release = release_of(args[3])
 ran = put(here.parent / "releases" / release / "forge", launcher(release, "run"))
 sys.exit(subprocess.run([sys.executable, str(ran), *args[5:]]).returncode)
 """

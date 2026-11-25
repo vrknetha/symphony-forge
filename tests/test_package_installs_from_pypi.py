@@ -1,15 +1,20 @@
 """Client CI, hook and pinned runner package requirements."""
 import sys
 
+import pytest
+from claude_plugin_stub import _calls as _claude_calls, _claude
 from conftest import ROOT, _install
+from test_close import run
 from test_fix_when_the_installed_forge_differs_from_th import _calls, _uv
-from test_mod_sync import _calls as _claude_calls, _claude
 from test_setup import _on_a_branch_with_forge_toml, _version
-from test_upgrade_check import BASH, UV_STUB, _release_shim, _review_job_steps, _run_pr_check_job
+from test_upgrade_check import (
+    BASH, UV_STUB, _install_release, _release_shim, _review_job_steps, _run_pr_check_job,
+)
 from test_upgrade_command import NAME, RELEASE, env, unsynced_up  # noqa: F401
 from test_upgrade_pending import OLD, _pin_old
 
 STORY = "FIX-FORGE-INSTALLS-FROM-PYPI"
+pytestmark = pytest.mark.platform
 
 
 def test_1_client_generated_commands_install_the_pypi_pin(repo):
@@ -58,37 +63,50 @@ def test_4_sync_replaces_the_disabled_claude_marketplace(repo):
 
 
 @BASH
-def test_5_upgrade_stops_until_the_trusted_workflow_uses_pypi(unsynced_up):
+def test_5_upgrade_opens_a_recovery_pull_request_on_a_protected_branch(unsynced_up):
     up = unsynced_up
     repo = up.repo
     workflow = ".github/workflows/forge.yml"
-    up.on_main("forge.toml", 'version = "v1.2.2"\n')
+    up.on_main("forge.toml", 'version = "v1.2.2"\nchecks = ["tests", "forge-pr-check"]\n')
     up.on_main(workflow, (ROOT / "tests/fixtures/doctor-v1.2.2" / workflow).read_text("utf-8"))
-    before = up.snapshot()
-
-    refused = up.run(RELEASE)
-    assert refused.returncode == 1
-    assert "default branch still installs Forge from the retired GitHub repository" in refused.stderr
-    assert "recovering-upgrades-from-the-retired-github-repository" in refused.stderr
-    assert up.snapshot() == before
-
-    # The owner repairs the trusted workflow first. This repo's old pin has no PyPI package.
-    text = (repo.path / workflow).read_text("utf-8")
-    up.on_main(workflow, text.replace("git+https://github.com/knacklabs/symphony-forge@v",
-                                      "symphony-forge=="))
+    base = repo.git("rev-parse", "main")
+    remote = up.tmp / "remote.git"
+    hook = remote / "hooks/pre-receive"
+    hook.write_text('#!/bin/sh\nwhile read old new ref; do\n'
+                    '  if [ "$ref" = refs/heads/main ]; then exit 1; fi\n'
+                    'done\nexit 0\n', encoding="utf-8")
+    hook.chmod(0o755)
+    up.env.checks([run("tests")], [{"context": "forge-pr-check", "state": "failure"}])
     done = up.run(RELEASE)
-    assert done.returncode == 0, done.stdout + done.stderr
+    assert done.returncode == 1, done.stdout + done.stderr
+    assert up.env.gh_calls("pr", "create"), done.stdout + done.stderr
+    assert "Checks failed on the pull request: forge-pr-check." in done.stderr
+    assert "recovering-upgrades-from-the-retired-github-repository" in done.stderr
+    assert repo.git("rev-parse", "main", "origin/main").splitlines() == [base, base]
+    assert up.show("forge.toml").splitlines() == [
+        f'version = "{RELEASE}"', 'checks = ["tests", "forge-pr-check"]',
+    ]
     assert up.uv()[0]["args"][-1] == f"symphony-forge=={RELEASE.removeprefix('v')}"
     assert up.uv()[-1]["args"][5:] == ["close", NAME]
 
-    # The runner checks out the trusted base, including its old pin. Execute that workflow's
-    # shell steps to verify it installs the new pin and really runs the new release's check.
+    # Simulate the owner's reviewed GitHub merge. The server forbids direct pushes, so the
+    # fixture moves the ref on the server, then the client fetches it like a normal merge.
+    head = repo.git("rev-parse", f"origin/fix/{NAME}")
+    repo.git("--git-dir", str(remote), "update-ref", "refs/heads/main", head, base)
+    repo.git("pull", "--ff-only", "origin", "main")
+
+    # The restored check runs from the upgraded trusted base and installs its pinned release.
     (up.tmp / "uvbin" / "forge").unlink()
+    _install_release(up.env, RELEASE)
+    up.env.checks([run("tests"), run("forge-pr-check")])
+    item, where = up.env.start_fix()
+    closed = up.env.close(item)
+    assert closed.returncode == 0, closed.stdout + closed.stderr
     _install(repo.bin, "uv", UV_STUB.format(python=sys.executable, release=_release_shim()))
     steps = _review_job_steps(repo.git("show", f"main:{workflow}"))
-    checked = _run_pr_check_job(up.env, up.folder, steps, branch=f"fix/{NAME}")
+    checked = _run_pr_check_job(up.env, where, steps, branch=f"fix/{item}")
     assert checked.returncode == 0, checked.stdout + checked.stderr
-    assert f"forge-pr-check passed for fix/{NAME}." in checked.stdout
+    assert f"forge-pr-check passed for fix/{item}." in checked.stdout
 
 
 def test_6_upgrade_without_a_version_uses_the_pypi_release(unsynced_up):
