@@ -19,6 +19,7 @@ import pytest
 
 from conftest import _install, patient
 from test_close import env  # noqa: F401
+from test_doctor_fix import _prs
 from test_setup import _autoreview, _executable, _fresh_client, _stub_forge, _version
 from test_setup import doctor_sdks, sdk_data  # noqa: F401
 
@@ -53,6 +54,7 @@ def _a_later_doctor_repair_gets_its_own_close_review(env, monkeypatch):
     old_head = repo.git("rev-parse", old_branch)
     env.gh.respond("pr", "list", "--head", old_branch, stdout=json.dumps(
         [{"number": 7, "state": "MERGED", "headRefOid": old_head, "body": "", "isDraft": False}]))
+    _prs(env.gh, (old_branch, old_head, "MERGED"))
     monkeypatch.setenv("FORGE_NOW", "2026-10-04T09:01:00+00:00")
 
     cleaned = repo.forge("doctor", "--fix")
@@ -259,7 +261,8 @@ def _doctor_fix_cleanup_follows_its_pull_request(repo, gh, tmp_path, monkeypatch
     _old_hosts(repo, client)
     started = repo.forge("doctor", "--fix", cwd=client)
     assert "- Fixed: wrote 2 of Forge's files in fix forge-files-20261004-0900.\n" in started.stdout
-    folder = _folder_of(repo, client, "fix/forge-files-20261004-0900")
+    branch = "fix/forge-files-20261004-0900"
+    folder = _folder_of(repo, client, branch)
     # A tracked lockfile change alone qualifies finished worktrees for cleanup.
     _set(folder, "uv.lock", "version = 2\n")
     before = _status(repo, folder)
@@ -267,10 +270,12 @@ def _doctor_fix_cleanup_follows_its_pull_request(repo, gh, tmp_path, monkeypatch
                 for path in folder.rglob("*") if path.is_file()}
     main = _status(repo, client)
     trees = repo.git("worktree", "list", "--porcelain", cwd=client)
-    gh.respond("pr", "list", "--head", "fix/forge-files-20261004-0900", stdout=json.dumps(
+    gh.respond("pr", "list", "--head", branch, stdout=json.dumps(
         [{"headRefOid": before[0], "state": state}]))
+    _prs(gh, (branch, before[0], state))
 
     if state == "CLOSED":
+        repo.git("push", "-q", "origin", branch, cwd=client)
         monkeypatch.setenv("FORGE_NOW", "2026-10-04T09:01:00+00:00")
     done = repo.forge("doctor", "--fix", cwd=client)
     if state == "CLOSED":

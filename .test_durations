@@ -973,7 +973,6 @@
     "tests/test_doctor_fix.py::test_3_doctor_removes_only_the_folders_of_finished_work[a_folder_holding_anything_else_is_kept[open pull request]]": 0.9475668750001205,
     "tests/test_doctor_fix.py::test_3_doctor_removes_only_the_folders_of_finished_work[a_folder_holding_anything_else_is_kept[submodules]]": 1.1613223330000437,
     "tests/test_doctor_fix.py::test_3_doctor_removes_only_the_folders_of_finished_work[a_folder_holding_anything_else_is_kept[untracked file]]": 1.2925846660000389,
-    "tests/test_doctor_fix.py::test_3_doctor_removes_only_the_folders_of_finished_work[an_unusable_github_answer_removes_nothing[100 entries]]": 1.9555850009996902,
     "tests/test_doctor_fix.py::test_3_doctor_removes_only_the_folders_of_finished_work[an_unusable_github_answer_removes_nothing[fails]]": 1.9599690009999904,
     "tests/test_doctor_fix.py::test_3_doctor_removes_only_the_folders_of_finished_work[an_unusable_github_answer_removes_nothing[not a list]]": 1.9161152089995994,
     "tests/test_doctor_fix.py::test_3_doctor_removes_only_the_folders_of_finished_work[clean_and_cache_only_folders_are_removed]": 1.2174005430006218,
