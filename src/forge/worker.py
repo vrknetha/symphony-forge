@@ -17,7 +17,7 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
-from forge import claude_sdk, codex, design, doctor, machine, merge_timings, native, repo, roles, routing, story, task
+from forge import claude_sdk, codex, design, doctor, machine, merge_timings, native, repo, review_process, roles, routing, story, task
 from forge.repo import git, refuse
 
 HERE = Path(__file__).parent
@@ -342,11 +342,11 @@ def _work(args: argparse.Namespace) -> bool:
         try:
             if not on_codex:
                 budget = repo.subagent_budget(config, "build" if design else kind.lower())
-                before = story._snapshot(top) if design else None  # pyright: ignore[reportPrivateUsage]
+                before = review_process.snapshot(top) if design else None
 
                 def before_turn() -> None:
                     nonlocal before
-                    before = story._snapshot(top)  # pyright: ignore[reportPrivateUsage]
+                    before = review_process.snapshot(top)
 
                 if design:
                     claude = ["--model", chosen["model"], "--effort", chosen["effort"]]
@@ -360,7 +360,7 @@ def _work(args: argparse.Namespace) -> bool:
                     # failed round.
                     if (not design or config["tools"] != "both" or config["workers"] != "split" or
                             state.get("tool") or
-                            story._snapshot(top) != before):  # pyright: ignore[reportPrivateUsage]
+                            review_process.snapshot(top) != before):
                         raise
                     reason = str(error).split("\n", 1)[0].removeprefix("The worker ")
                     chosen = repo.design_models(config, "codex")

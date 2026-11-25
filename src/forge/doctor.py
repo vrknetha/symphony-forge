@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from forge import __version__, checks, claude_sdk, close, codex, init, machine, quicktest, repo, review, story, sync, task
+from forge import __version__, antigravity, checks, claude_sdk, close, codex, init, machine, quicktest, repo, review, story, sync, task
 
 COMMANDS = [{"words": "doctor", "run": "doctor", "changes_state": False,
     "help": "Check tools, versions, hooks, adapter drift and the named CI checks", "args": [(('--fix',), {"action": "store_true", "help":
@@ -346,17 +346,30 @@ def doctor(args: argparse.Namespace) -> int:
             said = _last(done) if done.returncode else "no forge is on PATH after uv installed it"
             add(f"{problem} Installing it failed: {said}", install)
         else: add(problem, REPAIR if repairs and not args.fix else install)
+    antigravity_selected = cfg["workers"] == "antigravity" or cfg.get("reviews") == "antigravity"
     workers = cfg["workers"] if cfg["tools"] == "both" else cfg["tools"]
+    if cfg["workers"] == "antigravity":
+        workers = "antigravity"
     if item := task.branch_item(repo.current_branch(top), top):
         workers = item[1].get("tool") or workers
-    on_codex = workers != "claude" or cfg["tools"] == "both"  # reviews and reads use Codex when both are set
+    if antigravity_selected:
+        reader = cfg.get("reviews") or ("codex" if cfg["tools"] == "both" else cfg["tools"])
+        on_codex = workers in ("codex", "split") or reader == "codex"
+        on_claude = workers in ("claude", "split") or reader == "claude"
+    else:
+        on_codex = workers != "claude" or cfg["tools"] == "both"
+        on_claude = workers != "codex"
     programs = {"codex": shutil.which(os.environ.get("CODEX_BIN") or "codex"),
                 "claude": shutil.which("claude")}
-    if cfg["tools"] != "both" and not programs[cfg["tools"]]:
+    if (cfg["tools"] != "both" and not programs[cfg["tools"]]
+            and (not antigravity_selected or cfg["tools"] == "codex" and on_codex
+                 or cfg["tools"] == "claude" and on_claude)):
         add(f"{cfg['tools']} is not installed or not on PATH.", INSTALL[cfg["tools"]])
     # Kits supply their own executables; their repair needs no standalone program.
     needs_sdk = bool(cfg["tools"] == "both" or cfg["tools"] == "codex"
                      and (cfg["codex_fast"] == "off" or programs["claude"]))
+    if antigravity_selected:
+        needs_sdk = bool(on_codex and needs_sdk)
     sdk_failed = ""
     if args.fix and needs_sdk and shutil.which("uv") and codex.sdk_problem():
         try: codex.install()
@@ -364,12 +377,31 @@ def doctor(args: argparse.Namespace) -> int:
     for tool in ("git", "gh", "uv"):
         if not shutil.which(tool): add(f"{tool} is not installed or not on PATH.", INSTALL[tool])
     if shutil.which("gh") and repo.run("gh", "auth", "status", cwd=top).returncode: add("gh is not signed in to GitHub.", "gh auth login")
-    if workers != "codex" and programs["claude"] and init.signed_in("claude", top) is False:  # Claude builds on claude and split
+    if on_claude and programs["claude"] and init.signed_in("claude", top) is False:
         add("Claude is not signed in.", "run claude and sign in")
     if on_codex and init.signed_in("codex", top) is False:
         add("Codex is not signed in.", "codex login")
+    if antigravity_selected:
+        if problem := antigravity.problem():
+            add(problem, antigravity.INSTALL)
+        else:
+            signed_in, reason = antigravity.signed_in(top)
+            if signed_in is False:
+                add("Antigravity is not signed in.", "run agy and sign in")
+            elif signed_in is None:
+                add(f"Forge could not check Antigravity's sign-in: {reason}.",
+                    "run agy to check it, then forge doctor")
+            if os.environ.get("SSH_CONNECTION"):
+                signed_in, reason = antigravity.signed_in(top, mode="full")
+                if signed_in is False:
+                    add("Antigravity's full profile for this checkout is not signed in.", reason)
+                elif signed_in is None:
+                    add(f"Forge could not check Antigravity's sign-in for this checkout: {reason}.",
+                        "run agy to check it, then forge doctor")
     if needs_sdk and (problem := sdk_failed or codex.sdk_problem()): add(problem)
     needs_claude_sdk = bool(cfg["tools"] == "both" or cfg["tools"] == "claude" and programs["codex"])
+    if antigravity_selected:
+        needs_claude_sdk = bool(on_claude and needs_claude_sdk)
     claude_failed = ""
     if args.fix and needs_claude_sdk and shutil.which("uv") and claude_sdk.sdk_problem():
         try: claude_sdk.install()
@@ -484,7 +516,9 @@ def doctor(args: argparse.Namespace) -> int:
     if on_codex and not trusted: add("Codex doesn't trust this project, so it would skip Forge's hooks and the "
                      "project's Codex settings.", trust)
     skills = {"claude": [Path(os.environ.get("CLAUDE_CONFIG_DIR") or Path.home() / ".claude"), top / ".claude"],
-              "codex": [codex_config.parent, Path.home() / ".agents", top / ".codex", top / ".agents"]}
+              "codex": [codex_config.parent, Path.home() / ".agents", top / ".codex", top / ".agents"],
+              "antigravity": [Path.home() / ".gemini/config", Path.home() / ".gemini/antigravity-cli",
+                              Path.home() / ".gemini", top / ".agents", top / ".codex"]}
     package = top / "package.json"
     packages = json.loads(sync.read(package)) if package.is_file() else {}
     dependencies = {**packages.get("dependencies", {}), **packages.get("devDependencies", {})}
@@ -492,7 +526,8 @@ def doctor(args: argparse.Namespace) -> int:
                     or any(name in dependencies for name in ("react", "react-dom", "vue", "svelte", "@angular/core", "next", "vite")))
     if has_frontend:
         for host in (host for host in skills if cfg["tools"] == host or cfg["tools"] == "both"
-                     and (workers in (host, "split") or shutil.which(host))):
+                     and (workers in (host, "split") or shutil.which(host))
+                     or host == "antigravity" and workers == "antigravity"):
             for skill in ("impeccable", "emil-design-eng"):
                 if not any((folder / "skills" / skill / "SKILL.md").is_file() for folder in skills[host]):
                     add(f"{skill} is required for UI work but isn't installed where the " f"{host} worker reads skills.", INSTALL[skill])

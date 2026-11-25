@@ -295,6 +295,25 @@ def _new_checkout(item: str, branch: str, folder: str, base: str, state: dict[st
     return path
 
 
+def _task_next(item: str, path: Path) -> str:
+    """Check the profile after its worktree exists, before telling an SSH user to work."""
+    if not os.environ.get("SSH_CONNECTION"):
+        return f"Next: forge work {item}"
+    from forge import antigravity, routing
+
+    config = routing.routed(path, repo.config(path))
+    if repo.worker_family(config, False) != "antigravity":
+        return f"Next: forge work {item}"
+    signed_in, reason = antigravity.signed_in(path, mode="full", again=f"forge work {item}")
+    if signed_in is False:
+        return ("Antigravity's full profile for this worktree is not signed in.\n"
+                f"Next: {reason}")
+    if signed_in is None:
+        return (f"Forge could not check Antigravity's sign-in for this worktree: {reason}.\n"
+                f"Next: cd {repo.quote(str(path))} && forge doctor")
+    return f"Next: forge work {item}"
+
+
 def publish_start(top: Path, branch: str) -> None:
     """Create the remote claim only if nobody else has made it."""
     # Keep the original commit reachable after squash merges and branch cleanup.
@@ -518,7 +537,7 @@ def start(args: argparse.Namespace) -> None:
     on = f" on top of {blockers[0]}" if stacked else ""
     print(f"Started {item}{on} on {branch} in {path}")
     print("Keep this part to about 400 changed lines outside tests and docs; close only warns when it is larger.")
-    print(f"Next: forge work {item}")
+    print(_task_next(item, path))
 
 
 def can_start(item: str, waiting: list[str], scope: list[str], started: dict[str, list[str]],

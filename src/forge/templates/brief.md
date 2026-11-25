@@ -81,6 +81,13 @@ This plan update keeps the code review when no other reviewed input changed.
 For a fix, follow the printed `forge fix amend` step to update its Done when before more work.
 Narrow stays a choice at a stuck-worker stop. Review-loop stops use more, split or accept.
 
+When `reviews` names a family in `forge.toml`, Forge uses that family for cold reads and code reviews.
+If that family built the change, close asks the owner to choose another reviewer.
+Open work folders follow that change after Forge sees it on the default branch, unless they set their own review family.
+Antigravity cold reads need plans and notes that Git can store without a filter.
+Over SSH, `forge task start` checks the new Antigravity work folder and gives its sign-in step if needed.
+New and existing repos keep their current review and read choices until they set `reviews`.
+
 $story_files
 
 You can continue, close and merge published work on another machine with `forge work`, `forge close` and `forge merge`.

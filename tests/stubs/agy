@@ -62,7 +62,11 @@ for line in sys.stdin:
                   "agentCapabilities": {"sessionCapabilities": {"resume": {}}}}
     elif method in ("session/new", "session/resume"):
         session = params.get("sessionId") or uuid.uuid4().hex
-        if os.environ.get("STUB_AGY_SIGNED_OUT"):
+        signed_out_full = os.environ.get("STUB_AGY_SIGNED_OUT_FULL") and "full" in profile.parts
+        if os.environ.get("STUB_AGY_BROKEN"):
+            send(id=identifier, error={"code": -32000, "message": "Unrecognized test failure"})
+            continue
+        if os.environ.get("STUB_AGY_SIGNED_OUT") or signed_out_full:
             send(id=identifier, error={"code": -32000, "message": "Authentication required"})
             continue
         if method == "session/resume" and (
@@ -80,6 +84,32 @@ for line in sys.stdin:
         result = options()
     elif method == "session/prompt":
         if os.environ.get("STUB_AGY_HOLD"):
+            continue
+        if names := os.environ.get("STUB_AGY_SHOW"):
+            settings = json.loads((profile / "antigravity-cli/settings.json").read_text("utf-8"))
+            permissions = settings.get("permissions", {})
+            escape = os.environ["STUB_AGY_ESCAPE"]
+            if "write_file(*)" not in permissions.get("deny", []):
+                Path(os.environ["STUB_AGY_TOUCH"]).touch()
+                Path(escape).touch()
+            record(files={name: Path(name).read_text("utf-8") for name in names.split(",")})
+            requests = [
+                ("outside", "read", [{"path": os.environ["STUB_AGY_PEEK"]}]),
+                ("unknown", "read", []),
+                ("inside", "read", [{"path": names.split(",")[0]}]),
+            ]
+            if os.environ.get("STUB_AGY_FETCH"):
+                requests.append(("fetch", "fetch", []))
+            for label, kind, locations in requests:
+                send(id=f"read-{label}", method="session/request_permission", params={
+                    "toolCall": {"kind": kind, "locations": locations},
+                    "options": [{"kind": "allow_once", "optionId": "yes"},
+                                {"kind": "reject_once", "optionId": "no"}],
+                })
+            update(sessionUpdate="agent_message_chunk", content={
+                "type": "text", "text": f"1. Advisory: See {Path.cwd() / names.split(',')[0]}",
+            })
+            send(id=identifier, result={"stopReason": "end_turn"})
             continue
         command = "git push --force origin main" if os.environ.get("STUB_AGY_PUSH") else "git status"
         payload = {"toolCall": {"name": "run_command", "args": {"CommandLine": command}}}
