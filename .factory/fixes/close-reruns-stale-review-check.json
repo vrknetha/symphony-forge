@@ -11,7 +11,7 @@
   "done_when": "When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it.",
   "fix_kind": "backend",
   "kind": "fix",
-  "round": 1,
+  "round": 2,
   "status": "working",
   "steps": [
     {
@@ -21,6 +21,11 @@
     {
       "at": "2026-11-25T16:09:32.309975+00:00",
       "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:12:16.601464+00:00",
+      "round": 2,
       "step": "resume"
     }
   ],
