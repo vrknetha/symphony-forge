@@ -267,7 +267,11 @@ def test_4_session_holds_handed_out_reads(repo, gh, monkeypatch, tmp_path, tool,
         assert f"Round {replacement['round']}" in replacement["prompt"]
         stale = back(fresh_owner, fresh)
         assert stale.returncode == 1
-        assert "That round was stopped or replaced, so Forge recorded nothing." in stale.stderr
+        assert (f"Round {fresh['round']} is not the open round for SHOP; "
+                f"round {replacement['round']} is open, so Forge recorded nothing.") in stale.stderr
+        assert (f"Next: forge handback SHOP --round {replacement['round']} "
+                '--subagent <id> --text "<message>"') in stale.stderr
+        assert "reader-chat" not in stale.stderr
         assert [row["item"] for row in lanes()] == ["SHOP"]
         success(back(fresh_owner, replacement))
         assert lanes() == []

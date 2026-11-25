@@ -250,19 +250,32 @@ def handback(args: Any) -> int:
         held = codex._json(lock)
         if not pending or args.round != pending["result"]["round"]:
             root = machine.main_checkout(top).as_posix()
-            for entry in machine.entries():
+            live = machine.entries()
+            for entry in live:
                 if (entry.get("native") and entry.get("session") == owner["id"]
                         and entry.get("repo_root") == root and entry.get("item") == args.item
                         and entry.get("round") == args.round):
                     machine.leave(entry)
-            if pending:
+            entry_id = (pending.get("entry") or {}).get("id") if pending else None
+            open_live = bool(pending) and (
+                any(run.get("id") == entry_id for run in live)
+                or lock_alive(lock) is not False)
+            if open_live:
                 open_round = pending["result"]["round"]
-                subagent = args.subagent.strip() or "<id>"
+                owned = (pending.get("session") == owner["id"]
+                         and all(held.get(key) == owner["process"][key] for key in ("pid", "started")))
+                if owned:
+                    raise repo.Refused(
+                        f"Round {args.round} is not the open round for {args.item}; "
+                        f"round {open_round} is open, so Forge recorded nothing. "
+                        f"Hand back round {open_round}'s own subagent result, not a stopped round's.",
+                        f"forge handback {args.item} --round {open_round} "
+                        '--subagent <id> --text "<message>"')
                 raise repo.Refused(
-                    f"Round {args.round} is not the open round for {args.item}; "
-                    f"round {open_round} is open, so Forge recorded nothing.",
-                    f"forge handback {args.item} --round {open_round} "
-                    f'--subagent {subagent} --text "<its last message>"')
+                    f"Round {args.round} is not the open round for {args.item}; another session holds "
+                    f"open round {open_round}, so only that session can hand it back. "
+                    "Forge recorded nothing.",
+                    "forge next")
             raise repo.Refused("That round was stopped or replaced, so Forge recorded nothing.", "forge next")
         if pending["session"] != owner["id"] or any(
                 held.get(key) != owner["process"][key] for key in ("pid", "started")):
