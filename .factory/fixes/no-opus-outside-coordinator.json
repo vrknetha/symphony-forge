@@ -1,0 +1,15 @@
+{
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/no-opus-outside-coordinator",
+  "done_when": "The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort in new repos and after upgrade in existing repos, and repos with their own model entries keep them.",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T09:55:44.834542+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Forge sends Claude diagnostic roles (debugger, security, performance) and the grill and Claude plan-read defaults to Opus, but the owner wants Opus used only by the coordinating session, because Sonnet is enough for these roles and costs less."
+}
