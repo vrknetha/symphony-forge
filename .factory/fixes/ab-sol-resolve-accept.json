@@ -2,10 +2,16 @@
   "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
   "branch": "fix/ab-sol-resolve-accept",
   "done_when": "After forge close --resolve accept, close records the choice and goes on to the checks without asking the round-limit question again.",
+  "drop": {
+    "at": "2026-11-25T08:39:55.374391+00:00",
+    "because": "Restarted: a script bug built the Sol control on the wrong model",
+    "by": "vrknetha <vrknetha@gmail.com> 1795595995 +0530",
+    "status": "working"
+  },
   "fix_kind": "backend",
   "kind": "fix",
   "round": 1,
-  "status": "working",
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-25T08:37:50.109251+00:00",
@@ -15,6 +21,10 @@
       "at": "2026-11-25T08:38:36.486974+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T08:39:55.374718+00:00",
+      "step": "drop"
     }
   ],
   "stuck": {
