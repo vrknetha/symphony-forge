@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/doctor.py\tAvoid repeatedly downloading the whole pull request history\tFORGE-TIDYUP-1/TIDY",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 92,
+      "text": "Avoid repeatedly downloading the whole pull request history",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/TIDY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tGate: tests/test_doctor_fix_files.py::test_4_doctor_brings_forges_files_up_to_date_through_a_fix\tFORGE-TIDYUP-1/TIDY",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 83,
+      "text": "Gate: tests/test_doctor_fix_files.py::test_4_doctor_brings_forges_files_up_to_date_through_a_fix",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/TIDY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tKeep queued workers from older releases in their worktrees\tFORGE-TIDYUP-1/TIDY",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 98,
+      "text": "Keep queued workers from older releases in their worktrees",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/TIDY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tNot done: A folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have\tFORGE-TIDYUP-1/TIDY",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 148,
+      "text": "Not done: A folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/TIDY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/doctor.py\tNot done: After `forge next`, `forge start` or `forge land`, the folder and local branch of each merged item",
+      "kind": "edge",
+      "path": "src/forge/doctor.py",
+      "line": 95,
+      "text": "Not done: After `forge next`, `forge start` or `forge land`, the folder and local branch of each merged item",
+      "from": "review",
+      "item": "FORGE-TIDYUP-1/TIDY",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

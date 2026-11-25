@@ -7,8 +7,137 @@
     "head": null,
     "start": "2ad14ce9204d350d038afec2c320c159c679954f"
   },
+  "known": [
+    {
+      "area": "tidy_finished() in src/forge/doctor.py",
+      "file": "src/forge/doctor.py",
+      "gain": 5,
+      "harm": 5,
+      "line": 148,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have",
+      "work": 2
+    },
+    {
+      "area": "_finished() in src/forge/doctor.py",
+      "file": "src/forge/doctor.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 98,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Keep queued workers from older releases in their worktrees",
+      "work": 2
+    },
+    {
+      "area": "_finished() in src/forge/doctor.py",
+      "file": "src/forge/doctor.py",
+      "gain": 4,
+      "harm": 2,
+      "line": 83,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: tests/test_doctor_fix_files.py::test_4_doctor_brings_forges_files_up_to_date_through_a_fix",
+      "work": 1
+    },
+    {
+      "area": "_finished() in src/forge/doctor.py",
+      "file": "src/forge/doctor.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 92,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Avoid repeatedly downloading the whole pull request history",
+      "work": 2
+    },
+    {
+      "area": "_finished() in src/forge/doctor.py",
+      "file": "src/forge/doctor.py",
+      "gain": 2,
+      "harm": 2,
+      "line": 95,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: After `forge next`, `forge start` or `forge land`, the folder and local branch of each merged item",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "cf5f196678207fd7f4261230dab05c428c7f24ab5bdd99b9aa13197c4779203a",
+    "changed": "719b4cdd384eaec6af2d2a61ae74acc960751f792fea89f0151582d982638005",
+    "commit": "e73a3cfd3d2d849519916ea110709ad860ffbc44",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 5, Work 2, Harm 5\nRaise: Data loss\nCase: normal use - A person edits a finished worktree while another terminal runs `forge next`. The cleanup checks all candidate worktrees first at `src/forge/doctor.py:120`, then removes them with `--force` without checking their state again. With many folders, an edit can arrive after its status check but before removal, and the command deletes that uncommitted file.",
+        "file": "src/forge/doctor.py",
+        "gain": 5,
+        "harm": 5,
+        "line": 148,
+        "priority": "P1",
+        "title": "Not done: A folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - An older-release worker is waiting for a machine slot when its pull request is merged elsewhere and the main checkout has upgraded. Older live entries can lack `checkout_root`; `src/forge/machine.py:714` preserves those entries without adding that field, so this filter ignores them. A waiting worker has not yet recorded a run-start event, so the subsequent `board.active_runs` check does not protect it either. Cleanup removes its clean checkout while the worker is still queued.\nAdds work: recognize older live entries when protecting their checkouts; F 2 x H 2 = 4; 2 x C = 4.",
+        "file": "src/forge/doctor.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 98,
+        "priority": "P1",
+        "title": "Keep queued workers from older releases in their worktrees",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 2\nRaise: Gate\nCase: normal use - The existing doctor test suite runs after this change. Its merged-fix case at `tests/test_doctor_fix_files.py:54` and closed-fix case at line 270 still stub only `gh pr list --head ...`, so the new all-PR request receives no matching response and leaves the folders that those tests expect removed. The closed case also needs its remote branch advanced to the asserted head to satisfy the new safety rule. Both cases remain in the parametrized test at line 853.",
+        "file": "src/forge/doctor.py",
+        "gain": 4,
+        "harm": 2,
+        "line": 83,
+        "priority": "P1",
+        "title": "Gate: tests/test_doctor_fix_files.py::test_4_doctor_brings_forges_files_up_to_date_through_a_fix",
+        "work": 1
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Scale\nCase: normal use - A repo with 1,001 historical pull requests and one candidate folder runs cleanup. The first invocation downloads 1,000 PRs, then the doubled limit starts again from the beginning and downloads all 1,001. The [GitHub CLI lister](https://github.com/cli/cli/blob/trunk/pkg/cmd/pr/shared/lister.go) fetches at most 100 per page, so this takes at least 21 sequential API requests on every command. If either invocation exceeds the ten-second timeout, cleanup silently removes nothing and repeats the cost next time.\nAdds work: batch or paginate without restarting the full history scan; F 3 x H 2 = 6; 2 x C = 4.",
+        "file": "src/forge/doctor.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 92,
+        "priority": "P1",
+        "title": "Avoid repeatedly downloading the whole pull request history",
+        "work": 2
+      },
+      {
+        "body": "Gain 2, Work 2, Harm 2\nRaise: Not done\nCase: normal use - A public repository has a merged Forge branch named `fix/login` and a contributor opens a separate pull request from a fork with the same branch name. The all-PR response contains both, but this set records only the name, so the fork's open PR causes the already-merged local branch to be skipped indefinitely. The request does not fetch the head repository identity needed to distinguish the branches.",
+        "file": "src/forge/doctor.py",
+        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
+        "gain": 2,
+        "harm": 2,
+        "line": 95,
+        "priority": "P1",
+        "title": "Not done: After `forge next`, `forge start` or `forge land`, the folder and local branch of each merged item",
+        "work": 2
+      }
+    ],
+    "id": "cab785d1-d727-480f-aefc-1e193361459e",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T08:24:48.054512+00:00",
@@ -18,6 +147,10 @@
       "at": "2026-11-25T08:25:09.580029+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T08:48:53.038399+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
