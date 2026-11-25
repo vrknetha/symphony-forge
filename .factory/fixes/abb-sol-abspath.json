@@ -1,0 +1,15 @@
+{
+  "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
+  "branch": "fix/abb-sol-abspath",
+  "done_when": "A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path with no second review run.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T08:40:31.598075+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "A review finding that names a file by its absolute path makes the review helper discard the whole review, so its tokens (about 3M once) are wasted and the review runs again."
+}
