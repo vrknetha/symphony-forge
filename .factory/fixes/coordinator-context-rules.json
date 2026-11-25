@@ -1,0 +1,15 @@
+{
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/coordinator-context-rules",
+  "done_when": "The coordinator guide says to hand over at 20 to 30% of context and never past 40%, at a quiet moment (after a merge or while waiting on CI), to delete session timers before /clear, and to use no repeating flow-check timers (CronCreate or /loop) but Forge's step-end events and one-shot waits.",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T16:07:59.323838+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "A client used about 593M Claude tokens in one day, mostly from long coordinator chats that reread the whole conversation on every tool call, overlapping coordinator chats and repeating flow-check timers (about 40M alone); session timers also survive /clear."
+}
