@@ -100,7 +100,7 @@
     "id": "15930ef2-5ec3-4840-a905-484eec9b3b21",
     "status": "blocked"
   },
-  "round": 3,
+  "round": 4,
   "status": "fixing",
   "steps": [
     {
@@ -129,13 +129,20 @@
     {
       "at": "2026-11-25T17:22:54.005555+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T17:23:12.395926+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": "1427b441-823b-48a2-af9a-64c2cf3d6314",
-    "head": "9a6a9ab69535ea95ec52885b505025e081965209",
-    "keys": {},
-    "round": 1
+    "close": "7d6a73dc-69e1-4d71-861e-a17c45fd562b",
+    "head": "8c333d40f1366b628a9ac868269e760986f5455f",
+    "keys": {
+      "the open P0 functional: existing codex coordinators become invisible after upgrade in src/forge/native.py": 1
+    },
+    "round": 3
   },
   "why": "Two or more coordinator chats on the same repo each reread their own long conversation and act on the same items, which multiplied a client's token use.",
   "worker": "codex"
