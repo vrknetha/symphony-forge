@@ -13,7 +13,7 @@ from conftest import ROOT
 from test_setup import _fresh_client, _version
 
 STORY = "client-repos-never-learn-that-a-newer-fo"
-QUERY = ("release", "view", "--repo", "knacklabs/symphony-forge", "--json", "tagName")
+QUERY = ("release", "view", "--repo", "vrknetha/symphony-forge", "--json", "tagName")
 
 
 @pytest.mark.parametrize("adoption", ["new", "previous release"])

@@ -25,9 +25,9 @@ COMMANDS = [{
     "listing": "| `forge upgrade [release]` | Upgrades Forge to the release, or the newest: installs it, has it refresh Forge's files in a fix, and closes that fix |",
 }]
 
-SOURCE = "knacklabs/symphony-forge"
+SOURCE = "vrknetha/symphony-forge"
 INSTALL = ("uv tool install --force --reinstall --no-cache --python 3.11 "
-           f"git+https://github.com/{SOURCE}@{{release}}")
+           "symphony-forge=={version}")
 PREFIX = "upgrade-forge-to-"
 WHY, DONE = "Upgrade Forge to {release}.", "This repo pins and runs Forge {release}."
 RELEASE = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
@@ -243,7 +243,7 @@ def upgrade(args: argparse.Namespace) -> int:
             resume = "forge land --all" if command == "merge train" else f"forge {command} {wait['item']}"
             print(f"Ended {command} for {wait['item']} to install Forge. "
                   f"Run {resume} to resume the CI wait.", flush=True)
-        install = INSTALL.format(release=release)
+        install = INSTALL.format(version=release.removeprefix("v"))
         installed = repo.run(*install.split())
         if installed.returncode:
             reason = (installed.stderr or installed.stdout).strip().splitlines() or ["uv gave no reason"]

@@ -89,7 +89,7 @@ def test_3_hooks_without_forge_run_the_pinned_release_through_uvx(repo, tmp_path
     commands = _synced(repo)
     stub, log = _logging(tmp_path, "uvx")
     _all_run(commands, repo.path, _home(tmp_path, uvx=stub))
-    release = f"--from git+https://github.com/knacklabs/symphony-forge@v{_version(repo).removeprefix('v')}"
+    release = f"--from symphony-forge=={_version(repo).removeprefix('v')}"
     assert log.read_text(encoding="utf-8").splitlines() == [
         f"{repo.path} -q {release} forge hook {hook}"
         for hook in ("context", "handoff", "deny", "approval") * 2]
@@ -106,7 +106,7 @@ def test_4_with_nothing_installed_hooks_block_with_one_plain_line(repo, tmp_path
         assert done.returncode == 2, (rel, event, done.stdout, done.stderr)
         assert done.stderr == (
             "Forge isn't installed, so this hook can't run; install it with uv tool install "
-            f"git+https://github.com/knacklabs/symphony-forge@{pinned}, then run forge doctor.\n")
+            f"symphony-forge=={pinned.removeprefix('v')}, then run forge doctor.\n")
 
 
 def test_5_doctor_reports_a_hook_that_cant_run_with_a_bare_path(repo, tmp_path, monkeypatch):

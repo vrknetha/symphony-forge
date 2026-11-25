@@ -14,7 +14,7 @@ from conftest import ROOT
 from test_setup import _fresh_client, _version
 
 STORY = "upgrade-from-fix-points-to-main"
-QUERY = ("release", "view", "--repo", "knacklabs/symphony-forge", "--json", "tagName")
+QUERY = ("release", "view", "--repo", "vrknetha/symphony-forge", "--json", "tagName")
 
 
 @pytest.fixture(params=["new", "previous release"])

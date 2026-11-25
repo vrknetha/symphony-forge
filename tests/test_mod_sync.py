@@ -33,7 +33,8 @@ state = json.loads((here / 'claude-state.json').read_text('utf-8'))
 if args == ['--version']:
     print(state['version'] + ' (Claude Code)')
 elif args == ['plugin', 'marketplace', 'list', '--json']:
-    print(json.dumps([{{'name': 'forge', 'source': {{'source': 'github', 'repo': 'knacklabs/symphony-forge'}}}}] if state['marketplace'] else []))
+    source = state['marketplace'] if isinstance(state['marketplace'], str) else 'vrknetha/symphony-forge'
+    print(json.dumps([{{'name': 'forge', 'source': 'github', 'repo': source}}] if state['marketplace'] else []))
 elif args == ['plugin', 'list', '--json']:
     print(json.dumps([{{'id': 'forge@forge', 'version': state['installed'], 'scope': 'user', 'enabled': True}}] if state['installed'] else []))
 elif state['offline']:
@@ -79,7 +80,7 @@ def _sync_keeps_the_mod_current_at_user_scope(repo, monkeypatch, marketplace, in
     done = repo.forge('sync')
     assert done.returncode == 0, done.stderr
     writes = [args for args in _calls(repo) if args[:1] == ['plugin'] and 'list' not in args]
-    assert writes == ([['plugin', 'marketplace', 'add', 'knacklabs/symphony-forge']] if not marketplace else []) + [
+    assert writes == ([['plugin', 'marketplace', 'add', 'vrknetha/symphony-forge']] if not marketplace else []) + [
         ['plugin', 'marketplace', 'update', 'forge'],
         ['plugin', 'update', 'forge@forge', '--scope', 'user'] if installed else
         ['plugin', 'install', 'forge@forge', '--scope', 'user'],
@@ -150,7 +151,7 @@ def _marketplace_tracks_the_package_release():
     assert plugin['version'] == version
     assert json.loads((ROOT / 'src/forge/mod/.claude-plugin/plugin.json').read_text('utf-8'))['version'] == version
     assert plugin['source'] == {
-        'source': 'git-subdir', 'url': 'https://github.com/knacklabs/symphony-forge.git',
+        'source': 'git-subdir', 'url': 'https://github.com/vrknetha/symphony-forge.git',
         'path': 'src/forge/mod', 'ref': f'v{version}',
     }
 
@@ -172,7 +173,7 @@ def _previously_adopted_repo_gets_the_mod(repo):
     _install(repo.bin, 'uv', f'''#!{sys.executable}
 import os, sys
 assert sys.argv[1:6] == ['tool', 'run', '--from',
-    'git+https://github.com/knacklabs/symphony-forge@v1.2.2', 'forge']
+    'symphony-forge==1.2.2', 'forge']
 os.execv({json.dumps(sys.executable)}, [{json.dumps(sys.executable)},
     {json.dumps(str(repo.bin / 'old-forge'))}, *sys.argv[6:]])
 ''')
@@ -180,7 +181,7 @@ os.execv({json.dumps(sys.executable)}, [{json.dumps(sys.executable)},
     done = repo.forge('sync')
     assert done.returncode == 0, done.stdout + done.stderr
     writes = [args for args in _calls(repo) if args[:1] == ['plugin'] and 'list' not in args]
-    assert writes == [['plugin', 'marketplace', 'add', 'knacklabs/symphony-forge'],
+    assert writes == [['plugin', 'marketplace', 'add', 'vrknetha/symphony-forge'],
                       ['plugin', 'marketplace', 'update', 'forge'],
                       ['plugin', 'install', 'forge@forge', '--scope', 'user']]
     assert not (repo.path / '.claude-plugin').exists()

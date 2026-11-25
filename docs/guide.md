@@ -17,7 +17,7 @@ reader while available. A native read uses a separate `reader` subagent.
 Install the release a repo pins (uv brings Python 3.11 or later if you don't have it):
 
 ```
-uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.48
+uv tool install symphony-forge==1.2.48
 ```
 
 `forge --version` prints the installed version. Each repo pins its release in `forge.toml`, and
@@ -682,7 +682,7 @@ refuses, follow its `Next:` line; running it again picks up where it stopped.
 If the machine's lanes still have runs, the command names them and asks you to wait.
 
 A repo pinned to a release older than the command upgrades once with
-`uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge upgrade vX.Y.Z`.
+`uvx --from symphony-forge==X.Y.Z forge upgrade vX.Y.Z`.
 
 ## Releasing Forge
 
@@ -726,7 +726,7 @@ Hold merges from the cut until you push the tag and check the installed version.
      remote, so in the scratch folder make the app as `app` and a local bare repo as its remote:
      `git init -b main app`, `git init --bare -b main origin.git`, `git -C app remote add origin ../origin.git`.
      Run `forge init` in `app` from the tag:
-     `uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge init --starter react --actions no`.
+     `uvx --from symphony-forge==X.Y.Z forge init --starter react --actions no`.
      Init sets up the app and pushes its first commit to that remote, then stops with "Forge cannot identify
      a GitHub repository from origin". That is expected for this folder; the app is ready.
    - Start a `general-purpose` subagent, not the `worker` role. Set its model to the one in

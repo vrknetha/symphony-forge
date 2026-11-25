@@ -5,9 +5,9 @@ done
 export PATH
 if command -v forge >/dev/null 2>&1; then :
 elif command -v uvx >/dev/null 2>&1; then
-  forge() { uvx -q --from git+https://github.com/knacklabs/symphony-forge@v1.2.48 forge "$@"; }
+  forge() { uvx -q --from symphony-forge==1.2.48 forge "$@"; }
 else
-  forge() { echo "Forge isn't installed, so this hook can't run; install it with uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.48, then run forge doctor." >&2; return 2; }
+  forge() { echo "Forge isn't installed, so this hook can't run; install it with uv tool install symphony-forge==1.2.48, then run forge doctor." >&2; return 2; }
 fi
 
 # Isolate user exit/exec, and replay Git's input to both checks.

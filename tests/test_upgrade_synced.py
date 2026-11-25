@@ -117,7 +117,7 @@ def test_2_upgrade_is_not_ready_while_synced_files_are_out_of_date(env):
     assert done.stderr == (
         f"This fix pins Forge v9.9.9, but Forge {installed} is running close, so it can't tell "
         "whether the fix's files are what v9.9.9 writes.\n"
-        "Next: uv tool install git+https://github.com/knacklabs/symphony-forge@v9.9.9, then "
+        "Next: uv tool install symphony-forge==9.9.9, then "
         f"forge close {item}\n")
     assert "Ready" not in done.stdout
     assert len(env.review_calls()) == reviews

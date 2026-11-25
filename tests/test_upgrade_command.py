@@ -25,7 +25,7 @@ from test_close import CLEAN, GREEN, blocked, env, finding  # noqa: F401
 pytestmark = pytest.mark.platform
 
 RELEASE, NAME = "v9.9.9", "upgrade-forge-to-v9-9-9"
-URL = "git+https://github.com/knacklabs/symphony-forge@{}"
+URL = "symphony-forge=={}"
 MARK = "release marker"
 
 UV = """#!{python}
@@ -105,11 +105,11 @@ if args[:2] == ["pip", "install"]:
 if args[:2] == ["tool", "install"]:
     if (here / "uv-install-fails").exists():
         sys.exit("error: Failed to fetch the release: network is unreachable")
-    put(here.parent / "uvbin" / "forge", launcher(args[-1].rsplit("@", 1)[1], "installed"))
+    put(here.parent / "uvbin" / "forge", launcher("v" + args[-1].rsplit("==", 1)[1], "installed"))
     sys.exit(0)
 if args[:2] != ["tool", "run"]:
     sys.exit("stub uv: unsupported command: " + " ".join(args))
-release = args[3].rsplit("@", 1)[1]
+release = args[3].replace("symphony-forge==", "v").rsplit("@", 1)[-1]
 ran = put(here.parent / "releases" / release / "forge", launcher(release, "run"))
 sys.exit(subprocess.run([sys.executable, str(ran), *args[5:]]).returncode)
 """
@@ -221,11 +221,11 @@ def assert_ready(up: Upgrade, done, expected: list[str], release: str = RELEASE,
 
 def install(release: str = RELEASE) -> list[str]:
     return ["tool", "install", "--force", "--reinstall", "--no-cache", "--python", "3.11",
-            URL.format(release)]
+            URL.format(release.removeprefix("v"))]
 
 
 def release_run(release: str, *args: str) -> list[str]:
-    return ["tool", "run", "--from", URL.format(release), "forge", *args]
+    return ["tool", "run", "--from", URL.format(release.removeprefix("v")), "forge", *args]
 
 
 # --- Done-when 1: one command, from the install to the close ---------------------------------
@@ -274,7 +274,7 @@ def _newest_then_a_newer_one(up):
     done = up.run()
 
     assert_ready(up, done, ours(up))
-    assert ["release", "view", "--repo", "knacklabs/symphony-forge", "--json", "tagName"] in \
+    assert ["release", "view", "--repo", "vrknetha/symphony-forge", "--json", "tagName"] in \
         up.env.gh.calls()
 
     # A newer release came out while the first upgrade waits for its merge.

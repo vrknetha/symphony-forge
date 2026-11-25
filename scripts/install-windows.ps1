@@ -114,7 +114,7 @@ if (-not $forgeReady) {
     if ($Check) { Missing 'Forge' }
     else {
         Write-Output 'Installing Forge...'
-        & uv tool install --force "git+https://github.com/knacklabs/symphony-forge@v$ForgeVersion"
+        & uv tool install --force "symphony-forge==$ForgeVersion"
         if ($LASTEXITCODE -ne 0) { throw 'Forge did not install. Check the message above, then run this script again.' }
         & uv tool update-shell
         if ($LASTEXITCODE -ne 0) { throw 'Forge is installed, but its command could not be added to your PATH. Run uv tool update-shell, then open a new PowerShell window.' }

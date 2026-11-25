@@ -82,7 +82,7 @@ done
 export PATH
 if command -v forge >/dev/null 2>&1; then :
 elif command -v uvx >/dev/null 2>&1; then
-  forge() { uvx -q --from git+https://github.com/knacklabs/symphony-forge@v<version> forge "$@"; }
+  forge() { uvx -q --from symphony-forge==<version> forge "$@"; }
 else
   forge() { echo "Forge isn't installed, so this hook can't run; install it with <install>, then run forge doctor." >&2; return 2; }
 fi
@@ -147,7 +147,7 @@ SPOTTED_RULE = "plans/spotted.json merge=forge-roadmap"
 
 def install_line(version: str) -> str:
     """The command that installs the pinned Forge (the pin refusal's own Next line)."""
-    return repo.REFUSALS["pin"][1].format(pinned="v" + version.removeprefix("v"))
+    return repo.REFUSALS["pin"][1].format(package_version=version.removeprefix("v"))
 
 
 def read(path: Path) -> str:
@@ -787,10 +787,14 @@ def install_mod(top: Path) -> None:
         installed = json.loads(run("list", "--json"))
         if not isinstance(markets, list) or not isinstance(installed, list):
             raise ValueError("Claude Code returned an unreadable plugin list")
-        if not any(isinstance(row, dict) and row.get("name") == "forge" for row in markets):
-            run("marketplace", "add", "knacklabs/symphony-forge")
+        market = next((row for row in markets if isinstance(row, dict) and row.get("name") == "forge"), None)
+        moved = market is not None and market.get("repo") == "knacklabs/symphony-forge"
+        if moved:
+            run("marketplace", "remove", "forge", "--scope", "user")
+        if market is None or moved:
+            run("marketplace", "add", "vrknetha/symphony-forge")
         run("marketplace", "update", "forge")
-        if any(isinstance(row, dict) and row.get("id") == "forge@forge"
+        if not moved and any(isinstance(row, dict) and row.get("id") == "forge@forge"
                and row.get("scope") == "user" for row in installed):
             run("update", "forge@forge", "--scope", "user")
         else:

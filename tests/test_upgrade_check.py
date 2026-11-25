@@ -16,7 +16,7 @@ pytestmark = pytest.mark.platform
 
 STORY = "FORGE-UPGRADE-1"
 
-SOURCE = "git+https://github.com/knacklabs/symphony-forge@"
+SOURCE = "symphony-forge=="
 
 # This checkout's Forge, installed as the release <version> names: no later release exists yet.
 RELEASE = """#!{python}
@@ -36,7 +36,7 @@ import json, pathlib, sys
 here = pathlib.Path(__file__).resolve().parent
 with open(here / "uv-calls.jsonl", "a", encoding="utf-8") as f:
     f.write(json.dumps(sys.argv[1:]) + "\\n")
-(here / "forge").write_text({release!r}.replace("<version>", sys.argv[-1].rsplit("@v", 1)[1]),
+(here / "forge").write_text({release!r}.replace("<version>", sys.argv[-1].rsplit("==", 1)[1]),
                             encoding="utf-8")
 (here / "forge").chmod(0o755)
 """
@@ -142,7 +142,7 @@ def _upgrade_installs_and_passes_the_release_it_pins(env):
 
     assert (done.returncode, done.stdout) == (0, "forge-pr-check passed for fix/tidy-readme.\n"), \
         done.stderr
-    assert _uv_calls(env) == [["tool", "install", SOURCE + "v1.3.0"]]
+    assert _uv_calls(env) == [["tool", "install", SOURCE + "1.3.0"]]
     assert env.repo.forge("--version").stdout.split()[-1] == "v1.3.0"
 
 
@@ -174,7 +174,7 @@ def _ordinary_pull_request_installs_and_passes_the_default_branch_release(env):
 
     assert (done.returncode, done.stdout) == (0, "forge-pr-check passed for fix/tidy-readme.\n"), \
         done.stderr
-    assert _uv_calls(env) == [["tool", "install", SOURCE + "v1.2.0"]]
+    assert _uv_calls(env) == [["tool", "install", SOURCE + "1.2.0"]]
 
 
 BASH = pytest.mark.skipif(os.name == "nt", reason="the workflow's steps run in bash on ubuntu-latest")

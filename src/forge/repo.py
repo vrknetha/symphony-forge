@@ -52,7 +52,7 @@ REFUSALS = {
                   "move {key} to forge.toml in a fix, or take it out of forge.local.toml"),
     "pin": (
         "Forge {installed} is installed, but this repo pins {pinned}.",
-        "uv tool install git+https://github.com/knacklabs/symphony-forge@{pinned}",
+        "uv tool install symphony-forge=={package_version}",
     ),
     "pin_elsewhere": ("{item} is checked out in {folder}, which pins Forge {installed}; "
                       "this folder pins {pinned}.", "cd {folder}, then forge {words} {item}"),
@@ -998,7 +998,7 @@ def check_pin(cwd: str | os.PathLike[str] | None = None, item: str = "", words: 
         print(f"Forge v{__version__} is installed, but this repo pins v{pinned}, so v{pinned} runs "
               f"through uv.{advice}", file=sys.stderr)
         sys.exit(run_release(f"v{pinned}", sys.argv[1:], cwd))
-    refuse(REFUSALS["pin"], installed=f"v{__version__}", pinned=f"v{pinned}")
+    refuse(REFUSALS["pin"], installed=f"v{__version__}", pinned=f"v{pinned}", package_version=pinned)
 
 
 def resume_pin(top: Path, previous: str, rounds: int | None = None, *, accepted: bool = False,
@@ -1025,14 +1025,12 @@ def run_release(release: str, args: list[str], cwd: str | os.PathLike[str] | Non
     """Run a Forge release's `forge <args>` through uv in cwd, its output streamed; its exit code."""
     return subprocess.run(
         [shutil.which("uv") or "uv", "tool", "run", "--from",
-         f"git+https://github.com/knacklabs/symphony-forge@{release}", "forge", *args],
+         f"symphony-forge=={release.removeprefix('v')}", "forge", *args],
         cwd=cwd, env={**uv_env(), "FORGE_PINNED_RUN": release}).returncode
 
 
 def uv_env() -> dict[str, str]:
-    """This environment for uv, without a git hook's repository: uv fetches a git+ source with
-    its own `git init` and `git reset --hard`, which would turn this repo bare or overwrite its
-    index. The program uv starts finds the repository from its folder."""
+    """Keep a git hook's repository variables out of uv and the Forge it starts."""
     return {key: value for key, value in os.environ.items()
             if key not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE")}
 
