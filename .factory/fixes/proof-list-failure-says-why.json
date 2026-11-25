@@ -1,6 +1,13 @@
 {
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/proof-list-failure-says-why",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21378-3acd-76d0-9b9f-d2d128fdc7c7",
+    "head": null,
+    "start": "53d984c923259d9ff106f47b3a50b29550db4ca3"
+  },
   "done_when": "A Done-when proof failure says that test names must be in backticks and that a Proof list on a merge commit is not read.",
   "fix_kind": "backend",
   "kind": "fix",
