@@ -70,6 +70,40 @@ sys.exit(engine.returncode)
 '''
 
 
+def _relative_path(file: str, roots: list[Path], changed: set[str] | frozenset[str]) -> str:
+    """Turn an absolute path inside a checkout or review root into a repo-relative path."""
+    candidate = Path(file)
+    if not candidate.is_absolute():
+        return file
+    for ancestor in candidate.parents:
+        rel = candidate.relative_to(ancestor)
+        if ".." in rel.parts:
+            continue
+        for root in roots:
+            with contextlib.suppress(OSError):
+                if os.path.samefile(ancestor, root):
+                    posix = rel.as_posix()
+                    if changed and posix not in changed:
+                        folded = posix.casefold()
+                        for path in changed:
+                            if path.casefold() == folded:
+                                with contextlib.suppress(OSError):
+                                    if os.path.samefile(root / posix, root / path):
+                                        return path
+                    return posix
+    # Fall back to prefix matching when a root directory is no longer on disk.
+    posix = file.replace("\\", "/")
+    folded = posix.casefold() if os.name == "nt" else posix
+    for root in roots:
+        prefix = root.as_posix().rstrip("/") + "/"
+        match = prefix.casefold() if os.name == "nt" else prefix
+        if folded.startswith(match):
+            rel_text = posix[len(prefix):]
+            if ".." not in Path(rel_text).parts:
+                return rel_text
+    return file
+
+
 def main() -> None:
     from forge import codex
     # Close must attach the real interpreter to its Windows job before the
@@ -77,8 +111,8 @@ def main() -> None:
     print(os.getpid(), flush=True)
     if sys.stdin.buffer.read(1) != b"1":
         return
-    tree, launcher, mode, helper, *args = sys.argv[1:]
-    roots = [Path(tree), Path(tree).resolve()]
+    tree, checkout, launcher, mode, helper, *args = sys.argv[1:]
+    roots = list(dict.fromkeys((Path(tree), Path(tree).resolve(), Path(checkout), Path(checkout).resolve())))
     class EngineProcess(subprocess.Popen):
         def __init__(self, command, *positional, **kwargs):
             if isinstance(command, (list, tuple)) and command and command[0] == launcher:
@@ -107,17 +141,14 @@ def main() -> None:
         implementation["terminate_process_group"] = terminate_engine
 
     def validate_paths(report: Any, repo: Path, *args: Any) -> None:
-        # Translate our disposable checkout paths before the helper rejects absolute paths.
+        # Translate checkout and disposable review-tree paths before the helper rejects absolute paths.
+        changed = args[0] if args and isinstance(args[0], (set, frozenset)) else set()
         if isinstance(report, dict) and isinstance(report.get("findings"), list):
             for finding in report["findings"]:
                 location = finding.get("code_location") if isinstance(finding, dict) else None
                 file = location.get("file_path") if isinstance(location, dict) else None
                 if isinstance(file, str):
-                    for root in roots:
-                        prefix = root.as_posix().rstrip("/") + "/"
-                        if file.replace("\\", "/").startswith(prefix):
-                            location["file_path"] = file.replace("\\", "/")[len(prefix):]
-                            break
+                    location["file_path"] = _relative_path(file, roots, changed)
         validate(report, repo, *args)
 
     implementation["validate_report"] = validate_paths
@@ -134,7 +165,9 @@ def main() -> None:
             # Resolve Forge's tools from the private parent of the review clone.
             with contextlib.chdir(Path(tree).parent):
                 copy = antigravity.home(top) / "review" / item / str(pass_number)
-                roots.append(copy)
+                for candidate in (copy, copy.resolve()):
+                    if candidate not in roots:
+                        roots.append(candidate)
                 return antigravity.review_engine(
                     top, item, checkout, copy, prompt, implementation["tracked_sensitive_paths"],
                     context["model"], context["effort"], Path(context["spent"]))
