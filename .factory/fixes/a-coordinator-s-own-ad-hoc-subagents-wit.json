@@ -1,0 +1,15 @@
+{
+  "base": "f46d0d319eed56976a220b9975502c95a74bdf1c",
+  "branch": "fix/a-coordinator-s-own-ad-hoc-subagents-wit",
+  "done_when": "The coordinator guide that Forge ships tells the coordinator to set a model on every ad-hoc subagent it starts outside Forge's roles (Sonnet for analysis and research, Haiku for sorting and search), and a test checks the shipped guide says so.",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T06:38:56.485400+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "A coordinator's own ad-hoc subagents without a model, such as the built-in general-purpose agent, inherit the coordinator's model (Opus) for analysis that a cheaper model handles."
+}
