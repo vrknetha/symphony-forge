@@ -574,6 +574,15 @@ preservation review, merge, cleanup and rollback. Follow it in order.
 
 ## Waiting or stopped runs
 
+Keep one coordinator chat active for the same work. Hand over to a fresh chat at
+20 to 30% of the context window, at a quiet moment after a merge or while CI runs.
+Never go past 40%. Give the next chat a short handover with the current item, any
+running work and the next step. In Claude Code, delete any session timers before
+`/clear`. They survive the clear.
+
+Use Forge's step-end events to resume work. When you need a timed check, use a
+one-shot wait. Never use repeating flow-check timers (`CronCreate` or `/loop`).
+
 When a run is waiting or stopped, read the [run reference](run-reference.md) for
 machine queues, board JSON fields and the Claude Code pane. Use `forge next` for
 the current next step. Only a person can stop a run, after host confirmation;
