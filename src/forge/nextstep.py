@@ -152,7 +152,7 @@ def next_step(args: Any) -> int:
             if refusal.entry == repo.REFUSALS["added_work_min_gain"]:
                 raise
     shown, version = release_notes.once(top)
-    notice = upgrade.release_notice(top) + fullrun.notices(top) + shown
+    notice = native.coordinator_warnings(top) + upgrade.release_notice(top) + fullrun.notices(top) + shown
     # Populate shared facts before concurrent readers can race on their first lookup.
     repo.forge_dir(top)
     repo.default_branch(top)

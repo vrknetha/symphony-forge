@@ -1,4 +1,5 @@
 """Session-owned reads use the existing item record, lock and machine lane."""
+import hashlib
 import json
 import os
 import re
@@ -67,6 +68,48 @@ def session() -> dict[str, Any]:
         app = "Claude Code" if tool == "claude" else "Codex"
         raise repo.Refused(f"Forge cannot find the coordinating {app} session; nothing ran.", "")
     return {"id": f"{tool}:{owner['pid']}:{owner['started']}", "process": owner}
+
+
+def coordinator_warnings(top: Path) -> list[str]:
+    """Name other chats that ran next in this clone and still have a live host."""
+    tool = repo.coordinator()
+    if tool is None or os.environ.get("FORGE_WORKER"):
+        return []
+    try:
+        owner = session()
+    except (repo.Refused, OSError, subprocess.CalledProcessError):
+        return []
+    process = owner["process"]
+    chat = os.environ.get("CODEX_THREAD_ID" if tool == "codex" else "CLAUDE_SESSION_ID")
+    app = "Codex" if tool == "codex" else "Claude Code"
+    name = f"{app} session {' '.join(chat.split()) if chat else process['pid']}"
+    key = hashlib.sha256(f"{owner['id']}:{chat}".encode()).hexdigest()
+    directory = repo.forge_dir(top)
+    current = directory / f"coordinator-{key}.json"
+    warnings = []
+    try:
+        pending = tempfile.NamedTemporaryFile(dir=directory, delete=False)
+        path = Path(pending.name)
+        try:
+            with pending:
+                pending.write(json.dumps({"name": name, "process": process}).encode())
+            os.replace(path, current)
+        finally:
+            path.unlink(missing_ok=True)
+        for path in sorted(directory.glob("coordinator-*.json")):
+            if path == current:
+                continue
+            peer = codex._json(path)
+            if not isinstance(peer.get("process"), dict) or not isinstance(peer.get("name"), str):
+                continue
+            alive = codex._alive(peer["process"])
+            if alive is False:
+                path.unlink(missing_ok=True)
+            elif alive:
+                warnings.append(f"Warning: {peer['name']} also coordinates this repo.")
+    except OSError:
+        pass  # An unavailable local warning must not stop the next-step report.
+    return warnings
 
 
 @contextmanager
