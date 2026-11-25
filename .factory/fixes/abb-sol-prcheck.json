@@ -1,6 +1,13 @@
 {
   "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
   "branch": "fix/abb-sol-prcheck",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a211e2-7843-7121-85ec-dcafd0ca2968",
+    "head": null,
+    "start": "b82547ee52e3781f4ddce4015aef3af86efbf8fc"
+  },
   "done_when": "A failed forge-pr-check prints its refusal reasons and next step in the GitHub job log.",
   "fix_kind": "backend",
   "kind": "fix",
