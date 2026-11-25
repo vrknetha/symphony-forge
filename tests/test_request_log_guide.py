@@ -7,7 +7,7 @@ import pytest
 
 from conftest import ROOT
 from test_setup import LISTED, _fresh_client, _version
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 
 STORY = "FORGE-REQLOG-1"
@@ -128,10 +128,12 @@ def test_4_the_guides_state_the_log_rules(repo, gh, tmp_path, setup):
     repo.git("commit", "--allow-empty", "-q", "-m", "Use the current logging guidance", cwd=client)
     worked = repo.forge("work", "check-logging-guidance", cwd=client)
     assert worked.returncode == 0, worked.stdout + worked.stderr
-    brief = " ".join(calls(log)[-1]["brief"].split())
+    prompt = calls(log)[-1]["brief"]
+    brief = " ".join(prompt.split())
     assert BRIEF in brief
+    reference = " ".join(referenced_standards(prompt).read_text(encoding="utf-8").split())
     for instruction in STANDARDS:
-        assert instruction in brief
+        assert instruction in reference
     conventions = re.search(r"how-to for each concern .*? in `([^`]+)`", brief)
     assert conventions, brief
     for name, instruction in CONVENTIONS.items():

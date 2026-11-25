@@ -590,6 +590,7 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
     on, and its subject: the task's name, or the fix's why."""
     on: set[str] = set()
     design_text = ""
+    untyped_fix = False
     values: dict[str, str] = {
         "settings": SETTINGS,
         "test_step": TEST_STEPS[repo.config(top)["test_place"]],
@@ -628,7 +629,10 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
             existing_tests=_existing_tests(top, task.cell_list(row.get("Scope", ""))))
     else:
         on.add("fix")
-        user_facing = state.get("fix_kind") == "ui"
+        fix_kind = state.get("fix_kind")
+        user_facing = fix_kind == "ui"
+        # Older fixes may also have received the mechanical default without choosing it.
+        untyped_fix = fix_kind in (None, "mechanical") and not state.get("fix_kind_explicit")
         subject = state.get("why", "")
         values.update(why=subject, done=state.get("done_when", ""),
                       interfaces=", ".join(f"`{pattern}`" for pattern in
@@ -648,9 +652,11 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
                 "<!-- sample-data-proof -->\n", 1)[0].strip()
     if user_facing:
         on.add("user-facing")
-    values["design_context"], owned_design = design_context(top, design_text, user_facing)
+    inline_design = user_facing or untyped_fix or continued
+    values["design_context"], owned_design = design_context(
+        top, design_text, user_facing, inline_design=inline_design)
     values["theme_file"] = " (`apps/web/src/index.css`)" if (top / "apps/web/src/index.css").is_file() else ""
-    if owned_design:
+    if owned_design and inline_design:
         on.add("screen-design")
         values["design_folder"] = owned_design
     values["summary"] = (f"Fix round {round_number} on {subject}." if round_number > 1 else
@@ -712,8 +718,8 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
             brief += (f"\n## Fix round\n\n### Open serious findings\n\n{values['findings']}\n"
                       f"\n### Failing checks\n\n{values['checks']}\n")
         return brief + changes + "\n" + values["handover"] + "\n" + values["prototype_proof"] + "\n", subject
-    on.add("standards")
-    values["standards"] = (HERE / "standards.md").read_text(encoding="utf-8").strip()
+    values["standards"] = (HERE / "standards.md").as_posix()
+    values["release_notes"] = (HERE / "release-notes").as_posix()
     values["conventions"] = str(CONVENTIONS)
     text = (HERE / "templates" / "brief.md").read_text(encoding="utf-8")
     text = text.split("<!-- prototype-proof -->\n", 1)[0]
@@ -737,7 +743,8 @@ def commit_nudge(top: Path) -> str:
     return prompt + ("\n" + sample_proof() + "\n" if sample else "")
 
 
-def design_context(top: Path, text: str, user_facing: bool, *, review_base: str = "") -> tuple[str, str]:
+def design_context(top: Path, text: str, user_facing: bool, *, review_base: str = "",
+                   inline_design: bool = True) -> tuple[str, str]:
     """The same design and short skill guidance on both hosts; only an owned canvas sets a gate."""
     from forge import autoreview, roles, sync
 
@@ -757,7 +764,13 @@ def design_context(top: Path, text: str, user_facing: bool, *, review_base: str 
         files = sorted(path.relative_to(top).as_posix() for path in (top / folder).rglob("*") if path.is_file())
         parts.append("Screens, images and design files (open the images when checking screens):\n"
                      + "\n".join(f"- `{path}`" for path in files))
-    names = ["PRODUCT.md", "DESIGN.md", *([folder + "SCREENS.md"] if folder else [])]
+    names = ["PRODUCT.md", "DESIGN.md"] if inline_design else []
+    if not inline_design:
+        parts.append("Open `PRODUCT.md` for product goals and `DESIGN.md` for design rules if your work needs them.")
+        if folder:
+            parts.append(f"Open `{folder}SCREENS.md` if your work needs the screen requirements.")
+    elif folder:
+        names.append(folder + "SCREENS.md")
     generated = autoreview.generated_paths(top, review_base, "HEAD", [
         name for name in names if (top / name).is_file()]) if review_base else set()
     for name in names:

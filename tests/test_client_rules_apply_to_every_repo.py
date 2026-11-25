@@ -9,7 +9,7 @@ import pytest
 from conftest import ROOT, FORGE_SHIM, _install
 from test_doctor_fix import HOOKS_FIXED, HOOKS_ROW, _commit_refused
 from test_setup import _fresh_client, _version
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 STORY = "client-workers-and-reviews-receive-forge"
 
@@ -57,7 +57,9 @@ def test_1_sync_and_worker_briefs_carry_only_general_rules(repo, gh, tmp_path, m
     built = repo.forge("work", "check-general-rules" if setup == "new" else "adopt-forge",
                        cwd=client)
     assert built.returncode == 0, built.stdout + built.stderr
-    brief = " ".join(calls(log)[-1]["brief"].split())
+    prompt = calls(log)[-1]["brief"]
+    brief = " ".join(prompt.split())
+    reference = " ".join(referenced_standards(prompt).read_text(encoding="utf-8").split())
     assert "A test that fails in the suite but passes alone is flaky; its failure stays unresolved" in brief
     for host in (".claude", ".codex"):
         standards = " ".join((client / host / "skills/forge/standards.md").read_text(
@@ -70,12 +72,13 @@ def test_1_sync_and_worker_briefs_carry_only_general_rules(repo, gh, tmp_path, m
             "never retry assertions or whole tests",
         ):
             assert phrase in standards, phrase
-            assert phrase in brief, phrase
+            assert phrase in reference, phrase
         for forbidden in ("Forge's 13 principles", "FORGE_LIVE_CODEX", "codex-smoke",
                           "machine load from parallel workers", "forge-source",
                           "no module over 1,200 lines", "fixed ceiling on `forge` commands"):
             assert forbidden not in standards
             assert forbidden not in brief
+            assert forbidden not in reference
 
 
 @pytest.mark.platform
