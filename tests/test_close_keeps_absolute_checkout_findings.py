@@ -5,17 +5,27 @@ import shutil
 import sys
 from pathlib import Path
 
+import pytest
+
 from conftest import _install
 from test_close import ROOT, env, finding, report  # noqa: F401
 
 STORY = "abb-sol-abspath"
 
 
-def test_1_close_keeps_absolute_checkout_finding_without_retry(env):
+@pytest.mark.parametrize("alternate", [False, True], ids=["checkout", "alternate-root"])
+def test_1_close_keeps_absolute_checkout_finding_without_retry(env, alternate):
     item, checkout = env.start_fix()
+    cited_root = checkout
+    if alternate:
+        if os.name == "nt":
+            cited_root = checkout.with_name(checkout.name.upper())
+        else:
+            cited_root = checkout.with_name("checkout-alias")
+            cited_root.symlink_to(checkout, target_is_directory=True)
     fixture = ROOT / "tests/fixtures/autoreview-ce14dcca/scripts/autoreview"
     shutil.copyfile(fixture, os.environ["AUTOREVIEW"])
-    issue = finding("P1", "Saving loses the basket", (checkout / "app.py").as_posix())
+    issue = finding("P1", "Saving loses the basket", (cited_root / "app.py").as_posix())
     del issue["code_location"]["column"]
     response = report(issue)
     del response["usage"], response["review_status"]

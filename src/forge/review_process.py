@@ -70,6 +70,27 @@ sys.exit(engine.returncode)
 '''
 
 
+def checkout_citation(file: str, roots: list[Path]) -> str:
+    path = Path(file.replace("\\", "/"))
+    if not path.is_absolute() or ".." in path.parts:
+        return file
+    parent = path.parent
+    if not any(parent.is_relative_to(root) for root in roots):
+        # Don't let a citation initiate a connection to a new Windows share.
+        if path.drive.startswith("\\\\") and not any(
+                path.drive.lower() == root.drive.lower() for root in roots):
+            return file
+        try:
+            # Resolve aliases to the checkout, keeping the name of any cited file symlink.
+            parent = parent.resolve()
+        except (OSError, RuntimeError, ValueError):
+            return file
+    for root in roots:
+        if parent.is_relative_to(root):
+            return "/".join((*parent.relative_to(root).parts, path.name))
+    return file
+
+
 def main() -> None:
     from forge import codex
     # Close must attach the real interpreter to its Windows job before the
@@ -113,11 +134,7 @@ def main() -> None:
                 location = finding.get("code_location") if isinstance(finding, dict) else None
                 file = location.get("file_path") if isinstance(location, dict) else None
                 if isinstance(file, str):
-                    for root in roots:
-                        prefix = root.as_posix().rstrip("/") + "/"
-                        if file.replace("\\", "/").startswith(prefix):
-                            location["file_path"] = file.replace("\\", "/")[len(prefix):]
-                            break
+                    location["file_path"] = checkout_citation(file, roots)
         validate(report, repo, *args)
 
     implementation["validate_report"] = validate_paths
