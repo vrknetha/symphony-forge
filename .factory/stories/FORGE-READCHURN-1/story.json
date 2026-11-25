@@ -1,12 +1,33 @@
 {
+  "approval": {
+    "at": "2026-11-25T06:33:19.935767+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01JYohVo2Ke7Uz3A74yzbKuu",
+    "hash": "6bddc0d644e0494aa927038991dcc0c4177e857d642eb74b9ca7723383b03b74",
+    "round": 2,
+    "runtime": "claude",
+    "session": "d657efa8-39f4-4695-91d7-c193e1a5ba69"
+  },
   "doc": "plans/FORGE-READCHURN-1.md",
-  "status": "planning",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-25T06:12:50.595629+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T06:25:19.012065+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T06:31:31.059212+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T06:33:19.935964+00:00",
+      "step": "approved"
     }
   ],
   "title": "Cold reads stop churning after round one",
-  "touches": 0
+  "touches": 1
 }
