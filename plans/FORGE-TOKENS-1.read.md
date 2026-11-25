@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-25T04:23:18.860536+00:00
-seconds: 712.463
-read_hash: 07701e1f9fa39acf9597573d6e2b9bb1b9e12d35
-round: 3
+read_at: 2026-11-25T07:36:12.140518+00:00
+seconds: 47.035
+read_hash: f36519a582d8c850ea702638375975ee5989f82d
+round: 5
 passed: yes
-doc_seen: 07701e1f9fa39acf9597573d6e2b9bb1b9e12d35
+doc_seen: f36519a582d8c850ea702638375975ee5989f82d
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 56d1a44c1319e104b3dc4a5570848c3c80288d73
+notes_seen: a2b542c3be1abeb6f6277871722cab3c6fef6632
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a210ca-c20a-78e2-ab26-1b563ed55f3c
 session:
@@ -135,3 +135,23 @@ Only a genuine trade-off goes to the human, as a question with options.
     [worker.py](/src/forge/worker.py:146) merges the default branch before work and lists changes since the previous turn ended. An [existing test](/tests/test_fix_every_fix_round_resends_the_whole_worker.py:23) also supplies a coordinator’s change. Contrary to the [accepted limit](/plans/FORGE-TOKENS-1.md:35), those changes were not necessarily made in the builder’s conversation; with names only, their contents may be new to it.  
     Gain 3, Work 1, Harm 2
    Disposition: keep - below the bar (follow-up)
+
+## Round 4
+
+15. Advisory: Unproven: item 1’s test does not cover two promised references.
+    Raise: Test  
+    Case: normal use - a backend builder receives its first brief.  
+    The [planned test](/plans/FORGE-TOKENS-1.md:40) checks the standards reference and retained UI design notes. It can pass while non-screen design notes remain inline, as [worker.py](/src/forge/worker.py:752) currently sends them, and while the [release-history text](/src/forge/templates/brief.md:11) remains inline.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+16. Advisory: The Why still claims a host-context saving that the owner removed.
+    Raise: Plan gap  
+    Case: normal use - the owner assesses the savings expected from this story.  
+    The [Why](/plans/FORGE-TOKENS-1.md:20) identifies about 21k tokens of Codex context per call and says the story removes those costs. The [owner’s note](/plans/FORGE-TOKENS-1.md:56) removes that part, and the remaining tasks leave [Codex’s request settings](/src/forge/codex.py:64) unchanged. The stated context saving is no longer part of the plan.  
+    Gain 3, Work 1, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+## Round 5
+
+No findings.
