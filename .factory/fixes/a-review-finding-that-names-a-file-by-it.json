@@ -24,8 +24,8 @@
       "gain": 3,
       "harm": 3,
       "line": 30,
-      "outcome": "open",
-      "reason": "",
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted: code works; only the mixed-case test case is skipped on Linux; follow-up",
       "round": 1,
       "security": false,
       "title": "Test: Checkout paths cited through a symlink alias are kept in one review",
@@ -37,7 +37,13 @@
     "branch_diff": "f1f0bd047753a3b86c8a3ac71426fd3e1124ead3ce095b12ac0247f310aa2ddf",
     "changed": "dbdffd8b1f1b0abfe62adc41173bec1dc9cd089d5bd96e724ef74a919db3c680",
     "commit": "96c6cac503fd963c64f2445473739562dbecc725",
-    "dismissals": [],
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted: code works; only the mixed-case test case is skipped on Linux; follow-up",
+        "finding": 1
+      }
+    ],
     "findings": [
       {
         "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a macOS reviewer cites the checkout using a valid different-case spelling.\nThe test adds the mixed-case case only when `swapped.exists()` is true, but the pull request test job runs on Ubuntu (`.github/workflows/forge.yml:61`), where the fixture creates only the lowercase worktree (`tests/test_close.py:228`). The required check therefore exercises the direct and symlink paths but not the mixed-case path. An implementation that resolves symlinks while still matching checkout prefixes case-sensitively would pass CI even though a valid mixed-case macOS path discards the review and triggers a retry. The case-insensitive part of the previous finding remains unproved.",
@@ -51,10 +57,10 @@
       }
     ],
     "id": "faad8ccb-7c40-4fb0-b6e1-43597c68d7b4",
-    "status": "blocked"
+    "status": "clean"
   },
   "round": 2,
-  "status": "hotspot",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T08:12:58.875500+00:00",
@@ -82,12 +88,23 @@
       "at": "2026-11-25T08:39:08.320422+00:00",
       "round": 2,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-25T17:09:00.614319+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 2,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-25T08:39:08.320422+00:00",
+    "by": "owner",
+    "choice": "accept",
     "file": "tests/test_close_keeps_checkout_absolute_paths.py",
-    "wait_id": "4b5bfe51-ba68-4175-acf9-35abd1d26939"
+    "reason": "Owner accepted: code works; only the mixed-case test case is skipped on Linux; follow-up",
+    "wait_id": "4b5bfe51-ba68-4175-acf9-35abd1d26939",
+    "worker_round": 2
   },
   "stuck": {
     "close": "08d7a9b3-1cc8-4df5-90ac-80f7ece2dd08",
