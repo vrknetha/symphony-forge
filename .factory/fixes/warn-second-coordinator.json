@@ -1,4 +1,5 @@
 {
+  "allow_large": "Owner allowed 7 code files: 2 are generated hook settings files written by sync",
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/warn-second-coordinator",
   "chat": {
