@@ -219,7 +219,9 @@ def check(top: Path, item: str, base: str, results: str, *, ran: bool = True,
         missing = [key for key in covered if not mapped.get(key)]
         if missing:
             wanted = "Done when" if missing == ["Done when"] else ", ".join(missing)
-            messages.append(f'Done-when proof: Add a line "{wanted}: <test>" to the Proof list in your last commit message.')
+            messages.append(f'Done-when proof: Add a line "- {wanted}: `<test>`" to the Proof list '
+                            'in a commit message. Put each test name in backticks. '
+                            'Forge skips Proof lists on merge commits.')
     if ran:
         files = _tree(top, head)
         outcomes = _results(results)
