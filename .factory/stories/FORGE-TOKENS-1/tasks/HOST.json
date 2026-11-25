@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-TOKENS-1-HOST",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T06:13:01.726518+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T06:13:24.779207+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "d54cb57e2a6707d5dfa2008a4d9fa10c51abb891",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
