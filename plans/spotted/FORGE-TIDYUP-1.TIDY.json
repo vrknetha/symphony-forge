@@ -41,8 +41,8 @@
       "text": "Not done: A folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have",
       "from": "blocking",
       "item": "FORGE-TIDYUP-1/TIDY",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     },
     {
       "key": "edge\tsrc/forge/doctor.py\tNot done: After `forge next`, `forge start` or `forge land`, the folder and local branch of each merged item",
