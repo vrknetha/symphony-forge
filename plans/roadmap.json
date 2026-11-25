@@ -692,6 +692,12 @@
       "order": 127
     },
     {
+      "key": "FORGE-ANTIGRAVITY-1",
+      "title": "Google Antigravity as a third coding agent",
+      "status": "pending",
+      "order": 128
+    },
+    {
       "key": "FORGE-RELNOTES-1",
       "title": "Tell clients what each Forge release changed",
       "status": "pending",

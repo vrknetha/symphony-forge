@@ -1,0 +1,208 @@
+{
+  "branch": "task/FORGE-ANTIGRAVITY-1-RUNTIME",
+  "chat": {
+    "approval": "35b0d7fb00126418189ed83705349871a04568dd080156d88770a7bc2e79b341",
+    "claude": null,
+    "conversation": "01a20e0f-7ccf-7e80-a418-63a80b0215ac",
+    "head": null,
+    "start": "28f752e827a973234733acded0357521b356b45d"
+  },
+  "known": [
+    {
+      "area": "profile() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 5,
+      "harm": 5,
+      "line": 60,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Not done: item 4 \u2014 background-task input bypasses the destructive-command guard",
+      "work": 2
+    },
+    {
+      "area": "profile() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 5,
+      "harm": 5,
+      "line": 57,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Disputed keep 50: checkout imports can execute code before the guard",
+      "work": 3
+    },
+    {
+      "area": "home() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 5,
+      "harm": 5,
+      "line": 33,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Disputed keep 49: a relative profile path can skip the build guard",
+      "work": 2
+    },
+    {
+      "area": "stuck_stop() in src/forge/close.py",
+      "file": "src/forge/close.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 611,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Switching a stuck Antigravity item selects Codex instead of Claude",
+      "work": 1
+    },
+    {
+      "area": "turn.call() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 187,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Recognize the documented Antigravity authentication error",
+      "work": 1
+    },
+    {
+      "area": "profile() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 65,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Read Antigravity settings saved with a UTF-8 byte order mark",
+      "work": 1
+    },
+    {
+      "area": "setup() in tests/test_antigravity_build.py",
+      "file": "tests/test_antigravity_build.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 31,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Standard: Isolate host-side configuration in tests",
+      "work": 2
+    },
+    {
+      "area": "test_1_builds_and_fixes_run_on_antigravity_with_their_model_and_effort() in tests/test_antigravity_build.py",
+      "file": "tests/test_antigravity_build.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 65,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: tasks and fixes are built in their own worktrees",
+      "work": 1
+    },
+    {
+      "area": "test_1_builds_and_fixes_run_on_antigravity_with_their_model_and_effort() in tests/test_antigravity_build.py",
+      "file": "tests/test_antigravity_build.py",
+      "gain": 2,
+      "harm": 1,
+      "line": 96,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: exercise the default when no Antigravity model entry exists",
+      "work": 1
+    },
+    {
+      "area": "test_1_live_acp_contract() in tests/test_antigravity_live.py",
+      "file": "tests/test_antigravity_live.py",
+      "gain": 2,
+      "harm": 1,
+      "line": 53,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Later: complete the live round trip after READS and REVIEW",
+      "work": 3
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "f82476e2c2a0ea66f3a8b0d300dd6a3f1df7b68bfe0365e083f1d42074daa27c",
+    "changed": "cc8ee5aa0ff92511228ecb6094bd28422a5e4725f2d7fdd04464cd4e9419cb13",
+    "commit": "270a2d8486662224be5162d6885fdd9f42109396",
+    "dismissals": [],
+    "findings": [],
+    "id": "6e858cb0-772b-4fdb-b958-4f7fe7cd8a0b",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-24T14:56:39.077516+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-24T14:57:03.437769+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T15:03:16.663496+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T15:29:04.549049+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T15:29:48.626021+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T15:46:23.327722+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T16:43:39.543658+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T01:51:52.569725+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T03:28:42.896706+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T03:39:39.820000+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "92ec99cc-4d6c-400e-aaa0-41c5345c95f0",
+    "head": "c60be2e015da2d6e48591d8c3bec0cbc1b0e3e4b",
+    "keys": {},
+    "round": 4
+  },
+  "worker": "codex"
+}

@@ -23,6 +23,7 @@ from typing import Any
 from forge.close_remote import push_replay, reconcile, replay_baseline, save_replay, squash_replay
 from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
 
+SWITCH_WORKER = {"claude": "codex", "codex": "claude", "antigravity": "claude"}
 REFUSALS = {
     "not_started": ("Forge has not started {item} in any worktree of this repo.", "forge next"),
     "no_checks": ("forge.toml runs change tests in CI but names no checks.",
@@ -127,7 +128,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
                                   branch_diff=review.fingerprint("HEAD", item, top, state, base,
                                                                  branch_diff=True))
             if choice == "switch":  # the next forge work runs this item on the other tool
-                state["tool"] = "claude" if state["stop"]["tool"] == "codex" else "codex"
+                state["tool"] = SWITCH_WORKER.get(state["stop"]["tool"], "claude")
             if choice == "split" and (findings := score.open_findings(state.get("review") or {})):
                 details = "; ".join(f"{f['title']} ({f['file']}:{f['line']})" for f in findings)
                 follow_up = _start_follow_up(top, state, f"Review findings split from {item}: {details}",
@@ -608,7 +609,7 @@ def stuck_stop(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
     since = (state.get("stuck") or {}).get("head") or f"origin/{repo.default_branch(top)}"
     tried = repo.git("log", "--first-parent", "--no-merges", "--format=%s", f"{since}..HEAD",
                      "--", ".", ":(exclude).factory", cwd=top).splitlines()
-    other = "claude" if tool == "codex" else "codex"
+    other = SWITCH_WORKER.get(tool, "claude")
     choices = [f"switch this item to {other.title()}", f"keep {tool.title()} for one more round",
                "or narrow or split it"]
     question = (f"{title} is stuck. It should deliver: {delivers}\n{what}\n"

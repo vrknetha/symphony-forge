@@ -195,9 +195,10 @@ def _work(args: argparse.Namespace) -> bool:
     tool = getattr(args, "fallback", None) or state.get("tool")
     family = repo.worker(config, "build", design, tool)[0]
     on_codex = family == "codex"
+    on_agy = family == "antigravity"
     # Native Codex children inherit the coordinator's tier, even over role config.
     # The SDK can request normal speed without changing the coordinator.
-    is_native = (repo.route(config, family, command="work", item=item) == "native"
+    is_native = (not on_agy and repo.route(config, family, command="work", item=item) == "native"
                  and (not on_codex or config["codex_fast"] != "off"))
     if is_native and not on_codex:
         is_native = bool(claude_sdk.sdk_problem())
@@ -215,7 +216,12 @@ def _work(args: argparse.Namespace) -> bool:
         kind = "Build" if state["fix_kind"] == "backend" else "Lite"
     # Readiness checks run before the round's status commit.
     approval = _approval(match["key"], item, top) if match["task"] else None
-    claude = ready(top, config, kind, on_codex, design=design, native=is_native)
+    if on_agy:
+        from forge import antigravity
+        antigravity.ready(config, kind, design)
+        claude = []
+    else:
+        claude = ready(top, config, kind, on_codex, design=design, native=is_native)
     _, chosen, why = repo.worker(config, kind.lower(), design, tool)
     review.bound_review(top, item, state, state.get("review") or {})
     findings, failing = _fix_round(state)
@@ -267,20 +273,20 @@ def _work(args: argparse.Namespace) -> bool:
             refuse(REFUSALS["question"], item=item, question=question)
         if previous and last != family:  # a failed start leaves nothing of the other to resume
             codex._record(codex._item_file(top, item, ".json", kind), conversation=None,
-                          start=None, head=None, claude=None)
+                          start=None, head=None, claude=None, antigravity=None)
         if is_native:
             session, (session_record, thread, fresh) = None, native.resumable(top, item, owner)
         else:
             thread, fresh = (codex.conversation(top, item, approval) if on_codex
                              and last == family else (None, "first turn"))
             # A Claude worker continues the item's last session, including in a replacement checkout.
-            session = None if on_codex else codex.record(top, item).get("claude")
+            session = None if on_codex else codex.record(top, item).get(family)
             if last != family:
                 fresh = moved if previous else fresh
             elif session:
                 thread = session["id"]
             elif not on_codex and previous:
-                fresh = "Forge has no record of its Claude session on this machine"
+                fresh = f"Forge has no record of its {family.title()} session on this machine"
         state = repo.read_state(item, top) or {}
         stop = state.get("stop") or {}
         if note is None and stop.get("by") == "owner" and stop.get("worker_round") == state.get("round"):
@@ -345,9 +351,10 @@ def _work(args: argparse.Namespace) -> bool:
                 if design:
                     claude = ["--model", chosen["model"], "--effort", chosen["effort"]]
                 try:
-                    final = _claude(item, top, brief, fresh_brief, claude,
+                    final = _session_round(item, top, brief, fresh_brief, claude,
                             session, thread, None if fresh == "first turn" else fresh,
-                            budget, before_turn if design else None)
+                            budget, before_turn if design else None,
+                            family=family, chosen=chosen, kind=kind)
                 except (repo.Refused, OSError) as error:
                     # Only both with split falls back; one tool, or the owner's chosen one, keeps its
                     # failed round.
@@ -390,12 +397,13 @@ def _work(args: argparse.Namespace) -> bool:
                     _restore_settings(item, top, state)
                     if git("status", "--porcelain", "-uall", cwd=top):
                         print(NUDGING, flush=True)
-                        saved = codex.record(top, item)["claude"]
+                        saved = codex.record(top, item)[family]
                         try:
-                            nudged = _run(item, top, nudge, claude, budget, resume=saved["id"])
+                            nudged = (_agy_turn(item, top, nudge, chosen, kind, saved["id"])
+                                      if on_agy else _run(item, top, nudge, claude, budget, resume=saved["id"]))
                         finally:
                             codex._record(codex._item_file(top, item, ".json", kind),
-                                claude={**saved, "head": git("rev-parse", "HEAD", cwd=top)})
+                                **{family: {**saved, "head": git("rev-parse", "HEAD", cwd=top)}})
                     outcome = "completed"
                     return False
             name = f"{match['key']} · {subject}" if match["task"] else f"Fix · {subject}"
@@ -783,18 +791,37 @@ def _existing_tests(top: Path, scope: list[str]) -> str:
     return ", ".join(f"`{path}`" for path in found) or "none found"
 
 
-def _claude(item: str, top: Path, brief: str, fresh_brief: str | None, models: list[str],
+def _agy_turn(item: str, top: Path, brief: str, chosen: dict[str, str],
+              kind: str, resume: str | None, session: dict[str, Any] | None = None) -> str:
+    from forge import antigravity
+    with repo.record_run(top, item, "worker", family="antigravity", **chosen) as ran:
+        ran["model_kind"] = kind.lower()
+        try:
+            result = antigravity.turn(top, item, brief, cwd=top, mode="full",
+                                      model=chosen["model"], effort=chosen["effort"],
+                                      again=f"forge work {item}", ran=ran, resume=resume)
+        finally:
+            if session is not None and ran.get("chat"):
+                session["id"] = ran["chat"]
+        ran["outcome"] = "completed"
+    final = result["text"]
+    print(final, flush=True)
+    with repo.work_log(top, item).open("a", encoding="utf-8") as out:
+        out.write(final + "\n")
+    return final
+
+
+def _session_round(item: str, top: Path, brief: str, fresh_brief: str | None, models: list[str],
             session: dict[str, Any] | None, resume: str | None, why: str | None,
             budget: dict[str, str],
-            before_turn: Callable[[], None] | None = None) -> str:
-    """A Claude worker's round: continue session `resume` with the short brief, else start a new
-    session with the whole brief and say why when there was one to continue. When Claude says it
-    has no such session, the same round starts fresh; any other failure fails the round and keeps
-    the session, so the next forge work continues it. The session, its checkout, the item's rounds
-    and HEAD when a round ends go in the item's record on this machine."""
+            before_turn: Callable[[], None] | None, *, family: str,
+            chosen: dict[str, str], kind: str) -> str:
+    """Resume with the short brief, or start again with the whole brief if the session is gone."""
     path = codex._item_file(top, item, ".json", "Fix")
     log = repo.work_log(top, item)
     rounds = session["rounds"] if session else 0
+    on_agy = family == "antigravity"
+    from forge.antigravity import NoSession
     try:
         if resume:
             codex.remember(top, item)
@@ -802,30 +829,42 @@ def _claude(item: str, top: Path, brief: str, fresh_brief: str | None, models: l
                 before_turn()
             size = log.stat().st_size if log.exists() else 0
             try:
+                if on_agy:
+                    return _agy_turn(item, top, brief, chosen, kind, resume)
                 return _run(item, top, brief, models, budget, resume=resume)
+            except NoSession:
+                pass
             except repo.Refused:
                 # Claude refuses a session it doesn't have before the turn starts, with this line.
                 output = log.read_bytes()[size:].decode("utf-8", "replace")
-                if "No conversation found" not in output:
+                if on_agy or "No conversation found" not in output:
                     raise
-            why = f"Claude no longer has session {resume}"
+            why = f"{family.title()} no longer has session {resume}"
         if why:
-            message = f"Starting a new Claude session with the whole brief, because {why}."
+            message = f"Starting a new {family.title()} session with the whole brief, because {why}."
             print(message, flush=True)
             with log.open("a", encoding="utf-8") as out:
                 out.write(message + "\n")
         # A replaced session keeps the item's round count.
-        session = {"id": str(uuid.uuid4()), "checkout": str(top),
-                   "start": git("rev-parse", "HEAD", cwd=top), "rounds": rounds}
-        codex._record(path, claude=session)
-        codex.remember(top, item, codex._json(path))
+        fresh_session = {"checkout": str(top), "start": git("rev-parse", "HEAD", cwd=top),
+                         "rounds": rounds}
+        if not on_agy:
+            session = {**fresh_session, "id": str(uuid.uuid4())}
+            codex._record(path, **{family: session})
+            codex.remember(top, item, codex._json(path))
         if before_turn is not None:
             before_turn()
+        if on_agy:
+            try:
+                return _agy_turn(item, top, fresh_brief or brief, chosen, kind, None, fresh_session)
+            finally:
+                if "id" in fresh_session:
+                    session = fresh_session
         return _run(item, top, fresh_brief or brief, models, budget, session_id=session["id"])
     finally:
         if session:
-            codex._record(path, claude={**session, "rounds": rounds + 1,
-                                        "head": git("rev-parse", "HEAD", cwd=top)})
+            codex._record(path, **{family: {**session, "rounds": rounds + 1,
+                                           "head": git("rev-parse", "HEAD", cwd=top)}})
 
 
 def _run(item: str, top: Path, brief: str, models: list[str], budget: dict[str, str],

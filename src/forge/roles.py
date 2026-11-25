@@ -69,6 +69,8 @@ ROLES = {
 
 
 def _family(model: str) -> str:
+    if model.startswith("gemini"):
+        return "antigravity"
     return "claude" if re.match(r"claude|opus|sonnet|haiku|fable", model) else "codex"
 
 
