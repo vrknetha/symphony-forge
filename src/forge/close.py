@@ -323,10 +323,10 @@ def _close(args: argparse.Namespace, top: Path) -> int:
                                          result.get("branch_diff") != branch_diff)
     if fresh:
         result.update(changed=changed, branch_diff=branch_diff)
-        # Keep the historical review commit unless replay removed it from this branch.
+        # Keep the historical review commit unless replay dropped it or accept covered repairs.
         if (not re.fullmatch(r"[0-9a-f]{40}|[0-9a-f]{64}", str(result.get("commit", ""))) or
-                repo.run("git", "merge-base", "--is-ancestor", result["commit"],
-                         "HEAD", cwd=top).returncode != 0):
+                repo.run("git", "merge-base", "--is-ancestor", result["commit"], "HEAD", cwd=top).returncode != 0 or
+                choice == "accept" and stacked_on and (repairs or merge_review.repairs(top, result["commit"]))):
             result["commit"] = repo.git("rev-parse", "HEAD", cwd=top)
             refreshed = True
     requested = []
