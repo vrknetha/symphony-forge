@@ -18,7 +18,7 @@
       "gain": 4,
       "harm": 3,
       "line": 583,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -31,7 +31,7 @@
       "gain": 4,
       "harm": 3,
       "line": 577,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -41,37 +41,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "39facdee9d8dd78215684e4645dcf16801d3d48cfb339d49d9d9e769e335fdfe",
-    "changed": "8d3cf6cd6135a6e3b9025bc51ac2a322ab4d24d136b1f531b3200ce132fc4ad8",
-    "commit": "cfda7f438e59dc62ae9aae9ee94c1e6aeb555d63",
+    "branch_diff": "820d2ea3c2ed9659f019574915e6da320db0464fb9bdfcfa8fe911d9d5c3e91d",
+    "changed": "082ba5e25e928aee7b4d8d4bd058158e774034bf887fb9b273ae388587c8fb97",
+    "commit": "b730775d9b27592fbe87bd819377325f9d76eb7d",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 1, Harm 3\nRaise: Functional. Case: normal use - a coordinator hands over while a Forge run is waiting on CI. The guide tells the new chat to resume from Forge's step-end events, but `src/forge/event_log.py:42` appends run events to local history, and `plans/FORGE-PANE-1.md:58` records that Forge no longer starts agent turns from events. The new chat therefore receives no completion notification and can remain idle if it waits for one. The guide needs to explain how to observe completion with the available one-shot wait or host notification.",
-        "file": "src/forge/templates/skill.md",
-        "gain": 4,
-        "harm": 3,
-        "line": 583,
-        "priority": "P1",
-        "title": "Functional: Give the new chat a working way to observe completion",
-        "work": 1
-      },
-      {
-        "body": "Gain 4, Work 1, Harm 3\nRaise: Functional. Case: normal use - one item is waiting on CI while another has a native plan read or worker running. The new guidance permits a handover with running work, but `src/forge/native.py:73` keeps the round's lock with its original session, and `src/forge/native.py:259` refuses a handback from a different session. If the old chat stays open but inactive, the new chat cannot record the result or start a replacement; ending the old session abandons the pending round. The handover guidance needs to account for session-owned rounds before switching chats.\nAdds work: check for and hand back session-owned rounds before switching; F 2 x H 2 = 4; 2 x C = 2",
-        "file": "src/forge/templates/skill.md",
-        "gain": 4,
-        "harm": 3,
-        "line": 577,
-        "priority": "P1",
-        "title": "Functional: Finish session-owned rounds before handing over",
-        "work": 1
-      }
-    ],
-    "id": "abe839b7-6c5b-4cd1-8b74-db2ef15463a3",
-    "status": "blocked"
+    "findings": [],
+    "id": "c1bcb429-b9e4-4a87-abe5-fe22b8e26860",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T16:07:59.323838+00:00",
@@ -90,6 +69,10 @@
       "at": "2026-11-25T16:47:11.943644+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:50:24.266800+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
