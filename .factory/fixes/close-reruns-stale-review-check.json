@@ -1,6 +1,13 @@
 {
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/close-reruns-stale-review-check",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21378-3acd-7b62-9643-7c6f47bebd21",
+    "head": null,
+    "start": "68a18ab03e8d261f7cd1a447eec6d930fbe4b71d"
+  },
   "done_when": "When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it.",
   "fix_kind": "backend",
   "kind": "fix",
