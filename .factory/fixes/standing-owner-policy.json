@@ -124,7 +124,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-19T01:59:18.821263+00:00",
@@ -137,12 +137,23 @@
     {
       "at": "2026-11-19T03:12:12.288415+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T17:08:55.954549+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-19T03:12:12.288690+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "src/forge/close.py",
-    "wait_id": "cf5c17fe-9451-4880-8903-ddeb4964b37b"
+    "reason": "Owner chose one more round for both findings",
+    "wait_id": "cf5c17fe-9451-4880-8903-ddeb4964b37b",
+    "worker_round": 2
   },
   "stuck": {
     "close": "a2a88ea1-ce83-4567-a69b-fc3a9dd69351",
