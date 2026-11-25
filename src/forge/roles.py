@@ -1,7 +1,7 @@
 """Forge's subagent roles for both hosts, from forge.toml and the host's built-in defaults.
 
 A Codex role whose kind's model belongs to the other family inherits the session's model.
-Claude planning uses grill, diagnostics use Opus, and implementation uses its worker settings.
+Claude planning uses grill, diagnostics use Sonnet at high effort, and implementation uses its worker settings.
 Roles set no tools or permission mode: they inherit the session's.
 """
 from __future__ import annotations
