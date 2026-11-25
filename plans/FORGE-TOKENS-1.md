@@ -4,41 +4,23 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon. End each
-item with its source in plain words, such as (Source: the client's note on late orders, 12 Oct),
-or with the sourced item that needs it, such as (Needed by: the Customers screen). A source is a
-client note, a brief answer, a decision, a screen marked Build now at sign-off, a fixed rule of
-the app, or the owner's own request with its date. Name each screen, field, endpoint, tool and
-setting that the plan adds in one of these items.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact made with the client's design system (link in
-docs/design/design-system.md); on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id. Before the first approval it needs a new read;
-after it, a design part's redraw that changes only that id keeps the approval; any other edit needs a new one.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- First, with no behaviour change: record a baseline of input tokens and model requests per build and repair round from the run records, counting commit nudges and capacity retries.
+- Next, send a large diff (over 2,000 characters) or a long related-test list as file names with a size note, keeping required tests and failing check names inline.
+- Then, a fresh build brief keeps scope, Done when, the rules that apply, and the proof and commit steps inline, and names the standards file, non-UI design notes and release history as files the worker opens when needed.
+- Last, a repair round starts fresh with a compacted brief (findings, failing tests, changes already tried, decisions, assignment) instead of resuming its conversation; the owner chose this on 25 Nov 2026, and it reverses the resume rule.
+- New and existing client repos both get these changes on upgrade; no repo setting changes.
 
 ## Why
 
-Builder rounds send fewer input tokens
-
-
+Builder rounds re-send large inputs. Astra's audit measured one build at 46 model requests and about 4.6M input tokens. A resumed repair round starts with a median 170k input tokens, against 56k for a fresh brief. The fresh brief inlines the 25.5 KB standards file, design documents and the test-audit section even for backend work, and large diffs and related-test lists are pasted in full. History undercounts 241 of 750 medium runs, so the baseline comes first.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **A baseline of input tokens and model requests per build and repair round, by effort, is recorded before any change ships.**
+2. **After each change, the same measure on the same kinds of work is recorded and the drop is stated as a measured number.**
+3. **A build brief no longer inlines the standards file or the design notes for non-UI work, and names them as files to open.**
+4. **Diffs over 2,000 characters and long test lists show file names with a size note, while required tests and failing check names stay inline.**
+5. **A repair round starts from a compacted brief instead of resuming a long conversation.**
 
 ## Risks
 
