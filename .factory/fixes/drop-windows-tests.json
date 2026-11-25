@@ -18,8 +18,19 @@
   "done_when": "Forge's nightly full run and its before-release check run no Windows job, a release no longer waits on Windows, and Linux tests on pull requests and the macOS tests stay.",
   "fix_kind": "mechanical",
   "kind": "fix",
+  "known": [],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "8455dfa76642d6124e707bcca1ffaeb1719be6a5d8c861633f93285fb9b5f922",
+    "changed": "340e3434daf12f2d7a12661da2f050a8b3ecf0265e46f66a7d54f9c2392b3000",
+    "commit": "27bb0a1c03255328c46c69502d2b8f53b9b3f410",
+    "dismissals": [],
+    "findings": [],
+    "id": "9e9df3b3-e847-4e3e-bc7d-394f4e538456",
+    "status": "clean"
+  },
   "round": 1,
-  "status": "working",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T16:52:01.246727+00:00",
@@ -29,6 +40,10 @@
       "at": "2026-11-25T16:52:10.522835+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:02:59.358349+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
