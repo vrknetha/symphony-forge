@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-25T03:59:42.958862+00:00
-seconds: 438.884
-read_hash: 4370a52a2b3e000b1758e194af40475b90e58c80
-round: 2
-passed: no
-doc_seen: 4370a52a2b3e000b1758e194af40475b90e58c80
+read_at: 2026-11-25T04:23:18.860536+00:00
+seconds: 712.463
+read_hash: 07701e1f9fa39acf9597573d6e2b9bb1b9e12d35
+round: 3
+passed: yes
+doc_seen: 07701e1f9fa39acf9597573d6e2b9bb1b9e12d35
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 93b951770c6f4cfb35510453db826083270e63cf
+notes_seen: 56d1a44c1319e104b3dc4a5570848c3c80288d73
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a210ca-c20a-78e2-ab26-1b563ed55f3c
 session:
-loop_choice: more
-loop_reason: The owner chose to split the story on 25 Nov 2026; the rewrite drops the per-test failure details, so finding 6 no longer applies
+loop_choice:
+loop_reason:
 ---
 # Cold read notes
 
@@ -104,4 +104,34 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - the comparison week includes native cold reads.  
     [Native cold reads](/src/forge/native.py:113) do not write the run-start and run-end records used for the stated baseline. Their [read record](/src/forge/story.py:400) describes the latest read. The plan does not identify how the coordinator will count all native reads for each week or mark that share unknown.  
     Gain 3, Work 3, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+## Round 3
+
+11. Advisory: RESUME leaves existing tests expecting the removed diff.
+    Raise: Test  
+    Case: normal use - a repair round lists changed files without their contents.  
+    [test_codex_resume.py](/tests/test_codex_resume.py:267) and [test_fix_every_fix_round_resends_the_whole_worker.py](/tests/test_fix_every_fix_round_resends_the_whole_worker.py:52) assert diff content that the new brief removes. [RESUME’s Tests cell](/plans/FORGE-TOKENS-1.md:51) names neither test, and the [changed-test picker](/src/forge/fasttest.py:153) does not identify either as a direct reader of `worker.py`. The planned test can pass while these assertions fail in the full suite.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+12. Advisory: Disputed keep 8: Codex reviews can still hide Forge’s skill list.
+    Raise: Test  
+    Case: normal use - Forge starts a Codex review through its pinned review helper.  
+    The [review launcher](/src/forge/review.py:982) uses a helper that passes [`skills.include_instructions=false`](/tests/fixtures/autoreview-ce14dcca/scripts/autoreview:4401). The [pinned Codex extension](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/ext/skills/src/extension.rs) suppresses the entire automatic skill list under that setting. An app-server check can pass while the separate review route still hides Forge’s skills.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+13. Advisory: Unproven: item 3 can retain host skills while passing the live check.
+    Raise: Test  
+    Case: normal use - both the host and the repository have skills.  
+    The [planned check](/plans/FORGE-TOKENS-1.md:44) verifies lower input and a visible Forge skill, but does not check that a host skill disappeared. The [pinned Codex configuration](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/config/src/skills_config.rs) supports a catalog token limit that can reduce input while retaining entries from both.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+14. Advisory: The stated repair risk assumes the builder made changes it has never seen.
+    Raise: Plan gap  
+    Case: normal use - the default branch or coordinator changes the checkout between rounds.  
+    [worker.py](/src/forge/worker.py:146) merges the default branch before work and lists changes since the previous turn ended. An [existing test](/tests/test_fix_every_fix_round_resends_the_whole_worker.py:23) also supplies a coordinator’s change. Contrary to the [accepted limit](/plans/FORGE-TOKENS-1.md:35), those changes were not necessarily made in the builder’s conversation; with names only, their contents may be new to it.  
+    Gain 3, Work 1, Harm 2
    Disposition: keep - below the bar (follow-up)

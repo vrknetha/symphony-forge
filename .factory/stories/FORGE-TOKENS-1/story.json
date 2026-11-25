@@ -13,6 +13,10 @@
     {
       "at": "2026-11-25T03:59:42.974629+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-25T04:23:18.908971+00:00",
+      "step": "read"
     }
   ],
   "title": "Builder rounds send fewer input tokens",
