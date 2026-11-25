@@ -32,7 +32,7 @@ REFUSALS = {
     "not_reviewed": ("The committed review at the head of {branch} is {problem}.",
                      "forge close {item}"),
     "story_doc": ("{problem}", "fix the story doc, then forge read <KEY>"),
-    "proof": ("{problem}", "forge close {item}"),
+    "proof": ("{problem}", "forge work {item}"),
     "stacked": ("{item} builds on {parent}; Forge checks its pull request once it targets {default}.",
                 "forge close {item}"),
 }

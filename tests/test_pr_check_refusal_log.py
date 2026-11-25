@@ -16,19 +16,38 @@ pytestmark = [pytest.mark.platform,
               pytest.mark.skipif(os.name == "nt", reason="The trusted workflow runs in bash on Linux")]
 
 
-def test_1_failed_pr_check_prints_refusal_and_next_step_in_job_log(env, github, tmp_path):
+@pytest.mark.parametrize(
+    ("proof_block", "expected_reasons"),
+    [
+        (
+            "Proof list:\n"
+            "- Done when: tests/test_missing_one.py::test_1_first (new; closest none; proves first)\n"
+            "- Done when: tests/test_missing_two.py::test_2_second (new; closest none; proves second)",
+            [
+                "Done-when proof: tests/test_missing_one.py::test_1_first is not on this branch.",
+                "Done-when proof: tests/test_missing_two.py::test_2_second is not on this branch.",
+            ],
+        ),
+        (
+            "Proof list:\n- Done when:",
+            [
+                "Done-when proof: The fix's Done-when line names no test in the Proof list.",
+                'Done-when proof: Add a line "Done when: <test>" to the Proof list in your last commit message.',
+            ],
+        ),
+    ],
+    ids=["multiple-missing-tests", "missing-test-mapping"],
+)
+def test_1_failed_pr_check_prints_refusal_and_next_step_in_job_log(
+    env, github, tmp_path, proof_block, expected_reasons
+):
     server, calls, answers = github
     client(env, False)
     repo = env.repo
     config = (repo.path / "forge.toml").read_text("utf-8")
     env.commit(repo.path, "forge.toml", config + 'test_place = "ci"\n', "Use CI tests")
     item, where = env.start_fix()
-    env.commit(
-        where,
-        "app.py",
-        "print('changed with missing proof test')\n",
-        "Change app\n\nProof list:\n- Done when: tests/test_missing.py::test_1_missing (new; closest none; proves it)",
-    )
+    env.commit(where, "app.py", "print('changed with invalid proof')\n", f"Change app\n\n{proof_block}")
 
     job_url = "https://github.com/acme/shop/actions/runs/123/job/456"
     answers["/repos/acme/shop/actions/runs/123/jobs"] = {
@@ -55,5 +74,4 @@ def test_1_failed_pr_check_prints_refusal_and_next_step_in_job_log(env, github, 
                               capture_output=True, text=True, encoding="utf-8", timeout=60)
 
     assert (checked.returncode, reported.returncode) == (1, 1), (checked.stderr, reported.stderr)
-    assert "Done-when proof: tests/test_missing.py::test_1_missing is not on this branch." in reported.stdout
-    assert f"Next: forge close {item}" in reported.stdout
+    assert reported.stdout.splitlines() == [*expected_reasons, f"Next: forge work {item}"]
