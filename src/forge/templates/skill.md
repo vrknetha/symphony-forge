@@ -208,6 +208,7 @@ the next merge.
 | "Use fewer cold-read or task-review rounds" | Ask the owner which limit to change; then in a fix set `cold_read_rounds` or `task_review_rounds` to `1` in `forge.toml`, then run `forge close <fix>` |
 | "Run everything in Claude" | Ask, then in a fix: set `tools = "claude"`, `workers = "claude"` in `forge.toml`, then `forge sync`, `forge close <fix>` |
 | "Run everything in Codex" | Ask, then in a fix: set `tools = "codex"`, `workers = "codex"` in `forge.toml`, then `forge sync`, `forge close <fix>` |
+| "Build with Antigravity" | Ask, then in a settings fix set `workers = "antigravity"` in `forge.toml`. Install Antigravity CLI 1.5.12 or newer and run `agy` to sign in. |
 | "Use both" | Ask, then in a fix: set `tools = "both"` in `forge.toml`, `forge close <fix>` |
 | "Change who builds just for me" | Edit `forge.local.toml` beside `forge.toml` in the main checkout (not a worktree): only `tools`, `workers` and `[models.<kind>]` tables. Git ignores it, so no fix; every worktree of that clone uses it. `forge next` and `forge doctor` name what it sets |
 | "Close takes too long running every test" | In a local-test repo, ask, then in a fix: set `fast_test` in `forge.toml`, a command close runs instead of `test`, with `{base}` replaced by the merge base with the default branch (for example `npx vitest run --changed {base}` plus lint). In a CI-test repo, its pull request check runs the tests that import the changed source files, not only the changed test files (see step 9 of 'Adopt a live app'); the nightly full run covers the rest. Then `forge close <fix>` |
@@ -413,6 +414,14 @@ and commit the plan there. These details do not change the approved numbered res
 Then run `forge close <item>` again. A version-pin-only difference still passes.
 Initial migration and adoption keep their new settings until their first pull request merges.
 New and earlier-adopted repos get this check on upgrade. Workers never edit settings.
+New and existing repos can choose Antigravity for builds and fixes after installing this release.
+Use `[models.build.antigravity]`, `[models.fix.antigravity]` or `[models.lite.antigravity]`
+to name a model and effort. Forge uses the account's default model when the entry is absent.
+Gemini 4 Neon uses `gemini-4-neon` and needs a plan above Free and Plus. Repair rounds resume
+on the same machine and raise effort after a failed check or blocking finding. Forge installs
+its command guard and skills path in a separate profile for each worktree. Sign in with Google,
+a Gemini API key or Vertex AI.
+
 A developer's own `tools`, `workers` and `[models.<kind>]` choices go in the git-ignored
 `forge.local.toml` instead, which you edit directly when they ask; Forge refuses any other key there.
 `runner` selects the GitHub Actions runner label in the generated `forge.yml`;
@@ -2021,9 +2030,9 @@ subagent role. It uses the explore entry in `forge.toml`; no separate Forge comm
 To ask Codex itself (for example a stronger model), run `forge ask "<question>" [--model <model>]`.
 It runs one read-only turn in an agent place and prints the answer.
 
-Each kind in `forge.toml`'s `[models]` table may have a codex and a claude entry, such as
-`[models.build.codex]` and `[models.build.claude]`; a single entry counts only for its own model's
-tool (a gpt model is Codex's, any other Claude's). Workers use their selected tool's entry,
+Each kind in `forge.toml`'s `[models]` table may have a Codex, Claude or Antigravity entry.
+A single entry uses the model name to pick the family. Names starting with `gpt` use Codex,
+names starting with `gemini` use Antigravity, and other names use Claude. Workers use their selected tool's entry,
 and explorers use their host's entry. Workers and Claude plan readers with no entry use Forge's defaults.
 Codex build, fix and lite default to `gpt-6.2-sol` at low effort; design uses its design default.
 New repos pin Codex reviews, including working-prototype reviews, and cold reads to

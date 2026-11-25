@@ -477,6 +477,8 @@ def synced(top: Path, cfg: dict[str, Any], base: str, head: str, paths: list[str
     inputs = {"AGENTS.md", "CLAUDE.md", ".claude/settings.json", ".codex/hooks.json",
               ".codex/config.toml", ".gitattributes", ".gitignore", "package.json", ".nvmrc",
               ".node-version", "pnpm-lock.yaml", "package-lock.json", "pyproject.toml"}
+    if githooks.ANTIGRAVITY_SKILLS in paths:
+        inputs.add(githooks.ANTIGRAVITY_SKILLS)
     hooks = githooks.husky_folder(top)
     if hooks:
         inputs.update((hooks.relative_to(top) / name).as_posix()

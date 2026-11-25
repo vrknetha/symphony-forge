@@ -447,6 +447,25 @@ def _merge_conflict(env):
             "next": "forge work tidy-readme to merge the default branch and continue this work, then forge close tidy-readme"}
 
 
+def _antigravity_skills_conflict(env):
+    repo = env.repo
+    manifest = ".agents/skills.json"
+    settings = (repo.path / "forge.toml").read_text("utf-8")
+    env.commit(repo.path, "forge.toml",
+               settings.replace('workers = "claude"', 'workers = "antigravity"'))
+    entries = [{"path": ".codex/skills"}]
+    env.commit(repo.path, manifest, json.dumps({"entries": entries}))
+    task_skills = {"entries": [*entries, {"path": "tools/task-skills"}]}
+    main_skills = {"entries": [*entries, {"path": "tools/main-skills"}]}
+    item, where = env.start_fix({manifest: json.dumps(task_skills)})
+    env.commit(repo.path, manifest, json.dumps(main_skills))
+    repo.git("push", "-q", "origin", "main")
+    return {"item": item, "clean": where,
+            "kept": {(where, manifest): task_skills, (repo.path, manifest): main_skills},
+            "problem": f"Merging main into fix/tidy-readme conflicts in {manifest}.",
+            "next": "forge work tidy-readme to merge the default branch and continue this work, then forge close tidy-readme"}
+
+
 def _bad_dismissal(env):
     env.reviews(blocked(finding("P0", "Not done: The readme opens with a greeting")))
     item = env.start_fix()[0]
@@ -510,7 +529,7 @@ GATES = [_review_fails_twice, _review_incomplete_twice, _open_serious_finding, _
          _missing_required_check, _github_api_error,
          pytest.param(_unnamed_check_run, marks=pytest.mark.platform),
          pytest.param(_unnamed_commit_status, marks=pytest.mark.platform), _no_checks_named,
-         _not_started, _merge_conflict, _bad_dismissal, _dismissal_of_replaced_finding,
+         _not_started, _merge_conflict, _antigravity_skills_conflict, _bad_dismissal, _dismissal_of_replaced_finding,
          _dismissal_cites_no_such_line, _dismissal_cites_no_such_file, _helper_not_pinned,
          _task_row_missing]
 
@@ -523,6 +542,8 @@ def test_2_gates_check_outcomes(env, case, request):
     if want.get("draft"):  # a draft left by an earlier blocked review
         env.open_pr("", draft=True)
     done = env.close(want["item"], *want.get("args", []))
+    for (where, path), manifest in want.get("kept", {}).items():
+        assert json.loads(env.repo.git("show", f"HEAD:{path}", cwd=where)) == manifest
     assert done.returncode == 1, done.stdout + done.stderr
     problem, next_line = done.stderr.splitlines()[-2:]
     assert problem == want["problem"]

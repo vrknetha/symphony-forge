@@ -1,0 +1,103 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tDisputed keep 49: a relative profile path can skip the build guard\tFORGE-ANTIGRAVITY-1/RUNTIME",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 33,
+      "text": "Disputed keep 49: a relative profile path can skip the build guard",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tDisputed keep 50: checkout imports can execute code before the guard\tFORGE-ANTIGRAVITY-1/RUNTIME",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 57,
+      "text": "Disputed keep 50: checkout imports can execute code before the guard",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tNot done: item 4 \u2014 background-task input bypasses the destructive-command guard\tFORGE-ANTIGRAVITY-1/RUNTIME",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 60,
+      "text": "Not done: item 4 \u2014 background-task input bypasses the destructive-command guard",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tRead Antigravity settings saved with a UTF-8 byte order mark\tFORGE-ANTIGRAVITY-1/RUNTIME",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 65,
+      "text": "Read Antigravity settings saved with a UTF-8 byte order mark",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tRecognize the documented Antigravity authentication error\tFORGE-ANTIGRAVITY-1/RUNTIME",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 187,
+      "text": "Recognize the documented Antigravity authentication error",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/close.py\tSwitching a stuck Antigravity item selects Codex instead of Claude\tFORGE-ANTIGRAVITY-1/RUNTIME",
+      "kind": "bug",
+      "path": "src/forge/close.py",
+      "line": 611,
+      "text": "Switching a stuck Antigravity item selects Codex instead of Claude",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_antigravity_build.py\tStandard: Isolate host-side configuration in tests\tFORGE-ANTIGRAVITY-1/RUNTIME",
+      "kind": "bug",
+      "path": "tests/test_antigravity_build.py",
+      "line": 31,
+      "text": "Standard: Isolate host-side configuration in tests",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_antigravity_build.py\tTest: tasks and fixes are built in their own worktrees\tFORGE-ANTIGRAVITY-1/RUNTIME",
+      "kind": "bug",
+      "path": "tests/test_antigravity_build.py",
+      "line": 65,
+      "text": "Test: tasks and fixes are built in their own worktrees",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\ttests/test_antigravity_build.py\tFollow-up: exercise the default when no Antigravity model entry exists",
+      "kind": "edge",
+      "path": "tests/test_antigravity_build.py",
+      "line": 96,
+      "text": "Follow-up: exercise the default when no Antigravity model entry exists",
+      "from": "review",
+      "item": "FORGE-ANTIGRAVITY-1/RUNTIME",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

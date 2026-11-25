@@ -66,11 +66,12 @@ def test_10_the_cold_read_runs_on_the_other_family(repo, gh, monkeypatch, sdk_da
     assert repo.forge("read", "SHOP").stderr == COORDINATOR
     assert unchanged() and not stub.exists() and not claude.exists()
 
-    # Under Claude Code the reader is Codex; the grill kind has one entry per family.
+    # Under Claude Code the reader is Codex. The grill kind accepts only per-family entries,
+    # and Antigravity adds a family to the list in the refusal.
     monkeypatch.delenv("CODEX_THREAD_ID")
     toml.write_text(_toml(version, "claude", {"grill": GRILL["grill.claude"]}), encoding="utf-8")
     assert repo.forge("read", "SHOP").stderr == MODELS_REFUSAL.format(
-        "models.grill has one entry per family, codex and claude, so it can't set model")
+        "models.grill has one entry per family, codex, claude and antigravity, so it can't set model")
     toml.write_text(_toml(version, "claude", GRILL), encoding="utf-8")
     assert unchanged() and not stub.exists()
 
