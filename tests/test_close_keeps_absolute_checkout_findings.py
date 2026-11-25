@@ -13,6 +13,7 @@ from test_close import ROOT, env, finding, report  # noqa: F401
 STORY = "abb-sol-abspath"
 
 
+@pytest.mark.platform
 @pytest.mark.parametrize("alternate", [False, True], ids=["checkout", "alternate-root"])
 def test_1_close_keeps_absolute_checkout_finding_without_retry(env, alternate):
     item, checkout = env.start_fix()
