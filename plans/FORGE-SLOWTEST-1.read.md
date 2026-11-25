@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-11T10:59:24.566913+00:00
-seconds: 504.567
-read_hash: 450d38fd78e77ccc39bd43f94a5b5d247a9f38f3
-round: 3
+read_at: 2026-11-25T17:21:49.600821+00:00
+seconds: 312.256
+read_hash: aee84b37bb3552b9a2dc6eb1f5b02e0f40f74eea
+round: 4
 passed: no
-doc_seen: 450d38fd78e77ccc39bd43f94a5b5d247a9f38f3
+doc_seen: aee84b37bb3552b9a2dc6eb1f5b02e0f40f74eea
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 0f2d090adc0c7f284481f2ff787e427c628d78e8
+notes_seen: 6e210c219c856c53cc3b20e76dc74d0e6a1d6aad
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a1ca23-d19c-7f91-abac-ec3333a0b580
 session:
-loop_choice: more
-loop_reason: Owner chose one more round: fix the 4 normal-use cases (17-20) in the plan
+loop_choice: accept
+loop_reason: Owner accepted cases 22-25 as known: a wrong guess only changes the quick run; the full run still catches it
 ---
 # Cold read notes
 
@@ -183,3 +183,35 @@ Only a genuine trade-off goes to the human, as a question with options.
     The [planned skip](/plans/FORGE-SLOWTEST-1.md:113) leaves an empty command. [review.test_run](/src/forge/review.py:402) then says `forge.toml` names no test command, although it does.  
     Gain 2, Work 1, Harm 1
    Disposition: keep - below the bar (live with)
+
+## Round 4
+
+22. Advisory: Not done: a workspace test can lose its unit tests on Windows.  
+    Raise: Not done  
+    Case: normal use - `npm run test --workspace=web` runs a workspace script containing Vitest and Playwright, while the root script named `test` runs only Playwright.  
+    [quicktest.py](/src/forge/quicktest.py:41) reads the root `package.json`, but npm runs the [workspace’s script](/opt/homebrew/lib/node_modules/npm/docs/content/using-npm/workspaces.md:151). The [planned classifier](/plans/FORGE-SLOWTEST-1.md:110) can therefore remove the whole workspace step, including Vitest.  
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted cases 22-25 as known: a wrong guess only changes the quick run; the full run still catches it
+
+23. Advisory: Not done: a lint step can be mistaken for browser tests.  
+    Raise: Not done  
+    Case: normal use - A repo runs `npm run lint:browser`, whose script is `eslint playwright` to lint files in its `playwright` directory.  
+    The [planned rule](/plans/FORGE-SLOWTEST-1.md:110) classifies a script that names `playwright` as a browser part. It would skip this lint step on Windows, although the step runs no browser tests.  
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted cases 22-25 as known: a wrong guess only changes the quick run; the full run still catches it
+
+24. Advisory: Not done: a Corepack command does not trigger combined-script detection.  
+    Raise: Not done  
+    Case: normal use - An adopted Node repo sets `test = "corepack pnpm test"` and has no `fast_test`.  
+    Forge’s [testing guide](/src/forge/templates/conventions/testing.md:14) uses Corepack with a combined pnpm test script. The [detection rule](/plans/FORGE-SLOWTEST-1.md:60) accepts calls beginning with the package manager, while [quicktest.py](/src/forge/quicktest.py:56) does not recognize the `corepack` prefix. Forge prints no combined-script line.  
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted cases 22-25 as known: a wrong guess only changes the quick run; the full run still catches it
+
+25. Advisory: Unproven: item 3: directly invoked browser commands.  
+    Raise: Test  
+    Case: normal use - A Windows repo runs `playwright test` directly as a separate step, with Playwright available on its path.  
+    [test_parts](/src/forge/quicktest.py:66) currently recognizes Node parts by package-manager prefixes. The [planned test](/plans/FORGE-SLOWTEST-1.md:151) uses only `npm run test:e2e`, so it can pass while the direct step still runs.  
+    Gain 3, Work 2, Harm 3
+
+Tests were not run. The story-state file was already modified when this read began; it did not change during the read.
+   Disposition: keep - Owner accepted cases 22-25 as known: a wrong guess only changes the quick run; the full run still catches it
