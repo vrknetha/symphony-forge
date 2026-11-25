@@ -523,23 +523,18 @@ def _retry_old_review(top: Path, item: str, sha: str, names: list[str],
     first_status = len(seen) - len(statuses)
     if index < first_status or seen[index] != ("forge-pr-check", RED):
         return None
-    url = str(statuses[index - first_status].get("target_url", ""))
-    match = re.search(r"/actions/runs/(\d+)/job/\d+(?:\?|$)", url)
-    if not match:
+    status = statuses[index - first_status]
+    run_link = re.search(r"/actions/runs/(\d+)/job/\d+(?:\?|$)", str(status.get("target_url", "")))
+    # The status URL names the commit the review checked. The run can name the base.
+    reviewed = re.search(r"/statuses/([a-f0-9]{40})$", str(status.get("url", "")))
+    if not run_link or not reviewed or reviewed[1] == sha:
         return None
-    run_id = match[1]
+    if repo.run("git", "merge-base", "--is-ancestor", reviewed[1], sha, cwd=top).returncode:
+        return None
+    run_id = run_link[1]
     workflow = _review_workflow(top, item, run_id)
-    old = str(workflow.get("head_sha", ""))
     if (workflow.get("event") != "pull_request_target"
-            or str(workflow.get("path", "")).partition("@")[0] != ".github/workflows/forge.yml"
-            or not re.fullmatch(r"[a-f0-9]{40}", old) or old == sha
-            or repo.run("git", "merge-base", "--is-ancestor", old, sha, cwd=top).returncode):
-        return None
-    # A pull_request_target workflow can report the base SHA. The review itself
-    # posts its job URL on the commit it checked.
-    previous = _ask(top, item, ".statuses", f"repos/{{owner}}/{{repo}}/commits/{old}/status?per_page=100")
-    if not any(status.get("context") == "forge-pr-check" and status.get("target_url") == url
-               for status in previous):
+            or str(workflow.get("path", "")).partition("@")[0] != ".github/workflows/forge.yml"):
         return None
     if workflow.get("status") != "completed":
         return run_id if workflow.get("run_attempt") == 2 else None
