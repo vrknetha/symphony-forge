@@ -18,7 +18,7 @@
       "gain": 4,
       "harm": 2,
       "line": 222,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -28,28 +28,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "7d4e671a035102b1d32bf63bfef9832551aab1933ab9e760c3877a86815593ac",
-    "changed": "49ae9f04ce5391ab3997d4545c7fab42fe2983ce4a58c8064736db1b4e5043c5",
-    "commit": "46e9f77658301f8e6f8986275d072df2f4951dcb",
+    "branch_diff": "9ea064db1f65162a606d5de9a674a391a54f8fa7f50c674efb7f6fbc70e1b31d",
+    "changed": "76ede6e04498d567e03a7643d24f208994d93e2ab454073245ac37595679eb0f",
+    "commit": "16ef1d19c1ccf4ef24e84f1a374f2e46b634a087",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 1, Harm 2\nRaise: Not done\nCase: normal use - a worker renames a previously named test and records its replacement in a merge commit.\nThe history reader skips the merge commit (`src/forge/repo.py:408`) and retains the older Proof list (`src/forge/review.py:771-779`). Since the old test is no longer on the branch, `proof.py:214-215` reports only that it is missing. The new explanation is emitted only for a `names no test` failure, so this failure gives neither required hint. A coordinator can keep editing the merge commit without learning why its Proof list is ignored. The new test covers only a branch with no earlier Proof list.",
-        "file": "src/forge/proof.py",
-        "gain": 4,
-        "harm": 2,
-        "line": 222,
-        "priority": "P1",
-        "required_done_when": true,
-        "title": "Not done: A Done-when proof failure says that test names must be in backticks and that a Proof list on a merge commit is not read.",
-        "work": 1
-      }
-    ],
-    "id": "3c83950e-ef17-4dae-b0c2-109eee60e64c",
-    "status": "blocked"
+    "findings": [],
+    "id": "4e7de83c-7281-41d5-8e91-7a972a1e8e36",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T16:08:09.533374+00:00",
@@ -68,6 +56,10 @@
       "at": "2026-11-25T16:47:39.453447+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:50:35.989222+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
