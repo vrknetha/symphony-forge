@@ -33,7 +33,6 @@ MODELS = {"build": SOL, "fix": FIX, "lite": {"model": "gpt-6-sol", "effort": "lo
 FIX_CONFIG = {**QUIET, "features.multi_agent": True, "model": "gpt-6-sol", "model_reasoning_effort": "high",
               "agents.default_subagent_model": "gpt-6-luna",
               "agents.default_subagent_reasoning_effort": "max"}
-LARGE = 200 * 1024
 
 RESUMING = r'''
 import json, os, pathlib, subprocess, sys, time
@@ -258,15 +257,17 @@ def _continued_context(repo, monkeypatch, sdk_data):
     assert "stub codex: turn-stub-2 on thr-stub-1" in fixed.stdout
 
     # The old contract repeated the whole brief and the worker's own commit. A continued
-    # conversation now gets the findings and changes since its last turn ended.
+    # conversation now gets findings, commit subjects and file names without patch text.
     text = _sent(calls, "turn/start")[-2]["input"][0]["text"]
     assert "The earlier brief in this conversation still applies." in text
     assert "You are the worker." not in text
     assert "- P1 Archived stories are missing (web/board.py:12): Show them too." in text
     assert f"The new commits:\n\n{commits}\n" in text
-    assert "Add the notes" in text and "+First notes" in text
-    assert "Build the page" not in text and "+BUILT = True" not in text
-    assert "+Edited after the turn" in text and "+NEW_FILE = True" in text
+    assert "Add the notes" in text
+    assert "Build the page" not in text and "built.py" not in text
+    assert {"A\tnotes.md", "M\tREADME.md", "A\tweb/new.py"} <= set(text.splitlines())
+    for patch_text in ("diff --git", "First notes", "Edited after the turn", "NEW_FILE = True"):
+        assert patch_text not in text
     assert "IGNORED CONTENT" not in text and "secret.log" not in text
     # Git's own index is left as it was: the new file is still untracked.
     assert "?? web/" in repo.git("status", "--porcelain", cwd=folder).splitlines()
@@ -279,20 +280,10 @@ def _continued_context(repo, monkeypatch, sdk_data):
         # A repair round wants Fast; this stub reports no tier back.
         "model": "gpt-6-sol", "effort": "high", "fast_wanted": True, "requested_tier": "priority",
         "tier": None}
-    repo.git("add", "-A", cwd=folder)
-    repo.git("commit", "-qm", "Keep the edits", cwd=folder)
-
-    # A very large change is listed by file instead of shown in full.
-    (folder / "big.txt").write_text("big line\n" * (LARGE // 9 + 1), encoding="utf-8")
-    assert repo.forge("work", "BOARD/PAGE").returncode == 0
-    text = _sent(calls, "turn/start")[-2]["input"][0]["text"]  # the last one is the commit nudge
-    assert "big line" not in text
-    assert "big.txt" in text and "web/new.py" in text and "README.md" in text
-    (folder / "big.txt").unlink()
 
 
 def _rewritten_history(repo, monkeypatch, sdk_data):
-    # Rewriting the branch keeps its chat and sends the changed contents to the next turn.
+    # Rewriting the branch keeps its chat and lists the changed file for the next turn.
     folder, calls, turns = _resuming(repo, monkeypatch, sdk_data)
     monkeypatch.setenv("STUB_CODEX_COMMIT", "built.py")
     assert repo.forge("work", "BOARD/PAGE").returncode == 0
@@ -309,7 +300,8 @@ def _rewritten_history(repo, monkeypatch, sdk_data):
     assert len(_sent(calls, "thread/start")) == 1
     assert _sent(calls, "thread/resume")[-1]["threadId"] == first
     assert _lines(turns)[-1]["continued"] is True
-    assert "BUILT = 2" in _text(calls)
+    assert "M\tbuilt.py" in _text(calls).splitlines()
+    assert "BUILT = 2" not in _text(calls)
     # With none of those, the next call continues the conversation again.
     assert repo.forge("work", "BOARD/PAGE").returncode == 0
     assert _lines(turns)[-1]["continued"] is True
