@@ -1,0 +1,12 @@
+{
+  "base": "92865a83ee7f1de5c4173694f403104731189e66",
+  "branch": "task/FORGE-TOKENS-1-RESUME",
+  "stacked_on": "FORGE-TOKENS-1/BRIEF",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T07:38:04.175149+00:00",
+      "step": "start"
+    }
+  ]
+}
