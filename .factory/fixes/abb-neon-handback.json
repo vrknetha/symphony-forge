@@ -1,0 +1,15 @@
+{
+  "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
+  "branch": "fix/abb-neon-handback",
+  "done_when": "A handback whose round number is not the open round names the open round and prints the exact handback command; with no open round it prints the next step.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T08:40:37.770287+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "A handback with a wrong round number says the round was stopped or replaced and gives no next step, so the work looks lost (issue #1791)."
+}
