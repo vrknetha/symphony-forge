@@ -1,67 +1,47 @@
 # Hand a long coordinator chat over to a fresh chat
 
-<n> parts · Risks: ... · New moving parts: ...
+1 part · Risks: none one-way · New moving parts: none
 
 ## What changes for you
 
-- A coordinator can run one new handover command that writes one short note from Forge's records: the items in flight with their state, what each one waits on, the logs to watch and the exact next commands. A fresh chat reads that one note instead of the old conversation.
-- The note reuses the session-end handoff file that Forge already writes, and nothing else is added. A new client repo gets the command at setup, and an existing client repo gets it on upgrade.
+- When you ask the coordinator to hand over, or after its chat has been compacted once, it refreshes Forge's existing handoff note on demand, adds its open decisions and lessons there, and tells you to clear the chat. The note holds the items in flight, their state, what each waits on and the exact next commands, all from `forge next`.
+- A new or cleared chat in a Forge repo shows one line at its start that names the handoff note and its date, so the fresh chat reads the note first instead of the old conversation.
+- No new command and no second file: the coordinator runs the session-end note's own step on demand.
+- What each repo gets: a new repo gets this at setup, and an existing repo gets it on upgrade to the release that has this story. No setting changes.
+
+Design: none (no screen changes)
 
 ## Why
 
-A long coordinator chat rereads the whole conversation on every tool call. The owner reports one client used about 593 million Claude tokens in one day. Forge's session-end note already holds the current state, so the new work is only the on-demand command and whatever that note still lacks.
+A long coordinator chat reads the whole conversation again on every tool call. The owner reports that one client used about 593 million Claude tokens in one day. Forge already writes a handoff note before each compaction, but nothing tells the coordinator to write it on demand, and a fresh chat does not know the note exists unless the coordinator guide is loaded.
 
 ## Done when
 
-1. **Running the handover command in a long chat writes one short note with the items in flight, their state, what each waits on, the logs to watch and the exact next commands.**
-2. **A fresh chat that reads only that note can continue the work without the old conversation.**
-3. **The session-end note is reused, and no second handoff file is added.**
+1. **When the owner asks for a hand over, or after a compaction, the coordinator guide tells the coordinator to refresh the handoff note with the existing step, add its decisions and lessons, and tell the owner to clear the chat.**
+2. **A new or cleared chat in a Forge repo with a handoff note starts with one line that names the note and its date; a repo with no note shows no such line.**
 
 ## Risks
 
-<!-- Each one-way step: deleting data, a destructive migration, a new vendor. -->
+Risks: none one-way. The part reverts with its pull request.
 
-Risks: none
+Accepted limits:
+- The note's current state is what `forge next` reports. Background runs that the old chat started outside Forge (its own shell jobs) are not listed; the coordinator adds their log paths under Decisions and lessons when it writes the note.
 
 ## For the builders
 
-<!-- Everything from here down is for the agents. The owner doesn't see it when approving, and
-tightening it needs no new approval. -->
-
 ### Done-when details
 
-<!-- Under each Done-when item's number: its evidence, edge cases and the tests that prove it.
-Workers and reviewers get the entries of the items they cover. An item with nothing to add has
-no entry. -->
-
-1. <Evidence, edge cases and the tests that prove item 1.>
+1. `src/forge/templates/skill.md`, section `## Handoff` (around line 623): add that on the owner's request or after a compaction the coordinator runs `forge hook handoff`, adds one line per open decision, lesson and outside log path under `## Decisions and lessons` in `.git/forge/handoff.md`, then tells the owner in one plain line to clear the chat (Claude `/clear`, Codex a new chat). Run `forge sync` so `.claude/skills/forge/SKILL.md` and `.codex/skills/forge/SKILL.md` match. No test: guide text.
+2. `context_hook` in `src/forge/nextstep.py` (around line 195): when `repo.forge_dir(top) / "handoff.md"` exists, print one line naming its path and the date from its `## Current state (<date>)` heading. Keep the hook offline and short. Test (new, runs the forge command): after `forge hook handoff` in a new repo, `forge hook context` prints the line with today's date; without the file it prints no such line.
 
 ## Tasks
 
-<!-- One row per task. Covers: the Done-when numbers it delivers, at most three. Scope: the paths
-it may change. Before writing each Scope, search the code for the files the task needs. The plan
-check refuses two tasks whose Scope paths have the same prefix up to the first wildcard, unless
-one waits for the other through After, directly or through another task; it names both tasks.
-Paths with a segment named `tests`, `test`, `__tests__` or `spec` do not cause Scope overlaps
-and can be shared without an After link. Explicit After links still apply.
-When tasks need the same production file, put it in the first task's Scope with the shared names and stubs;
-tasks that need them wait for that task through After and then own only their files. Keep a file
-that a script can make at build time out of the repo and out of every Scope; when the repo keeps such
-a file on purpose, give its change to one part that the others wait for. Tests: the
-tests it adds or changes. After: the tasks it waits for. When two tasks share a function, field,
-file format or command, the first task pins it: it commits the shared names and stubs plus one
-test that crosses both sides, and the tasks that use it list it under After. Split tasks so each
-owns its files; shared lines (command table, guide list, registry) go to one task or a small last
-wiring task; After only when a task needs another task's code. The
-Developer column is optional: the lead fills or changes a GitHub username here, below For the
-builders, without another approval. Leave it blank for an unassigned part. Forge next uses
-the caller's GitHub login; another developer may start it with a warning. Existing tables
-without Developer still work. The moving-parts line stays last: "none", or each new dependency, service, datastore,
-queue, background job or abstraction layer, with the Done-when item that needs it. -->
-
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
+| HANDOVER | Hand over on demand and point a fresh chat at the note | Guide step for an on-demand hand over; a start-of-chat line naming the note | 1, 2 | `src/forge/nextstep.py`, `src/forge/templates/skill.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_context_hook_names_handoff_note.py` (new) | | no | |
 
 New moving parts: none
 
 ## Notes
+
+- 25 Nov 2026: a Sippo ask; the owner wants it. The intake draft asked for a new command; this plan reuses `forge hook handoff` instead, because Forge keeps a fixed ceiling on commands and the step already does the work.
