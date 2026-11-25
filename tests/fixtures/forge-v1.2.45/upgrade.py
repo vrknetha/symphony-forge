@@ -1,0 +1,379 @@
+"""forge upgrade: move a repo to a newer Forge release in one fix, from the install to the close.
+
+It skips the pin check (the command changes the pin), and runs the new release's own sync and
+close through uv, so neither an old cached build nor an older forge on PATH writes the files.
+"""
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import re
+import shutil
+import subprocess
+from pathlib import Path
+from typing import Any
+
+from forge import close, event_log, machine, quicktest, repo, story, task
+
+COMMANDS = [{
+    "words": "upgrade", "run": "upgrade", "changes_state": False,
+    "help": "Upgrade Forge in this repo to a release, or the newest, through one fix",
+    "args": [(('release',), {"nargs": "?", "help": "such as v1.3.0; the newest when left out"})],
+    "position": 45,
+    "listing": "| `forge upgrade [release]` | Upgrades Forge to the release, or the newest: installs it, has it refresh Forge's files in a fix, and closes that fix |",
+}]
+
+SOURCE = "knacklabs/symphony-forge"
+INSTALL = ("uv tool install --force --reinstall --no-cache --python 3.11 "
+           f"git+https://github.com/{SOURCE}@{{release}}")
+PREFIX = "upgrade-forge-to-"
+WHY, DONE = "Upgrade Forge to {release}.", "This repo pins and runs Forge {release}."
+RELEASE = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
+
+REFUSALS = {
+    "own_repo": ("This is Forge's own repo, which moves its version by releasing a new Forge.",
+                 "forge next"),
+    "not_default": ("forge upgrade runs from the main checkout on the default branch.",
+                    "Move to the main checkout. Drop this fix only if Forge started it and the owner agrees.\n"
+                    "Then switch to the default branch and run forge upgrade <release>."),
+    "dirty": ("This checkout has changes you haven't committed: {files}.",
+              "commit or undo them, then {again}"),
+    "running": ("Forge runs are still in progress on this machine:\n{runs}\n"
+                "An install during a run can mix two releases.",
+                "Wait until no Forge runs are in progress, then {again}"),
+    "bad_release": ("{release!r} is not a Forge release; a release is v and three numbers, such "
+                    "as v1.3.0.", "forge upgrade <release>"),
+    "not_newer": ("{default} already pins Forge {pinned}, so {release} would not be an upgrade.",
+                  "forge upgrade <a release newer than {pinned}>"),
+    "no_newest": ("Forge could not find its newest release: {reason}.",
+                  "forge upgrade <release>, naming the release"),
+    "other_open": ("The upgrade to Forge {other} is still open in fix {fix}.",
+                   "forge upgrade {other} to finish it, or remove it: git worktree remove --force "
+                   "{path} && git branch -D fix/{fix}"),
+    "leftover": ("Fix {fix} was interrupted as it started, and its folder {path} holds work, so "
+                 "Forge left it alone.", "check that folder, then git worktree remove --force "
+                 "{path} && git branch -D fix/{fix}, then forge upgrade {release}"),
+    "taken": ("Fix {fix} already exists {how}, so Forge left it alone.",
+              "{next_command}"),
+    "install": ("Installing Forge {release} failed: {reason}",
+                "run {install} in your own terminal, then forge upgrade {release}"),
+    "stale": ("After the install, your PATH finds {found} instead of Forge {release}.",
+              "remove that forge or put uv's tool folder ahead of it on PATH, then "
+              "forge upgrade {release}"),
+}
+
+
+def made(item: str, state: dict[str, Any], release: str) -> bool:
+    """The fix that forge upgrade makes for this release: its name and its record both say so."""
+    return (item == PREFIX + release.replace(".", "-") and state.get("kind") == "fix"
+            and state.get("why") == WHY.format(release=release)
+            and state.get("done_when") == DONE.format(release=release))
+
+
+def upgrade(args: argparse.Namespace) -> int:
+    top = repo.root()
+    again = " ".join(["forge upgrade", *([args.release] if args.release else [])])
+    if repo.config(top)["repo"] == "forge-source":
+        repo.refuse(REFUSALS["own_repo"])
+    default, branch = repo.default_branch(top), repo.current_branch(top)
+    if branch != default:
+        repo.refuse(REFUSALS["not_default"])
+    # The index and the working tree both, so a staged change undone in the folder still counts;
+    # untracked files don't.
+    dirty = repo.run("git", "status", "--porcelain", "-z", "--no-renames", "--untracked-files=no",
+                     cwd=top).stdout
+    if dirty:
+        repo.refuse(REFUSALS["dirty"], files=", ".join(entry[3:] for entry in dirty.split("\0") if entry),
+                    again=again)
+    release = args.release or _newest(top)
+    if not RELEASE.fullmatch(release):
+        repo.refuse(REFUSALS["bad_release"], release=release)
+    needs_install = _on_path()[0] != release
+    runs = machine.entries() if needs_install else []
+    if needs_install:
+        # Close can wait for CI after leaving both lanes. Unfinished history alone
+        # is not a live run: use the lanes' process identity check for these too.
+        for root in dict.fromkeys([top, *machine.remembered()]):
+            activity = event_log.read(root)
+            ended = {event.get("run_id") for event in activity if event.get("event") == "run end"}
+            for event in activity:
+                if (event.get("event") == "run start" and event.get("id") not in ended
+                        and machine._running(event.get("process"))
+                        and not any(run.get("process") == event["process"] for run in runs)):
+                    runs.append({**event, "repo_name": root.name})
+    if runs:
+        repo.refuse(REFUSALS["running"], runs="\n".join(
+            f"- {run['repo_name']}: {run['item'] or 'test command'} ({run['kind']})"
+            for run in runs), again=again)
+    pinned = repo.default_config(top)["version"]  # fetches the default branch first
+    if _numbers(release) <= _numbers(pinned):
+        repo.refuse(REFUSALS["not_newer"], default=default, pinned=pinned, release=release)
+    name, ref = PREFIX + release.replace(".", "-"), f"origin/{default}"
+    repo.set_version(story.show(top, ref, "forge.toml") or "", release)  # refuses before anything
+    trees = story.worktrees(top)
+    for other, path in trees.items():
+        if other.startswith(f"fix/{PREFIX}") and other != f"fix/{name}":
+            shown = repo.run("gh", "pr", "view", other, "--json",
+                             "state,headRefOid,headRefName,baseRefName", cwd=top) if shutil.which("gh") else None
+            try:
+                pr = json.loads(shown.stdout) if shown and shown.returncode == 0 else {}
+            except ValueError:
+                pr = {}
+            # Squash merges do not make the fix's commits ancestors of the default branch.
+            if (isinstance(pr, dict) and pr.get("state") == "MERGED"
+                    and pr.get("headRefName") == other and pr.get("baseRefName") == default
+                    and pr.get("headRefOid") == repo.git("rev-parse", other, cwd=top)
+                    and all(line[:2] == "!!" and line.endswith("/")
+                            and Path(line[3:]).name in repo.CACHES for line in repo.git(
+                                "status", "--porcelain", "--ignored", "--untracked-files=normal",
+                                cwd=path).splitlines())):
+                repo.git("worktree", "remove", str(path), cwd=top)
+                repo.git("branch", "-D", other, cwd=top)
+                print("Removed the finished upgrade's worktree and local branch.", flush=True)
+                continue
+            repo.refuse(REFUSALS["other_open"], fix=other[4:], path=path,
+                        other=other[4 + len(PREFIX):].replace("-", "."))
+    why, done = WHY.format(release=release), DONE.format(release=release)
+
+    # 1. The fix, started like forge fix start's, or the one an earlier run left.
+    path = trees.get(f"fix/{name}")
+    state = {"kind": "fix", "why": why, "done_when": done}
+    branch = f"fix/{name}"
+    rel = repo.state_path(name)
+    remote = repo.git("ls-remote", "--heads", "origin", branch, cwd=top)
+    if remote:
+        repo.git("fetch", "-q", "origin", f"+refs/heads/{branch}:refs/remotes/origin/{branch}", cwd=top)
+    local = story.show(top, branch, rel)
+    published = story.show(top, f"origin/{branch}", rel)
+    existing = json.loads(local or published or "{}")
+    if existing.get("kind") == "fix" and existing.get("branch") == branch and existing.get("drop"):
+        source = branch if local else f"origin/{branch}"
+        if path and repo.git("status", "--porcelain", "--untracked-files=all", cwd=path):
+            repo.refuse(REFUSALS["taken"], fix=name, how="with uncommitted work",
+                        next_command=f"git -C {repo.quote(path)} stash push --include-untracked")
+        # Inspect every commit, so work that was later reverted still belongs to its fix.
+        work = repo.git("log", "--format=", "--name-only", source,
+                        *([f"origin/{branch}"] if published else []), "--not", ref,
+                        "--", ".", f":(exclude){rel}", cwd=top)
+        next_command = (f"forge fix drop {name} --undo" if existing.get("status") == "dropped"
+                        else f"forge close {name}")
+        if work:
+            repo.refuse(REFUSALS["taken"], fix=name, how="for other work",
+                        next_command=next_command)
+        if existing.get("status") == "dropped":
+            task.fix_drop(argparse.Namespace(item=name, undo=True, because=None))
+            path = story.worktrees(top)[branch]
+        elif path is None:
+            path = task._folder(f"fix-{name}")
+            if source != branch:
+                repo.git("branch", branch, source, cwd=top)
+            repo.git("worktree", "add", "-q", str(path), branch, cwd=top)
+        # Restore fetches and reconciles again; check the commits it actually restored.
+        if repo.git("log", "--format=", "--name-only", f"{ref}..HEAD",
+                    "--", ".", f":(exclude){rel}", cwd=path):
+            repo.refuse(REFUSALS["taken"], fix=name, how="for other work",
+                        next_command=f"forge close {name}")
+        existing = repo.read_state(name, path) or {}
+        existing.pop("drop", None)
+        existing.update(state)
+        repo.commit_state(f"Use the unused fix for Forge {release}",
+                          repo.write_state(name, existing, path), top=path)
+    if path is None:
+        if repo.run("git", "rev-parse", "-q", "--verify", f"refs/heads/fix/{name}", cwd=top
+                    ).returncode == 0 or remote:
+            repo.refuse(REFUSALS["taken"], fix=name, how="as a branch without its folder",
+                        next_command=f"git branch -d fix/{name}")
+        path = task._new_checkout(name, f"fix/{name}", f"fix-{name}", ref,
+                                  {**state, "base": repo.git("rev-parse", ref, cwd=top)},
+                                  f"Start the fix: {why}")
+        print(f"Started fix {name} in {path}.", flush=True)
+    else:
+        found = repo.read_state(name, path) if path.is_dir() else {}
+        if found is None:  # interrupted right after the folder was made: take it up only when clean
+            if repo.git("rev-list", "HEAD", "--not", ref, cwd=path) or repo.git(
+                    "status", "--porcelain", "--untracked-files=all", cwd=path):
+                repo.refuse(REFUSALS["leftover"], fix=name, path=path, release=release)
+            rel = repo.write_state(name, repo.add_step(
+                {**state, "base": repo.git("rev-parse", "HEAD", cwd=path), "status": "started",
+                 "branch": f"fix/{name}"}, "start"), path)
+            repo.commit_state(f"Start the fix: {why}", rel, top=path)
+        elif found.get("why") != why:
+            repo.refuse(REFUSALS["taken"], fix=name, next_command=f"forge work {name}",
+                        how="for other work" if path.is_dir() else "as a branch without its folder")
+        print(f"Continuing fix {name} in {path}.", flush=True)
+
+    # 2. The version, and nothing else, in the fix's forge.toml.
+    toml = path / "forge.toml"
+    text = toml.read_bytes().decode("utf-8")  # bytes keep its line endings
+    edited = repo.set_version(text, release)
+    if edited != text:
+        toml.write_bytes(edited.encode("utf-8"))
+    print(f'Set version = "{release}" in the fix\'s forge.toml.', flush=True)
+    quicktest.suggest(path, repo.config(path))
+
+    # 3 and 4. The release installed, and the forge on PATH is it.
+    if not needs_install:
+        print(f"Forge {release} is already installed, so the install was skipped.", flush=True)
+    else:
+        install = INSTALL.format(release=release)
+        installed = repo.run(*install.split())
+        if installed.returncode:
+            reason = (installed.stderr or installed.stdout).strip().splitlines() or ["uv gave no reason"]
+            repo.refuse(REFUSALS["install"], release=release, reason=reason[-1], install=install)
+        print(f"Installed Forge {release}.", flush=True)
+    found, where = _on_path()
+    if found != release:
+        repo.refuse(REFUSALS["stale"], release=release,
+                    found=(f"Forge {found} at {where}" if found else f"a forge of unknown version at {where}")
+                    if where else "no forge")
+    print(f"The forge on your PATH is Forge {release}.", flush=True)
+    _update_tools()
+
+    # 5. The release's own sync refreshes Forge's files in the fix's folder.
+    print(f"Running Forge {release}'s forge sync in the fix's folder.", flush=True)
+    synced = repo.run_release(release, ["sync"], path)
+    if synced:
+        return synced
+
+    # 6. One commit: forge.toml and everything sync changed, deletions included, never hook shims.
+    changed = close.synced_changes(path)
+    # A deletion already staged, such as a rename's old name, is in neither the folder nor the
+    # index, so git add can't name it; the commit by path still takes it.
+    listed = repo.git("ls-files", "-z", "--", *changed, cwd=path).split("\0") if changed else []
+    adding = [rel for rel in changed if rel in listed or (path / rel).exists()]
+    if adding:
+        repo.git("add", "--", *adding, cwd=path)
+    if changed and repo.run("git", "diff", "--cached", "--quiet", "--", *changed, cwd=path).returncode:
+        proof = close.generated_fix_proof(done,
+            f'forge.toml sets version = "{release}"; '
+            f"Forge {release}'s forge sync completed successfully in this fix.", name)
+        repo.git("commit", "-q", "-m", f"Upgrade Forge to {release}", "-m", proof,
+                 "--", *changed, cwd=path)
+        print(f"Committed the upgrade to Forge {release}.", flush=True)
+    else:
+        print("Nothing new to commit.", flush=True)
+
+    # 7 and 8. The release's own close; its last line says who merges, and its exit code is ours.
+    print(f"Running Forge {release}'s forge close {name}.", flush=True)
+    return repo.run_release(release, ["close", name], path)
+
+
+CODEX_INSTALL = ("irm https://chatgpt.com/codex/install.ps1 | iex" if os.name == "nt"
+                 else "curl -fsSL https://chatgpt.com/codex/install.sh | sh")  # OpenAI's standalone installer
+
+
+def _codex_command() -> list[str] | None:
+    """The update for the Codex on PATH, from where its real path says it was installed."""
+    found = shutil.which("codex")
+    if found is None:
+        return None
+    real = Path(os.path.realpath(found))
+    parts = real.parts
+    if "node_modules" in parts:  # npm's launcher: <prefix>[/lib]/node_modules/@openai/codex/...
+        prefix = Path(*parts[:parts.index("node_modules")])
+        prefix = prefix.parent if prefix.name == "lib" else prefix
+    elif (real.parent / "node_modules/@openai/codex").is_dir():  # Windows: codex.cmd beside it
+        prefix = real.parent
+    elif {"Cellar", "Caskroom"} & set(parts):
+        return ["brew", "upgrade", "codex"]
+    elif "standalone" in parts:  # OpenAI's own installer; only newer Codex has `update`
+        # --help starts no session; never pass `update` blind, an old Codex reads it as a prompt.
+        helped = repo.run("codex", "--help", timeout=30)
+        return ["codex", "update"] if re.search(r"^\s+update\b", helped.stdout, re.M) else None
+    else:
+        return None
+    # --prefix updates the npm copy that is first on PATH, not npm's current global folder.
+    return ["npm", "install", "-g", "--prefix", str(prefix), "@openai/codex@latest"]
+
+
+def _update_tools() -> None:
+    """Update Claude Code and the Codex CLI with the installer that installed each, one line
+    each. A failure prints the line for the person to run; it never fails the upgrade."""
+    codex = _codex_command()
+    for name, exe, command in (("Claude Code", "claude", ["claude", "update"]),
+                               ("Codex CLI", "codex", codex)):
+        if shutil.which(exe) is None:
+            continue
+        reason = "Forge could not tell which installer put it there"
+        where, lead = "run", ""
+        if command:
+            try:
+                done = repo.run(*command, timeout=300)
+                output = (done.stderr or done.stdout).strip()
+                reason = (output.splitlines() or ["no reason given"])[-1]
+                version = re.search(r"\d+\.\d+\.\d+", repo.run(exe, "--version").stdout)
+            except (repo.Refused, OSError, subprocess.TimeoutExpired) as error:
+                done, version, reason = None, None, str(error).splitlines()[0] or "it did not finish"
+            if done and done.returncode == 0 and version:
+                print(f"Installed {name} {version[0]}.", flush=True)
+                continue
+            if done and re.search(r"EACCES|permission denied|sudo|administrator|elevat", output, re.I):
+                # Keep this PATH: sudo's own would not find claude or npm.
+                where, lead = (("run this in an administrator terminal", "") if os.name == "nt"
+                               else ("run", 'sudo env PATH="$PATH" '))
+        text = lead + (" ".join(map(repo.quote, command)) if command else CODEX_INSTALL)
+        print(f"{name} was not updated ({reason}). To update it, {where}: {text}", flush=True)
+
+
+def release_notice(top: Path) -> list[str]:
+    """Best-effort daily release check, shared by all of this repo's worktrees."""
+    try:
+        pinned = repo.config(top)["version"]
+        cache = repo.forge_dir(top) / f"release-{repo.now()[:10]}.json"
+        try:
+            # Exclusive creation claims today's check before contacting GitHub. A failed or
+            # interrupted check stays claimed, so other worktrees never retry it today.
+            claimed = cache.open("x", encoding="utf-8")
+        except FileExistsError:
+            tag = json.loads(cache.read_text(encoding="utf-8"))
+        else:
+            with claimed:
+                try:
+                    tag = _newest(top, timeout=3)
+                except (repo.Refused, OSError, subprocess.TimeoutExpired):
+                    tag = None
+                json.dump(tag, claimed)
+        if isinstance(tag, str) and RELEASE.fullmatch(tag) and _numbers(tag) > _numbers(pinned):
+            return [f"Forge {tag} is out (you pin {pinned}): forge upgrade {tag}",
+                    f"Next: forge upgrade {tag}"]
+    except (repo.Refused, OSError, ValueError):
+        # No cache access or an in-flight writer: this optional notice must not block next.
+        pass
+    return []
+
+
+def _newest(top: Path, timeout: float | None = None) -> str:
+    """The newest release's tag, as GitHub has it."""
+    from forge import github
+
+    gh = shutil.which("gh")
+    if gh is None:
+        repo.refuse(REFUSALS["no_newest"], reason="gh is not installed")
+    args = ("gh", "release", "view", "--repo", SOURCE, "--json", "tagName")
+    done = github.read(args, lambda: subprocess.run(
+        [gh, *args[1:]], cwd=top, input="", capture_output=True, text=True, encoding="utf-8",
+        errors="replace", timeout=timeout))
+    try:
+        tag = json.loads(done.stdout).get("tagName") if done.returncode == 0 else None
+    except (ValueError, AttributeError):
+        tag = None
+    if not isinstance(tag, str):
+        lines = (done.stderr or done.stdout).strip().splitlines() or ["gh gave no release"]
+        repo.refuse(REFUSALS["no_newest"], reason=lines[-1].rstrip("."))
+    return tag
+
+
+def _numbers(version: str) -> tuple[int, ...]:
+    """A version's three numbers, then 1 for a release or 0 for a prerelease, which comes before it."""
+    found = re.match(r"v?(\d+)\.(\d+)\.(\d+)(.*)", version)
+    return (*map(int, found.groups()[:3]), 0 if found[4] else 1) if found else ()
+
+
+def _on_path() -> tuple[str, str]:
+    """The release the forge on PATH reports ("" when it can't say), and where it lives."""
+    where = shutil.which("forge")
+    if where is None:
+        return "", ""
+    words = repo.run("forge", "--version").stdout.split()
+    return (words[-1] if words and RELEASE.fullmatch(words[-1]) else ""), where

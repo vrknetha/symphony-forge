@@ -23,7 +23,7 @@ import pathlib
 import sys
 import time
 
-VERSION = "0.159.2"
+VERSION = "0.171.0"
 THREAD, TURN = "thr-stub-1", "turn-stub-1"
 DECLINE = {"decision": "decline"}
 LOG = pathlib.Path(__file__).resolve().parent / "codex-app-server.jsonl"
@@ -81,7 +81,7 @@ def finish_turn(config, status, overloaded=False):
 
 
 def hooks(cwd):
-    """Project hooks from the main checkout, as Codex 0.159.2 loads linked worktrees."""
+    """Project hooks from the main checkout, as Codex 0.171.0 loads linked worktrees."""
     import hashlib
     import re
 
@@ -109,7 +109,7 @@ def hooks(cwd):
              "matcher": group.get("matcher"), "timeoutSec": hook.get("timeout", 600),
              "statusMessage": hook.get("statusMessage"), "additionalContextLimit": None,
              "sourcePath": str(path), "source": "project", "pluginId": None, "enabled": True,
-             "isManaged": False,
+             "isManaged": False, "environmentId": None,
              "displayOrder": 0, "currentHash": "sha256:" + hashlib.sha256(
                  json.dumps([event, group.get("matcher"), hook]).encode()).hexdigest(),
              "trustStatus": os.environ.get("STUB_CODEX_HOOK_TRUST", "trusted")}

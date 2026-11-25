@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/intake.py\tFunctional: Do not close pull requests belonging to a longer story key\tstory-drop-refuses-any-story-with-a-part",
+      "kind": "bug",
+      "path": "src/forge/intake.py",
+      "line": 241,
+      "text": "Functional: Do not close pull requests belonging to a longer story key",
+      "from": "blocking",
+      "item": "story-drop-refuses-any-story-with-a-part",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/intake.py\tFunctional: Keep the part's scope until its pull requests are closed\tstory-drop-refuses-any-story-with-a-part",
+      "kind": "bug",
+      "path": "src/forge/intake.py",
+      "line": 243,
+      "text": "Functional: Keep the part's scope until its pull requests are closed",
+      "from": "blocking",
+      "item": "story-drop-refuses-any-story-with-a-part",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/intake.py\tFunctional: Refresh remote parts before deciding what to drop\tstory-drop-refuses-any-story-with-a-part",
+      "kind": "bug",
+      "path": "src/forge/intake.py",
+      "line": 241,
+      "text": "Functional: Refresh remote parts before deciding what to drop",
+      "from": "blocking",
+      "item": "story-drop-refuses-any-story-with-a-part",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/intake.py\tNot done: A dropped story with a built part remains on the board\tstory-drop-refuses-any-story-with-a-part",
+      "kind": "bug",
+      "path": "src/forge/intake.py",
+      "line": 219,
+      "text": "Not done: A dropped story with a built part remains on the board",
+      "from": "blocking",
+      "item": "story-drop-refuses-any-story-with-a-part",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/task.py\tFunctional: Prevent parked parts from being started or closed again\tstory-drop-refuses-any-story-with-a-part",
+      "kind": "bug",
+      "path": "src/forge/task.py",
+      "line": 652,
+      "text": "Functional: Prevent parked parts from being started or closed again",
+      "from": "blocking",
+      "item": "story-drop-refuses-any-story-with-a-part",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_start_sorts_ideas.py\tTest: The named proof does not cover the built-part drop outcome\tstory-drop-refuses-any-story-with-a-part",
+      "kind": "bug",
+      "path": "tests/test_start_sorts_ideas.py",
+      "line": 370,
+      "text": "Test: The named proof does not cover the built-part drop outcome",
+      "from": "blocking",
+      "item": "story-drop-refuses-any-story-with-a-part",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

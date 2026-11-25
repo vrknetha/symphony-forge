@@ -11,9 +11,10 @@ const STAGES = {
 const TONE = { Building: 'moving', Review: 'moving', Ready: 'ready', Merged: 'ready', Planned: 'waiting' };
 
 let Board;
-let drawer = null; // { id, node, opener, seen }
-let page = null; // { id, node, tab, row, seen }
+let drawer = null; // { id, node, opener, back, seen }: back is where the opener sat, see placeOf
+let page = null; // { id, node, tab, row, whole, reading }
 const planFolds = new Map(); // story -> section open states, for this board session
+const plans = new Map(); // story -> its plan as last read: { text }, or { reason, alert } while none has been read
 
 function el(tag, attrs = {}, ...children) {
   const node = document.createElement(tag);
@@ -26,8 +27,6 @@ function el(tag, attrs = {}, ...children) {
   return node;
 }
 
-let lostFocus = null; // the control a redraw removed before its copy loaded, such as a plan link
-
 // A control without a data-focus key is known by its tag, address and words.
 function focusKey(control) {
   return control.dataset.focus || `${control.tagName} ${control.getAttribute('href')} ${control.textContent}`;
@@ -35,22 +34,44 @@ function focusKey(control) {
 
 function refocus(node, key) {
   const control = [...node.querySelectorAll('a, button, summary, [tabindex]')].find((one) => focusKey(one) === key);
-  if (!control) return false;
+  if (!control) return;
   if (control.tagName !== 'SUMMARY') control.closest('details:not([open])')?.setAttribute('open', '');
   control.focus({ preventScroll: true });
-  return true;
+}
+
+// Where a control sits: its key, the labelled part of the screen around it, and its place among that part's
+// controls. The same item can show in two places (the Needs you strip and a full list), and a refresh can draw
+// the control again, so Escape finds it again in the place the drawer was opened from.
+const CONTROLS = 'a, button, summary, [tabindex]:not([tabindex="-1"])';
+
+function placeOf(control) {
+  const key = control?.dataset?.focus;
+  const area = control?.closest?.('section[aria-label], [role=dialog]');
+  if (!key) return null;
+  const label = area?.getAttribute('aria-label');
+  const where = !area ? null : label ? `section[aria-label="${CSS.escape(label)}"]` : '[role=dialog]';
+  return { key, where, at: area ? [...area.querySelectorAll(CONTROLS)].indexOf(control) : -1 };
+}
+
+// The opener if it is still on the page, else its key in its place, else the control now nearest its old
+// spot in that place (the item left or moved, so the card is gone), else its key anywhere, else the first
+// control on the screen: the card can have moved behind an "and N more" button, and focus must not drop to the page.
+function returnTarget({ opener, back }) {
+  if (opener?.isConnected) return opener;
+  if (!back) return null;
+  const area = back.where && document.querySelector(back.where);
+  const controls = area ? [...area.querySelectorAll(CONTROLS)] : [];
+  return controls.find((one) => one.dataset.focus === back.key)
+    || (controls.length ? controls[Math.min(Math.max(back.at, 0), controls.length - 1)] : null)
+    || document.querySelector(`[data-focus="${CSS.escape(back.key)}"]`)
+    || document.querySelector(`main:not([hidden]) :is(${CONTROLS})`);
 }
 
 function replaceContent(node, ...children) {
   const active = document.activeElement;
   const key = active !== node && node.contains(active) ? focusKey(active) : null;
   node.replaceChildren(...children);
-  if (key) lostFocus = refocus(node, key) ? null : { node, key };
-}
-
-function restoreLostFocus(part) {
-  if (!lostFocus || !lostFocus.node.contains(part) || document.activeElement !== document.body) return;
-  if (refocus(part, lostFocus.key)) lostFocus = null;
+  if (key) refocus(node, key);
 }
 
 function recordedWords(value, fallback = 'See the recorded review for technical details.') {
@@ -123,11 +144,31 @@ function roundWhat(round) {
   return recordedWords(text, recordedWords(text.split(' — ')[0]));
 }
 
+// A round is a review, not a worker turn that was never reviewed; a summary from an older release has only reviews.
+const reviewed = (rounds) => (rounds || []).filter((round) => round.reviewed !== false);
+
+// A story's review rounds sit on its parts, so its groups are its own rounds, then each part's under the part's title.
+// A merged part with no review in the data has its own group: its history is not on this machine.
+function roundGroups(row) {
+  const parts = row.kind === 'story' ? row.children.map((part) => ({ id: part.id, title: part.title,
+    rounds: reviewed(part.rounds), missing: STAGES[part.stage] === 'Merged' && !reviewed(part.rounds).length })) : [];
+  const groups = [{ id: row.id, title: null, rounds: reviewed(row.rounds) }, ...parts]
+    .filter((group) => group.rounds.length || group.missing);
+  return groups.map((group) => ({ ...group, title: group.title || (groups.length > 1 ? 'The story itself' : null) }));
+}
+
 function figures(row) {
   const count = row.findings?.count;
+  const groups = roundGroups(row);
+  const total = groups.flatMap((group) => group.rounds).reduce((sum, round) => sum + (round.reviews
+    ?? (round.first != null && round.last != null ? round.last - round.first + 1 : 1)), 0);
+  // A story's parts that merged long ago come only with its full history, so until it is read the total is not known.
+  // A merged part with no history here leaves only a floor.
+  const gaps = groups.some((group) => group.missing);
+  const rounds = row.kind !== 'story' ? (row.rounds ? total : row.round ?? 'unknown')
+    : !row.full ? 'unknown' : !gaps ? total : total ? `at least ${total}` : 'unknown';
   return el('dl', { class: 'figures' },
-    [['review rounds', row.rounds ? row.rounds.reduce((total, round) => total
-      + (round.first != null && round.last != null ? round.last - round.first + 1 : 1), 0) : row.round ?? 'unknown'],
+    [['review rounds', rounds],
      ['known issues kept', issues(row).length],
      ['open findings', typeof count === 'number' ? count : 'unknown']]
       .map(([label, value]) => el('div', {}, el('dt', {}, label), el('dd', {}, String(value)))));
@@ -150,12 +191,18 @@ function timeBar(row) {
 }
 
 function roundList(row, limit) {
-  const list = (row.rounds || []).slice(-limit);
-  if (!list.length) return el('p', { class: 'quiet' }, 'No review rounds yet. They show here once the work is reviewed.');
-  return el('ol', { class: 'rounds' }, list.map((round) => el('li', {},
-    el('span', { class: `dot ${round.findings?.length || round.new_findings ? 'stuck' : 'moving'}`, 'aria-hidden': 'true' }),
-    el('span', { class: 'what' }, el('strong', {}, `${roundName(round)}: `), roundWhat(round)),
-    el('span', { class: 'took' }, duration(roundSeconds(round))))));
+  if (row.kind === 'story' && !row.full) return el('p', { class: 'quiet' }, 'Reading the full history…');
+  const groups = roundGroups(row);
+  if (!groups.length) return el('p', { class: 'quiet' }, 'No review rounds yet. They show here once the work is reviewed.');
+  const list = (group) => el('ol', { class: 'rounds', ...(group.title ? { 'aria-labelledby': `rounds-${group.id}` } : {}) },
+    group.rounds.slice(-limit).map((round) => el('li', {},
+      el('span', { class: `dot ${round.findings?.length || round.new_findings ? 'stuck' : 'moving'}`, 'aria-hidden': 'true' }),
+      el('span', { class: 'what' }, el('strong', {}, `${roundName(round)}: `), roundWhat(round)),
+      el('span', { class: 'took' }, duration(roundSeconds(round))))));
+  if (groups.length === 1 && !groups[0].title) return list(groups[0]);
+  return el('div', { class: 'round-parts' }, groups.map((group) => el('div', { class: 'round-part' },
+    el('p', { class: 'part-name', id: `rounds-${group.id}` }, group.title),
+    group.rounds.length ? list(group) : el('p', { class: 'quiet' }, 'Its review history is not on this laptop.'))));
 }
 
 function partList(parts, current) {
@@ -197,12 +244,18 @@ function closeIcon() {
   return svg;
 }
 
+let pressed = null; // the control under a click while its handler runs
+
 async function openDrawer(id) {
   let row = rows().find((one) => one.id === id);
-  const opener = drawer?.opener || document.activeElement;
+  // Moving between items inside the drawer keeps its opener; choosing a card outside it makes that card the opener.
+  const from = pressed || document.activeElement; // Safari does not focus a clicked button, so the click names it
+  const inside = drawer?.node.contains(from);
+  const opener = inside ? drawer.opener : from;
+  const back = inside ? drawer.back : placeOf(from);
   // Moving between items keeps the open drawer, so it slides in only once.
   const node = drawer?.node || el('aside', { class: 'drawer', 'aria-labelledby': 'drawer-title' });
-  drawer = { id, node, opener, seen: '' };
+  drawer = { id, node, opener, back, seen: '' };
   if (!node.isConnected) document.body.append(node);
   if (!row) {
     node.append(el('p', { class: 'quiet' }, 'Reading this item…'));
@@ -215,33 +268,62 @@ async function openDrawer(id) {
       return;
     }
   }
+  drawer.whole = row.full ? row : null;
   fillDrawer(row);
   node.querySelector('h2').focus();
+  readDrawerWhole(row);
 }
 
 function fillDrawer(row) {
   drawer.seen = JSON.stringify(row);
-  replaceContent(drawer.node, ...drawerBody(row));
+  replaceContent(drawer.node, ...drawerBody(withOlder(row, drawer.whole)));
+}
+
+// Like the full page, the drawer reads a story's whole history once: the board's snapshot leaves out its older parts.
+async function readDrawerWhole(row) {
+  const mine = drawer;
+  if (mine.whole || mine.reading || row.kind !== 'story') return;
+  mine.reading = true;
+  let whole = null;
+  try {
+    whole = await item(mine.id);
+  } catch {} // the drawer shows that it is reading, and the next snapshot reads again
+  if (drawer !== mine) return;
+  mine.reading = false;
+  if (!whole) return;
+  mine.whole = whole;
+  fillDrawer(rows().find((one) => one.id === mine.id) || whole);
 }
 
 function closeDrawer(restore = true) {
   if (!drawer) return;
   drawer.node.remove();
-  const { opener } = drawer;
+  const { opener, back } = drawer;
   drawer = null;
-  if (restore && opener?.isConnected) opener.focus();
+  if (!restore) return;
+  returnTarget({ opener, back })?.focus();
 }
 
 // The full page
 
 async function item(id) {
-  const answer = await fetch(`board.json${TOKEN}&page=item&id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+  // A read the server refuses or cannot answer is asked once more at once; the next snapshot asks again after that.
+  let answer;
+  for (let again = false; ; again = true) {
+    try {
+      answer = await Board.read(`item:${id}`, `board.json${TOKEN}&page=item&id=${encodeURIComponent(id)}`);
+    } catch (error) {
+      if (again) throw error;
+      continue;
+    }
+    if (answer.status < 500 || again) break;
+  }
   let body = {};
   try {
     body = await answer.json();
   } catch {}
   if (!answer.ok) throw new Error(body.error || 'The board could not read this item. Open it again in a moment.');
-  return body.item;
+  return { ...body.item, full: true };
 }
 
 function openItem(id) {
@@ -249,51 +331,143 @@ function openItem(id) {
 }
 
 async function showPage() {
-  const id = location.hash.startsWith('#item/') ? decodeURIComponent(location.hash.slice(6)) : null;
+  const id = location.hash.startsWith('#item/') ? decodeURIComponent(location.hash.slice(6).split('?')[0]) : null;
   if (!id) return closePage();
-  if (page?.id === id) return;
+  if (page?.id === id) {
+    // Same item: Back, Forward or a link changed only the tab.
+    if (page.row && tabInAddress(page.row) !== page.tab) {
+      fillPage();
+      if (document.activeElement?.getAttribute('role') === 'tab') document.getElementById(tabId(page.tab)).focus();
+    }
+    return;
+  }
   closeDrawer(false);
   closePage();
   const main = document.querySelector('main:not(.item-page)');
+  const held = rows().find((one) => one.id === id); // the board already holds an item it shows
   const node = el('main', { class: 'item-page' },
     el('nav', { 'aria-label': 'Breadcrumb', class: 'crumbs' }, el('a', { href: '#now' }, 'Now'), el('span', { 'aria-hidden': 'true' }, '›'),
       el('span', { 'aria-current': 'page' }, id)),
-    el('p', { class: 'quiet' }, 'Reading this item…'));
-  page = { id, node, tab: 'Overview', row: null, seen: '' };
+    held ? null : el('p', { class: 'quiet' }, 'Reading this item…'));
+  page = { id, node, tab: 'Overview', row: held || null, whole: null, reading: false };
   main.hidden = true;
   main.after(node);
+  if (held) {
+    fillPage();
+    return readWhole();
+  }
+  let row;
   try {
-    page.row = await item(id);
+    row = await item(id);
   } catch (error) {
     if (page?.node !== node) return;
+    page.failed = true; // the page asks again when the board next asks
     node.replaceChildren(node.firstChild, el('p', { role: 'alert', class: 'problem' }, `${error.message} Go back to Now to pick another.`));
     return;
   }
-  if (page?.node === node) fillPage();
+  if (page?.node === node) {
+    page.row = page.whole = row; // after the check: a slower read must not give a newer page another item's row
+    fillPage();
+  }
 }
 
-function fillPage() {
-  const { row } = page;
-  const tabId = (name) => `tab-${name.replaceAll(' ', '-')}`;
-  page.seen = JSON.stringify(rows().find((one) => one.id === row.id) || null);
-  const tabs = ['Overview', ...(row.kind === 'story' ? ['Plan'] : []), 'Rounds', 'Known issues'];
+// The board's snapshot leaves out a story's parts that merged over a week ago. The page reads the whole
+// story once, behind what it already shows, and keeps those parts through every snapshot.
+async function readWhole() {
+  const { node, id } = page;
+  if (page.whole || page.reading || page.row.kind !== 'story') return;
+  page.reading = true;
+  let whole = null;
+  try {
+    whole = await item(id);
+  } catch {} // the page keeps the story as the board holds it, and the next snapshot reads again
+  if (page?.node !== node) return;
+  page.reading = false;
+  if (!whole) return;
+  page.whole = whole;
+  page.row = withOlder(page.row, page.whole);
+  drawPage();
+}
+
+function withOlder(row, whole) {
+  const older = row.kind === 'story' && whole?.children;
+  if (!older) return row;
+  const now = new Map(row.children.map((part) => [part.id, part]));
+  return { ...row, full: true, children: [...older.map((part) => now.get(part.id) || part), ...row.children.filter((part) => !older.some((one) => one.id === part.id))] };
+}
+
+function tabId(name) {
+  return `tab-${name.replaceAll(' ', '-')}`;
+}
+
+function slug(name) {
+  return name.toLowerCase().replaceAll(' ', '-');
+}
+
+function tabsOf(row) {
+  return ['Overview', ...(row.kind === 'story' ? ['Plan'] : []), 'Rounds', 'Known issues'];
+}
+
+// The open tab is in the address, #item/<id>?tab=plan, so a reload, a link, Back and Forward keep it.
+// Overview has no tab in the address, and a tab the item does not have reads as Overview.
+function tabInAddress(row) {
+  const asked = new URLSearchParams(location.hash.split('?')[1]).get('tab');
+  return tabsOf(row).find((name) => slug(name) === asked) || 'Overview';
+}
+
+// The page's left summary and its row of tabs.
+function frame(row) {
+  const tabs = tabsOf(row);
   const kept = issues(row);
-  page.node.querySelector('.crumbs [aria-current]').textContent = row.title;
   const tablist = el('div', { role: 'tablist', 'aria-label': row.title, class: 'tabs' }, tabs.map((name) => el('button', {
     type: 'button', role: 'tab', id: tabId(name), 'data-focus': tabId(name), 'aria-controls': 'tab-panel', 'aria-selected': String(name === page.tab),
-    onclick: () => { page.tab = name; fillPage(); document.getElementById(tabId(name)).focus(); },
+    onclick: () => { location.hash = `item/${page.id}${name === 'Overview' ? '' : `?tab=${slug(name)}`}`; showPage(); }, // draw now; the hashchange after it finds the tab drawn
   }, name === 'Known issues' ? `Known issues · ${kept.length}` : name)));
+  const summary = el('div', { class: 'summary' },
+    el('p', { class: 'kind' }, tag(row), el('span', {}, kind(row))),
+    el('h1', {}, row.title),
+    el('p', { class: 'person' }, el('span', { 'data-assign': row.id }, person(row))),
+    el('p', { class: 'state-line' }, row.status || 'Status unknown.'),
+    figures(row));
+  return { tablist, summary };
+}
+
+function tabPanel(row) {
   const panel = el('section', { role: 'tabpanel', id: 'tab-panel', 'aria-labelledby': tabId(page.tab), class: 'panel' });
   panel.append(...{ Overview: overview, Plan: plan, Rounds: roundsTab, 'Known issues': knownIssues }[page.tab](row, panel));
-  replaceContent(page.node, page.node.firstChild,
-    el('div', { class: 'item-grid' },
-      el('div', { class: 'summary' },
-        el('p', { class: 'kind' }, tag(row), el('span', {}, kind(row))),
-        el('h1', {}, row.title),
-        el('p', { class: 'person' }, el('span', { 'data-assign': row.id }, person(row))),
-        el('p', { class: 'state-line' }, row.status || 'Status unknown.'),
-        figures(row)),
-      el('div', { class: 'sheet' }, tablist, panel)));
+  return panel;
+}
+
+function drawing(row) {
+  const { tablist, summary } = frame(row);
+  return el('div', { class: 'item-grid' }, summary, el('div', { class: 'sheet' }, tablist, tabPanel(row)));
+}
+
+// The page's first drawing, and the one after a tab is chosen: all of it is built again.
+function fillPage() {
+  const { row, node } = page;
+  page.tab = tabInAddress(row);
+  node.querySelector('.crumbs [aria-current]').textContent = row.title;
+  replaceContent(node, node.firstChild, Board.keep(drawing(row)));
+  if (page.tab === 'Plan') readPlan(page.id);
+}
+
+// The page again from what it now holds: Board.patch replaces only the parts that differ.
+function drawPage() {
+  const { row, node } = page;
+  const crumb = node.querySelector('.crumbs [aria-current]');
+  if (crumb.textContent !== row.title) crumb.textContent = row.title;
+  const grid = node.querySelector('.item-grid');
+  const active = document.activeElement;
+  const key = grid.contains(active) ? focusKey(active) : null;
+  Board.patch(grid, drawing(row));
+  if (key && !active.isConnected) refocus(node, key); // a replaced control keeps the keyboard
+}
+
+// A new snapshot. The plan is read again behind the page and drawn only when its words changed.
+function refreshPage() {
+  drawPage();
+  if (page.tab === 'Plan') readPlan(page.id);
 }
 
 function fact(label, value) {
@@ -321,22 +495,35 @@ function overview(row) {
   ].filter(Boolean);
 }
 
-function plan(row, panel) {
+// The plan as last read; "Reading the plan…" shows only until the first read ends.
+function plan(row) {
   if (!planFolds.has(row.id)) planFolds.set(row.id, {});
-  const folds = planFolds.get(row.id);
-  const doc = el('article', { class: 'plan' }, el('p', { class: 'quiet' }, 'Reading the plan…'));
-  fetch(`plan/${encodeURIComponent(row.id)}${TOKEN}`, { cache: 'no-store' })
-    .then(async (answer) => {
-      const text = await answer.text();
-      if (answer.ok) return doc.replaceChildren(renderPlan(text, folds)), restoreLostFocus(doc);
-      let reason = 'The board could not read the plan. Open the tab again in a moment.';
+  const read = plans.get(row.id) || { reason: 'Reading the plan…' };
+  return [el('article', { class: 'plan' }, read.text === undefined
+    ? el('p', read.alert ? { role: 'alert', class: 'problem' } : { class: 'quiet' }, read.reason)
+    : renderPlan(read.text, planFolds.get(row.id)))];
+}
+
+async function readPlan(id) {
+  let read;
+  try {
+    const answer = await Board.read(`plan:${id}`, `plan/${encodeURIComponent(id)}${TOKEN}`); // a failed read shows the old-data line
+    const text = await answer.text();
+    if (answer.ok) read = { text };
+    else {
+      read = { reason: 'The board could not read the plan. Open the tab again in a moment.' };
       try {
-        reason = JSON.parse(text).error;
+        read.reason = JSON.parse(text).error;
       } catch {}
-      doc.replaceChildren(el('p', { class: 'quiet' }, reason));
-    })
-    .catch(() => doc.replaceChildren(el('p', { role: 'alert', class: 'problem' }, 'The board cannot reach its server. Start the board again from the terminal.')));
-  return [doc];
+    }
+  } catch {
+    read = { reason: 'The board cannot reach its server. Start the board again from the terminal.', alert: true };
+  }
+  const had = plans.get(id);
+  if (had?.text !== undefined && read.text === undefined) return; // a plan on screen stays when a read fails
+  if (JSON.stringify(had) === JSON.stringify(read)) return;
+  plans.set(id, read);
+  if (page?.id === id && page.tab === 'Plan') drawPage();
 }
 
 function roundsTab(row) {
@@ -347,7 +534,7 @@ function roundsTab(row) {
       el('ol', { class: 'rounds' }, reads.map((read) => el('li', {},
         el('span', { class: 'dot waiting', 'aria-hidden': 'true' }),
         el('span', { class: 'what' }, el('strong', {}, `Read ${read.round}: `),
-          `${read.findings?.length ?? 'unknown'} notes`),
+          read.findings ? `${read.findings.length} ${read.findings.length === 1 ? 'note' : 'notes'}` : 'unknown notes'),
         el('span', { class: 'took' }, read.read_at ? day(read.read_at) : 'unknown'))))) : null,
   ].filter(Boolean);
 }
@@ -374,16 +561,33 @@ export function install(board) {
   document.head.append(el('link', { rel: 'stylesheet', href: `item.css${TOKEN}` }));
   Object.assign(Board, { select: openDrawer, openDrawer, openItem });
   addEventListener('hashchange', showPage);
+  addEventListener('click', (event) => {
+    pressed = event.target.closest?.(CONTROLS);
+    setTimeout(() => { pressed = null; });
+  }, true);
+  // One Escape closes one thing. A drawer sits over a list, so from the list the drawer closes first and the
+  // list stays. Inside the drawer a control that closes itself (the assign form) goes first, and stops the event.
   addEventListener('keydown', (event) => {
-    if (event.key !== 'Escape') return;
-    if (drawer) closeDrawer();
-    else if (page) Board.navigate('now');
+    if (event.key === 'Escape' && drawer && !drawer.node.contains(event.target)) {
+      event.stopPropagation();
+      closeDrawer();
+    }
+  }, true);
+  addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') closeDrawer(); // a full page stays; only the drawer closes
   });
   Board.onSnapshot(() => {
     const row = drawer && rows().find((one) => one.id === drawer.id);
     if (row && JSON.stringify(row) !== drawer.seen) fillDrawer(row);
-    if (page?.row && JSON.stringify(rows().find((one) => one.id === page.id) || null) !== page.seen) {
-      item(page.id).then((fresh) => { if (page?.id === fresh.id) { page.row = fresh; fillPage(); } }, () => {});
+    if (row) readDrawerWhole(row);
+    if (page?.failed) { // an item the snapshot leaves out could not be read: read it again
+      closePage();
+      showPage();
+    } else if (page?.row) {
+      const held = rows().find((one) => one.id === page.id);
+      if (held) page.row = withOlder(held, page.whole);
+      refreshPage();
+      readWhole();
     }
   });
   showPage();

@@ -2,6 +2,7 @@
 forge.toml's version refuses while the files forge sync writes differ from the fix's copies."""
 from __future__ import annotations
 
+import json
 import re
 
 from test_close import env  # noqa: F401 (the shared fixture)
@@ -23,11 +24,21 @@ def test_2_upgrade_is_not_ready_while_synced_files_are_out_of_date(env):
     # The default branch pins an older Forge; a fix pins the installed one and syncs, as the
     # skill's upgrade steps say, but a skill copy is left from the old release.
     toml = (env.repo.path / "forge.toml").read_text("utf-8")
+    toml = re.sub(r'^workers = ".*"$', 'workers = "antigravity"', toml, flags=re.M)
+    toml = re.sub(r"^checks = .*$", 'checks = ["forge-pr-check"]', toml, flags=re.M)
+    toml += 'test_place = "local"\ntest = "git status --porcelain"\n'
     installed = re.search(r'^version = "(.+)"$', toml, re.M)[1]
     env.commit(env.repo.path, "forge.toml", toml.replace(installed, "v1.0.0"), "Pin Forge v1.0.0")
+    manifest = ".agents/skills.json"
+    client_entry = {"path": "tools/skills"}
+    env.commit(env.repo.path, manifest, json.dumps({"entries": [client_entry]}), "Add client skills")
     env.repo.git("push", "-q", "origin", "main")
     # This repo was never synced, so the fix writes every synced file and needs a reason to be large.
-    item, where = env.start_fix({"forge.toml": toml}, allow_large="Forge's first synced files")
+    item, where = env.start("tidy-readme", "fix/tidy-readme", ".factory/fixes/tidy-readme.json",
+                            {"kind": "fix", "why": "Upgrade Forge",
+                             "done_when": "Forge is up to date",
+                             "allow_large": "Forge's first synced files"}, {})
+    env.commit(where, "forge.toml", toml, "Pin the installed Forge")
     _sync(env, where)
     _commit(env, where)
     env.commit(where, ".claude/skills/forge/SKILL.md", "The old release's skill\n")
@@ -55,7 +66,11 @@ def test_2_upgrade_is_not_ready_while_synced_files_are_out_of_date(env):
     done = env.repo.forge("close", item, cwd=where)
 
     assert done.returncode == 0, done.stdout + done.stderr
-    assert "Ready: tidy-readme has a clean review and green checks." in done.stdout
+    assert "Ready: tidy-readme has a clean review and its tests passed on this machine." in done.stdout
+    assert "Forge's own settings or generated files only; no Done-when test needed." in done.stdout
+    assert json.loads((where / manifest).read_text("utf-8")) == {
+        "entries": [client_entry, {"path": ".codex/skills"}],
+    }
 
     # The review close recorded, after its throwaway sync checkout, is the one forge-pr-check
     # finds current on the same head.
@@ -63,8 +78,8 @@ def test_2_upgrade_is_not_ready_while_synced_files_are_out_of_date(env):
     base = env.repo.git("merge-base", "origin/main", head, cwd=where)
     done = env.repo.forge("hook", "pr-check", "--base", base, "--head", head,
                           "--branch", "fix/tidy-readme", cwd=where)
-    assert (done.returncode, done.stdout) == (0, "forge-pr-check passed for fix/tidy-readme.\n"), \
-        done.stderr
+    assert (done.returncode, done.stdout) == (
+        0, "forge-pr-check passed for fix/tidy-readme.\n"), done.stderr
 
     # A file sync deletes counts too: an old Forge-only CLAUDE.md that sync removed in the folder
     # but that is still committed stays in the pull request.
@@ -83,7 +98,7 @@ def test_2_upgrade_is_not_ready_while_synced_files_are_out_of_date(env):
     done = env.repo.forge("close", item, cwd=where)
 
     assert done.returncode == 0, done.stdout + done.stderr
-    assert "Ready: tidy-readme has a clean review and green checks." in done.stdout
+    assert "Ready: tidy-readme has a clean review and its tests passed on this machine." in done.stdout
 
     # Only the Forge the fix pins can call it synced: once the synced upgrade has landed on the
     # default branch and the fix then pins a newer release, close run from the default checkout

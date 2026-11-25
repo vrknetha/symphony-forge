@@ -20,6 +20,7 @@ import time
 import urllib.error
 import urllib.request
 from contextlib import contextmanager
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import pytest
@@ -32,12 +33,16 @@ from test_story import worktree
 STORY = "FORGE-BOARD-4"
 
 
-@pytest.fixture(params=["new", "adopted-v1.2.2"])
+@pytest.fixture(params=["new"])
 def client(repo, gh, tmp_path, request):
     _client(repo, gh, tmp_path, request.param)
     gh.respond("pr", "list", stdout="[]")
     gh.respond("api", "graphql", stdout=json.dumps({"data": {"repository": {"pullRequests": {"nodes": []}}}}))
     return repo
+
+
+class Address(str):
+    """The page address; `process` is the running `forge board`, for a test that stops it."""
 
 
 @contextmanager
@@ -55,7 +60,9 @@ def live(repo, **env):
             if found := re.search(r"http://127\.0\.0\.1:\d+/\?token=[\w-]+", line):
                 break
         assert line is not None, process.stderr.read()
-        yield found[0]
+        address = Address(found[0])
+        address.process = process
+        yield address
     finally:
         process.terminate()
         process.wait(timeout=30)
@@ -324,3 +331,12 @@ def test_8_board_requests_stay_fast(client):
             commit(alpha, f"alpha-{n}.txt")
             changed.append(timed())
         assert statistics.median(changed) < 1.0, changed
+
+
+def test_90_board_serves_every_script_and_style_file_of_its_page(client):
+    # The page's files live in this folder; a change to one reruns the browser tests that share this server.
+    folder = Path(__file__).resolve().parents[1] / "src" / "forge" / "board_app"
+    with live(client) as url:
+        for file in sorted(folder.glob("*.js")) + sorted(folder.glob("*.css")):
+            status, _, body = get(url, "/" + file.name)
+            assert status == 200 and body == file.read_bytes(), file.name

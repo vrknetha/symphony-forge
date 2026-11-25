@@ -1,0 +1,92 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/github.py\tAllow one check wait while usable quota remains\tquota-wait-visible",
+      "kind": "bug",
+      "path": "src/forge/github.py",
+      "line": 105,
+      "text": "Allow one check wait while usable quota remains",
+      "from": "blocking",
+      "item": "quota-wait-visible",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/github.py\tBudget check waits at the configured polling rate\tquota-wait-visible",
+      "kind": "bug",
+      "path": "src/forge/github.py",
+      "line": 83,
+      "text": "Budget check waits at the configured polling rate",
+      "from": "blocking",
+      "item": "quota-wait-visible",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/github.py\tNot done: While close, merge or land wait for GitHub quota they print the REST and GraphQL numbers they are waiting on and the reset time\tquota-wait-visible",
+      "kind": "bug",
+      "path": "src/forge/github.py",
+      "line": 112,
+      "text": "Not done: While close, merge or land wait for GitHub quota they print the REST and GraphQL numbers they are waiting on and the reset time",
+      "from": "blocking",
+      "item": "quota-wait-visible",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/github.py\tReport the effective limit when the eight-place cap applies\tquota-wait-visible",
+      "kind": "bug",
+      "path": "src/forge/github.py",
+      "line": 112,
+      "text": "Report the effective limit when the eight-place cap applies",
+      "from": "blocking",
+      "item": "quota-wait-visible",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_quota_wait_visible.py\tGate: test_1_quota_wait_prints_numbers_every_few_minutes_and_resumes\tquota-wait-visible",
+      "kind": "bug",
+      "path": "tests/test_quota_wait_visible.py",
+      "line": 35,
+      "text": "Gate: test_1_quota_wait_prints_numbers_every_few_minutes_and_resumes",
+      "from": "blocking",
+      "item": "quota-wait-visible",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\ttests/test_quota_wait_visible.py\tGate: test_2_plenty_of_quota_lets_a_second_close_start_without_waiting\tquota-wait-visible",
+      "kind": "bug",
+      "path": "tests/test_quota_wait_visible.py",
+      "line": 63,
+      "text": "Gate: test_2_plenty_of_quota_lets_a_second_close_start_without_waiting",
+      "from": "blocking",
+      "item": "quota-wait-visible",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_quota_wait_visible.py\tStandard: Tests build their own data with factories, own that data, don't depend on order, and never sleep\tquota-wait-visible",
+      "kind": "bug",
+      "path": "tests/test_quota_wait_visible.py",
+      "line": 59,
+      "text": "Standard: Tests build their own data with factories, own that data, don't depend on order, and never sleep",
+      "from": "blocking",
+      "item": "quota-wait-visible",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "simplify\tsrc/forge/github.py\tSimpler: missing approach \u2192 record the need, simplest option and reuse",
+      "kind": "simplify",
+      "path": "src/forge/github.py",
+      "line": 39,
+      "text": "Simpler: missing approach \u2192 record the need, simplest option and reuse",
+      "from": "review",
+      "item": "quota-wait-visible",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

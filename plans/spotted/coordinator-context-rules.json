@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/templates/skill.md\tFunctional: Finish session-owned rounds before handing over\tcoordinator-context-rules",
+      "kind": "bug",
+      "path": "src/forge/templates/skill.md",
+      "line": 577,
+      "text": "Functional: Finish session-owned rounds before handing over",
+      "from": "blocking",
+      "item": "coordinator-context-rules",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/skill.md\tFunctional: Give the new chat a working way to observe completion\tcoordinator-context-rules",
+      "kind": "bug",
+      "path": "src/forge/templates/skill.md",
+      "line": 583,
+      "text": "Functional: Give the new chat a working way to observe completion",
+      "from": "blocking",
+      "item": "coordinator-context-rules",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

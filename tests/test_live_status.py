@@ -25,11 +25,9 @@ STORY = "FORGE-MOD-1"
 
 
 def row(repo, item):
-    boards = [view(repo, command) for command in ("board", "next")]
-    assert boards[0]["items"] == boards[1]["items"]
-    assert boards[0]["events"] == boards[1]["events"]
-    rows = [r for parent in boards[0]["items"] for r in [parent, *parent["children"]]]
-    return next(r for r in rows if r["id"] == item), boards[0]
+    board = view(repo, "board")
+    rows = [r for parent in board["items"] for r in [parent, *parent["children"]]]
+    return next(r for r in rows if r["id"] == item), board
 
 
 # ponytail: each case runs several forge commands; a busy machine needs more than the 150 s default.
@@ -111,11 +109,11 @@ def test_7_live_status_in_both_machine_views(env, monkeypatch, request, case):
             else:
                 # Codex reports a null configured effort. Its matching model's default
                 # is on the second catalog page, after a different model's high default.
-                stub.write_text(stub.read_text("utf-8").replace('"stub-model"', '"gpt-6.1-sol"'), "utf-8")
+                stub.write_text(stub.read_text("utf-8").replace('"stub-model"', '"gpt-6.2-sol"'), "utf-8")
             monkeypatch.setenv("STUB_SAY", "No findings.")
             model = "gpt-6-sol"
         if "default" in case:
-            model, effort = ("gpt-6.1-sol", "medium") if case.endswith("codex") else ("claude-opus-5-5", "high")
+            model, effort = ("gpt-6.2-sol", "medium") if case.endswith("codex") else ("claude-opus-5-5", "high")
         assert repo.forge("read", item).returncode == 0
         (folder / "plans/SHOP.md").write_text(DOC.replace("come back", "return"), "utf-8")
     elif case == "codex":
@@ -317,15 +315,16 @@ def test_7_live_status_in_both_machine_views(env, monkeypatch, request, case):
                 json.dumps(f'"{sys.executable}" -m pytest -vv{parallel} test_progress.py')))
             repo.git("push", "-q", "origin", "main")
             repo.git("merge", "--no-edit", "origin/main", cwd=folder)
+            repo.git("add", "test_progress.py", cwd=folder)
+            repo.git("commit", "-q", "-m", "Add the live progress cases", "-m",
+                     "Proof list:\n- Done when: check: The readme opens with a greeting", cwd=folder)
         process = subprocess.Popen([sys.executable, str(repo.bin / "forge"),
                                    "read" if case.startswith("read") else "close" if case.startswith(("progress", "ci", "review")) else "work", item], cwd=repo.path,
                                    stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         connections, activities = [], []
         try:
-            # A setup or teardown failure now retries the file once. Observe and release
-            # both real pytest attempts, keeping the same live-progress assertions.
-            for expected in ([None, None] if case in ("progress error", "progress teardown") else
-                             [None] if case.startswith(("progress", "ci")) else expected_steps):
+            # A setup or teardown failure stays red without retry. Observe its one attempt.
+            for expected in ([None] if case.startswith(("progress", "ci")) else expected_steps):
                 connection, _ = listener.accept()
                 connections.append(connection)
                 if case.startswith("ci"):

@@ -1,0 +1,181 @@
+{
+  "base": "d68b2284a746600b50fb05afa7981d365407f876",
+  "branch": "fix/story-drop-refuses-any-story-with-a-part",
+  "chat": {
+    "approval": null,
+    "claude": {
+      "id": "0dcdd550-f91f-483f-b040-0f80c3ca9413",
+      "rounds": 0,
+      "start": "1eecefc347d8fc7cea34534326b071614fd4ff67"
+    },
+    "conversation": null,
+    "head": null,
+    "start": null
+  },
+  "done_when": "After forge story drop on a story with a built, unmerged part, the story shows as dropped, its open pull requests are closed, and another story's part that shares a file starts without the would-change-hasn't-merged-yet refusal.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "story_drop() in src/forge/intake.py",
+      "file": "src/forge/intake.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 219,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A dropped story with a built part remains on the board",
+      "work": 2
+    },
+    {
+      "area": "story_drop() in src/forge/intake.py",
+      "file": "src/forge/intake.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 241,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Do not close pull requests belonging to a longer story key",
+      "work": 2
+    },
+    {
+      "area": "story_drop() in src/forge/intake.py",
+      "file": "src/forge/intake.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 241,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Refresh remote parts before deciding what to drop",
+      "work": 2
+    },
+    {
+      "area": "_started() in src/forge/task.py",
+      "file": "src/forge/task.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 652,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Prevent parked parts from being started or closed again",
+      "work": 2
+    },
+    {
+      "area": "story_drop() in src/forge/intake.py",
+      "file": "src/forge/intake.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 243,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Keep the part's scope until its pull requests are closed",
+      "work": 2
+    },
+    {
+      "area": "test_5_one_short_instruction_moves_an_idea_and_leaves_one_item() in tests/test_start_sorts_ideas.py",
+      "file": "tests/test_start_sorts_ideas.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 370,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The named proof does not cover the built-part drop outcome",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "4bbe031aab43ab9776661e456b32dadc5b70ad7658a9458aae202f38c007c364",
+    "changed": "a3be67710901f2135a7ae9ed03f10e14ba59b71420d3e19fde9a4a3f99a02f0f",
+    "commit": "ead947d979e46d952be52de74ce800067e85b34d",
+    "dismissals": [],
+    "findings": [],
+    "id": "39155d9f-2a2d-4479-8a77-6450e6c16292",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T17:57:07.460011+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T17:57:24.226165+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T18:08:40.025578+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T18:09:28.239414+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T18:20:45.589105+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T18:20:45.612937+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-24T02:04:13.232774+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-24T02:05:25.132501+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T02:11:37.730726+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T03:03:15.643104+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T03:08:31.226673+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-23T18:20:45.612937+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "src/forge/task.py",
+    "reason": "Owner chose one more round: fetch the story before the parked-part check",
+    "wait_id": "8a8de9e4-9c1f-4fc3-b907-f86027e8b41c",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "dfdff748-bda9-44a1-b5a9-e545efe1d614",
+    "head": "822b8795d71a0ea1ec9b30e662a14e09ea54a378",
+    "keys": {},
+    "round": 3
+  },
+  "why": "Story drop refuses any story with a part record (src/forge/intake.py story_drop, the has started parts check), so an owner cannot park a story whose part is built but unmerged. Also, task._started (src/forge/task.py) treats every unmerged task branch as busy with its Scope and never checks whether its story was dropped, so closing the part's pull request does not release its files against another story's part.",
+  "worker": "claude"
+}

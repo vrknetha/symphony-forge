@@ -19,7 +19,7 @@ def test_1_concurrent_rebuilds_keep_one_ready_sdk(tmp_path, monkeypatch, pytestc
     if sdk == "codex" and REAL_UV is None:
         pytest.skip("uv is missing, so the Codex SDK test environment can't be built")
     data = tmp_path / "data"
-    pin = PIN if sdk == "codex" else "0.2.161"
+    pin = PIN if sdk == "codex" else "0.2.187"
     name = f"openai-codex-{pin}" if sdk == "codex" else f"claude-agent-sdk-{pin}"
     env = data / "forge" / f"{sdk}-sdk" / name
     env.mkdir(parents=True)

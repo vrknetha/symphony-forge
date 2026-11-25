@@ -77,14 +77,14 @@ def test_36_client_apps_simple(repo, tmp_path):
     _carried_over_rules_are_on_their_pages()
     _logger_example_writes_the_documented_fields(tmp_path)
 
-    # Every worker brief, for a task or a fix, carries the whole page.
+    # Every first worker brief links to the shared page for tasks and fixes.
     log = install_claude(repo)
     repo.write("forge.toml", f'version = "{repo.forge("--version").stdout.split()[-1]}"\n'
                              'workers = "claude"\n'
                              'models.build = { model = "opus", effort = "high" }\n'
                              'models.lite = { model = "sonnet", effort = "medium" }\n')
     repo.git("add", "forge.toml")
-    repo.git("commit", "-q", "-m", "Pin Forge")
+    repo.git("commit", "--allow-empty", "-q", "-m", "Pin Forge")
     repo.git("push", "-q", "origin", "main")
     story(repo)
     assert repo.forge("task", "start", "BOARD/PAGE").returncode == 0
@@ -93,7 +93,8 @@ def test_36_client_apps_simple(repo, tmp_path):
     for item in ("BOARD/PAGE", "fix-the-login-typo"):
         built = repo.forge("work", item)
         assert built.returncode == 0, built.stderr
-        assert PAGE.strip() in calls(log)[-1]["brief"], item
+        brief = calls(log)[-1]["brief"]
+        assert f"`{(ROOT / 'src/forge/standards.md').as_posix()}`" in brief, item
 
     # The separate command page names every command exposed by help, and nothing else.
     table: set[str] = set()

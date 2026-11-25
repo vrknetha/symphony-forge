@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/templates/design/ui-checks.js\tFunctional: Do not refuse screen content and delays as design violations\tbuilders-can-ship-bold-all-caps-gradient",
+      "kind": "bug",
+      "path": "src/forge/templates/design/ui-checks.js",
+      "line": 56,
+      "text": "Functional: Do not refuse screen content and delays as design violations",
+      "from": "blocking",
+      "item": "builders-can-ship-bold-all-caps-gradient",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/design/ui-checks.js\tFunctional: Keep the existing design-check suite passing\tbuilders-can-ship-bold-all-caps-gradient",
+      "kind": "bug",
+      "path": "src/forge/templates/design/ui-checks.js",
+      "line": 57,
+      "text": "Functional: Keep the existing design-check suite passing",
+      "from": "blocking",
+      "item": "builders-can-ship-bold-all-caps-gradient",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/design/ui-checks.js\tFunctional: Restrict the new rules to changed screens\tbuilders-can-ship-bold-all-caps-gradient",
+      "kind": "bug",
+      "path": "src/forge/templates/design/ui-checks.js",
+      "line": 54,
+      "text": "Functional: Restrict the new rules to changed screens",
+      "from": "blocking",
+      "item": "builders-can-ship-bold-all-caps-gradient",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/design/ui-checks.js\tNot done: Close misses some bold text, raw hex colours and motion of 300 ms or more\tbuilders-can-ship-bold-all-caps-gradient",
+      "kind": "bug",
+      "path": "src/forge/templates/design/ui-checks.js",
+      "line": 61,
+      "text": "Not done: Close misses some bold text, raw hex colours and motion of 300 ms or more",
+      "from": "blocking",
+      "item": "builders-can-ship-bold-all-caps-gradient",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_close_refuses_owner_design_rules.py\tGate: proof list\tbuilders-can-ship-bold-all-caps-gradient",
+      "kind": "bug",
+      "path": "tests/test_close_refuses_owner_design_rules.py",
+      "line": 47,
+      "text": "Gate: proof list",
+      "from": "blocking",
+      "item": "builders-can-ship-bold-all-caps-gradient",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_close_refuses_owner_design_rules.py\tTest: Close refuses a changed screen file that uses bold, all caps, gradient, hex or 300 ms motion\tbuilders-can-ship-bold-all-caps-gradient",
+      "kind": "bug",
+      "path": "tests/test_close_refuses_owner_design_rules.py",
+      "line": 54,
+      "text": "Test: Close refuses a changed screen file that uses bold, all caps, gradient, hex or 300 ms motion",
+      "from": "blocking",
+      "item": "builders-can-ship-bold-all-caps-gradient",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_close_refuses_owner_design_rules.py\tTest: The app baseline lists the rest of the owner's rules\tbuilders-can-ship-bold-all-caps-gradient",
+      "kind": "bug",
+      "path": "tests/test_close_refuses_owner_design_rules.py",
+      "line": 82,
+      "text": "Test: The app baseline lists the rest of the owner's rules",
+      "from": "blocking",
+      "item": "builders-can-ship-bold-all-caps-gradient",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

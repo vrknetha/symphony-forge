@@ -1,0 +1,110 @@
+{
+  "branch": "task/FORGE-ANTIGRAVITY-1-REVIEW",
+  "chat": {
+    "approval": "35b0d7fb00126418189ed83705349871a04568dd080156d88770a7bc2e79b341",
+    "claude": null,
+    "conversation": "01a21174-1d1c-7203-9446-bb2a67c5900d",
+    "head": null,
+    "start": "90bfb3f96b5812810585d7605be1855123e3e275"
+  },
+  "known": [
+    {
+      "area": "review_engine() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 5,
+      "harm": 5,
+      "line": 197,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Resolve review executables outside the reviewed checkout",
+      "work": 2
+    },
+    {
+      "area": "review_engine() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 5,
+      "harm": 5,
+      "line": 201,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Filter design context before sending the review prompt",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/brief.md",
+      "file": "src/forge/templates/brief.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 147,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Allow the documented effort-only review configuration",
+      "work": 1
+    },
+    {
+      "area": "test_3_antigravity_reads_and_reviews_safely_and_own_family_reviews_are_refused() in tests/test_antigravity_review.py",
+      "file": "tests/test_antigravity_review.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 235,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Test Antigravity findings with absolute paths",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "56bb49b5dd3997191e5045787e4449f72708a3bef64cfca0dd5b61837da2c7b1",
+    "changed": "752960a3401a11ca19cfc96372495f0ba27ddb34a1ec78cded50f8e42d76ffbf",
+    "commit": "dcef436cb196665cbc5438d9b1cacc7ca40c584c",
+    "dismissals": [],
+    "findings": [],
+    "id": "e35023b0-ec07-49e7-829c-61132853808f",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T06:45:29.988878+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T06:45:48.845271+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T07:05:34.674822+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T07:05:55.118037+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T07:20:32.234685+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "12e3aac9-6eb6-414d-9ba1-f0dd4cd6d1b8",
+    "head": "4d773d2c42fb4b36605bdd0f9a0f2066114bbc12",
+    "keys": {
+      "the open P0 filter design context before sending the review prompt in src/forge/antigravity.py": 1,
+      "the open P0 resolve review executables outside the reviewed checkout in src/forge/antigravity.py": 1
+    },
+    "round": 1
+  },
+  "worker": "codex"
+}

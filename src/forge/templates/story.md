@@ -20,7 +20,8 @@ id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small chan
 screens that add no screen and change no flow, use Design: none (<why>) instead.
 Remove this comment and omit
 the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id and a new plan approval.
+these exact files. A folder edit needs its new tree id. Before the first approval it needs a new read;
+after it, a design part's redraw that changes only that id keeps the approval; any other edit needs a new one.
 The rule starts with the next plan read and approval. Plans approved without a Design line
 before this rule keep their existing approval. -->
 $design
@@ -67,7 +68,9 @@ one waits for the other through After, directly or through another task; it name
 Paths with a segment named `tests`, `test`, `__tests__` or `spec` do not cause Scope overlaps
 and can be shared without an After link. Explicit After links still apply.
 When tasks need the same production file, put it in the first task's Scope with the shared names and stubs;
-tasks that need them wait for that task through After and then own only their files. Tests: the
+tasks that need them wait for that task through After and then own only their files. Keep a file
+that a script can make at build time out of the repo and out of every Scope; when the repo keeps such
+a file on purpose, give its change to one part that the others wait for. Tests: the
 tests it adds or changes. After: the tasks it waits for. When two tasks share a function, field,
 file format or command, the first task pins it: it commits the shared names and stubs plus one
 test that crosses both sides, and the tasks that use it list it under After. Split tasks so each

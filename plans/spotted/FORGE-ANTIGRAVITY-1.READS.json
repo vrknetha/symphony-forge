@@ -1,0 +1,92 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tDisputed keep plan read note 54: Read copies expose private checkout files to other local users\tFORGE-ANTIGRAVITY-1/READS",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 159,
+      "text": "Disputed keep plan read note 54: Read copies expose private checkout files to other local users",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/READS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tNot done: item 3: Globally ignored credentials can enter the read copy\tFORGE-ANTIGRAVITY-1/READS",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 179,
+      "text": "Not done: item 3: Globally ignored credentials can enter the read copy",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/READS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/close.py\tApply reviewer-setting changes to open worktrees\tFORGE-ANTIGRAVITY-1/READS",
+      "kind": "bug",
+      "path": "src/forge/close.py",
+      "line": 202,
+      "text": "Apply reviewer-setting changes to open worktrees",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/READS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tDisputed keep plan read note 52: Doctor approves a different SSH worktree profile\tFORGE-ANTIGRAVITY-1/READS",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 395,
+      "text": "Disputed keep plan read note 52: Doctor approves a different SSH worktree profile",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/READS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/story.py\tNot done: item 3: Cold reads can execute checkout Git hooks and filters\tFORGE-ANTIGRAVITY-1/READS",
+      "kind": "bug",
+      "path": "src/forge/story.py",
+      "line": 315,
+      "text": "Not done: item 3: Cold reads can execute checkout Git hooks and filters",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/READS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/story.py\tRestore the snapshot used by design work\tFORGE-ANTIGRAVITY-1/READS",
+      "kind": "bug",
+      "path": "src/forge/story.py",
+      "line": 248,
+      "text": "Restore the snapshot used by design work",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/READS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_antigravity_review.py\tTest: item 3: Exercise linked agent customizations in the read copy\tFORGE-ANTIGRAVITY-1/READS",
+      "kind": "bug",
+      "path": "tests/test_antigravity_review.py",
+      "line": 79,
+      "text": "Test: item 3: Exercise linked agent customizations in the read copy",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/READS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_antigravity_setup.py\tTest: item 6: Check the initialized repository's default reviewer\tFORGE-ANTIGRAVITY-1/READS",
+      "kind": "bug",
+      "path": "tests/test_antigravity_setup.py",
+      "line": 159,
+      "text": "Test: item 6: Check the initialized repository's default reviewer",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/READS",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

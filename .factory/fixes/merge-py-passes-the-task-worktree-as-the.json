@@ -1,0 +1,151 @@
+{
+  "base": "ae0f9bd8e27117263e788aad6db62374ac5124a6",
+  "branch": "fix/merge-py-passes-the-task-worktree-as-the",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a20c71-fe29-7802-a875-3e9bf7fdb3ac",
+    "head": null,
+    "start": "bd596ce4eefd9d0f354088b01e5b8d12e124245e"
+  },
+  "done_when": "forge merge keeps waiting on checks and prints its Merged line, with its start-to-merge time, even when the task folder is removed during the check wait.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "merge() in src/forge/merge.py",
+      "file": "src/forge/merge.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 184,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: forge merge keeps waiting on checks and prints its Merged line, with its start-to-merge time, even when the task folder is removed",
+      "work": 3
+    },
+    {
+      "area": "wait() in src/forge/checks.py",
+      "file": "src/forge/checks.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 163,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Preserve the CI round after the task folder is removed",
+      "work": 2
+    },
+    {
+      "area": "merge() in src/forge/merge.py",
+      "file": "src/forge/merge.py",
+      "gain": 4,
+      "harm": 2,
+      "line": 170,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Existing merge-wait tests select checks from the wrong branch",
+      "work": 2
+    },
+    {
+      "area": "test_1_merge_prints_its_line_after_the_task_folder_is_removed_during_checks() in tests/test_merge_survives_task_folder_removal.py",
+      "file": "tests/test_merge_survives_task_folder_removal.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 27,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: forge merge keeps waiting on checks and prints its Merged line, with its start-to-merge time, even when the task folder is removed",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "f794d39f394c0603c0c41eb513be7915929a0bf1cabd376796ff3c1f5d8325a2",
+    "changed": "843b0a39c2d95e8d8a8fb2c74a9c186d2dc865ce3cc612c036c951059bf2146c",
+    "commit": "ea65e7abc4c481d084663b69a24ae38629565b82",
+    "dismissals": [],
+    "findings": [],
+    "id": "05ac11b4-1bea-48cd-8e50-8148874d82fb",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-24T06:00:34.455010+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-24T06:00:51.552572+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T07:24:28.948984+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T07:25:24.852562+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T08:13:45.969460+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T08:13:45.987710+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-24T09:15:04.738095+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-24T09:15:32.455859+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T09:56:21.648569+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T10:25:06.000673+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T11:06:58.156905+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-24T08:13:45.987710+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "src/forge/merge.py",
+    "reason": "Owner chose one more round: clear git's stale worktree record before recreating a hand-deleted task folder",
+    "wait_id": "66447fe5-dcc0-43c3-878e-14844ba7a68d",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "646e17b5-debb-4d0f-ad8f-05dcd3e8c6d9",
+    "head": "3f6457d0ec163ada92ff1f0a72836e8889e8b821",
+    "keys": {},
+    "round": 3
+  },
+  "why": "merge.py passes the task worktree as the top argument to checks.wait, and checks._ask runs every gh api call with cwd set to it, so subprocess raises FileNotFoundError once that folder is gone; the code after the wait also reads the task folder (story.show, close._pull_request, time_records.merge_line and git rev-parse), so those reads need the same care.",
+  "worker": "codex"
+}

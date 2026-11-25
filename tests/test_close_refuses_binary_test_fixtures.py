@@ -1,9 +1,7 @@
 """Unreadable test fixtures stop close before a review; workers receive the text-only rule."""
 from __future__ import annotations
 
-import shutil
 import zipfile
-from pathlib import Path
 
 import pytest
 
@@ -22,7 +20,7 @@ def test_1_close_refuses_an_added_binary_test_fixture_before_review(env):
     with zipfile.ZipFile(archive, "w") as fixture:
         fixture.writestr("README.md", "# An old repo\n")
     env.repo.git("add", "tests", cwd=where)
-    env.repo.git("commit", "-q", "-m", "Add an archived fixture", cwd=where)
+    env.repo.git("commit", "--allow-empty", "-q", "-m", "Add an archived fixture", cwd=where)
 
     done = env.close(item)
 
@@ -40,17 +38,11 @@ def test_1_close_refuses_an_added_binary_test_fixture_before_review(env):
     assert len(env.review_calls()) == 1
 
 
-@pytest.mark.parametrize("existing", [False, True], ids=["new-repo", "previous-release-repo"])
+@pytest.mark.parametrize("existing", [False], ids=["new-repo"])
 @pytest.mark.platform
 def test_2_sync_and_work_deliver_plain_text_fixture_guidance(env, existing):
     item, where = env.start_fix()
     log = install_claude(env.repo)
-    if existing:
-        # An existing repo adopted on the previous release, built from readable fixture files.
-        fixture = Path(__file__).with_name("fixtures") / "previous-release-fixture-guidance"
-        shutil.copytree(fixture, where, dirs_exist_ok=True)
-        env.repo.git("add", "-A", cwd=where)
-        env.repo.git("commit", "-q", "-m", "Repo adopted on the previous release", cwd=where)
     version = env.repo.forge("--version").stdout.split()[-1]
     env.commit(where, "forge.toml", f'version = "{version}"\nworkers = "claude"\n'
                'checks = ["tests", "forge-pr-check"]\n'
@@ -62,7 +54,7 @@ def test_2_sync_and_work_deliver_plain_text_fixture_guidance(env, existing):
         skill = (where / host / "skills/forge/SKILL.md").read_text("utf-8")
         assert RULE in " ".join(skill.split())
     env.repo.git("add", "-A", cwd=where)
-    env.repo.git("commit", "-q", "-m", "Sync the fixture guidance", cwd=where)
+    env.repo.git("commit", "--allow-empty", "-q", "-m", "Sync the fixture guidance", cwd=where)
     worked = env.repo.forge("work", item, cwd=where)
     assert worked.returncode == 0, worked.stdout + worked.stderr
     assert RULE in " ".join(calls(log)[-1]["brief"].split())

@@ -1,0 +1,99 @@
+{
+  "base": "3618ce820595d49f726c77b4d459d4ce310410c0",
+  "branch": "fix/custom-command-one-group",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a1ffcc-9665-7e52-bb03-223d0203a36e",
+    "head": null,
+    "start": "41df68086130fa92e736caecdc60305d196ba75a"
+  },
+  "done_when": "In a repo whose test command is custom, a change whose related tests are under a quarter of all tests runs one CI test group, as it does with the standard command, and a change Forge still cannot judge runs all groups; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "small_change() in src/forge/templates/review-tests.py",
+      "file": "src/forge/templates/review-tests.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 103,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Keep every fixed pytest shard in mixed test commands",
+      "work": 2
+    },
+    {
+      "area": "small_change() in src/forge/templates/review-tests.py",
+      "file": "src/forge/templates/review-tests.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 104,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Custom commands do not reliably select the required CI groups",
+      "work": 2
+    },
+    {
+      "area": "test_1_custom_command_uses_related_test_share() in tests/test_custom_commands_choose_groups.py",
+      "file": "tests/test_custom_commands_choose_groups.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 45,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_custom_command_uses_related_test_share",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "92c5bb7201757100834c15a3c8a7d9894e1784a835fcd33f13ed9f3d187d4aba",
+    "changed": "58c894ba204b8d8dcb074312bfeec3fd4c848b2b8fef53e844fcecd121fb5934",
+    "commit": "aeffc515a01584c93e759229da78bce0e35ff96f",
+    "dismissals": [],
+    "findings": [],
+    "id": "94092907-5acb-4bf7-ac96-dfc79512b4cc",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-21T20:28:56.329440+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-21T20:29:19.469569+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T20:42:31.231740+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T02:55:45.052152+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T03:17:58.440312+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "fe238677-959d-429e-85f4-feafda2ef870",
+    "head": "84537200fb38731e6c6b24014f7f7c817470c349",
+    "keys": {},
+    "round": 1
+  },
+  "why": "In a repo with a custom test command, Forge cannot judge a change's selected tests, so every small change runs all configured CI test groups instead of one",
+  "worker": "codex"
+}

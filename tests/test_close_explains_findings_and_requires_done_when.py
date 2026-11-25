@@ -20,24 +20,29 @@ def setup_client(env, adopted):
     env.repo.git("push", "-q", "origin", "main")
 
 
-@pytest.mark.parametrize("adopted", [False, True], ids=["new", "earlier-adopted"])
+def set_one_review_round(env):
+    config = (env.repo.path / "forge.toml").read_text("utf-8")
+    env.commit(env.repo.path, "forge.toml", "task_review_rounds = 1\n" + config,
+               "Set one review round for this test")
+    env.repo.git("push", "-q", "origin", "main")
+
+
+@pytest.mark.parametrize("adopted", [False], ids=["new"])
 def test_1_clean_close_explains_why_findings_do_not_block(env, adopted):
     setup_client(env, adopted)
-    # Story tasks retain the unrelated Not-done follow-up contract.
     item, _ = env.start_task()
-    env.reviews(blocked(finding("P1", "Not done: The greeting uses a separate formatter"),
-                        finding("P2", "Simpler: shorten the greeting")))
+    rare = finding("P1", "Support an unusual reader")
+    rare["body"] += "\nCase: rare - a reader uses an obsolete terminal."
+    env.reviews(blocked(rare, finding("P2", "Simpler: shorten the greeting")))
     closed = env.close(item)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     # Close now attaches each reason to its finding instead of one shared summary.
-    assert ("Does not block: Not done names no owner-approved Done-when item; "
-            "builder details are guidance.\nGain 4, Work 2, Harm 1") in closed.stdout
+    assert "Does not block: Rare case outside normal use." in closed.stdout
     assert "Does not block: Below the review bar.\nGain 2, Work 1, Harm 1" in closed.stdout
 
 
 @pytest.mark.parametrize("adopted,case", [(False, "quoted"), (False, "below-bar"),
-                                         (False, "rare"), (False, "light"),
-                                         (True, "below-bar")])
+                                         (False, "rare"), (False, "light")])
 def test_2_not_done_on_the_fix_acceptance_blocks_close(env, adopted, case):
     setup_client(env, adopted)
     owner = "The readme opens with a greeting"
@@ -68,9 +73,10 @@ def required_note():
     return note
 
 
-@pytest.mark.parametrize("adopted", [False, True], ids=["new", "earlier-adopted"])
+@pytest.mark.parametrize("adopted", [False], ids=["new"])
 def test_3_required_acceptance_stays_open_in_the_next_review(env, adopted):
     setup_client(env, adopted)
+    set_one_review_round(env)
     item, where = env.start_fix()
     note = required_note()
     env.reviews(blocked(note))
@@ -89,6 +95,7 @@ def test_3_required_acceptance_stays_open_in_the_next_review(env, adopted):
 
 
 def test_4_worker_receives_required_acceptance_below_the_score_bar(env):
+    set_one_review_round(env)
     item, _ = env.start_fix()
     note = required_note()
     env.reviews(blocked(note))

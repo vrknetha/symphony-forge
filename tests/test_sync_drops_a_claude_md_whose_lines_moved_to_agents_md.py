@@ -22,5 +22,4 @@ def test_1_sync_deletes_a_claude_md_whose_lines_all_moved_to_agents_md(repo):
     assert repo.forge("sync").returncode == 0
     assert not (repo.path / "CLAUDE.md").exists()
     assert (repo.path / "AGENTS.md").read_text(encoding="utf-8").startswith(TEAM)
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
-
+    assert "Nothing to change" in repo.forge("sync").stdout

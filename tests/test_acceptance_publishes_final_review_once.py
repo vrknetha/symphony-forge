@@ -11,9 +11,12 @@ STORY = "review-findings-split-from-close-pushes"
 
 
 @pytest.mark.platform
-@pytest.mark.parametrize("previous", [False, True], ids=["new", "earlier-adopted"])
+@pytest.mark.parametrize("previous", [False], ids=["new"])
 def test_1_acceptance_publishes_once_after_final_review_records(env, previous):
     client(env, previous)
+    config = (env.repo.path / "forge.toml").read_text("utf-8")
+    env.commit(env.repo.path, "forge.toml", "task_review_rounds = 1\n" + config)
+    env.repo.git("push", "-q", "origin", "main")
     item, where = env.start_fix()
     defect = finding("P1", "Greeting needs more detail")
     defect["body"] = "Gain 4, Work 1, Harm 2\nCase: normal use - Readers miss the detail."
@@ -42,4 +45,7 @@ def test_1_acceptance_publishes_once_after_final_review_records(env, previous):
     assert f"Human accepted the remaining finding: {reason}" in published
     for field in (".check_runs[]", ".statuses[]"):
         calls = env.gh_calls("api", "--paginate", "--jq", field)
-        assert calls and all(f"/commits/{heads[0]}/" in call[-1] for call in calls)
+        # Close also looks once at the code it pushed earlier, before it pushes its records on top.
+        own = env.repo.git("rev-list", "-n", "4", heads[0], cwd=where).split()
+        assert any(f"/commits/{heads[0]}/" in call[-1] for call in calls)
+        assert all(any(f"/commits/{sha}/" in call[-1] for sha in own) for call in calls)

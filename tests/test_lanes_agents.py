@@ -57,7 +57,10 @@ def person(monkeypatch):
 
 
 def hold_agents(env):
+    # forge upgrade updates the tool and reads its version; only a session is held.
     _install(env.repo.bin, "claude", HOLDING_CLAUDE.format(python=sys.executable).replace(
+        "sys.stdin.read()\n", 'if sys.argv[1:] in (["update"], ["--version"]):\n'
+        '    print("2.1.291 (Claude Code)")\n    sys.exit(0)\nsys.stdin.read()\n', 1).replace(
         'while not (here / f"go-{name}").exists():',
         'while not (here / f"go-{name}").exists() and not (here / "go-all").exists():'))
     sdk = env.repo.bin / "claude_agent_sdk" / "__init__.py"
@@ -91,11 +94,12 @@ def make_work(repo, name):
     return item, worktree(repo, "fix/" + item).name
 
 
-def start(where, directory, repo, *args, launcher=None):
+def start(where, directory, repo, *args, launcher=None, via=None):
     directory.mkdir(exist_ok=True)
     output = directory / f"{args[0]}.out"
     with output.open("w", encoding="utf-8") as sink:
-        process = subprocess.Popen([sys.executable, str(launcher or repo.bin / "forge"), *args], cwd=where,
+        process = subprocess.Popen([sys.executable, *([str(via)] if via else []),
+                                    str(launcher or repo.bin / "forge"), *args], cwd=where,
             stdin=subprocess.DEVNULL, stdout=sink, stderr=subprocess.STDOUT)
     return process, output
 
@@ -193,6 +197,8 @@ def test_1_half_the_cores_admit_work_rounds_while_reads_and_reviews_skip_the_lin
             return json.loads(board.stdout)["lanes"]["agents"]["entries"]
         rows = entries()
         admitted = next(e for e in rows if e["item"] == first)
+        # A plan read carries its round, so the Claude Code pane can show it.
+        assert next(e for e in rows if e["kind"] == "read")["round"] == 1
         if legacy:
             old_review = next(e for e in rows if e["kind"] == "review")
             assert os.getpgid(old_review["process"]["pid"]) != old_review["process"]["pid"]

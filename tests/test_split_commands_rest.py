@@ -10,6 +10,7 @@ STORY = "FORGE-SPLIT-1"
 SOURCE = Path(__file__).resolve().parents[1] / "src" / "forge"
 
 OWNERS = {
+    "ask": {"ask"},
     "approval": {"hook approval"},
     "close": {"close"},
     "deny": {"hook deny"},

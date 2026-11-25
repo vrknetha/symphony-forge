@@ -1,0 +1,77 @@
+{
+  "base": "32d4ae05e6e815e458e6fd117284f1303d270184",
+  "branch": "fix/with-ten-closes-and-github-s-core-budget",
+  "chat": {
+    "approval": null,
+    "claude": {
+      "id": "31c70033-a073-447a-8237-586b4b1584f6",
+      "rounds": 0,
+      "start": "a90db5f7fa20b8fbe6e9d6a065c509a46337bf0a"
+    },
+    "conversation": null,
+    "head": null,
+    "start": null
+  },
+  "done_when": "Ten closes at once with GitHub's core budget at 4,300 or more print no quota wait line, and a close waits only when GitHub's remaining core or GraphQL budget is low.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "test_1_ten_closes_with_a_healthy_core_budget_print_no_quota_wait() in tests/test_ten_closes_wait_for_no_quota.py",
+      "file": "tests/test_ten_closes_wait_for_no_quota.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 49,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Ten closes at once with GitHub's core budget at 4,300 or more print no quota wait line",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "67a0cf980504c8aa5953dfe2a1a01f2fd95f412e6f543d9ab28fb5643c934a9a",
+    "changed": "a2965fdedd4a7724f8672cf7515d321ae45d96304f9be04e1083ef3260fdc552",
+    "commit": "76a4b07ef141f681edfe8d2999857d36f5c5016e",
+    "dismissals": [],
+    "findings": [],
+    "id": "35b06748-3469-46a0-8eed-98b9f0460f1f",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-24T03:32:37.385913+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-24T03:32:54.616307+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T04:18:30.334951+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T04:19:10.112382+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T04:26:02.360804+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "0fdbe186-ccae-4823-98ea-5819c981d234",
+    "head": "57dd358946a8b01b6a32e70f01ad30b6c5798e3c",
+    "keys": {},
+    "round": 1
+  },
+  "why": "With ten closes and GitHub's core budget at 4,300 to 4,950, the GitHub-derived limit is about 11 to 13 places, so the fixed cap of eight in ready() in src/forge/github.py binds and closes above eight print Waiting for GitHub API quota before another check wait, which names quota instead of places.",
+  "worker": "claude"
+}

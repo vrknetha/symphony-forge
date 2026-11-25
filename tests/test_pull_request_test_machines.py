@@ -20,7 +20,7 @@ STORY = "FIX-TEST-RUNNER-SETTING"
     ("new", 3, "windows-latest", "self-hosted"),
     ("adopted", 1, "ubuntu-24.04", None),
 ])
-def test_1_only_pull_request_tests_use_the_optional_machine(repo, gh, tmp_path, history, groups, runner, test_runner):
+def test_1_test_jobs_use_the_optional_machine(repo, gh, tmp_path, history, groups, runner, test_runner):
     # Public workflow contract: init/sync must keep each job on its intended event and machine.
     # A wrong label or event guard breaks CI; no test-only production seam is needed.
     version = repo.forge("--version").stdout.split()[-1]
@@ -53,17 +53,22 @@ def test_1_only_pull_request_tests_use_the_optional_machine(repo, gh, tmp_path, 
     workflow = (client / ".github/workflows/forge.yml").read_text("utf-8")
     jobs = dict(re.findall(r"^  ([\w-]+):\n(.*?)(?=^  [\w-]+:|\Z)", workflow.split("\njobs:\n", 1)[1], re.M | re.S))
     expected_jobs = {"tests", "forge-pr-check", "full-suite", "full-suite-result"}
-    if history == "new" and groups > 1:
+    if history == "new" and (groups > 1 or runner != test_runner):
         expected_jobs |= {"docs-check", "tests-passed"}
     assert set(jobs) == expected_jobs
     for name, job in jobs.items():
-        selected = json.loads(re.search(r"^    runs-on: (.+)$", job, re.M)[1])
-        expected = "ubuntu-24.04" if history == "adopted" else test_runner if name == "tests" else runner
+        label = re.search(r"^    runs-on: (.+)$", job, re.M)[1]
+        selected = (expression(label.replace("needs.docs-check.outputs.docs-tests", "'false'"))
+                    if label.startswith("${{") else json.loads(label))
+        expected = "ubuntu-24.04" if history == "adopted" else test_runner if name in {"tests", "full-suite"} else runner
         assert selected == expected
     condition = re.search(r"^    if: (.+)$", jobs["tests"], re.M)[1]
     condition = condition.replace("needs.docs-check.outputs.docs-only", "'false'")
-    for event in ("pull_request", "pull_request_target", "schedule", "workflow_dispatch"):
-        assert bool(expression("${{ " + condition + " }}", event_name=event)) == (event == "pull_request")
+    # Related tests run only on pull requests. Trusted review and full runs
+    # retain their separate jobs and selected machines.
+    for event in ("pull_request", "pull_request_target", "push", "schedule", "workflow_dispatch"):
+        expected = event == "pull_request"
+        assert bool(expression("${{ " + condition + " }}", event_name=event)) == expected
     if test_runner is None:
         assert re.findall(r"^    runs-on: (.+)$", workflow, re.M) == re.findall(
             r"^    runs-on: (.+)$", before, re.M)

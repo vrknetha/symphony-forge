@@ -7,12 +7,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
 import subprocess
+import time
 from pathlib import Path
+from typing import Any
 
-from forge import close, machine, quicktest, repo, story, task
+from forge import close, codex, event_log, machine, native, quicktest, repo, story, task
 
 COMMANDS = [{
     "words": "upgrade", "run": "upgrade", "changes_state": False,
@@ -26,6 +29,7 @@ SOURCE = "knacklabs/symphony-forge"
 INSTALL = ("uv tool install --force --reinstall --no-cache --python 3.11 "
            f"git+https://github.com/{SOURCE}@{{release}}")
 PREFIX = "upgrade-forge-to-"
+WHY, DONE = "Upgrade Forge to {release}.", "This repo pins and runs Forge {release}."
 RELEASE = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
 
 REFUSALS = {
@@ -39,6 +43,8 @@ REFUSALS = {
     "running": ("Forge runs are still in progress on this machine:\n{runs}\n"
                 "An install during a run can mix two releases.",
                 "Wait until no Forge runs are in progress, then {again}"),
+    "wait_end": ("Forge could not end the {command} CI wait for {item} in {repo}.",
+                 "Wait for that command to finish, then {again}"),
     "bad_release": ("{release!r} is not a Forge release; a release is v and three numbers, such "
                     "as v1.3.0.", "forge upgrade <release>"),
     "not_newer": ("{default} already pins Forge {pinned}, so {release} would not be an upgrade.",
@@ -61,6 +67,13 @@ REFUSALS = {
 }
 
 
+def made(item: str, state: dict[str, Any], release: str) -> bool:
+    """The fix that forge upgrade makes for this release: its name and its record both say so."""
+    return (item == PREFIX + release.replace(".", "-") and state.get("kind") == "fix"
+            and state.get("why") == WHY.format(release=release)
+            and state.get("done_when") == DONE.format(release=release))
+
+
 def upgrade(args: argparse.Namespace) -> int:
     top = repo.root()
     again = " ".join(["forge upgrade", *([args.release] if args.release else [])])
@@ -81,9 +94,30 @@ def upgrade(args: argparse.Namespace) -> int:
         repo.refuse(REFUSALS["bad_release"], release=release)
     needs_install = _on_path()[0] != release
     runs = machine.entries() if needs_install else []
+    waits = []
+    if needs_install:
+        # Only lane entries have ids that forge stop can end. CI-only waits release
+        # the installed environment here instead of appearing in that stop list.
+        for root in dict.fromkeys([top, *machine.remembered()]):
+            activity = event_log.read(root)
+            ended = {event.get("run_id") for event in activity if event.get("event") == "run end"}
+            for event in activity:
+                if (event.get("event") == "run start" and event.get("kind") == "ci"
+                        and event.get("id") not in ended
+                        and machine._running(event.get("process"))
+                        and not any(run.get("process") == event["process"] for run in runs)):
+                    if not any(wait["process"] == event["process"] for wait in waits):
+                        waits.append({**event, "repo_name": root.name})
     if runs:
+        for run in runs:
+            if run.get("legacy") and not run.get("item"):
+                checkout = Path(run["repo"])
+                found = task.branch_item(repo.current_branch(checkout), checkout)
+                run["item"] = found[0] if found else None
         repo.refuse(REFUSALS["running"], runs="\n".join(
-            f"- {run['repo_name']}: {run['item'] or 'test command'} ({run['kind']})"
+            f"- {run['repo_name']}: {run['item'] or ('test command' if run['kind'] == 'test' else 'item not recorded')} "
+            f"({run['kind']}), id {run['id']}\n"
+            f"  To end this run: forge stop --id {run['id']}"
             for run in runs), again=again)
     pinned = repo.default_config(top)["version"]  # fetches the default branch first
     if _numbers(release) <= _numbers(pinned):
@@ -113,7 +147,7 @@ def upgrade(args: argparse.Namespace) -> int:
                 continue
             repo.refuse(REFUSALS["other_open"], fix=other[4:], path=path,
                         other=other[4 + len(PREFIX):].replace("-", "."))
-    why, done = f"Upgrade Forge to {release}.", f"This repo pins and runs Forge {release}."
+    why, done = WHY.format(release=release), DONE.format(release=release)
 
     # 1. The fix, started like forge fix start's, or the one an earlier run left.
     path = trees.get(f"fix/{name}")
@@ -195,6 +229,20 @@ def upgrade(args: argparse.Namespace) -> int:
     if not needs_install:
         print(f"Forge {release} is already installed, so the install was skipped.", flush=True)
     else:
+        for wait in waits:
+            process = wait["process"]
+            command = wait.get("command", "close")
+            live = codex._alive(process)
+            if live is False:
+                continue
+            launchers = _launchers(process)
+            if live is None or not codex._stop(process, False):
+                repo.refuse(REFUSALS["wait_end"], again=again, command=command,
+                            item=wait["item"], repo=wait["repo_name"])
+            _wait_gone(launchers)
+            resume = "forge land --all" if command == "merge train" else f"forge {command} {wait['item']}"
+            print(f"Ended {command} for {wait['item']} to install Forge. "
+                  f"Run {resume} to resume the CI wait.", flush=True)
         install = INSTALL.format(release=release)
         installed = repo.run(*install.split())
         if installed.returncode:
@@ -207,6 +255,7 @@ def upgrade(args: argparse.Namespace) -> int:
                     found=(f"Forge {found} at {where}" if found else f"a forge of unknown version at {where}")
                     if where else "no forge")
     print(f"The forge on your PATH is Forge {release}.", flush=True)
+    _update_tools()
 
     # 5. The release's own sync refreshes Forge's files in the fix's folder.
     print(f"Running Forge {release}'s forge sync in the fix's folder.", flush=True)
@@ -235,6 +284,95 @@ def upgrade(args: argparse.Namespace) -> int:
     # 7 and 8. The release's own close; its last line says who merges, and its exit code is ours.
     print(f"Running Forge {release}'s forge close {name}.", flush=True)
     return repo.run_release(release, ["close", name], path)
+
+
+CODEX_INSTALL = ("irm https://chatgpt.com/codex/install.ps1 | iex" if os.name == "nt"
+                 else "curl -fsSL https://chatgpt.com/codex/install.sh | sh")  # OpenAI's standalone installer
+
+
+def _launchers(process: dict[str, Any]) -> list[dict[str, Any]]:
+    """The programs above a process that only start it and wait, such as a virtual environment's
+    python.exe on Windows. Each holds the tool environment until it exits, which follows the end of
+    its child. A parent counts when it runs the same program and has no other child."""
+    def program(who: dict[str, Any]) -> str:
+        command = who.get("command", "")
+        return Path(command if os.name == "nt" else command.split()[0] if command else "").name.lower()
+
+    try:
+        parents = native.parent_ids()
+    except (OSError, ValueError, subprocess.CalledProcessError):
+        return []  # Nothing is known about the tree, so the install goes on as before.
+    found, current = [], process
+    for _ in range(len(parents)):
+        parent = parents.get(current["pid"], 0)
+        above = codex.identity(parent) if parent > 1 else None
+        if (not above or "command" not in above or program(above) != program(current)
+                or [pid for pid, up in parents.items() if up == parent] != [current["pid"]]):
+            break
+        found.append(above)
+        current = above
+    return found
+
+
+def _wait_gone(processes: list[dict[str, Any]], seconds: float = 10) -> None:
+    """Wait for processes to exit. A program that stays holds no more than this long, and the
+    install then says what it cannot replace."""
+    deadline = time.monotonic() + seconds
+    while time.monotonic() < deadline and any(codex._alive(who) is not False for who in processes):
+        time.sleep(0.1)
+
+
+def _codex_command() -> list[str] | None:
+    """The update for the Codex on PATH, from where its real path says it was installed."""
+    found = shutil.which("codex")
+    if found is None:
+        return None
+    real = Path(os.path.realpath(found))
+    parts = real.parts
+    if "node_modules" in parts:  # npm's launcher: <prefix>[/lib]/node_modules/@openai/codex/...
+        prefix = Path(*parts[:parts.index("node_modules")])
+        prefix = prefix.parent if prefix.name == "lib" else prefix
+    elif (real.parent / "node_modules/@openai/codex").is_dir():  # Windows: codex.cmd beside it
+        prefix = real.parent
+    elif {"Cellar", "Caskroom"} & set(parts):
+        return ["brew", "upgrade", "codex"]
+    elif "standalone" in parts:  # OpenAI's own installer; only newer Codex has `update`
+        # --help starts no session; never pass `update` blind, an old Codex reads it as a prompt.
+        helped = repo.run("codex", "--help", timeout=30)
+        return ["codex", "update"] if re.search(r"^\s+update\b", helped.stdout, re.M) else None
+    else:
+        return None
+    # --prefix updates the npm copy that is first on PATH, not npm's current global folder.
+    return ["npm", "install", "-g", "--prefix", str(prefix), "@openai/codex@latest"]
+
+
+def _update_tools() -> None:
+    """Update Claude Code and the Codex CLI with the installer that installed each, one line
+    each. A failure prints the line for the person to run; it never fails the upgrade."""
+    codex = _codex_command()
+    for name, exe, command in (("Claude Code", "claude", ["claude", "update"]),
+                               ("Codex CLI", "codex", codex)):
+        if shutil.which(exe) is None:
+            continue
+        reason = "Forge could not tell which installer put it there"
+        where, lead = "run", ""
+        if command:
+            try:
+                done = repo.run(*command, timeout=300)
+                output = (done.stderr or done.stdout).strip()
+                reason = (output.splitlines() or ["no reason given"])[-1]
+                version = re.search(r"\d+\.\d+\.\d+", repo.run(exe, "--version").stdout)
+            except (repo.Refused, OSError, subprocess.TimeoutExpired) as error:
+                done, version, reason = None, None, str(error).splitlines()[0] or "it did not finish"
+            if done and done.returncode == 0 and version:
+                print(f"Installed {name} {version[0]}.", flush=True)
+                continue
+            if done and re.search(r"EACCES|permission denied|sudo|administrator|elevat", output, re.I):
+                # Keep this PATH: sudo's own would not find claude or npm.
+                where, lead = (("run this in an administrator terminal", "") if os.name == "nt"
+                               else ("run", 'sudo env PATH="$PATH" '))
+        text = lead + (" ".join(map(repo.quote, command)) if command else CODEX_INSTALL)
+        print(f"{name} was not updated ({reason}). To update it, {where}: {text}", flush=True)
 
 
 def release_notice(top: Path) -> list[str]:
@@ -266,11 +404,13 @@ def release_notice(top: Path) -> list[str]:
 
 def _newest(top: Path, timeout: float | None = None) -> str:
     """The newest release's tag, as GitHub has it."""
+    from forge import github
+
     gh = shutil.which("gh")
     if gh is None:
         repo.refuse(REFUSALS["no_newest"], reason="gh is not installed")
     args = ("gh", "release", "view", "--repo", SOURCE, "--json", "tagName")
-    done = repo._github_read(args, lambda: subprocess.run(  # pyright: ignore[reportPrivateUsage]
+    done = github.read(args, lambda: subprocess.run(
         [gh, *args[1:]], cwd=top, input="", capture_output=True, text=True, encoding="utf-8",
         errors="replace", timeout=timeout))
     try:

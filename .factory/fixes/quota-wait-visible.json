@@ -1,0 +1,242 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/quota-wait-visible",
+  "done_when": "While close, merge or land wait for GitHub quota they print the REST and GraphQL numbers they are waiting on and the reset time, they recheck the quota at least once a minute and resume as soon as it is above the threshold, and no wait goes more than a few minutes without a printed line; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "check_wait.admit() in src/forge/github.py",
+      "file": "src/forge/github.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 112,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: While close, merge or land wait for GitHub quota they print the REST and GraphQL numbers they are waiting on and the reset time",
+      "work": 3
+    },
+    {
+      "area": "check_wait.admit() in src/forge/github.py",
+      "file": "src/forge/github.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 105,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Allow one check wait while usable quota remains",
+      "work": 2
+    },
+    {
+      "area": "check_wait.admit() in src/forge/github.py",
+      "file": "src/forge/github.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 83,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Budget check waits at the configured polling rate",
+      "work": 2
+    },
+    {
+      "area": "check_wait.admit() in src/forge/github.py",
+      "file": "src/forge/github.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 112,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Report the effective limit when the eight-place cap applies",
+      "work": 1
+    },
+    {
+      "area": "test_1_quota_wait_prints_numbers_every_few_minutes_and_resumes() in tests/test_quota_wait_visible.py",
+      "file": "tests/test_quota_wait_visible.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 35,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 23 Nov 2026: the product fix is done; the test measures from the first quota read rather than the exact wait start, a rare slow-endpoint case recorded in the v1.2.47 known issues",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_quota_wait_prints_numbers_every_few_minutes_and_resumes",
+      "work": 2
+    },
+    {
+      "area": "test_2_plenty_of_quota_lets_a_second_close_start_without_waiting() in tests/test_quota_wait_visible.py",
+      "file": "tests/test_quota_wait_visible.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 63,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_2_plenty_of_quota_lets_a_second_close_start_without_waiting",
+      "work": 2
+    },
+    {
+      "area": "test_2_plenty_of_quota_lets_a_second_close_start_without_waiting() in tests/test_quota_wait_visible.py",
+      "file": "tests/test_quota_wait_visible.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 59,
+      "outcome": "fixed in round 4",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Standard: Tests build their own data with factories, own that data, don't depend on order, and never sleep",
+      "work": 2
+    },
+    {
+      "area": "_waiting_line() in src/forge/github.py",
+      "file": "src/forge/github.py",
+      "gain": 1,
+      "harm": 1,
+      "line": 39,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Simpler: missing approach \u2192 record the need, simplest option and reuse",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "c8437f0882a76625aaeed3aec37536e39a9ab881c38124ed076ed7b611c69c9f",
+    "changed": "b74a97a1d691c253cb8621a1d654e1222f835380eb4d24acda77d12b6987081c",
+    "commit": "5ca1cda08a2996eab285906046a8398c88210e1c",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted on 23 Nov 2026: the product fix is done; the test measures from the first quota read rather than the exact wait start, a rare slow-endpoint case recorded in the v1.2.47 known issues",
+        "finding": 1
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - several closes or land children encounter a rate limit while GitHub's quota endpoint is slow.\nThe new endpoints are times when the fake quota request runs, not when the wait starts or check polling resumes. Before a quota request, `_quota` acquires a shared lock; rate-limit retries force fresh requests that can each take 60 seconds (src/forge/github.py:19, 26, 173\u2013175). A waiter queued behind several slow requests can therefore remain silent for minutes before its first recorded read, while this single-close test still passes. A delay after the last read and before polling resumes is also outside the measured interval. Capture the wait trigger and the first resumed action to bound both gaps.",
+        "file": "tests/test_quota_wait_visible.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 69,
+        "priority": "P1",
+        "title": "Gate: test_1_quota_wait_prints_numbers_every_few_minutes_and_resumes",
+        "work": 2
+      }
+    ],
+    "id": "f25ace6d-23d5-4980-b012-449d7d094030",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T03:23:38.791742+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T03:24:00.714165+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T03:26:32.065036+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T03:38:57.404408+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T03:41:03.023442+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:03:03.411737+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:03:03.455821+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T04:11:32.013512+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-23T04:24:35.516617+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:34:49.320042+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:34:49.343500+00:00",
+      "round": 4,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T04:39:47.098033+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 4,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-23T04:42:03.827682+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:58:57.166890+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:58:57.191810+00:00",
+      "round": 5,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T05:04:04.293774+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 5,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-23T04:58:57.191810+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "tests/test_quota_wait_visible.py",
+    "reason": "Owner accepted on 23 Nov 2026: the product fix is done; the test measures from the first quota read rather than the exact wait start, a rare slow-endpoint case recorded in the v1.2.47 known issues",
+    "wait_id": "0e0782b8-2522-4c42-90a6-fa4f4ccd6b8b",
+    "worker_round": 5
+  },
+  "stuck": {
+    "close": "85632aa4-b32b-4c01-93ed-e8ebe438f731",
+    "head": "ee5d01e54576caa6abeb7b66aa7b4eafb5a6a34c",
+    "keys": {},
+    "round": 4
+  },
+  "why": "Close can wait silently for a long time on 'Waiting for GitHub API quota' while the quota is fine (a client saw 47 minutes with all checks green; restarting close made it Ready at once)",
+  "worker": "claude"
+}

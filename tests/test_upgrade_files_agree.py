@@ -68,4 +68,4 @@ def test_1_synced_files_say_what_they_set_and_claude_md_moves_only_the_team_s_li
     assert "full access" in above and "workspace" not in text.lower(), text
     if setup is _adopted_on_an_earlier_release:
         assert above.startswith(TEAM_NOTE), text
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout

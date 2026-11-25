@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_ad_hoc_subagent_models.py\tGate: Run the ad-hoc model test when the shipped guide changes\ta-coordinator-s-own-ad-hoc-subagents-wit",
+      "kind": "bug",
+      "path": "tests/test_ad_hoc_subagent_models.py",
+      "line": 13,
+      "text": "Gate: Run the ad-hoc model test when the shipped guide changes",
+      "from": "blocking",
+      "item": "a-coordinator-s-own-ad-hoc-subagents-wit",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

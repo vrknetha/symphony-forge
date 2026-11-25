@@ -469,13 +469,14 @@ def test_6_nothing_left_running(repo, monkeypatch, sdk_data, tmp_path, claude_se
         # starts; here the SDK's Python is a script that does so a second on. Forge still knows
         # its driver by the command it runs under, and the next forge work after a crash stops it.
         real = sdk_data / "forge" / "codex-sdk" / f"openai-codex-{PIN}"
-        env = tmp_path / "data" / "forge" / "codex-sdk" / real.name
+        data = tmp_path / "restarting-sdk"
+        env = data / "forge" / "codex-sdk" / real.name
         (env / "bin").mkdir(parents=True)
         shutil.copy(real / "forge-sdk-ready", env)
         (env / "bin" / "python").write_text(f'#!/bin/sh\nsleep 1\nexec "{real}/bin/python" "$@"\n',
                                             encoding="utf-8")
         (env / "bin" / "python").chmod(0o755)
-        monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+        monkeypatch.setenv("XDG_DATA_HOME", str(data))
         work, saved, stub = _held(repo, calls, record, "stall")
         _crash(work, saved)
         assert repo.forge("work", "BOARD/PAGE").returncode == 0

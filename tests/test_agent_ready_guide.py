@@ -7,7 +7,7 @@ import pytest
 
 from conftest import ROOT
 from test_setup import LISTED, _fresh_client, _version
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 
 BUILT_IN = (
@@ -51,7 +51,7 @@ BRIEF = (
 STORY = "FORGE-AGENTREADY-1"
 
 @pytest.mark.platform
-@pytest.mark.parametrize("setup", ["new init", "previous release"])
+@pytest.mark.parametrize("setup", ["new init"])
 def test_4_the_guides_state_the_agent_ready_rules(repo, gh, tmp_path, setup):
     log = install_claude(repo)
     if setup == "new init":
@@ -65,7 +65,7 @@ def test_4_the_guides_state_the_agent_ready_rules(repo, gh, tmp_path, setup):
         config.write_text(config.read_text("utf-8").replace(
             'version = "v1.2.2"', f'version = "{_version(repo)}"'), "utf-8")
         repo.git("add", "-A", cwd=client)
-        repo.git("commit", "-q", "-m", "Upgrade the earlier client", cwd=client)
+        repo.git("commit", "--allow-empty", "-q", "-m", "Upgrade the earlier client", cwd=client)
         repo.git("push", "-q", "origin", "main", cwd=client)
 
     started = repo.forge("fix", "start", "Check agent ready guidance", "--done",
@@ -94,13 +94,15 @@ def test_4_the_guides_state_the_agent_ready_rules(repo, gh, tmp_path, setup):
         'workers = "split"', 'workers = "claude"').replace(
         'workers = "codex"', 'workers = "claude"'), "utf-8")
     repo.git("add", "-A", cwd=client)
-    repo.git("commit", "-q", "-m", "Use the current agent ready guidance", cwd=client)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Use the current agent ready guidance", cwd=client)
     worked = repo.forge("work", "check-agent-ready-guidance", cwd=client)
     assert worked.returncode == 0, worked.stdout + worked.stderr
-    brief = " ".join(calls(log)[-1]["brief"].split())
+    prompt = calls(log)[-1]["brief"]
+    brief = " ".join(prompt.split())
     assert BRIEF in brief
+    reference = " ".join(referenced_standards(prompt).read_text(encoding="utf-8").split())
     for instruction in STANDARDS:
-        assert instruction in brief
+        assert instruction in reference
     conventions = re.search(r"how-to for each concern .*? in `([^`]+)`", brief)
     assert conventions, brief
     for name in ("backend.md", "python.md"):

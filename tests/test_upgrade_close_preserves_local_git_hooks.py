@@ -112,8 +112,9 @@ def test_1_upgrade_close_checks_generated_files_without_rewriting_local_git_hook
     assert "Ready:" in closed.stdout
     repo.git("merge-base", "--is-ancestor", "origin/main", "HEAD", cwd=where)
     if merge != "no-conflict":
-        assert (where / guide).read_text("utf-8") == (
-            ROOT / "src/forge/templates/skill.md").read_text("utf-8")
+        template = (ROOT / "src/forge/templates/skill.md").read_text("utf-8").rstrip("\n")
+        committed = (ROOT / ".claude/skills/forge/SKILL.md").read_text("utf-8")  # plus known issues
+        assert (where / guide).read_text("utf-8") == template + committed[len(template):]
     for name in ("pre-commit", "pre-push"):
         assert (hooks / name).read_bytes() == custom
         assert not (hooks / f"{name}.pre-forge").exists()

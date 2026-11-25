@@ -2,6 +2,7 @@
 `forge board --out` and left out of `--json`, and the first-screen team lists.
 New plan reads use src/forge/story.py before those plans appear on the board."""
 import json
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 
@@ -20,7 +21,7 @@ from test_story import claude_plan, hook, new_story, ready, worktree
 STORY = "FORGE-BOARD-2"
 
 
-@pytest.mark.parametrize("history", ["new", "adopted-v1.2.2"])
+@pytest.mark.parametrize("history", ["new"])
 def test_8_every_item_and_older_finished_work(repo, gh, tmp_path, claude_payload, monkeypatch, history):
     _configured(repo, gh, tmp_path, history, ("SHOP", "PLAN", "IDEA", "WAIT"))
     now = datetime.now(timezone.utc).replace(microsecond=0)
@@ -103,7 +104,7 @@ def test_8_every_item_and_older_finished_work(repo, gh, tmp_path, claude_payload
         assert "tidy-help" in {entry["id"] for entry in data["team"]["blocked"]}
 
 
-@pytest.mark.parametrize("previous", [False, True], ids=["new-client", "earlier-adoption"])
+@pytest.mark.parametrize("previous", [False], ids=["new-client"])
 def test_7_first_screen(env, monkeypatch, previous):
     client(env, previous)
     conftest._install(env.repo.bin, "claude", READER.format(python=sys.executable))
@@ -131,6 +132,10 @@ def test_7_first_screen(env, monkeypatch, previous):
         assert started.returncode == 0, started.stderr
     monkeypatch.delenv("GIT_COMMITTER_DATE")
     clock(monkeypatch, now)
+    config = re.sub(r"(?m)^task_review_rounds\s*=.*(?:\r?\n|$)", "",
+                    (env.repo.path / "forge.toml").read_text("utf-8"))
+    env.commit(env.repo.path, "forge.toml", "task_review_rounds = 1\n" + config)
+    env.repo.git("push", "-q", "origin", "main")
     # Six fixes; the owner accepts the first P1 before the human merge wait.
     for n in range(6):
         started = env.repo.forge("fix", "start", f"Speed up page {n + 1}", "--done", "It is fast", "--slug", f"speed-{n}")

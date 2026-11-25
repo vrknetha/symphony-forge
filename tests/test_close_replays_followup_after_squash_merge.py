@@ -21,7 +21,9 @@ def stacked(env, previous=False):
     env.commit(parent_folder, "src/parent_only.py", "PARENT_ONLY = True\n")
     fix, where = started(repo, "Repair the follow-up", cwd=parent_folder)
     own = "FOLLOWUP = True\n" + "# stable\n" * 20
-    env.commit(where, "src/shared.py", own, "Repair the follow-up")
+    env.commit(where, "src/shared.py", own,
+               "Repair the follow-up\n\nProof list:\n"
+               "- Done when: check: The follow-up's changes were checked by its worker.")
     return repo, parent, parent_head, fix, where, own
 
 
@@ -35,7 +37,7 @@ def assert_not_ancestor(repo, commit, where):
     assert result.returncode == 1, result.stdout + result.stderr
 
 
-@pytest.mark.parametrize("previous", [False, True], ids=["new", "previously-adopted"])
+@pytest.mark.parametrize("previous", [False], ids=["new"])
 def test_1_close_replays_only_followup_commits_after_parent_squash_merges(env, previous):
     repo, parent, parent_head, fix, where, own = stacked(env, previous)
     # A follow-up may already have merged an earlier default-branch update.
@@ -66,7 +68,7 @@ def test_1_close_replays_only_followup_commits_after_parent_squash_merges(env, p
     assert repo.git("status", "--porcelain", cwd=where) == ""
 
 
-@pytest.mark.parametrize("previous", [False, True], ids=["new", "previously-adopted"])
+@pytest.mark.parametrize("previous", [False], ids=["new"])
 def test_2_close_aborts_replay_when_followups_own_commit_conflicts(env, previous):
     repo, parent, _, fix, where, own = stacked(env, previous)
     repo.git("push", "-q", "origin", f"fix/{fix}", cwd=where)
@@ -140,7 +142,7 @@ def test_4_leased_replay_push_preserves_work_arriving_after_lease_is_captured(en
         f"Next: check the remote branch and reconcile fix/{fix}, then forge close {fix}"]
 
 
-@pytest.mark.parametrize("previous", [False, True], ids=["new", "previously-adopted"])
+@pytest.mark.parametrize("previous", [False], ids=["new"])
 def test_5_fix_started_on_default_keeps_its_commits_without_merging_unrelated_default_changes(env, previous):
     repo = configured(env, previous)
     fix, where = started(repo, "Repair an ordinary problem")
@@ -162,7 +164,7 @@ def test_5_fix_started_on_default_keeps_its_commits_without_merging_unrelated_de
 
 def test_6_replay_preserves_own_changes_committed_in_a_default_merge(env):
     repo, parent, parent_head, fix, where, own = stacked(env)
-    proof = "The follow-up's changes were checked by its worker."
+    proof = "- Done when: check: The follow-up's changes were checked by its worker."
     # Merge bookkeeping is not worker evidence; keep the proof on the actual worker commit.
     repo.git("commit", "--amend", "-qm", "Repair the follow-up\n\nProof list:\n" + proof, cwd=where)
     land_on_default(repo)

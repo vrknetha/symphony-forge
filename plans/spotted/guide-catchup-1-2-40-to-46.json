@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/templates/skill.md\tNot done: skill.md and brief.md state the missing items found by the 22 Nov 2026 audit\tguide-catchup-1-2-40-to-46",
+      "kind": "bug",
+      "path": "src/forge/templates/skill.md",
+      "line": 2486,
+      "text": "Not done: skill.md and brief.md state the missing items found by the 22 Nov 2026 audit",
+      "from": "blocking",
+      "item": "guide-catchup-1-2-40-to-46",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_guide_catchup_1_2_40_to_46.py\tGate: proof list\tguide-catchup-1-2-40-to-46",
+      "kind": "bug",
+      "path": "tests/test_guide_catchup_1_2_40_to_46.py",
+      "line": 10,
+      "text": "Gate: proof list",
+      "from": "blocking",
+      "item": "guide-catchup-1-2-40-to-46",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_guide_catchup_1_2_40_to_46.py\tGate: test_1_guides_state_the_audit_items\tguide-catchup-1-2-40-to-46",
+      "kind": "bug",
+      "path": "tests/test_guide_catchup_1_2_40_to_46.py",
+      "line": 17,
+      "text": "Gate: test_1_guides_state_the_audit_items",
+      "from": "blocking",
+      "item": "guide-catchup-1-2-40-to-46",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "simplify\tsrc/forge/templates/skill.md\tSimpler: unrecorded approach \u2192 record the decisions",
+      "kind": "simplify",
+      "path": "src/forge/templates/skill.md",
+      "line": 45,
+      "text": "Simpler: unrecorded approach \u2192 record the decisions",
+      "from": "review",
+      "item": "guide-catchup-1-2-40-to-46",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

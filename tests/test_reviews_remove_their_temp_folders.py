@@ -12,6 +12,8 @@ import time
 import pytest
 
 from test_close import CLEAN, FAILED, env  # noqa: F401
+from test_fix_agent_runs_wait_in_line import _until
+from test_lanes_agents import alive
 
 pytestmark = pytest.mark.platform
 
@@ -108,7 +110,8 @@ def test_2_a_killed_review_s_fresh_folder_is_left_alone_until_it_is_a_day_old(
     killed = _leftovers(temp)
     close.kill()
     close.wait(timeout=60)
-    os.kill(helper, signal.SIGKILL if os.name != "nt" else signal.SIGTERM)
+    # Close now owns the review tree, including after an uncatchable kill.
+    _until(lambda: not alive(helper), "the killed close's review to end")
     assert _leftovers(temp) == killed  # the killed review could not remove it
 
     # Fresh, it could be a running review's, so the next review leaves it.

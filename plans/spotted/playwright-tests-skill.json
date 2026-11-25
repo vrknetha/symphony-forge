@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/app_baseline.py\tPreserve client-owned Playwright skills during sync\tplaywright-tests-skill",
+      "kind": "bug",
+      "path": "src/forge/app_baseline.py",
+      "line": 150,
+      "text": "Preserve client-owned Playwright skills during sync",
+      "from": "blocking",
+      "item": "playwright-tests-skill",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/sync.py\tPreserve client-owned Playwright skills during sync\tplaywright-tests-skill",
+      "kind": "bug",
+      "path": "src/forge/sync.py",
+      "line": 725,
+      "text": "Preserve client-owned Playwright skills during sync",
+      "from": "blocking",
+      "item": "playwright-tests-skill",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/skills/playwright-tests/SKILL.md\tReconcile the pull-request browser test instructions\tplaywright-tests-skill",
+      "kind": "bug",
+      "path": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "line": 25,
+      "text": "Reconcile the pull-request browser test instructions",
+      "from": "blocking",
+      "item": "playwright-tests-skill",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/skills/playwright-tests/SKILL.md\tStandard: Client tests create their data without a shared seed\tplaywright-tests-skill",
+      "kind": "bug",
+      "path": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "line": 18,
+      "text": "Standard: Client tests create their data without a shared seed",
+      "from": "blocking",
+      "item": "playwright-tests-skill",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/skills/playwright-tests/SKILL.md\tStandard: Playwright retries are zero\tplaywright-tests-skill",
+      "kind": "bug",
+      "path": "src/forge/templates/skills/playwright-tests/SKILL.md",
+      "line": 24,
+      "text": "Standard: Playwright retries are zero",
+      "from": "blocking",
+      "item": "playwright-tests-skill",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/starter/scripts/test.mjs\tThe CI smoke hit an occupied Docker port, while the same live test passed on macOS.",
+      "kind": "bug",
+      "path": "src/forge/templates/starter/scripts/test.mjs",
+      "line": 23,
+      "text": "The CI smoke hit an occupied Docker port, while the same live test passed on macOS.",
+      "from": "worker",
+      "item": "playwright-tests-skill",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tThe queue test failed in CI when its fake GitHub command read pull-request JSON, while the isolated case and full file passed locally.",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 55,
+      "text": "The queue test failed in CI when its fake GitHub command read pull-request JSON, while the isolated case and full file passed locally.",
+      "from": "worker",
+      "item": "playwright-tests-skill",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

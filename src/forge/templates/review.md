@@ -117,6 +117,13 @@ result in the pull request. Any other name is marked `not run` or `not checked` 
 exist: `not run` means close ran no such test, and `not checked` means close could not match the
 line to its run, so judge it by reading it:
 
+$proof_checked For each line, read the
+named test: report a test whose assertions would still pass if the line were false as a P1
+`Test: <the line>`, and a `check:` entry for an item that changes runtime behaviour the same
+way. A new test's line names the closest existing test, or none, and the outcome no existing
+test proves; a missing choice is part of `Gate: proof list`, and a new test whose outcome the
+closest test already proves is a P2 `Follow-up: duplicate test`.
+
 $proof_list
 
 On the first round, check the whole list, not a sample. Check every entry against the code and its
@@ -277,6 +284,12 @@ gate holds the merge until that check passes. A failed check or a proof with no 
 it is still P1 `Not done`.
 
 ## Test audit
+A Test or Gate finding based only on a future change to a test fake or GitHub call order is
+advice: for example, a fake that matches exact request text, or selecting a GitHub call by
+position or counting unrelated calls. Report it as P2 with Gain 2, Work 1, Harm 1; it does not
+block close. A real gap where today's code can do the wrong thing and the test still passes
+keeps its normal blocking score. Name that present failure and how the test misses it.
+
 Every test the change needs must exist, run in the repository's test suite, and fail if the
 behaviour it names broke. Report a missing test, or a hollow one (it checks only a mock, asserts
 nothing the change does, is skipped, or always passes), as a P1 finding titled

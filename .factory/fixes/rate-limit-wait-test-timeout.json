@@ -1,0 +1,75 @@
+{
+  "base": "537ad6b79e4517770d896009f51888fb70c3b2c0",
+  "branch": "fix/rate-limit-wait-test-timeout",
+  "done_when": "tests/test_github_rate_limits_wait_for_reset.py passes on main again with its rules unchanged, the quota wait fix's own tests still pass, and the rate-limit retry still resumes as soon as quota is back; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "run.ready() in src/forge/github.py",
+      "file": "src/forge/github.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 173,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Restore the one-minute retry when a quota refresh fails",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "17604330e52c5fdec4240509ba27461b48d2113da9e127655d39f403c368455e",
+    "changed": "317e1fdfa54e136448250b069bb8c85bb636989666979349acbc3a0b713b36c2",
+    "commit": "dbbdc2c095d8d1ba97f3907fce0c5eed14633c96",
+    "dismissals": [],
+    "findings": [],
+    "id": "ffee2e01-adfb-4617-b3e3-b7b203af169b",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T06:28:03.002061+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T06:28:10.110996+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T07:16:06.479072+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T07:16:37.742004+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T07:20:40.579641+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T07:26:54.522114+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T07:40:02.286122+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "9d5fe3cc-0002-4ed7-85c3-78b8f246a029",
+    "head": "9f652daa69545c6acae93b2a7bc80258afd497a2",
+    "keys": {},
+    "round": 2
+  },
+  "why": "Main is broken since the quota wait fix merged: tests/test_github_rate_limits_wait_for_reset.py::test_1_commands_wait_for_github_reset_and_continue times out in close, land and merge cases, so every open branch fails CI",
+  "worker": "claude"
+}

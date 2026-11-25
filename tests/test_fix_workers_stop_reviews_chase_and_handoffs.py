@@ -3,7 +3,7 @@
 import pytest
 
 from test_close import CLEAN, GREEN, env
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 STORY = "FIX-WORKERS-STOP-REVIEWS-CHASE-AND-HANDOFFS"
 
@@ -15,7 +15,7 @@ def worker_brief(repo):
     repo.write("forge.toml", f'version = "{version}"\nworkers = "claude"\n'
                'models.lite = { model = "sonnet", effort = "medium" }\n')
     repo.git("add", "forge.toml")
-    repo.git("commit", "-q", "-m", "Pin Forge")
+    repo.git("commit", "--allow-empty", "-q", "-m", "Pin Forge")
     repo.git("push", "-q", "origin", "main")
     started = repo.forge("fix", "start", "Clarify worker guidance", "--done", "Workers get clear rules")
     assert started.returncode == 0, started.stderr
@@ -48,7 +48,10 @@ def test_3_reviewer_requires_named_doc_tests(env):
 
 
 def test_4_worker_cannot_count_reformatting_as_reduction(worker_brief):
-    assert worker_brief.count("Joining lines or removing blank lines never counts as a reduction") == 2
+    # The worker gets the rule inline and can also read it in the referenced standards.
+    rule = "Joining lines or removing blank lines never counts as a reduction"
+    assert worker_brief.count(rule) == 1
+    assert rule in referenced_standards(worker_brief).read_text("utf-8")
 
 
 def test_5_both_synced_skills_require_handoff_before_close(repo):

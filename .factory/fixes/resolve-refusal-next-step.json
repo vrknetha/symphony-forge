@@ -1,0 +1,131 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/resolve-refusal-next-step",
+  "done_when": "The refusal says which state --resolve needs (a review stopped at the round limit or a stuck loop) and names the real next step for the item's current state, such as forge work or forge close, never the refused command; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "_close() in src/forge/close.py",
+      "file": "src/forge/close.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 111,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 23 Nov 2026: after failed CI a --resolve refusal can say forge close instead of forge work; close then names forge work, so it costs one extra command; recorded in the v1.2.47 known issues",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The refusal does not always name the real next step for the item's current state",
+      "work": 2
+    },
+    {
+      "area": "test_1_resolve_before_a_stop_names_the_state_and_the_real_next_step() in tests/test_close_resolve_names_real_next_step.py",
+      "file": "tests/test_close_resolve_names_real_next_step.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 16,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_resolve_before_a_stop_names_the_state_and_the_real_next_step",
+      "work": 1
+    },
+    {
+      "area": "_close() in src/forge/close.py",
+      "file": "src/forge/close.py",
+      "gain": 1,
+      "harm": 1,
+      "line": 111,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Simpler: missing pre-code approach \u2192 record the need, simplest option, and reuse",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "14b862d796b4464c6e02e6fca7012f14023ca9b367d88fef58dae0bc4f64eb1a",
+    "changed": "752e55a4607efd5aea9ea5a413bf5873aa90fd44d5e6097d1aff085a62b92858",
+    "commit": "4182d34348398165ed48c2934475597820a62a05",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted on 23 Nov 2026: after failed CI a --resolve refusal can say forge close instead of forge work; close then names forge work, so it costs one extra command; recorded in the v1.2.47 known issues",
+        "finding": 1
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - CI fails after a clean review or after the owner records an acceptance, and the coordinator runs or repeats `--resolve`.\nThe refusal can still say `forge close` when `forge next` says `forge work`. `resolve_refusal` passes an empty pull-request map to `_item` at `src/forge/nextstep.py:1159`, so `_item` cannot see the failed CI checks at lines 1051\u20131056 and `_item_readiness` cannot select `checks failed` at line 893. The earlier finding's repeated-choice and failed-check behavior is therefore not fully repaired.",
+        "file": "src/forge/close.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 111,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: The refusal does not always name the real next step for the item's current state",
+        "work": 2
+      }
+    ],
+    "id": "d163c357-93a5-4162-b7f5-f07ad7fd26d8",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T04:24:37.562631+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T04:30:38.935435+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:54:16.448496+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:55:04.452579+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T05:08:37.994321+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T05:08:38.011128+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T05:09:43.211475+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 2,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-23T05:08:38.011128+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/close.py",
+    "reason": "Owner accepted on 23 Nov 2026: after failed CI a --resolve refusal can say forge close instead of forge work; close then names forge work, so it costs one extra command; recorded in the v1.2.47 known issues",
+    "wait_id": "907afc7a-7b0e-4d0f-b626-e862ac74aa3f",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "e0d2f4a1-18e4-4f97-8ad6-af14f2559c36",
+    "head": "c5958543ad67718281ad15ce56cd1866f1087dd6",
+    "keys": {},
+    "round": 1
+  },
+  "why": "forge close --resolve on a review loop that has not stopped refuses with 'Record the human's choice only on a stopped review loop' and then names the same --resolve command as the next step",
+  "worker": "claude"
+}

@@ -1,0 +1,108 @@
+{
+  "base": "8b1df4631466ba1698329145daa30aeaf13cc0da",
+  "branch": "fix/nightly-hold-manual-run",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a2018d-f01d-7fc3-8f4c-b07dfc564b7c",
+    "head": null,
+    "start": "ea6356e7ce8c53f422a007a12f31f3476aa9920d"
+  },
+  "done_when": "Merge reads the newest finished full run on the default branch, scheduled or started by hand, so a green full run started by hand after the repair frees story merges, and the hold message says that a full run started by hand clears it; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "red() in src/forge/merge.py",
+      "file": "src/forge/merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 428,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Merge reads the newest finished full run on the default branch, scheduled or started by hand",
+      "work": 2
+    },
+    {
+      "area": "red() in src/forge/merge.py",
+      "file": "src/forge/merge.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 429,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "A page of unrelated workflow runs can hide the failed full run",
+      "work": 2
+    },
+    {
+      "area": "test_1_newest_finished_full_run_decides_story_merge() in tests/test_manual_full_run_controls_merges.py",
+      "file": "tests/test_manual_full_run_controls_merges.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 24,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: complete the full-run merge and human handoff proof",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "ddf1e295732b5d5ba07535feb3711e421be9a63d358b24c2300d73429cf1f168",
+    "changed": "5c11b8eb8412b1bc7383fefd852f19efb4e61fa53bec85eb8f26bf95a0aff407",
+    "commit": "128317d9dece03acc6be3066d0ec08c93567f9f0",
+    "dismissals": [],
+    "findings": [],
+    "id": "f10db797-b6a1-4f81-8fe3-6ee5a1e31a55",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T04:38:40.457262+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T04:40:07.337411+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T04:53:24.976576+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T04:54:34.303082+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T05:04:47.543831+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T05:50:53.160156+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T05:57:05.657467+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "c67fd6e2-2f15-493f-9068-b4c2ccff85ac",
+    "head": "b8813a9282e47a3e8cf1cbfe69e76c15f3251776",
+    "keys": {},
+    "round": 2
+  },
+  "why": "After a failed nightly full run, story merges stay held until the next scheduled run even when a repair merged and a full run started by hand on main passed, because merge reads only scheduled runs",
+  "worker": "codex"
+}

@@ -29,9 +29,16 @@ def git_files(command: str, *args: str) -> list[str]:
                           text=True).stdout.split("\0")[:-1]
 
 
+def source_root(path: Path) -> Path:
+    """The nearest folder above the file that holds a Python project file, else the repo root."""
+    return next((folder for folder in path.parents if folder != Path(".") and any(
+        (folder / name).is_file() for name in ("pyproject.toml", "setup.py", "setup.cfg"))),
+        Path("."))
+
+
 def module_parts(path: Path) -> list[str]:
     parts = list(path.with_suffix("").parts)
-    return parts[1:] if parts[0] == "src" else parts
+    return parts[1:] if len(parts) > 1 and parts[0] == "src" else parts
 
 
 def pytest_options(arguments: list[str]) -> str:
@@ -147,6 +154,12 @@ def mentions(file: Path, module: str, module_path: Path) -> bool:
     text = file.read_text("utf-8")
     # A bare word is not a module reference; qualified paths and imports are.
     path = module_path.as_posix().removeprefix("src/")
+    package = module_path.name == "__init__.py"
+
+    def imports(name: str) -> bool:
+        # An import of anything below a package runs its __init__.py.
+        return name == module or (package and name.startswith(module + "."))
+
     if "." in module and re.search(r"(?<![\w.])" + re.escape(module) + r"(?![\w])", text):
         return True
     if re.search(r"(?<![\w/])(?:src/)?" + re.escape(path) + r"(?![\w])", text):
@@ -156,13 +169,13 @@ def mentions(file: Path, module: str, module_path: Path) -> bool:
     except SyntaxError:
         return False  # pytest reports syntax errors in selected files.
     for node in ast.walk(tree):
-        if isinstance(node, ast.Import) and any(alias.name == module for alias in node.names):
+        if isinstance(node, ast.Import) and any(imports(alias.name) for alias in node.names):
             return True
         if isinstance(node, ast.ImportFrom):
             prefix = module_parts(file)[:-node.level] if node.level else []
             imported = ".".join(prefix + ([node.module] if node.module else []))
-            if imported == module or any(f"{imported}.{alias.name}" == module
-                                         for alias in node.names):
+            if imports(imported) or any(imports(f"{imported}.{alias.name}")
+                                        for alias in node.names):
                 return True
     return False
 
@@ -266,9 +279,27 @@ def own_version_only(path: Path, base: str) -> bool:
     return snapshots[0] == snapshots[1]
 
 
+def skip_browser(top: Path, command: str) -> str:
+    """On Windows a builder's own run leaves out separate browser-test steps and says so once."""
+    # FORGE_OS lets a test pick the platform; ponytail: no user-facing setting.
+    if os.environ.get("FORGE_OS", os.name) != "nt":
+        return command
+    parts = quicktest.test_parts(top, command)
+    skipped = [part for _, part, _ in parts if quicktest.browser_step(top, part)]
+    if not skipped:
+        return command
+    if not os.environ.get("FORGE_BROWSER_SKIPPED"):
+        os.environ["FORGE_BROWSER_SKIPPED"] = "1"
+        print(f"On Windows this run skips the browser tests ({', '.join(skipped)}). The pull request check, "
+              "the final check and the full test run still run them.", flush=True)
+    return " && ".join(part for _, part, _ in parts if part not in skipped) or "exit 0"
+
+
 def close_tests(base: str) -> int:
     """Use supported runners' selection; leave other commands unchanged."""
     command = repo.grouped(Path.cwd(), repo.config(Path.cwd())["test"])
+    if os.environ.get("FORGE_WORKER_TESTS") == "1":
+        command = skip_browser(Path.cwd(), command)
     parts = quicktest.test_parts(Path.cwd(), command)
     package = Path("package.json")
     if command == init.NODE_TEST:
@@ -316,24 +347,29 @@ def test(args) -> int:
         top = repo.root()
         cfg = repo.config(top)
         if not (cfg["fast_test"] or cfg["test"]):
-            if repo.sample_data(top, cfg):
-                print("This is a sample-data prototype, so tests are off until client sign-off.\n"
-                      "After sign-off, ask the coordinator to set sample_data = false in forge.toml.")
-            else:
-                print("forge.toml names no test command, so forge test ran none.")
-            return 0
+            sample = repo.sample_data(top, cfg)
+            if not args.change or sample:
+                if sample:
+                    print("This is a sample-data prototype, so tests are off until client sign-off.\n"
+                          "After sign-off, ask the coordinator to set sample_data = false in forge.toml.")
+                else:
+                    print("forge.toml names no test command, so forge test ran none.")
+                return 0
         base = f"origin/{repo.default_branch(top)}"
         if repo.run("git", "rev-parse", "--verify", base, cwd=top).returncode:
             raise repo.Refused(f"Fetch {base} first: run git fetch origin, then forge test.", "")
-        if args.change:
+        if args.change and repo.test_place(cfg) == "local":
             # Include incoming changes merged into this PR, even under Actions'
             # synthetic merge. Main's current tip alone hides their test files.
             merges = repo.git("rev-list", "--merges", f"{base}..HEAD", cwd=top).splitlines()
             if merges:
                 base = repo.git("merge-base", "--octopus", base,
                                 *(f"{commit}^1" for commit in merges), cwd=top)
+        command = review.close_test(top, base, closing=args.change)
+        if not args.change:
+            command = skip_browser(top, command)
         # CI groups reuse their own passes; explicit ungrouped commands always execute.
-        status, report = review.test_run(top, review.close_test(top, base, closing=args.change), base,
+        status, report = review.test_run(top, command, base,
                                         always=not (args.change and "FORGE_GROUPS" in os.environ),
                                         closing=args.change)
         print(report)
@@ -364,6 +400,16 @@ def related(base: str) -> tuple[list[str], list[str], bool, list[str]]:
     tests = [Path(name) for name in files
              if (Path(name).name.startswith("test_") or Path(name).name.endswith("_test.py"))
              and name.endswith(".py") and Path(name).is_file()]
+    if (not os.environ.get("FORGE_PUSH_BASE")
+            and repo.test_place(tomllib.loads(Path("forge.toml").read_text("utf-8"))) == "ci"):
+        # Main's tests can reach PR sources through unchanged adapters. Keep those
+        # tests without treating main's source changes as part of this PR.
+        for merge in repo.git("rev-list", "--merges", f"{base}..HEAD").splitlines():
+            changed += [name for name in git_files("diff", "--no-renames", "--name-only",
+                                                   f"{merge}^1", "HEAD")
+                        if Path(name) in tests or Path(name).name == "conftest.py"
+                        or any(part in {"tests", "test", "__tests__", "spec"}
+                               for part in Path(name).parts)]
     fixtures = [Path(name).parent for name in changed if Path(name).name == "conftest.py"]
     shared_names = [name for name in changed
               if name == "conftest.py"
@@ -385,9 +431,37 @@ def related(base: str) -> tuple[list[str], list[str], bool, list[str]]:
         if parts[-1] == "__init__":
             parts.pop()
         if parts:
-            modules.append((".".join(parts), path))
-    missed = [source.as_posix() for module, source in modules
-              if not any(mentions(path, module, source) for path in tests)]
+            modules.append((".".join(parts), path, Path(".")))
+            root = source_root(path)
+            if root != Path("."):  # Tests in a nested app import modules below its own root.
+                below = module_parts(path.relative_to(root))
+                if below[-1] == "__init__":
+                    below.pop()
+                if below:
+                    modules.append((".".join(below), path, root))
+
+    def hits(test: Path, module: str, source: Path, root: Path) -> bool:
+        if not test.is_relative_to(root):
+            return False
+        if mentions(test, module, source):
+            return True
+        # pytest also exposes the test's folder and test roots for bare imports.
+        folders = [test.parent, *(folder for folder in source.parents
+                                  if folder != test.parent and
+                                  any(part in {"tests", "test"} for part in folder.parts))]
+        for folder in folders:
+            if source.is_relative_to(folder):
+                parts = list(source.relative_to(folder).with_suffix("").parts)
+                if parts[-1] == "__init__":
+                    parts.pop()
+                if parts and mentions(test, ".".join(parts), source):
+                    return True
+        return False
+
+    found = {source for module, source, root in modules
+             if any(hits(path, module, source, root) for path in tests)}
+    missed = list(dict.fromkeys(source.as_posix() for _, source, _ in modules
+                                if source not in found))
     everything = [path.as_posix() for path in tests]
     if shared_changed:
         return everything, everything, True, missed
@@ -396,13 +470,15 @@ def related(base: str) -> tuple[list[str], list[str], bool, list[str]]:
                       or any(path.is_relative_to(folder) for folder in fixtures)
                       or any(path.is_relative_to(source.parent) or mentions(path, "", source)
                              for source in shared)
-                      or any(mentions(path, module, source) for module, source in modules)}
+                      or any(hits(path, module, source, root) for module, source, root in modules)}
     readers = tests + [Path(name) for name in files
                        if Path(name).name == "conftest.py" and Path(name).is_file()]
     inputs = {name for name in changed if Path(name).suffix != ".py"}
+    added = set(git_files("diff", "--no-renames", "--name-only", "--diff-filter=A", base)
+                + git_files("ls-files", "--others", "--exclude-standard"))
     picked |= {path for path in readers
-               if docskip.reads_file_relative(path.read_text("utf-8-sig"), inputs)}
-    picked = docskip.test_readers(readers, picked)
+               if docskip.reads_file_relative(path.read_text("utf-8-sig"), inputs, added)}
+    picked = docskip.test_readers(readers, picked, source_root)  # Names match inside one app only.
     return sorted(path.as_posix() for path in picked if path in tests), everything, False, missed
 
 
@@ -427,7 +503,7 @@ def report_workers(config):
 # and fail the run when an entry ran no test. xdist forwards each test's report to the controller.
 SELECTION = """import os, pathlib, pytest, re
 """ + WORKER_REPORT + """
-IGNORE, PICKED, ALWAYS, REQUIRED, TASKS = {}, {}, {}, {}, {}
+IGNORE, PICKED, ALWAYS, REQUIRED, TASKS, FILES = {}, {}, {}, {}, {}, {}
 RAN, ROOT = set(), []
 def pytest_sessionstart(session):
     if not session.config.pluginmanager.hasplugin("_forge_test_results"):
@@ -435,9 +511,11 @@ def pytest_sessionstart(session):
 def pytest_configure(config):
     config.option.ignore = (config.option.ignore or []) + IGNORE
     ROOT.append(pathlib.Path(str(config.rootdir)))
+    config.args = [*config.args, *FILES]  # beside the command's own test paths, never instead of them
 def name(nodeid):  # relative to the repo, as forge.toml names it, whatever pytest's rootdir
     file, _, rest = nodeid.partition("::")
-    return pathlib.Path(os.path.relpath(ROOT[0] / file)).as_posix() + ("::" + rest if rest else "")
+    root = os.environ.get("FORGE_TEST_REPO", os.curdir)
+    return pathlib.Path(os.path.relpath(ROOT[0] / file, root)).as_posix() + ("::" + rest if rest else "")
 def runs(nodeid, entry):
     return nodeid == entry or nodeid.startswith((entry + "::", entry + "["))
 def task_runs(nodeid, entry):
@@ -480,11 +558,12 @@ RESULTS_HEADER = "# forge test results\n"
 INVOCATION_HEADER = "# forge pytest invocation "
 RETRY_HEADER = "# forge pytest retry\n"
 RETRY_STEP = "# forge pytest retry invocation\n"
-RESULTS = """import json, os, pathlib, pytest
+RESULTS = """import json, os, pathlib, pytest, re
 """ + WORKER_REPORT + """
 FILE, ROOT = [], []
 COLLECTED = []
 FAILED, PASSED = set(), set()
+PRODUCT_FAILURES = set()
 CRASHED, CRASH_ITEMS, FINISHED = set(), set(), set()
 INVOCATION_HEADER = """ + repr(INVOCATION_HEADER) + """
 RETRY_HEADER = """ + repr(RETRY_HEADER) + """
@@ -506,10 +585,11 @@ def pytest_configure(config):
                 pytest.exit("Close keeps this pytest command's earlier result.", returncode=previous["exit"])
             config.args = previous["files"]
             config.option.file_or_dir = config.args
-            config.option.splits = config.option.group = None
-            # Xdist workers reconstruct the original CLI args, losing this file selection.
-            # Run the failed files here instead of collecting the whole group again.
-            config.option.dist = "no"
+            if not previous.get("interrupted"):
+                config.option.splits = config.option.group = None
+                # Xdist workers reconstruct the original CLI args, losing this file selection.
+                # A lost worker instead replays the original invocation in workers.
+                config.option.dist = "no"
             config._forge_prior_passed = previous["passed"]
     path = os.environ.pop("FORGE_TEST_RESULTS", None)
     if path and not hasattr(config, "workerinput"):
@@ -539,25 +619,36 @@ def pytest_runtest_logreport(report):
         CRASH_ITEMS.add(report.nodeid)
     if not FILE or report.outcome == "rerun" or report.when != "call" and report.passed:
         return
+    slow = False
     FINISHED.add(report.nodeid)
+    if report.failed and report.when != "???":
+        message = getattr(getattr(report.longrepr, "reprcrash", None), "message", "")
+        slow = report.when == "call" and bool(re.fullmatch(
+                r"Failed: Timeout (?:>[^\\s]+s|\\(>[^\\s]+s\\) from pytest-timeout\\.)", message))
+        if not slow:
+            PRODUCT_FAILURES.add(report.nodeid)
     if report.when == "call":
         outcome = (("xfail" if report.skipped else "xpass") if hasattr(report, "wasxfail")
                    else report.outcome)
     else:
         outcome = "skipped" if report.skipped else "error"
-    _write_result(outcome, report.nodeid)
+    _write_result(outcome, report.nodeid, slow)
 def pytest_collectreport(report):
     if FILE and report.failed:
+        PRODUCT_FAILURES.add(report.nodeid)
         _write_result("error", report.nodeid)
-def _write_result(outcome, nodeid):
+def _write_result(outcome, nodeid, slow=False):
     file, _, rest = nodeid.partition("::")
     if outcome in ("failed", "error"):
         FAILED.add((ROOT[0] / file).resolve().as_posix())
-    nodeid = pathlib.Path(os.path.relpath(ROOT[0] / file)).as_posix() + ("::" + rest if rest else "")
+    root = os.environ.get("FORGE_TEST_REPO", os.curdir)
+    nodeid = pathlib.Path(os.path.relpath(ROOT[0] / file, root)).as_posix() + ("::" + rest if rest else "")
     if outcome == "passed":
         PASSED.add(nodeid)
     with FILE[0].open("a", encoding="utf-8") as results:
         results.write(outcome + " " + nodeid + "\\n")
+        if slow:
+            results.write("# timeout " + nodeid + "\\n")
 @pytest.hookimpl(hookwrapper=True)
 def pytest_sessionfinish(session):
     yield  # Capture the final status, including always_test validation.
@@ -569,8 +660,10 @@ def pytest_sessionfinish(session):
     if FILE:
         for nodeid in CRASH_ITEMS - FINISHED:
             _write_result("error", nodeid)
-        invocation = dict(files=sorted(FAILED), passed=sorted(PASSED), exit=int(session.exitstatus),
-                          collected=sum(COLLECTED), interrupted=bool(CRASHED))
+        invocation = dict(files=list(session.config.args) if CRASHED else sorted(FAILED),
+                          passed=sorted(PASSED), exit=int(session.exitstatus),
+                          collected=sum(COLLECTED), interrupted=bool(CRASHED),
+                          product_failure=bool(PRODUCT_FAILURES))
         with FILE[0].open("a", encoding="utf-8") as results:
             results.write(INVOCATION_HEADER + json.dumps(invocation) + "\\n")
 """
@@ -694,7 +787,31 @@ def test_process(top, item, command, env, entry, ran, log):
     return done
 
 
+def run_logged(command: str, environment: dict, entry: dict | None) -> int:
+    """Run a command. A run in the lane also writes its output to its log, which the pane's Open output reads."""
+    if entry is None:
+        return subprocess.run(command, shell=True, env=environment).returncode
+    from forge import codex
+
+    with Path(entry["output_path"]).open("w", encoding="utf-8") as sink, subprocess.Popen(
+            command, shell=True, env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+            text=True, encoding="utf-8", errors="replace", **codex.GROUP) as process:
+        try:
+            machine.started(entry, process.pid)
+            for chunk in test_output(process, lines=False):
+                print(chunk, end="", flush=True)
+                sink.write(chunk)
+                sink.flush()
+            return process.wait()
+        except BaseException:
+            codex._stop(codex.identity(process.pid) or {"pid": process.pid}, True)
+            process.wait()
+            raise
+
+
 def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
+    if os.environ.get("FORGE_WORKER_TESTS") == "1":
+        command = skip_browser(Path.cwd(), command)
     parts = quicktest.test_parts(Path.cwd(), command)
     mixed = any(kind in ("vitest", "jest") for kind, _, _ in parts)
     if mixed:
@@ -720,6 +837,14 @@ def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
     picked, tests, shared_changed, missed = related(base)
     # Tests that run the program from outside never name its files, so say what local runs miss.
     from forge import review  # imported late: review's imports lead back here
+    if not worker:
+        from forge import proof
+
+        top = Path.cwd()
+        item = review.branch_item(review.pull_request_branch(top), top)
+        if item:
+            named = list(dict.fromkeys(name for names in proof.entries(top, item[0], "HEAD", base).values()
+                                       for name in names if proof.TEST_NAME.fullmatch(name)))
     print("".join(f"{review.GAP}{source}. The nightly full run covers it.\n" for source in missed),
           end="", flush=True)
     if worker and len(picked) * 3 > len(tests):
@@ -750,7 +875,7 @@ def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
         if not picked and not always and not named:
             print("No tests ran: no changed or module-related test files were selected.")
             checks = " && ".join(part for kind, part, _ in parts if kind != "python")
-            return subprocess.run(checks, shell=True, env=environment).returncode if checks else 0
+            return run_logged(checks, environment, entry) if checks else 0
         # Keep shell setup, test roots and pytest settings in the repo's full command.
         listed = {entry.split("::")[0] for entry in always + named}
         excluded = [path for path in tests if path not in picked and path not in listed]
@@ -763,25 +888,10 @@ def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
     with tempfile.TemporaryDirectory(prefix="forge-pytest-") as folder:
         node_worker_environment(environment, folder)
         selection = Path(folder) / "_forge_pytest_selection.py"
+        files = list(dict.fromkeys((Path.cwd() / name.split("::", 1)[0]).as_posix() for name in named))
         selection.write_text(SELECTION.format(repr(excluded), repr(None if shared_changed else picked),
-                                              repr(always), repr(required), repr(named)), "utf-8")
+                                              repr(always), repr(required), repr(named), repr(files)),
+                             "utf-8")
         environment["PYTHONPATH"] = os.pathsep.join(
             [folder, environment.get("PYTHONPATH", "")])
-        arguments = always + list(dict.fromkeys(name.split("::", 1)[0] for name in named))
-        if entry is None:
-            return subprocess.run(narrow_command(command, excluded, workers, arguments), shell=True,
-                                  env=environment).returncode
-        from forge import codex
-
-        with subprocess.Popen(narrow_command(command, excluded, workers, arguments), shell=True,
-                              env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                              text=True, encoding="utf-8", errors="replace", **codex.GROUP) as process:
-            try:
-                machine.started(entry, process.pid)
-                for chunk in test_output(process, lines=False):
-                    print(chunk, end="", flush=True)
-                return process.wait()
-            except BaseException:
-                codex._stop(codex.identity(process.pid) or {"pid": process.pid}, True)
-                process.wait()
-                raise
+        return run_logged(narrow_command(command, excluded, workers, always), environment, entry)

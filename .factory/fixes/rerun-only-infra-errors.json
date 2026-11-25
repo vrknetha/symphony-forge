@@ -1,0 +1,199 @@
+{
+  "allow_large": "Owner allowed on 21 Nov 2026: the CI repair needs six counted files, including the test timings list and a line cut in the review module",
+  "amendments": [
+    {
+      "at": "2026-11-21T13:57:47.640142+00:00",
+      "because": "Automatic fix creation for flaky tests is not built yet; it is planned in FORGE-FASTPATH-1 after v1.2.45 is measured",
+      "done_when": "Close, land and the CI test step rerun a failed job or failed test files only when the failure is a runner loss, cancellation or timeout, never when a test fails its check; a test that passes only on a rerun still opens a fix; new repos get it at init and existing repos on upgrade and forge sync"
+    }
+  ],
+  "base": "bb5484562039300e4d1effcbb8b1e64f116370a2",
+  "branch": "fix/rerun-only-infra-errors",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a1fe49-6a8f-7c41-93d2-d17b2140b114",
+    "head": null,
+    "start": "6b546c793aad94f4c2edd9cb4e6d6e0761c93123"
+  },
+  "done_when": "Close, land and the CI test step rerun a failed job or failed test files only when the failure is a runner loss, cancellation or timeout, never when a test fails its check; a test that passes only on a rerun is still reported as flaky as today; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "_restart() in src/forge/land.py",
+      "file": "src/forge/land.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 350,
+      "outcome": "accepted",
+      "reason": "src/forge/fasttest.py:683 Owner accepted on 21 Nov 2026 as a known issue: a buffered F mark before a cancelled job can still cause a rerun, which is no worse than today where every failed job reruns",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Mixed infrastructure and product failures still retry",
+      "work": 2
+    },
+    {
+      "area": "src/forge/fasttest.py",
+      "file": "src/forge/fasttest.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 584,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Preserve worker execution when retrying a lost pytest worker",
+      "work": 2
+    },
+    {
+      "area": "src/forge/fasttest.py",
+      "file": "src/forge/fasttest.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 621,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Leave timed-out setup and teardown failures red",
+      "work": 1
+    },
+    {
+      "area": "_restart() in src/forge/land.py",
+      "file": "src/forge/land.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 336,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Do not reject the generated aggregate when a train retries a failed group",
+      "work": 2
+    },
+    {
+      "area": "_restart() in src/forge/land.py",
+      "file": "src/forge/land.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 352,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Recognize GitHub's actual runner-loss evidence",
+      "work": 2
+    },
+    {
+      "area": "src/forge/fasttest.py",
+      "file": "src/forge/fasttest.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 621,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Retain timeout retries for existing pytest-timeout installations",
+      "work": 2
+    },
+    {
+      "area": "test_1_grouped_full_run_retries_only_failed_files() in tests/test_grouped_full_run_retries_failed_files.py",
+      "file": "tests/test_grouped_full_run_retries_failed_files.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 64,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Grouped retry proofs do not check the unfinished sibling",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "dd4e20d9c48ac8ffa228a4f41108673ad704f0149e3ad5d52eac3165da2ca4d0",
+    "changed": "a393be7553a0a4fe4012407feecb63d911d8b1b9f260d58ecf50b06de9ba4231",
+    "commit": "28da652da6462528d0729b47e21322dcb1537d73",
+    "dismissals": [],
+    "findings": [],
+    "id": "3dc291af-eea0-42f4-bf80-b5b10f807e28",
+    "status": "clean"
+  },
+  "round": 6,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-21T13:26:08.236221+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-21T13:26:25.587806+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T13:57:51.845012+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T14:10:37.113200+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-21T14:11:18.933074+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T15:14:37.998102+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-21T15:15:39.995910+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-21T15:16:21.036238+00:00",
+      "by": "owner",
+      "choice": "same",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-21T16:06:30.293985+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T16:20:42.580082+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-21T17:40:56.776637+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T18:10:21.429533+00:00",
+      "round": 6,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T18:16:59.835755+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "bcc5e401-524c-4040-a424-ebf5cfb819c8",
+    "head": "86b103327dd2ed040198dd127659828b25ee45d1",
+    "keys": {},
+    "round": 4
+  },
+  "why": "Forge reruns failed CI test jobs once (close's 'Started the failed test jobs again once') and reruns failed test files inside a group, even when a test failed its assertion. In Forge's last 150 runs, 0 of 38 job reruns passed and reruns cost 28% of CI time. Owner chose on 21 Nov 2026: rerun only on infrastructure errors.",
+  "worker": "codex"
+}

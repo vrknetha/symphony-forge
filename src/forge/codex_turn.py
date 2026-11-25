@@ -34,7 +34,7 @@ SERVER: list[int] = []  # the app-server's process id once it has started, for e
 RECORDED = threading.Semaphore(0)  # a release per line Forge sends once it has recorded an id
 # The fields of a hooks/list entry that say where the hook is and its state, not what it runs.
 PLACE = {"key", "sourcePath", "source", "pluginId", "displayOrder", "enabled", "isManaged",
-         "currentHash", "trustStatus"}
+         "currentHash", "trustStatus", "environmentId"}
 RETRIES = 3  # the times a turn Codex ends as at capacity is sent again, each wait twice the last
 # ponytail: the tests' seam, like FORGE_CHECKS_WAIT
 RETRY_WAIT = float(os.environ.get("FORGE_CODEX_RETRY_WAIT", "30"))
@@ -216,7 +216,19 @@ def main() -> int:
                 if client.received_tier != tier:
                     client.received_tier = None
                 params = {**params, "serviceTier": tier, "serviceTierForTurn": tier}
-            response = request_raw(method, params)
+            for attempt in range(RETRIES + 1):
+                try:
+                    response = request_raw(method, params)
+                    break
+                except JsonRpcError as error:
+                    # A rejected start has no turn stream or completion to drive the retry below.
+                    if (method != "turn/start" or attempt == RETRIES
+                            or not overloaded({"message": error.message})):
+                        raise
+                    wait = RETRY_WAIT * 2 ** attempt
+                    emit(retry=wait, attempt=attempt + 2, of=RETRIES + 1)
+                    RECORDED.acquire()
+                    time.sleep(wait)
             if method in ("thread/start", "thread/resume"):
                 effort, cursor = response.get("reasoningEffort"), None
                 while effort is None or request.get("fast"):

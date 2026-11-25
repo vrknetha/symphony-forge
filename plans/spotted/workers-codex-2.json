@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tforge.toml\tGate: this repo's worker-selection tests\tworkers-codex-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Gate: this repo's worker-selection tests",
+      "from": "blocking",
+      "item": "workers-codex-2",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tforge.toml\tTest: Every gpt-6.1-sol model entry in forge.toml says gpt-6.2-sol, the Terra review entries are unchanged, and nothing else changes\tsol-6-2-models",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 12,
+      "text": "Test: Every gpt-6.1-sol model entry in forge.toml says gpt-6.2-sol, the Terra review entries are unchanged, and nothing else changes",
+      "from": "blocking",
+      "item": "sol-6-2-models",
+      "status": "done",
+      "closed_by": "workers-codex-2"
+    },
+    {
+      "key": "bug\tforge.toml\tTest: forge.toml says workers = \"codex\", nothing else in it changes, and forge work names Codex as the builder\tworkers-codex-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Test: forge.toml says workers = \"codex\", nothing else in it changes, and forge work names Codex as the builder",
+      "from": "blocking",
+      "item": "workers-codex-2",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

@@ -1,0 +1,198 @@
+{
+  "allow_large": "Owner allowed on 22 Nov 2026: one fix for the Codex SDK 0.171.0 pin and hook check, the Claude Agent SDK 0.2.187 pin, the gpt-6.2-sol defaults, the upgrade notice and the Codex smoke workflow (8 files)",
+  "amendments": [
+    {
+      "at": "2026-11-22T07:48:19.080146+00:00",
+      "because": "Owner on 22 Nov 2026: bump only Sol to 6.2, keep other models, and also update the Claude SDK",
+      "done_when": "A Codex worker or reader turn starts on SDK 0.171.0 with Forge's own hooks trusted, and new repos default Codex build, fix and lite to gpt-6.2-sol."
+    }
+  ],
+  "base": "a27cc967e4fbedac42dbca27c132e2ca7ca8851c",
+  "branch": "fix/codex-0-169-0-and-later-add-environmenti",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a20241-f59e-7933-90a8-54465d0d8ca8",
+    "head": null,
+    "start": "591c0c668c3605c149467eda67ee04ddfadf47b2"
+  },
+  "done_when": "A Codex worker or reader turn starts on Codex SDK 0.171.0 with Forge's own hooks trusted, Claude turns run on Claude Agent SDK 0.2.187, every gpt-6.1-sol default becomes gpt-6.2-sol while reviews stay on gpt-6.1-terra, and upgrading repos are told the new default without their settings changing; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/codex.py",
+      "file": "src/forge/codex.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 34,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Upgrade leaves the newly pinned SDKs unavailable",
+      "work": 2
+    },
+    {
+      "area": "upgrade() in src/forge/upgrade.py",
+      "file": "src/forge/upgrade.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 233,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Existing repos receive the new-default notice during upgrade",
+      "work": 2
+    },
+    {
+      "area": "_install_claude_sdk() in tests/conftest.py",
+      "file": "tests/conftest.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 205,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Exercise Claude turns with the pinned SDK",
+      "work": 2
+    },
+    {
+      "area": "sync() in src/forge/sync.py",
+      "file": "src/forge/sync.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 720,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as known issues: a teammate who pulls the upgrade is told to run forge doctor --fix at the first Codex turn, as with every earlier SDK bump; the new-default notice misses a clone-local forge.local.toml that replaces the shared model tables",
+      "round": 4,
+      "security": false,
+      "title": "Disputed keep: SDK setup during upgrade misses teammates\u2019 machines",
+      "work": 2
+    },
+    {
+      "area": "sync() in src/forge/sync.py",
+      "file": "src/forge/sync.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 725,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as known issues: a teammate who pulls the upgrade is told to run forge doctor --fix at the first Codex turn, as with every earlier SDK bump; the new-default notice misses a clone-local forge.local.toml that replaces the shared model tables",
+      "round": 4,
+      "security": false,
+      "title": "Disputed keep: The upgrade notice misses clone-local Codex defaults",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "133813e4300ec9b808139bd2f54ba5c7f8ca543d9e115026d3384b7aa4b78f90",
+    "changed": "31ed8043d2fd2f955087d60fa079c7fc233774323f4b4124ae9daaad4713d6ef",
+    "commit": "3c1f6c7e764680e1af4a72e774474e0606033621",
+    "dismissals": [],
+    "findings": [],
+    "id": "311d9c9d-3b4d-4b49-85a9-01a18516a486",
+    "status": "clean"
+  },
+  "round": 6,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T07:47:28.273147+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T07:56:45.790970+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T08:38:35.447458+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T08:39:51.930717+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T08:43:28.219285+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T09:12:19.924173+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T09:12:19.942592+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T10:35:48.411869+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-22T10:56:43.853105+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T11:13:22.349482+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T13:55:14.418746+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T14:30:30.059801+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T14:30:30.114104+00:00",
+      "round": 5,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T14:32:18.470659+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 5,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-22T15:06:37.340102+00:00",
+      "round": 6,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T15:16:47.907459+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-22T14:30:30.114104+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/sync.py",
+    "reason": "Owner accepted on 22 Nov 2026 as known issues: a teammate who pulls the upgrade is told to run forge doctor --fix at the first Codex turn, as with every earlier SDK bump; the new-default notice misses a clone-local forge.local.toml that replaces the shared model tables",
+    "wait_id": "ae8601aa-75bd-40fe-8be0-84006b730d9d",
+    "worker_round": 5
+  },
+  "stuck": {
+    "close": "3c4f7b51-126a-49ca-9cc5-1d87a963ef7c",
+    "head": "40339c5c6774df9b5d5317c44481bd2d2e44740a",
+    "keys": {},
+    "round": 5
+  },
+  "why": "Codex 0.169.0 and later add environmentId to each project hook's metadata. Forge's hook-trust check in src/forge/codex_turn.py compares every hook field that is not in its PLACE set against Forge's own hook definitions, so environmentId makes Forge's own hooks fail the check and Forge starts no Codex worker or reader turn. Forge also still pins SDK 0.159.2 and defaults Codex build, fix and lite to gpt-6.1-sol.",
+  "worker": "codex"
+}

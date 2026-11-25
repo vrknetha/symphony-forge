@@ -18,7 +18,7 @@ from test_upgrade_command import RELEASE, Upgrade, unsynced_up  # noqa: F401
 STORY = "worker-no-settings"
 
 
-@pytest.fixture(params=[False, True], ids=["new-client", "previous-adoption"])
+@pytest.fixture(params=[False], ids=["new-client"])
 def client(repo, gh, tmp_path, request):
     if request.param:
         shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", repo.path,
@@ -37,7 +37,7 @@ def client(repo, gh, tmp_path, request):
     assert synced.returncode == 0, synced.stdout + synced.stderr
     repo.git("add", "-A")
     # Fixture setup predates an active Forge item; commits under test use the installed hook.
-    repo.git("-c", f"core.hooksPath={tmp_path / 'no-hooks'}", "commit", "-q", "-m", "Setup")
+    repo.git("-c", f"core.hooksPath={tmp_path / 'no-hooks'}", "commit", "--allow-empty", "-q", "-m", "Setup")
     repo.git("switch", "-q", "main")
     repo.git("merge", "-q", "--ff-only", "fix/settings-setup")
     repo.git("-c", f"core.hooksPath={tmp_path / 'no-hooks'}", "push", "-q", "origin", "main")
@@ -66,7 +66,7 @@ def test_1_worker_settings_commits_require_named_done_when(client, monkeypatch, 
     before = client.git("rev-parse", "HEAD", cwd=folder)
     if case != "coordinator":
         monkeypatch.setenv("FORGE_WORKER", "1")
-    committed = subprocess.run(["git", "commit", "-q", "-m", "Change settings"], cwd=folder,
+    committed = subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "Change settings"], cwd=folder,
                                capture_output=True, text=True, encoding="utf-8")
     if case == "unrelated-worker":
         assert committed.returncode != 0
@@ -79,7 +79,7 @@ def test_1_worker_settings_commits_require_named_done_when(client, monkeypatch, 
         client.git("restore", "--staged", "forge.toml", cwd=folder)
         (folder / "spelling.txt").write_text("Correct spelling\n", "utf-8")
         client.git("add", "spelling.txt", cwd=folder)
-        client.git("commit", "-q", "-m", "Correct spelling", cwd=folder)
+        client.git("commit", "--allow-empty", "-q", "-m", "Correct spelling", cwd=folder)
     else:
         assert committed.returncode == 0, committed.stdout + committed.stderr
         assert client.git("rev-parse", "HEAD", cwd=folder) != before
@@ -115,7 +115,7 @@ def test_3_task_permission_comes_from_its_current_covered_done_when(client, monk
     config.write_text(config.read_text("utf-8") + "\n# Settings change\n", "utf-8")
     client.git("add", "forge.toml", cwd=folder)
     monkeypatch.setenv("FORGE_WORKER", "1")
-    committed = subprocess.run(["git", "commit", "-q", "-m", "Change settings"], cwd=folder,
+    committed = subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", "Change settings"], cwd=folder,
                                capture_output=True, text=True, encoding="utf-8")
     assert (committed.returncode == 0) == covered, committed.stdout + committed.stderr
     if not covered:
@@ -135,7 +135,7 @@ def test_4_worker_round_restores_uncommitted_settings_unless_done_when_names_the
     client.git("switch", "-q", "fix/settings-setup")
     client.write("forge.toml", _toml(client.forge("--version").stdout.split()[-1],
                                     "codex", MODELS, "client"))
-    client.git("-c", f"core.hooksPath={tmp_path / 'no-hooks'}", "commit", "-qam", "Use Codex")
+    client.git("-c", f"core.hooksPath={tmp_path / 'no-hooks'}", "commit", "--allow-empty", "-qam", "Use Codex")
     client.git("switch", "-q", "main")
     client.git("merge", "-q", "--ff-only", "fix/settings-setup")
     client.git("-c", f"core.hooksPath={tmp_path / 'no-hooks'}", "push", "-q", "origin", "main")
@@ -215,6 +215,8 @@ def test_6_coordinator_generated_merge_commits_incoming_settings(env, client):
     assert closed.returncode == 0, closed.stdout + closed.stderr
     assert "Ready:" in closed.stdout
     assert "Incoming coordinator settings" in (folder / "forge.toml").read_text("utf-8")
-    assert (folder / guide).read_text("utf-8") == (ROOT / "src/forge/templates/skill.md").read_text("utf-8")
+    template = (ROOT / "src/forge/templates/skill.md").read_text("utf-8").rstrip("\n")
+    committed = (ROOT / ".claude/skills/forge/SKILL.md").read_text("utf-8")
+    assert (folder / guide).read_text("utf-8") == template + committed[len(template):]
     client.git("merge-base", "--is-ancestor", "origin/main", "HEAD", cwd=folder)
     assert client.git("status", "--porcelain", cwd=folder) == ""

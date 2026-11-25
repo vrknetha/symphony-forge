@@ -30,16 +30,16 @@ STORY = "FIX-A-CHANGE-THAT-TOUCHES-CENTRAL-FILES-SELE"
 
 
 @pytest.mark.parametrize("flavor,place,selected,ci_red", [
-    ("new", "ci", 2, False), ("adopted", "ci", 2, False),
+    ("new", "ci", 2, False), ("no-fast-test", "ci", 2, False),
     ("source", "ci", 2, False), ("new", "ci", 2, True),
     ("new", "ci", 1, False), ("new", "local", 2, False),
-], ids=["new-broad", "adopted-broad", "forge-broad", "red-ci",
+], ids=["new-broad", "no-fast-test-broad", "forge-broad", "red-ci",
         "exact-quarter", "laptop-only"])
 def test_1_broad_related_tests_wait_for_ci(env, tmp_path, monkeypatch,
                                          flavor, place, selected, ci_red):
     monkeypatch.delenv("PYTEST_ADDOPTS", raising=False)
     monkeypatch.setenv("PYTEST_DISABLE_PLUGIN_AUTOLOAD", "1")
-    _client(env, tmp_path, flavor == "adopted", fast_test=False)
+    _client(env, tmp_path, False, fast_test=False)
     # The fixture merged its preparation on the remote. Match a real worker's fetch
     # so the next fix's size counts only its own files, not that preparation too.
     env.repo.git("fetch", "-q", "origin", "main")
@@ -52,7 +52,7 @@ def test_1_broad_related_tests_wait_for_ci(env, tmp_path, monkeypatch,
     config = config.replace('test_place = "ci"', f'test_place = "{place}"')
     config = re.sub(r'^merge = .*\n', '', config, flags=re.M)
     config = 'merge = "agent"\n' + config
-    if flavor != "adopted":
+    if flavor != "no-fast-test":
         config = 'fast_test = "forge test --pytest {base}"\n' + config
     if flavor == "source":
         config = re.sub(r'^repo = .*\n', '', config, flags=re.M)
@@ -109,8 +109,6 @@ def test_1_broad_related_tests_wait_for_ci(env, tmp_path, monkeypatch,
                        f"repos/{{owner}}/{{repo}}/commits/{original}/check-runs?per_page=100",
                        stdout="".join(json.dumps(check) + "\n" for check in
                                       [run("tests"), run("forge-pr-check")]))
-    before_checks = len(env.gh_calls("api"))
-
     merged = env.repo.forge("merge", item)
     attempts = env.gh_calls("pr", "merge")
 
@@ -129,9 +127,9 @@ def test_1_broad_related_tests_wait_for_ci(env, tmp_path, monkeypatch,
             published = attempts[0][attempts[0].index("--match-head-commit") + 1]
         assert published != original
         env.repo.git("merge-base", "--is-ancestor", advanced, published, cwd=remote)
-        assert ["api", "--paginate", "--jq", ".check_runs[]",
-                f"repos/{{owner}}/{{repo}}/commits/{published}/check-runs?per_page=100"
-                ] in env.gh_calls("api")[before_checks:]
+        check_runs_path = f"repos/{{owner}}/{{repo}}/commits/{published}/check-runs?per_page=100"
+        assert ["api", "--paginate", "--jq", ".check_runs[]", check_runs_path
+                ] in env.gh_calls("api", path=check_runs_path)
         if ci_red:
             assert merged.returncode != 0
             assert "Checks failed on the pull request: tests." in merged.stderr

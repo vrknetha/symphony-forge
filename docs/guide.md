@@ -9,7 +9,7 @@ inside Forge and goes into every worker's brief. How Forge behaves is set by its
 ## Install
 
 You need git, the GitHub CLI (`gh`, signed in with `gh auth login`), `uv`, and the agent your
-repo uses: Claude Code, Codex, or both for split workers. Either agent can coordinate the work;
+repo uses: Claude Code, Codex, or both (new repos: Claude builds, and code reviews use Codex). Either agent can coordinate the work;
 with one tool selected, that tool reads plans. With both selected, the first read uses the other
 installed tool, or the coordinator's tool if the other is unavailable. Later reads keep that
 reader while available. A native read uses a separate `reader` subagent.
@@ -17,7 +17,7 @@ reader while available. A native read uses a separate `reader` subagent.
 Install the release a repo pins (uv brings Python 3.11 or later if you don't have it):
 
 ```
-uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.36
+uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.48
 ```
 
 `forge --version` prints the installed version. Each repo pins its release in `forge.toml`, and
@@ -169,6 +169,7 @@ set the test command and CI checks as needed, then turn off the setting. In the 
 prototype's screens in the app's browser tests with `checkScreen` from `.forge/design/render-check.mjs`,
 so the rendered check starts with the first tests. Close blocks that fix until
 the `Personal data` answer is settled.
+After sign-off, `forge next` also lists `Before production` gaps. The agent starts one normal change for each light-review and "Demo only" line and does not promote while a line is open. Forge cannot see the release and refuses nothing.
 The design comes first. Before any screen, use the app's existing design. If it has none, draft
 one from the client's brand; use a neutral design when there is no brand. Every
 API a person uses gets its screen in the client's design, built by the agent when it builds the API, with no
@@ -257,6 +258,11 @@ An existing app from the current starter can use the command. A non-starter or a
 missing required parts gets a refusal naming what is missing and no file changes; the worker
 builds the feature by hand in that app's layout.
 
+To remove a feature, tell the agent, for example "we do not need invoices any more". It runs
+`forge task feature-check` before and after it works through a fixed list of places to clean,
+then runs the app's own tests. No customer data is deleted: the table and its rows stay for a
+later, separate step.
+
 Only starter apps get an MCP server inside the API at `/mcp`, marked with `mcp = "/mcp"`
 in `services.toml`. Each feature has six tools: `<feature>_search`, `<feature>_get`,
 `<feature>_create`, `<feature>_update`, `<feature>_delete` and `<feature>_restore`.
@@ -330,6 +336,11 @@ A prototype without the sample-data mark also needs its strict whole-product rev
    do not cause Scope overlaps. Parts can share these test paths without an After link. Explicit
    After links still apply. An in-flight story gets the same check at its next plan check;
    follow the refusal's step to amend the plan.
+   Keep a file that a script can make at build time (a generated API contract or the types made from
+   it) out of the repo and out of every Scope, when nobody needs it stored. When the repo keeps such a
+   file on purpose, give its change to one first part that the other parts wait for. Three or more
+   parts that list the same file make the plan read print a `Shared file:` note. The `Shared file:` note
+   is advice: it does not stop the read or the approval, and it looks only at the plan being read.
 3. `forge read <KEY>` runs an independent cold read. Answer every finding (cut, defer or keep),
    amend the doc, then run `forge read <KEY>` again; the same reader reads the whole doc again,
    and this repeats until a round finds nothing.
@@ -349,8 +360,13 @@ A prototype without the sample-data mark also needs its strict whole-product rev
 6. Run `forge land --all` in the background in place of closing and merging by hand. It takes
    every task and fix in close, starts them oldest first, several at a time up to the machine's
    agent places, and merges each one when it passes, where the repo allows agent merges. A change
-   not yet ready that changes a file an older change in the run also changes waits for it. Only
-   one run works in a repo at a time. A change that needs a worker or you stops alone; the run
+   not yet ready that changes a file an older change in the run also changes waits for it. Where
+   the agent merges and CI runs the tests (`tests` is a required check), two to five ready changes
+   are tested together once on a temporary draft pull request, then merge in order with no new run
+   of their own; a change that clashes, builds on an unmerged change, changes `forge.toml`, was ready
+   before the default branch changed it or has no ready record of its own stays out and merges one
+   at a time.
+   Only one run works in a repo at a time. A change that needs a worker or you stops alone; the run
    ends with `Merged (n): ... · Ready to merge (n): ... · Needs you (n): ...` and each stopped
    change's reason and next step. A failed check whose log names none of the change's files
    runs again once. Where a human merges, the run merges nothing and lists the ready changes
@@ -391,7 +407,7 @@ build, fix or lite kind has no Claude entry, Forge uses `claude-sonnet-5-5` at l
 Claude plan reads default to `claude-opus-5-5` at high effort, including when Claude is the only
 installed tool. Claude planner and architect roles use that plan-read entry; debugger,
 security and performance use Opus 5.5 at high effort. Codex build, fix and lite workers with
-no entry use Forge's `gpt-6.1-sol` at low effort; Codex design uses its design default.
+no entry use Forge's `gpt-6.2-sol` at low effort; Codex design uses its design default.
 Ask your agent to change these settings in a fix.
 
 `forge init` writes low effort for Codex and Claude build, fix and lite.
@@ -439,7 +455,7 @@ uses its selected tool's design entry: `[models.design.codex]` on Codex and
 `claude-sonnet-5-5` at xhigh effort. With `tools = "both"` and `workers = "split"`, the
 fallback applies only to Claude design rounds run through its kit. If the `claude` command
 is missing, or Claude fails before changing the checkout,
-Forge uses `[models.design.codex]` instead: `gpt-6.1-sol` at high effort by default. Forge prints
+Forge uses `[models.design.codex]` instead: `gpt-6.2-sol` at high effort by default. Forge prints
 and logs the fallback reason. If Claude changed the checkout before failing, Forge reports the
 failure without a Codex retry. When Claude Code coordinates without the SDK, design work runs as
 its native `frontend` subagent; a failed native round gets no automatic Codex retry.
@@ -473,6 +489,8 @@ If that round fails or is interrupted, answer again with `--note`; the question 
 
 For a quick read-only question about this checkout, hand it to the session's `explorer`
 subagent role. It uses the explore entry in `forge.toml`; no separate Forge command is needed.
+To ask Codex itself (for example a stronger model), run `forge ask "<question>" [--model <model>]`.
+It runs one read-only turn in an agent place and prints the answer.
 
 New repos get explore on Claude with `claude-haiku-5-5` at high effort and on Codex with the
 initial lite settings. Upgrading and syncing an existing repo preserves its settings: without
@@ -597,9 +615,11 @@ Each job that uses the step skips only its guarded steps.
 New and upgraded repos use `stack = "on"` by default, with no settings change. A part can start
 on one reviewed, unmerged part when its After list or Scope makes it wait for that part.
 The base must use the same Forge release and must start from the default branch.
-A part that builds on another can become a base after Forge merges the lower part and close
-moves it onto that merged code and reviews it again. Set `stack = "off"` to make new parts
-wait for merges. Parts that already started on another part keep their base.
+A part that builds on another can become a base after the lower part merges, through Forge or
+with GitHub's button, and close moves it onto that merged code and reviews it again. Until then,
+`forge next` says the new part waits for the base to include the merge from the default branch:
+run `forge close` on that base. Set `stack = "off"` to make new parts wait for merges.
+Parts that already started on another part keep their base.
 
 ## Merging a ready item
 
@@ -668,18 +688,70 @@ A repo pinned to a release older than the command upgrades once with
 
 For Forge's maintainers:
 
-1. In a fix, set `__version__` in `src/forge/__init__.py` to the new version (without the `v`),
-   close it and merge it.
-2. Start one Linux full run with `gh workflow run forge.yml --ref main`.
-   Confirm it is green. This workflow posts the full-run status that sign-off and release read.
-   Start the Windows platform run with `gh workflow run forge-next.yml --ref main`.
-   Confirm it is green before you tag the release.
-3. Tag the merge commit `vX.Y.Z` and push the tag: `git tag vX.Y.Z <merge commit>`, then
-   `git push origin vX.Y.Z`. Check the tag's tree matches the default branch with
-   `git diff --quiet vX.Y.Z origin/main`.
+Cut one release a day at 05:00 UTC from the newest main commit whose Linux full run
+and Windows run passed. Freeze the contents at the cut. Only a fix without which the
+release is unsafe or its checks cannot pass may join; later work waits for the next day.
+Publish within 30 minutes of the cut, without a separate owner yes.
+Skip the day when nothing merged since the last release or main is red.
+Hold merges from the cut until you push the tag and check the installed version.
+
+1. In a fix, set `__version__` in `src/forge/__init__.py` to the new version (without the `v`)
+   and add `src/forge/release-notes/v<version>.md` for everything merged since the previous
+   release. Merge it last: the cut commit is this fix's merge commit. A fix that must join the
+   release after it (a fix without which the release is unsafe) also updates that notes file.
+2. Before the cut, reuse passed nightly runs on the bump's merge commit (or the last joining fix's).
+   If a run is missing, start it with `gh workflow run forge.yml --ref main` (Linux) or
+   `gh workflow run forge-next.yml --ref main` (Windows). Both must pass before the cut.
+   At 05:00 UTC, select the bump's merge commit (or the last joining fix's), once its Linux full
+   run and Windows run passed. Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
+   If current main is ahead of that commit, skip the day: the release gate requires current main.
+   Reuse the passed nightly runs on that exact commit. Do not start them again.
+   The Linux workflow posts the full-run status that sign-off and release read.
+   If an essential fix must join, repeat both runs and record its tested commit before the tag.
+3. Before you create the tag, run `uv run --frozen --python 3.11 python
+   .github/release-notes-check.py vX.Y.Z <full cut SHA>`. When it fails, do not tag: add the
+   missing change to the notes in a fix, merge it, and use its merge commit as the cut.
+   Tag the exact cut commit with `git tag vX.Y.Z <full cut SHA>`, then `git push origin vX.Y.Z`.
+   Use the recorded full SHA, never `origin/main`. Check the tag's tree against the cut with
+   `git diff --quiet vX.Y.Z <full cut SHA>`.
    The tag push runs the Windows checks again or reuses passed proof for the same tree.
    Confirm that run is green too.
-4. Install from the tag and check that `forge --version` prints `vX.Y.Z`.
+4. Install from the tag and check that `forge --version` prints `vX.Y.Z`. Then allow merges again.
+   Publish the GitHub release from the cut commit's notes file, not the local one:
+   `git show <full cut SHA>:src/forge/release-notes/vX.Y.Z.md | gh release create vX.Y.Z --notes-file -`.
+5. Score the release. Nothing else starts this, a pull request never does, and it never holds the
+   release. Use Claude only, in your own Claude Code session. Use no model whose id contains
+   `fable` or `astra`.
+   - Make a scratch folder outside the Forge repo. `forge init` needs a git checkout with an `origin`
+     remote, so in the scratch folder make the app as `app` and a local bare repo as its remote:
+     `git init -b main app`, `git init --bare -b main origin.git`, `git -C app remote add origin ../origin.git`.
+     Run `forge init` in `app` from the tag:
+     `uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge init --starter react --actions no`.
+     Init sets up the app and pushes its first commit to that remote, then stops with "Forge cannot identify
+     a GitHub repository from origin". That is expected for this folder; the app is ready.
+   - Start a `general-purpose` subagent, not the `worker` role. Set its model to the one in
+     `[models.build.claude]` in `forge.toml`. Give it only the full path of the scratch folder, the path of
+     `benchmark/notes.md` in the Forge repo, and the rule "no person is here". Its task is to build the
+     reference app described in the notes, in `app`. Its boundary: it works only in the scratch folder and
+     never changes the Forge repo, because a new subagent starts in your working directory. It makes no
+     stories and no fixes, and does not commit. Point it at the scratch app's AGENTS.md and skills.
+   - Stop a step that hangs. Stop the whole build after 120 minutes (a guess, not measured) and
+     score what exists. A failed build still gets a score.
+   - Start the fix before you write the score, in the Forge repo, and write the score into that fix's worktree:
+     `uv run --frozen --python 3.11 python scripts/bench_score.py <scratch app> --checks benchmark/checks.toml --release vX.Y.Z --results benchmark/results`
+     Do not use bare `python`. Add `--usage <file>` for the build's use: a JSON file with all four keys
+     `input_tokens`, `output_tokens`, `turns` and `minutes`. Write `null` for a value the session does not
+     report. A file that lacks a key is not used.
+   - The script gives each run its own Compose project, `forge-bench-<release>-<id>` (in `BENCH_PROJECT`),
+     and a free local port for each name in the `ports` key of `benchmark/checks.toml`. The `setup` key runs
+     once after the app answers. The stop command is `down --volumes` for that project only. If a compose
+     command hangs, stop it and run that stop command by hand.
+   - Show the score next to the previous one, with up, down or same, the minutes and the tokens
+     (or "not reported"). When the script prints "No earlier score to compare with" (the first score),
+     report the score, the minutes and the tokens and say it is the first score. When it prints "This is a
+     new baseline" (the notes, checks or design checker changed since the previous score), say "new baseline"
+     and show the previous score beside it with no direction. Commit the result file in a normal fix and
+     close it as usual.
 
 What the switch to this Forge removed from the repo, and where to find it, is in
 `docs/archive.md`.

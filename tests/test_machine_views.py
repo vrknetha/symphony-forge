@@ -7,6 +7,7 @@ Owns src/forge/board.py and src/forge/nextstep.py's machine output contract.
 import copy
 import json
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -21,7 +22,6 @@ from test_task import DOC, story
 from conftest import ROOT
 from test_close import GREEN, STORY_DOC, env  # noqa: F401
 from test_last_task_records_story_outcome import github_merge
-from test_mod_plugin import packaged_mod  # noqa: F401
 from test_upgrade_command import Upgrade
 
 pytestmark = pytest.mark.platform
@@ -115,6 +115,10 @@ def _board_exposes_produced_questions_reviews_run_ends_and_readiness(env, priori
     from test_run_records import configure, records
     from test_close import blocked, finding, report, CLEAN
     repo = configure(env)
+    config = re.sub(r"(?m)^task_review_rounds\s*=.*(?:\r?\n|$)", "",
+                    (repo.path / "forge.toml").read_text("utf-8"))
+    env.commit(repo.path, "forge.toml", "task_review_rounds = 1\n" + config)
+    repo.git("push", "-q", "origin", "main")
     item, folder = env.start_fix()
     stub = repo.bin / "claude_agent_sdk/__init__.py"
     source = stub.read_text("utf-8")
@@ -163,9 +167,9 @@ def _board_exposes_produced_questions_reviews_run_ends_and_readiness(env, priori
     assert previous_review not in {o["id"] for o in row["occurrences"]}
     assert ready["id"] == result["id"] + ":" + repo.git("rev-parse", "HEAD", cwd=folder)
     # Successful close under human ownership advertises readiness with no runnable merge.
-    following = view(repo, "next")["next"]
-    assert following["command"] is None
-    assert "ready to merge" in following["line"]
+    step, text = plain_next(repo)
+    assert step is None or not step.startswith("forge merge")
+    assert "ready to merge" in text
 
 
 def _next_rejects_the_first_placeholder_before_a_later_runnable_step(repo, gh):
@@ -181,7 +185,7 @@ def _next_rejects_the_first_placeholder_before_a_later_runnable_step(repo, gh):
     folder = worktree(repo, "task/BOARD-PAGE")
     # A human's historical merge lacks the outcome trailer now written by forge merge.
     repo.git("merge", "-q", "--squash", "task/BOARD-PAGE")
-    repo.git("commit", "-qm", "Merge the board task without an outcome")
+    repo.git("commit", "--allow-empty", "-qm", "Merge the board task without an outcome")
     repo.git("push", "-q", "origin", "main")
     repo.git("worktree", "remove", str(folder))
     made = repo.forge("fix", "start", "Polish the guide", "--done", "Reads clearly", "--slug", "polish")
@@ -193,9 +197,7 @@ def _next_rejects_the_first_placeholder_before_a_later_runnable_step(repo, gh):
     # Outcome advice now refreshes remote merges before the command reads them.
     assert steps[0] == 'Next: git fetch origin, then forge story done BOARD "<outcome sentence>"'
     assert "Next: forge work polish" in steps[1:]
-    following = view(repo, "next")["next"]
-    assert following["command"] is None
-    assert "record its outcome" in following["line"]
+    assert "record its outcome" in plain.stdout
     rows = {r["id"]: r for r in view(repo, "board")["items"]}
     assert rows["BOARD"]["next"]["command"] is None
     assert "record its outcome" in rows["BOARD"]["next"]["line"]
@@ -206,6 +208,15 @@ def view(repo, command, cwd=None):
     result = repo.forge(command, "--json", cwd=cwd)
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout)
+
+
+def plain_next(repo, cwd=None):
+    """The plain `forge next` text and its first "Next: " command, or None when that step is not one forge command."""
+    shown = repo.forge("next", cwd=cwd)
+    assert shown.returncode == 0, shown.stderr
+    step = next((line[6:].split("  # ")[0] for line in shown.stdout.splitlines() if line.startswith("Next: ")), None)
+    runnable = step and step.startswith("forge ") and not re.search(r" then | or |[<>;&|$`]", step)
+    return step if runnable else None, shown.stdout
 
 
 def snapshot(board):
@@ -246,24 +257,8 @@ def github(gh, prs):
         {"data": {"repository": {"pullRequests": {"nodes": prs}}}}))
 
 
-@pytest.mark.parametrize("context", [None, "commit status", "check start", "live worker", "live read",
-                                    "plugin checks", "plugin refresh"])
+@pytest.mark.parametrize("context", [None, "commit status", "check start", "live worker", "live read"])
 def test_1_board_shows_stories_workers_checks_and_findings(repo, gh, request, context, monkeypatch):
-    # CORE adds the packaged plugin boundary to this criterion's existing owner.
-    # The old command cases stay; the mod cases prove transport and refresh lifecycle.
-    if context in ("plugin checks", "plugin refresh"):
-        from test_mod_plugin import (
-            packaged_mod_refreshes_real_checks_and_returns_headless_text,
-            refresh_failures_timeout_and_overlap_keep_the_last_snapshot,
-        )
-        plugin = request.getfixturevalue("packaged_mod")
-        temporary = request.getfixturevalue("tmp_path")
-        if context == "plugin checks":
-            packaged_mod_refreshes_real_checks_and_returns_headless_text(
-                request.getfixturevalue("env"), plugin, temporary)
-        else:
-            refresh_failures_timeout_and_overlap_keep_the_last_snapshot(plugin, temporary)
-        return
     if context in ("live worker", "live read"):
         _board_shows_recorded_live_agent_metadata(request.getfixturevalue("env"), context.split()[1])
         return
@@ -278,13 +273,13 @@ def test_1_board_shows_stories_workers_checks_and_findings(repo, gh, request, co
                'models.build = { model = "gpt-6.1-sol", effort = "medium" }\n'
                'models.fix = { model = "gpt-6-luna", effort = "high" }\n')
     repo.git("add", "forge.toml")
-    repo.git("commit", "-qm", "Choose build model")
+    repo.git("commit", "--allow-empty", "-qm", "Choose build model")
     story(repo)
     repo.git("worktree", "add", str(repo.path.parent / "repo-BOARD"), "story/BOARD")
-    assert view(repo, "next")["next"]["command"] == "forge task start BOARD/PAGE"
+    assert plain_next(repo)[0] == "forge task start BOARD/PAGE"
     assert repo.forge("task", "start", "BOARD/PAGE").returncode == 0
     folder = worktree(repo, "task/BOARD-PAGE")
-    assert view(repo, "next")["next"]["command"] == "forge work BOARD/PAGE"
+    assert plain_next(repo)[0] == "forge work BOARD/PAGE"
     made = repo.forge("fix", "start", "Polish the guide", "--done", "The guide reads clearly", "--slug", "polish")
     assert made.returncode == 0, made.stderr
     file = folder / ".factory/stories/BOARD/tasks/PAGE.json"
@@ -356,7 +351,7 @@ def test_1_board_shows_stories_workers_checks_and_findings(repo, gh, request, co
         lock.unlink()
     # A landed task is finished, even though the committed state still says working.
     repo.git("add", "-A", cwd=folder)
-    repo.git("commit", "-qm", "Finish the task", cwd=folder)
+    repo.git("commit", "--allow-empty", "-qm", "Finish the task", cwd=folder)
     repo.git("merge", "--no-ff", "-m", "Accept the task", "task/BOARD-PAGE")
     repo.git("push", "-q", "origin", "main")
     child = next(r for r in view(repo, "board")["items"] if r["id"] == "BOARD")["children"][0]
@@ -370,7 +365,7 @@ def _successful_checks_do_not_replace_close_receipts(repo, gh, context):
     setup(repo, keys=())
     repo.write("forge.toml", (repo.path / "forge.toml").read_text() + 'checks = ["forge-pr-check"]\n')
     repo.git("add", "forge.toml")
-    repo.git("commit", "-qm", "Choose required check")
+    repo.git("commit", "--allow-empty", "-qm", "Choose required check")
     repo.git("push", "-q", "origin", "main")
     story(repo)
     assert repo.forge("task", "start", "BOARD/PAGE").returncode == 0
@@ -400,7 +395,7 @@ def _successful_checks_do_not_replace_close_receipts(repo, gh, context):
     assert row["next"] == {"command": "forge close polish", "line": "Polish the guide is waiting for its checks.",
                           "step": "forge close polish"}
     # The GitHub request must ask for the fallback; a canned response cannot prove that.
-    query = next(c for c in gh.calls() if c[:2] == ["api", "graphql"])
+    query = next(c for c in gh.calls("api", "graphql", query="StatusContext"))
     assert "startedAt" in " ".join(query)
     assert "\n" not in query[-1], "Windows .cmd shims must receive the whole query on one line"
     # Failures need work, while other results still need close's receipt.
@@ -429,7 +424,7 @@ def _successful_checks_do_not_replace_close_receipts(repo, gh, context):
         for row in (rows["polish"], rows["BOARD"]["children"][0]):
             assert "ready to merge" not in row["next"]["line"]
             assert "checks passed" not in row["next"]["line"]
-        assert "ready to merge" not in view(repo, "next")["next"]["line"]
+        assert "ready to merge" not in plain_next(repo)[1]
 
 
 def _skipped_checks_fail_only_when_required(repo, gh, conclusion, required):
@@ -438,7 +433,7 @@ def _skipped_checks_fail_only_when_required(repo, gh, conclusion, required):
     setup(repo, keys=())
     repo.write("forge.toml", (repo.path / "forge.toml").read_text() + 'checks = ["forge-pr-check"]\n')
     repo.git("add", "forge.toml")
-    repo.git("commit", "-qm", "Choose required check")
+    repo.git("commit", "--allow-empty", "-qm", "Choose required check")
     repo.git("push", "-q", "origin", "main")
     made = repo.forge("fix", "start", "Polish the guide", "--done", "The guide reads clearly", "--slug", "polish")
     assert made.returncode == 0, made.stderr
@@ -473,7 +468,7 @@ def test_2_next_and_board_share_the_mod_contract(repo, gh, request, status, merg
     setup(repo, keys=())
     repo.write("forge.toml", (repo.path / "forge.toml").read_text() + f'merge = "{merge}"\n')
     repo.git("add", "forge.toml")
-    repo.git("commit", "-qm", "Choose merge owner")
+    repo.git("commit", "--allow-empty", "-qm", "Choose merge owner")
     repo.git("push", "-q", "origin", "main")
     made = repo.forge("fix", "start", "Polish the guide", "--done", "The guide reads clearly", "--slug", "polish")
     assert made.returncode == 0, made.stderr
@@ -481,10 +476,10 @@ def test_2_next_and_board_share_the_mod_contract(repo, gh, request, status, merg
     state(folder / ".factory/fixes/polish.json", status=status)
     github(gh, [])
     plain = repo.forge("next").stdout
-    result = view(repo, "next")
-    assert result["next"]["command"] == command
-    assert result["next"]["line"] in plain.splitlines()
-    assert not result["next"]["line"].startswith("Next: ")
+    assert plain_next(repo)[0] == command
+    # The pane no longer reads `forge next --json`: the option is refused.
+    refused = repo.forge("next", "--json")
+    assert refused.returncode != 0 and "--json" in refused.stderr
     row = view(repo, "board")["items"][0]
     # A saved ready label alone no longer grants readiness; the real close receipts
     # and owner-specific merge steps are exercised by the client lifecycle contract.
@@ -519,7 +514,6 @@ def test_2_next_and_board_share_the_mod_contract(repo, gh, request, status, merg
                     contract(value, example[0])
         elif example is not None:
             assert isinstance(actual, type(example))
-    contract(result, fixture["next"])
     contract(view(repo, "board"), fixture["board"])
     contract(waiting_row, fixture["board"]["items"][1])
     assert snapshot(view(repo, "board", folder)) == snapshot(view(repo, "board", waiting))
@@ -527,18 +521,10 @@ def test_2_next_and_board_share_the_mod_contract(repo, gh, request, status, merg
 
 
 @pytest.mark.parametrize("conclusion,required", [(None, None)] + [
-    ("plugin " + case, None) for case in ("events", "busy reload", "reload complete", "reload start")] + [
     (f"review {priority}", None) for priority in ("P1", "P3")] + [
     (c, r) for c in ("SKIPPED", "NEUTRAL", "STALE") for r in (True, False)])
 def test_3_board_reports_github_occurrences_after_cache_expiry(repo, gh, monkeypatch, request,
                                                              conclusion, required):
-    # EVENTS joins this criterion's command owner, as CORE does for criterion 1.
-    if conclusion and conclusion.startswith("plugin "):
-        from test_mod_plugin import packaged_events_start_each_sessions_turn_from_real_worker_occurrences
-        packaged_events_start_each_sessions_turn_from_real_worker_occurrences(
-            request.getfixturevalue("env"), request.getfixturevalue("packaged_mod"),
-            request.getfixturevalue("tmp_path"), conclusion.removeprefix("plugin "))
-        return
     if conclusion and conclusion.startswith("review "):
         _board_exposes_produced_questions_reviews_run_ends_and_readiness(
             request.getfixturevalue("env"), conclusion.split()[1])
@@ -548,7 +534,8 @@ def test_3_board_reports_github_occurrences_after_cache_expiry(repo, gh, monkeyp
         return
     setup(repo, keys=())
     assert view(repo, "board")["items"] == []
-    initial_calls = len([c for c in gh.calls() if c[:2] == ["api", "graphql"]])
+    check_query = "pullRequests(first: 25"
+    initial_calls = len(gh.calls("api", "graphql", query=check_query))
     monkeypatch.setenv("FORGE_NOW", "2026-10-04T10:00:00+00:00")
     for name in ("first", "second", "older"):
         made = repo.forge("fix", "start", name, "--done", "Reads clearly", "--slug", name)
@@ -580,7 +567,7 @@ def test_3_board_reports_github_occurrences_after_cache_expiry(repo, gh, monkeyp
     # The --out board uses the same cache; it must not refresh the open checks early.
     written = repo.forge("board", "--out", str(repo.path / ".git/forge/cache-board.json"))
     assert written.returncode == 0, written.stderr
-    assert len([c for c in gh.calls() if c[:2] == ["api", "graphql"]]) == initial_calls + 1
+    assert len(gh.calls("api", "graphql", query=check_query)) == initial_calls + 1
     monkeypatch.setenv("FORGE_NOW", "2026-10-04T10:01:00+00:00")
     rows = {r["id"]: r for r in view(repo, "board")["items"]}
     assert rows["first"]["pr"]["checks"] == "fail"
@@ -608,9 +595,9 @@ def test_3_board_reports_github_occurrences_after_cache_expiry(repo, gh, monkeyp
     monkeypatch.setenv("FORGE_NOW", "2026-10-04T10:04:00+00:00")
     events = {r["id"]: r for r in view(repo, "board")["items"]}["first"]["occurrences"]
     assert {e["id"] for e in events} == {"check-run:111371488291:2026-10-04T10:03:00Z", "status:SC_kwDNIULPAAAADOokTrg"}
-    calls = [c for c in gh.calls() if c[:2] == ["api", "graphql"]]
+    calls = gh.calls("api", "graphql", query=check_query)
     assert len(calls) == initial_calls + 5
-    assert "first: 25" in " ".join(calls[-1]) and "CREATED_AT" in " ".join(calls[-1])
+    assert all("CREATED_AT" in " ".join(call) for call in calls)
 
 
 @pytest.mark.parametrize("phase,history", [
@@ -637,7 +624,7 @@ def test_4_client_machine_views_follow_the_last_task_merge(env, history, phase):
         shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", repo.path,
                         dirs_exist_ok=True)
         repo.git("add", "-A")
-        repo.git("commit", "-qm", "Adopt Forge v1.2.2")
+        repo.git("commit", "--allow-empty", "-qm", "Adopt Forge v1.2.2")
         env.commit(repo.path, ".factory/fixes/upgrade-client.json", json.dumps({
             "kind": "fix", "branch": "fix/upgrade-client", "why": "Upgrade Forge",
             "done_when": "The client uses this release", "status": "started"}))
@@ -650,7 +637,7 @@ def test_4_client_machine_views_follow_the_last_task_merge(env, history, phase):
         synced = repo.forge("sync")
         assert synced.returncode == 0, synced.stderr
         repo.git("add", "-A")
-        repo.git("commit", "-qm", "Upgrade Forge and sync")
+        repo.git("commit", "--allow-empty", "-qm", "Upgrade Forge and sync")
         checkout = env.tmp / "upgraded-checkout"
         remote = repo.git("remote", "get-url", "origin")
         repo.git("clone", "-q", "--branch", "fix/upgrade-client", str(repo.path), str(checkout))
@@ -677,7 +664,7 @@ def test_4_client_machine_views_follow_the_last_task_merge(env, history, phase):
     # Approval is a gate; the visible stage follows the current next-step derivation.
     assert row["stage"] == "building"
     assert row["children"][0]["next"]["command"] == "forge work SHOP/T1"
-    assert view(repo, "next")["next"]["command"] == "forge work SHOP/T1"
+    assert plain_next(repo)[0] == "forge work SHOP/T1"
     # The shipped views consume the same real run producers on new and upgraded clients.
     from test_worker import install_claude
     install_claude(repo)
@@ -692,7 +679,7 @@ def test_4_client_machine_views_follow_the_last_task_merge(env, history, phase):
     # Close leaves saved state waiting for checks; the reviewed-head receipt makes it ready.
     child = next(r for r in view(repo, "board")["items"] if r["id"] == "SHOP")["children"][0]
     # Live status ships through the same commands after init and earlier adoption.
-    for command in ("board", "next"):
+    for command in ("board",):
         live = view(repo, command)
         current = next(r for r in live["items"] if r["id"] == "SHOP")["children"][0]
         assert current["activity"] == {"status": "idle"}
@@ -738,9 +725,6 @@ def test_4_client_machine_views_follow_the_last_task_merge(env, history, phase):
             for current, result in ((item, rows["SHOP"]["children"][0]), (fix, rows[fix])):
                 assert result["stage"] == ("checks failed" if conclusion == "FAILURE" else "ready")
                 assert result["next"]["command"] == f"forge {'work' if conclusion == 'FAILURE' else 'merge'} {current}"
-            following = view(repo, "next")["next"]
-            assert following["command"] == f"forge {'work' if conclusion == 'FAILURE' else 'merge'} {item}"
-            assert ("checks failed" in following["line"]) == (conclusion == "FAILURE")
         return
     if phase == "offline":
         # A later commit invalidates that receipt; a machine view must not advertise stale readiness.
@@ -762,7 +746,7 @@ def test_4_client_machine_views_follow_the_last_task_merge(env, history, phase):
             if merged_fix:
                 # Retain the merged worktree to cover its permission-dependent cleanup instruction.
                 repo.git("merge", "--squash", "fix/tidy-readme")
-                repo.git("commit", "-qm", "Accept the fix")
+                repo.git("commit", "--allow-empty", "-qm", "Accept the fix")
                 repo.git("push", "-q", "origin", "main")
             repo.git("remote", "set-url", "origin", str(env.tmp / "unreachable.git"))
             offline = {r["id"]: r for r in view(repo, "board")["items"]}
@@ -784,4 +768,5 @@ def test_4_client_machine_views_follow_the_last_task_merge(env, history, phase):
     assert row["stage"] == "done"
     assert row["children"][0]["stage"] == "merged"
     assert row["next"] == {"command": None, "line": "Shoppers can save a basket is finished.", "step": None}
-    assert "record the outcome" not in view(repo, "next")["next"]["line"]
+    assert "record the outcome" not in plain_next(repo)[1]
+

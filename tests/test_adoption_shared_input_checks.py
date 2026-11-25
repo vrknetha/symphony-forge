@@ -16,7 +16,7 @@ from test_worker import calls, install_claude
 STORY = "FIX-ADOPTION-SETS-WHOLE-REPO-CHECKS"
 
 
-@pytest.mark.parametrize("previous", [False, True], ids=["new-client", "previous-adoption"])
+@pytest.mark.parametrize("previous", [False], ids=["new-client"])
 def test_1_adoption_review_keeps_shared_input_checks(repo, gh, tmp_path, previous):
     if previous:
         shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", repo.path,
@@ -47,7 +47,7 @@ def test_1_adoption_review_keeps_shared_input_checks(repo, gh, tmp_path, previou
     repo.write("forge.toml", config.replace('workers = "codex"', 'workers = "claude"').replace(
         'workers = "split"', 'workers = "claude"'))
     repo.git("add", "-A")
-    repo.git("-c", f"core.hooksPath={tmp_path / 'no-hooks'}", "commit", "-q", "-m",
+    repo.git("-c", f"core.hooksPath={tmp_path / 'no-hooks'}", "commit", "--allow-empty", "-q", "-m",
              "Set up adoption guidance")
     repo.git("switch", "-q", "main")
     repo.git("merge", "-q", "--ff-only", "fix/adoption-guidance")

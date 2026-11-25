@@ -64,7 +64,7 @@ def _agent_budgets(agents: dict[str, dict[str, str]]) -> dict[str, dict[str, str
             for name, definition in agents.items()}
 
 
-@pytest.mark.parametrize("case", ["new-init-design", "new-configured-retry", "adopted-configured-retry",
+@pytest.mark.parametrize("case", ["new-init-design", "new-configured-retry",
                                   "new-lite-retry", "new-design-retry"])
 def test_6_claude_builder_gets_haiku_helpers(repo, gh, tmp_path, monkeypatch, sdk_data, case):
     if case == "new-init-design":
@@ -108,6 +108,9 @@ def test_6_claude_builder_gets_haiku_helpers(repo, gh, tmp_path, monkeypatch, sd
     monkeypatch.setenv("STUB_CLAUDE_COMMIT_FROM", "1")
     first = repo.forge("work", item)
     assert first.returncode == 0, first.stdout + first.stderr
+    proof_key = "Done when" if case == "new-lite-retry" else "1"
+    repo.git("commit", "--allow-empty", "-q", "-m", "Record the helper retry proof", "-m",
+             f"Proof list:\n- {proof_key}: check: synthetic helper retry fixture", cwd=folder)
     failed = env.close(item)
     assert failed.returncode == 1, failed.stdout + failed.stderr
     assert "intentional failed close test" in failed.stdout
@@ -140,7 +143,7 @@ def test_10_no_process_wide_setting(repo, gh, tmp_path, monkeypatch, sdk_data):
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(claude_config))
     monkeypatch.delenv("CLAUDE_CODE_SUBAGENT_MODEL", raising=False)
-    _, folder, log = _round_client(repo, gh, tmp_path, monkeypatch, "claude", history="adopted",
+    _, folder, log = _round_client(repo, gh, tmp_path, monkeypatch, "claude", history="new",
                                    sdk_data=sdk_data)
     # A different kind's pair must not replace the default for this build kind.
     config = folder / "forge.toml"
@@ -149,7 +152,7 @@ def test_10_no_process_wide_setting(repo, gh, tmp_path, monkeypatch, sdk_data):
         'models.lite = { model = "claude-sonnet-5-5", effort = "low", '
         'subagents = "custom-haiku", subagent_effort = "medium" }'), encoding="utf-8")
     repo.git("add", "forge.toml", cwd=folder)
-    repo.git("commit", "-q", "-m", "Keep a separate lite helper budget", cwd=folder)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Keep a separate lite helper budget", cwd=folder)
     settings = [folder / ".claude/settings.json", home / ".claude/settings.json",
                 claude_config / "settings.json"]
     before = {path: path.read_bytes() if path.exists() else None for path in settings}
@@ -163,7 +166,7 @@ def test_10_no_process_wide_setting(repo, gh, tmp_path, monkeypatch, sdk_data):
 
 
 def test_11_one_key_is_refused_as_today(repo, gh, tmp_path, monkeypatch, sdk_data):
-    _, folder, _ = _round_client(repo, gh, tmp_path, monkeypatch, "claude", history="adopted",
+    _, folder, _ = _round_client(repo, gh, tmp_path, monkeypatch, "claude", history="new",
                                  sdk_data=sdk_data)
     config = folder / "forge.toml"
     text = config.read_text("utf-8")

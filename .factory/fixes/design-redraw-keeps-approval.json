@@ -1,0 +1,209 @@
+{
+  "allow_large": "Owner allowed 6 code files on 23 Nov 2026: the old-hash fallback across task, worker, approval and board checks keeps stories approved before this release approved after the upgrade",
+  "base": "537ad6b79e4517770d896009f51888fb70c3b2c0",
+  "branch": "fix/design-redraw-keeps-approval",
+  "done_when": "A design part's own redraw may change only the Design line of an approved story's What changes for you without voiding the approval or asking for a new cold read; any other change to What changes for you or Done when still needs a new approval; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "test_1_design_redraw_keeps_the_approval() in tests/test_design_redraw_keeps_approval.py",
+      "file": "tests/test_design_redraw_keeps_approval.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 48,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A design part cannot close after redrawing its own screens",
+      "work": 2
+    },
+    {
+      "area": "approval_hashes() in src/forge/design.py",
+      "file": "src/forge/design.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 115,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The first redraw invalidates approvals recorded before the upgrade",
+      "work": 3
+    },
+    {
+      "area": "approval_hash() in src/forge/design.py",
+      "file": "src/forge/design.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 109,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "An initial approval can be recorded for a different design than the owner saw",
+      "work": 2
+    },
+    {
+      "area": "changed_since_read() in src/forge/story.py",
+      "file": "src/forge/story.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 712,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "A redraw before initial approval bypasses the cold read",
+      "work": 1
+    },
+    {
+      "area": "test_1_design_redraw_keeps_the_approval() in tests/test_design_redraw_keeps_approval.py",
+      "file": "tests/test_design_redraw_keeps_approval.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 65,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 23 Nov 2026: the test does not prove both closes finish or that the read is kept; if the code fails, Forge falls back to today's new read and approval, so it cannot do worse; recorded in the v1.2.47 known issues",
+      "round": 1,
+      "security": false,
+      "title": "Gate: tests/test_design_redraw_keeps_approval.py::test_1_design_redraw_keeps_the_approval",
+      "work": 2
+    },
+    {
+      "area": "approval_hash() in src/forge/design.py",
+      "file": "src/forge/design.py",
+      "gain": 2,
+      "harm": 2,
+      "line": 109,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A Design-shaped line in Done when is excluded from approval",
+      "work": 1
+    },
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 1149,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "New story templates still instruct coordinators to reapprove every redraw",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "8310a6bb2dbd3a15898fc9848e7fa4d315a57544fd6572a5c5e10058872bc811",
+    "changed": "152c1459b69941f0306375ff45cd67f689138d4c59dadb0bcda4d5d0f6652cd7",
+    "commit": "068c7609dd66f8ebaeb07b68835d12acc2f6de74",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted on 23 Nov 2026: the test does not prove both closes finish or that the read is kept; if the code fails, Forge falls back to today's new read and approval, so it cannot do worse; recorded in the v1.2.47 known issues",
+        "finding": 1
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Test\nCase: normal use - a design part closes its redraw, runs a follow-up work round, and closes again.\nThe test still accepts any close error other than the two checked strings and never verifies that the passed cold read survives. Its GitHub fixture returns an empty PR list but supplies no response for `gh pr create`; unmatched calls fail in tests/conftest.py:117-136, while a successful close needs that call at src/forge/close.py:980-988. Thus the test can pass without either close completing. It would also pass with a stale read record, although src/forge/story.py:789-793 would reject the redrawn plan. Check the close outcomes and the preserved read at the command boundary.",
+        "file": "tests/test_design_redraw_keeps_approval.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 100,
+        "priority": "P1",
+        "title": "Gate: tests/test_design_redraw_keeps_approval.py::test_1_design_redraw_keeps_the_approval",
+        "work": 2
+      }
+    ],
+    "id": "46c1ca14-2ff1-4d81-9303-3b1c2e412978",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T05:45:50.033875+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T05:46:05.246128+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T06:10:14.322374+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T06:20:00.941642+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T06:20:42.729322+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T06:30:14.042605+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T06:30:14.060889+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T07:04:20.504086+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-23T07:17:14.612170+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T07:27:59.447550+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T07:27:59.486662+00:00",
+      "round": 4,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T07:38:35.998313+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 4,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-23T07:27:59.486662+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "tests/test_design_redraw_keeps_approval.py",
+    "reason": "Owner accepted on 23 Nov 2026: the test does not prove both closes finish or that the read is kept; if the code fails, Forge falls back to today's new read and approval, so it cannot do worse; recorded in the v1.2.47 known issues",
+    "wait_id": "7214e261-99bb-462e-81e5-1e9ebd672332",
+    "worker_round": 4
+  },
+  "stuck": {
+    "close": "26a78403-bde4-47c4-82fe-5fb31c242278",
+    "head": "20f7935921c24c3e028188c74b79bfc8d21d3544",
+    "keys": {},
+    "round": 3
+  },
+  "why": "When a story's design part redraws the screens, the plan's Design line changes and Forge treats the approved plan as changed, asking for a new cold read and a new approval although the owner already saw the screens",
+  "worker": "claude"
+}

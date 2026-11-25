@@ -21,7 +21,7 @@ import pytest
 pytestmark = pytest.mark.platform
 
 STORY = "FORGE-WARM-1"
-PIN = "0.159.2"
+PIN = "0.171.0"
 UNTRUSTED = "- Codex doesn't trust this project"
 APPROVE = "- Note: when Codex asks you to approve Forge's hooks, approve them"
 
@@ -93,6 +93,7 @@ def test_11_codex_doctor(repo, gh, tmp_path, monkeypatch):
             (home / "skills" / name / "SKILL.md").write_text(f"{name}\n", encoding="utf-8")
     monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))  # never the real SDK environment
     env = tmp_path / "data" / "forge" / "codex-sdk" / f"openai-codex-{PIN}"
+    shutil.rmtree(env)
     program = tmp_path / ("bundled-codex.cmd" if os.name == "nt" else "bundled-codex")
     _program(program, f"echo codex-cli {PIN}")
     hooks = _stub_forge(tmp_path, monkeypatch)
@@ -100,7 +101,7 @@ def test_11_codex_doctor(repo, gh, tmp_path, monkeypatch):
     # Default-branch file repairs now require a clean checkout at origin/main. Land the
     # worker setting so this SDK test still isolates SDK and trust problems.
     repo.git("add", "forge.toml", cwd=client)
-    repo.git("commit", "-q", "-m", "Use Codex workers", cwd=client)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Use Codex workers", cwd=client)
     repo.git("push", "-q", "origin", "main", cwd=client)
 
     def trust(level: str) -> None:
@@ -208,7 +209,7 @@ def test_11_codex_doctor(repo, gh, tmp_path, monkeypatch):
     config.write_text(config.read_text("utf-8").replace(
         'workers = "claude"', 'workers = "claude"\ntools = "claude"'), encoding="utf-8")
     repo.git("add", "forge.toml", cwd=client)
-    repo.git("commit", "-q", "-m", "Use Claude workers", cwd=client)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Use Claude workers", cwd=client)
     repo.git("push", "-q", "origin", "main", cwd=client)
     _install(repo.bin, "claude", "#!/bin/sh\n")
     claude = repo.forge("doctor", "--fix", cwd=client)
@@ -220,10 +221,11 @@ def test_11_codex_doctor(repo, gh, tmp_path, monkeypatch):
     assert not env.exists()
     assert len((repo.bin / "uv-calls.jsonl").read_text(encoding="utf-8").splitlines()) == 2
 
-    # Permit both tools again: a Codex cold read needs its SDK; trust stays advice.
+    # Permit both tools again: a Codex cold read needs its SDK, and reviews need trust.
+    trust("trusted")
     config.write_text(config.read_text("utf-8").replace('tools = "claude"', 'tools = "both"'), "utf-8")
     repo.git("add", "forge.toml", cwd=client)
-    repo.git("commit", "-q", "-m", "Permit both tools", cwd=client)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Permit both tools", cwd=client)
     repo.git("push", "-q", "origin", "main", cwd=client)
     _install(repo.bin, "codex", "#!/bin/sh\n")
     monkeypatch.setenv("CLAUDECODE", "1")

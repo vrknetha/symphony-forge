@@ -12,7 +12,7 @@ STORY = "FIX-APP-BASELINE"
 ROOT = Path(__file__).resolve().parents[1]
 # The approved guide adds the fixed baseline, look method and guard rules.
 # This package-byte contract remains distinct from the init/sync guidance test.
-BASELINE_SHA256 = "77779156a217952408cb9f6cb258091105bc0fb05defb53c0735c6e3262e4c72"
+BASELINE_SHA256 = "8f6a974f875892d7e99ca531be1438a25bcee8e38b6055646906f74ec2a2ecab"
 
 
 @pytest.mark.platform

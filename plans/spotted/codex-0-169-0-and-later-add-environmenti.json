@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/codex.py\tFunctional: Upgrade leaves the newly pinned SDKs unavailable\tcodex-0-169-0-and-later-add-environmenti",
+      "kind": "bug",
+      "path": "src/forge/codex.py",
+      "line": 34,
+      "text": "Functional: Upgrade leaves the newly pinned SDKs unavailable",
+      "from": "blocking",
+      "item": "codex-0-169-0-and-later-add-environmenti",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/codex.py\tSync can crash while it preserves a chat if the newly pinned SDK is not installed; filed as https://github.com/knacklabs/symphony-forge/issues/1757.",
+      "kind": "bug",
+      "path": "src/forge/codex.py",
+      "line": 303,
+      "text": "Sync can crash while it preserves a chat if the newly pinned SDK is not installed; filed as https://github.com/knacklabs/symphony-forge/issues/1757.",
+      "from": "worker",
+      "item": "codex-0-169-0-and-later-add-environmenti",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/sync.py\tDisputed keep: SDK setup during upgrade misses teammates\u2019 machines\tcodex-0-169-0-and-later-add-environmenti",
+      "kind": "bug",
+      "path": "src/forge/sync.py",
+      "line": 720,
+      "text": "Disputed keep: SDK setup during upgrade misses teammates\u2019 machines",
+      "from": "blocking",
+      "item": "codex-0-169-0-and-later-add-environmenti",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tsrc/forge/sync.py\tDisputed keep: The upgrade notice misses clone-local Codex defaults\tcodex-0-169-0-and-later-add-environmenti",
+      "kind": "bug",
+      "path": "src/forge/sync.py",
+      "line": 725,
+      "text": "Disputed keep: The upgrade notice misses clone-local Codex defaults",
+      "from": "blocking",
+      "item": "codex-0-169-0-and-later-add-environmenti",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tsrc/forge/upgrade.py\tNot done: Existing repos receive the new-default notice during upgrade\tcodex-0-169-0-and-later-add-environmenti",
+      "kind": "bug",
+      "path": "src/forge/upgrade.py",
+      "line": 233,
+      "text": "Not done: Existing repos receive the new-default notice during upgrade",
+      "from": "blocking",
+      "item": "codex-0-169-0-and-later-add-environmenti",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/conftest.py\tGate: Exercise Claude turns with the pinned SDK\tcodex-0-169-0-and-later-add-environmenti",
+      "kind": "bug",
+      "path": "tests/conftest.py",
+      "line": 205,
+      "text": "Gate: Exercise Claude turns with the pinned SDK",
+      "from": "blocking",
+      "item": "codex-0-169-0-and-later-add-environmenti",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_close_runs_only_related_tests.py\tThe CI close command timed out after sixty seconds and left child processes, while the complete file passed locally; the cause remains unresolved.",
+      "kind": "bug",
+      "path": "tests/test_close_runs_only_related_tests.py",
+      "line": 81,
+      "text": "The CI close command timed out after sixty seconds and left child processes, while the complete file passed locally; the cause remains unresolved.",
+      "from": "worker",
+      "item": "codex-0-169-0-and-later-add-environmenti",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

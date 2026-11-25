@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import tomllib
@@ -13,12 +14,15 @@ from typing import Any
 from forge import repo
 from forge.repo import git, refuse, run
 
+IDEAS = "plans/ideas.md"  # a carried idea is not work
+
 REFUSALS = {
     "bad_task": ("{item!r} is not a task; a task is named KEY/TASK.", "forge next"),
     "no_doc": ("Story {key} has no story doc on {default} or on story/{key}.",
                'forge story new {key} "<title>"'),
     "no_task": ("The story doc of {key} has no task {task}.", "forge next"),
     "not_approved": ("Story {key} is not approved yet.", "forge next"),
+    "dropped": ("Story {key} is dropped, so its parts stop.", "forge next"),
     "changed": ('"What changes for you" or "Done when" of story {key} changed after its approval, '
                 "so it needs a new approval.", "forge next"),
     "started": ("{item} is already started on {branch}{person}.", "forge work {item}"),
@@ -40,6 +44,8 @@ REFUSALS = {
                  'forge fix start "<why>" --done "<done when>" --kind <kind>'),
     "not_fix": ("{branch} is not a fix, and allow-large works only inside a fix's folder.",
                 'cd <the fix folder> && forge fix allow-large "<reason>"'),
+    "worker_allow": ("A worker cannot allow a fix past the five-file limit: stop and report this refusal "
+                     "to the coordinator, who records the allowance between rounds.", "forge next"),
     "no_reason": ("The permission needs a one-line reason.", 'forge fix allow-large "<reason>"'),
     "bad_slug": ("{slug!r} is not a fix name; a fix name is lowercase words joined by hyphens.",
                  'forge fix start "<why>" --done "<done when>" --slug <name>'),
@@ -231,17 +237,19 @@ def _folder(name: str) -> Path:
     return main.parent / f"{main.name}-{name}"
 
 
-def pick_up(item: str, branches: list[str]) -> Path | None:
+def pick_up(item: str, branches: list[str], *, allow_size: bool = False) -> Path | None:
     """Find the item's checkout, or make one from its published state."""
-    from forge import story
+    from forge import owner_choices, story
 
     top = repo.root()
     for branch, tree in story.worktrees(top).items():
         state = repo.read_state(item, tree)
         if state and state.get("branch") == branch:
+            if not allow_size:
+                owner_choices.require_size(tree, state)
             return tree
     for branch in branches:
-        if run("git", "fetch", "-q", "origin", branch, cwd=top).returncode:
+        if run("git", "fetch", "-q", "origin", branch, repo.replayed_tags(branch), cwd=top).returncode:
             continue
         remote = f"origin/{branch}"
         state = story.json_of(show(remote, repo.state_path(item), top))
@@ -257,6 +265,8 @@ def pick_up(item: str, branches: list[str]) -> Path | None:
                                    f"forge work {item}")
         else:
             git("worktree", "add", "-q", "--track", "-b", branch, str(path), remote, cwd=top)
+        if not allow_size:
+            owner_choices.require_size(path, state)
         return path
     return None
 
@@ -283,6 +293,25 @@ def _new_checkout(item: str, branch: str, folder: str, base: str, state: dict[st
     repo.commit_state(message, rel, top=path)
     publish_start(path, branch)
     return path
+
+
+def _task_next(item: str, path: Path) -> str:
+    """Check the profile after its worktree exists, before telling an SSH user to work."""
+    if not os.environ.get("SSH_CONNECTION"):
+        return f"Next: forge work {item}"
+    from forge import antigravity, routing
+
+    config = routing.routed(path, repo.config(path))
+    if repo.worker_family(config, False) != "antigravity":
+        return f"Next: forge work {item}"
+    signed_in, reason = antigravity.signed_in(path, mode="full", again=f"forge work {item}")
+    if signed_in is False:
+        return ("Antigravity's full profile for this worktree is not signed in.\n"
+                f"Next: {reason}")
+    if signed_in is None:
+        return (f"Forge could not check Antigravity's sign-in for this worktree: {reason}.\n"
+                f"Next: cd {repo.quote(str(path))} && forge doctor")
+    return f"Next: forge work {item}"
 
 
 def publish_start(top: Path, branch: str) -> None:
@@ -435,7 +464,10 @@ def start(args: argparse.Namespace) -> None:
     tasks = rows(sections(text))
     if task not in tasks:
         refuse(REFUSALS["no_task"], key=key, task=task)
-    approval = json.loads(show(source, repo.state_path(key)) or "{}").get("approval") or {}
+    record = json.loads(show(source, repo.state_path(key)) or "{}")
+    if record.get("status") == "dropped":
+        refuse(REFUSALS["dropped"], key=key)
+    approval = record.get("approval") or {}
     approved = approval.get("hash")
     if not approved:
         refuse(REFUSALS["not_approved"], key=key)
@@ -505,7 +537,7 @@ def start(args: argparse.Namespace) -> None:
     on = f" on top of {blockers[0]}" if stacked else ""
     print(f"Started {item}{on} on {branch} in {path}")
     print("Keep this part to about 400 changed lines outside tests and docs; close only warns when it is larger.")
-    print(f"Next: forge work {item}")
+    print(_task_next(item, path))
 
 
 def can_start(item: str, waiting: list[str], scope: list[str], started: dict[str, list[str]],
@@ -516,6 +548,9 @@ def can_start(item: str, waiting: list[str], scope: list[str], started: dict[str
         waiting = [dep if "/" in dep else f"{key}/{dep}" for dep in waiting]
         waiting = [dep for dep in waiting if not _merged(main, dep, top)]
         blockers = waits_for(item, waiting, scope, started)
+        if len(blockers) > 1 and any(part.split("/", 1)[0] != key for part in blockers):
+            raise repo.Refused(f"{item} has open blockers: {', '.join(blockers)}. "
+                               "Parts of another story must merge first.", "forge next")
         stacked = stack_base(item, blockers, main, top)
         if waiting and not stacked:
             refuse(REFUSALS["waiting"], item=item, deps=", ".join(waiting))
@@ -543,10 +578,15 @@ def can_start(item: str, waiting: list[str], scope: list[str], started: dict[str
         return None, error
 
 
+def _merge_commit(main: str, item: str, top: Path | None = None) -> str:
+    """The default branch commit that brought this item's state, however it was merged."""
+    return git("log", "--first-parent", "--diff-filter=A", "-1", "--format=%H", main,
+               "--", repo.state_path(item), cwd=top)
+
+
 def forge_merged(main: str, item: str, top: Path | None = None) -> str:
     """The default branch commit where Forge merged this item, or an empty string."""
-    commit = git("log", "--first-parent", "--diff-filter=A", "-1", "--format=%H", main,
-                 "--", repo.state_path(item), cwd=top)
+    commit = _merge_commit(main, item, top)
     if commit and f"Forge-merged: {item}" in git("show", "-s", "--format=%B", commit, cwd=top).splitlines():
         return commit
     return ""
@@ -556,6 +596,8 @@ def stack_base(item: str, blockers: list[str], main: str, top: Path | None = Non
     """The single reviewed remote base for a new part; refuse before any start mutation."""
     top = top or repo.root()
     if not blockers or repo.config(top)["stack"] == "off":
+        return None
+    if any(base.split("/", 1)[0] != item.split("/", 1)[0] for base in blockers):
         return None
     if len(blockers) != 1:
         refuse(REFUSALS["two_bases"], item=item, deps=", ".join(blockers))
@@ -569,7 +611,8 @@ def stack_base(item: str, blockers: list[str], main: str, top: Path | None = Non
             refuse(REFUSALS["base_local"], item=item, base=base)
         refuse(REFUSALS["base_not_started"], item=item, base=base)
     if below := state.get("stacked_on"):
-        merged = forge_merged(main, below, top)
+        # A merge with GitHub's button has no trailer; the base containing that commit is the proof.
+        merged = _merge_commit(main, below, top)
         if not merged:
             refuse(REFUSALS["base_stacked"], item=item, base=base, below=below)
         if run("git", "merge-base", "--is-ancestor", merged, ref, cwd=top).returncode:
@@ -605,6 +648,14 @@ def _merged(main: str, item: str, top: Path | None = None) -> bool:
     return repo.read_blob(top or repo.root(), f"{main}:{repo.state_path(item)}") is not None
 
 
+def _dropped(key: str, top: Path | None, history: dict[str, Any] | None) -> bool:
+    """A dropped story's unmerged parts hold no files."""
+    from forge import story
+
+    top = top or repo.root()
+    return story.state_of(top, key, story.plan_ref(top, key, history), history).get("status") == "dropped"
+
+
 def _started(main: str, top: Path | None = None,
              history: dict[str, Any] | None = None) -> dict[str, list[str]]:
     """Every story's started, unmerged tasks, each with its Scope."""
@@ -620,7 +671,8 @@ def _started(main: str, top: Path | None = None,
         for rel in paths:
             match = re.fullmatch(r"\.factory/stories/([^/]+)/tasks/([^/]+)\.json", rel)
             if match and f"task/{match[1]}-{match[2]}" == branch and not (
-                    rel in history["states"] if history is not None else _merged(main, f"{match[1]}/{match[2]}", top)):
+                    rel in history["states"] if history is not None else _merged(main, f"{match[1]}/{match[2]}", top)
+            ) and not _dropped(match[1], top, history):
                 text = (history["docs"].get(f"{ref}:plans/{match[1]}.md", "") if history is not None else
                         show(ref, f"plans/{match[1]}.md", top) or "")
                 doc = rows(sections(text))
@@ -648,6 +700,63 @@ def waits_for(part: str, after: list[str], scope: list[str] | None = None,
     blockers = [item for item, owned in (busy or {}).items()
                 if any(_overlap(a, b) for a in (scope or []) for b in owned)]
     return [item for item in dict.fromkeys(waits + blockers) if item != part]
+
+
+def _patch_changes(patch: str) -> list[tuple[set[str], set[str]]]:
+    """Added and removed content per hunk, with paths so equal lines stay separate."""
+    changes = []
+    for block in re.split(r"(?m)^diff --git ", patch)[1:]:
+        path, _, body = block.partition("\n")
+        if re.search(r"(?m)^GIT binary patch$", body):
+            index = re.search(r"(?m)^index [0-9a-f]+\.\.([0-9a-f]+)", body)
+            changes.append(({path + "\n" + index[1]}, set()))
+        for hunk in re.split(r"(?m)^@@[^\n]*\n", body)[1:]:
+            added = {path + "\n" + line for line in hunk.splitlines() if line.startswith("+")}
+            removed = {path + "\n" + line for line in hunk.splitlines() if line.startswith("-")}
+            if added or removed:
+                changes.append((added, removed))
+    return changes
+
+
+def check_foreign_work(top: Path, item: str, main: str, base: str) -> None:
+    """Compare open tasks' patches, but refuse only changes left in this task's net diff."""
+    if "/" not in item:
+        return
+    from forge import review
+
+    paths = [".", *(f":(exclude,glob){path}**" for path in review.BOOKKEEPING)]
+    net = set().union(*(added | removed for added, removed in _patch_changes(
+        git("diff", "--binary", "--full-index", "--no-renames", "-U0", base, "HEAD", "--", *paths, cwd=top))))
+    if not net:
+        return
+
+    def patches(*refs: str) -> dict[str, str]:
+        diff = git("log", "--format=commit %H", "--no-merges", "-p", "--binary", "--no-renames",
+                   *refs, "--", *paths, cwd=top)
+        result = run("git", "patch-id", "--stable", input=diff, cwd=top)
+        result.check_returncode()
+        return dict(line.split() for line in result.stdout.splitlines())
+
+    ours = patches("HEAD", "--not", base, main)
+    foreign = []
+    for other in _started(main, top):
+        if other == item:
+            continue
+        branch = f"task/{other.replace('/', '-')}"
+        refs = git("for-each-ref", "--format=%(refname)", f"refs/heads/{branch}",
+                   f"refs/remotes/origin/{branch}", cwd=top).splitlines()
+        for ref in refs:
+            start = git("log", "--reverse", "--format=%H", "--diff-filter=A", ref,
+                        "--", repo.state_path(other), cwd=top).splitlines()[0]
+            shared = ours.keys() & patches(ref, "--not", start, base, main).keys()
+            if any(any((added or removed) <= net for added, removed in _patch_changes(
+                    git("show", "--format=", "--binary", "--full-index", "--no-renames", "-U0",
+                        ours[patch], "--", *paths, cwd=top))) for patch in shared):
+                foreign.append(other)
+                break
+    if foreign:
+        raise repo.Refused(f"{item} includes unmerged commits from {', '.join(foreign)}. "
+                           "Remove or revert those changes before close.", f"forge work {item}")
 
 
 # --- forge fix start / forge fix allow-large -------------------------------------------
@@ -697,13 +806,20 @@ def fix_start(args: argparse.Namespace) -> None:
     if prototype and fix_kind == "ui":
         require_prototype_design(top, base)
     state = {"kind": "fix", "why": why, "done_when": done, "base": git("rev-parse", base),
-             "fix_kind": fix_kind or "mechanical"}
+             "fix_kind": fix_kind or "mechanical", "fix_kind_explicit": fix_kind is not None}
     if base == "HEAD":
         state["stacked_on"] = parent[0]
     if prototype:
         state["allow_large"] = "Prototype before sign-off"
+    from forge import owner_choices
+
+    owner_choices.size_choice(top, name, state, getattr(args, "files", []))
     path = _new_checkout(name, f"fix/{name}", f"fix-{name}", base, state, f"Start the fix: {why}")
     print(f"Started fix {name} on fix/{name} in {path}")
+    if stop := state.get("stop"):
+        print(f'Ask the owner: {stop["question"]} Record the choice with forge fix allow-large "<reason>".')
+        print(f'Next: cd {repo.quote(str(path))} && forge fix allow-large "<reason>"')
+        return
     if name != slug:
         print(f"Fix name {slug} is already taken; using {name}.")
     print(f"Next: forge {getattr(args, 'next', 'work')} {name}")
@@ -718,22 +834,45 @@ def allow_large(args: argparse.Namespace) -> None:
     if found is None:
         refuse(REFUSALS["not_fix"], branch=branch or "A detached HEAD")
     name, state = found
+    from forge import board
+    if os.environ.get("FORGE_WORKER") or any(
+            run.get("kind") in ("work", "worker") for run in board.active_runs(top, name)):
+        refuse(REFUSALS["worker_allow"])
     state["allow_large"] = args.reason.strip()
+    if (state.get("stop") or {}).get("predicted_files"):
+        repo.record_event(top, name, "owner wait end", wait_id=state["stop"].get("wait_id"))
+        del state["stop"]
+    from forge import close, owner_choices
+    answered = owner_choices.answer_command(top, name, state, "forge fix allow-large")
     kind, limit = ("story part", "line limit") if "/" in name else ("fix", "fix limit")
     repo.commit_state(f"Allow the {kind} past the {limit}: {state['allow_large']}",
                       repo.write_state(name, state, top), top=top)
+    if answered:
+        close.share_wait(top, name, state)
     print(f"{kind.capitalize()} {name} may now go over the {limit}.")
+    if answered and unbuilt_fix(name, state, top):
+        print(f"Next: forge work {name}")
 
 
 def require_fix_changes(item: str, state: dict, top: Path, files: list[str]) -> None:
     """Close and land cannot publish an interrupted fix's bookkeeping as its result."""
     if state.get("kind") != "fix":
         return
-    if any(path and not path.startswith((".factory/", "plans/spotted/"))
-           and path != "plans/spotted.json" for path in files):
+    def record(path: str) -> bool:
+        return path.startswith((".factory/", "plans/spotted", IDEAS))
+
+    if any(path and not record(path) for path in files):
         return
     untracked = repo.git("ls-files", "--others", "--exclude-standard", cwd=top)
     detail = f"\nUntracked files in the worktree: {untracked}" if untracked else ""
+    default = repo.default_branch(top)
+    own = repo.git("log", "--no-merges", "--name-only", "--format=", f"origin/{default}..HEAD", cwd=top).split()
+    if any(not record(path) for path in own):
+        # The fix did commit work, so after the merge the default branch has it or replaced it.
+        raise repo.Refused("After merging the default branch, this fix has no change left: the default branch "
+                           "already has it or replaced it. If it replaced the change, run "
+                           f"forge work {item} and make the change again.{detail}",
+                           f'forge fix drop {item} --because "<why>"')
     raise repo.Refused(f"The build round did not finish. This fix changes only Forge's records.{detail}",
                        f"forge work {item}")
 
@@ -748,7 +887,7 @@ def unbuilt_fix(item: str, state: dict, top: Path) -> bool:
         return False
     own = set(repo.git("rev-list", "--no-merges", "HEAD", "--not", start,
                        f"origin/{repo.default_branch(top)}", cwd=top).splitlines())
-    return not any(sha in own and (not files or any(file != path for file in files))
+    return not any(sha in own and any(file not in (path, IDEAS) for file in files)
                    for sha, _, files in repo.commit_log(top, start))
 
 
@@ -758,8 +897,12 @@ def amend(args: argparse.Namespace) -> None:
     text = args.done if args.done is not None else args.append
     if not (_one_line(text) and _one_line(args.because)):
         refuse(REFUSALS["amend_lines"], fix=args.item)
-    from forge import close  # close imports story, which imports this module
-    top = close._worktree(args.item)
+    require_active(args.item, allow_size=True)
+    top = pick_up(args.item, [f"fix/{args.item}", f"forge/{args.item}"], allow_size=True)
+    if top is None:
+        from forge import close
+
+        repo.refuse(close.REFUSALS["not_started"], item=args.item)
     state = repo.read_state(args.item, top) or {}
     old = state.get("done_when", "")
     new = text.strip() if args.done is not None else f"{old} {text.strip()}"
@@ -768,20 +911,38 @@ def amend(args: argparse.Namespace) -> None:
     state.setdefault("amendments", []).append(
         {"done_when": old, "because": args.because.strip(), "at": repo.now()})
     state["done_when"] = new
+    if (state.get("stop") or {}).get("predicted_files"):
+        repo.record_event(top, args.item, "owner wait end", wait_id=state["stop"].get("wait_id"))
+        del state["stop"]  # The first plan checks the narrower result's files again.
     # The review reads Ruling: lines from the branch's commits, so it drops findings on the old text.
     ruling = (f'Ruling: Done-when changed from "{old}" to '
               f'"{new}" because {args.because.strip()}; judge the new text.')
+    from forge import close, owner_choices
+    answered = owner_choices.answer_command(top, args.item, state, "forge fix amend")
     repo.commit_state(f"Change the fix's done-when\n\n{ruling}",
                       repo.write_state(args.item, state, top), top=top)
+    if answered:
+        close.share_wait(top, args.item, state)
     print(f"Fix {args.item} is now done when: {state['done_when']}")
     command = "work" if unbuilt_fix(args.item, state, top) else "close"
     print(f"Next: forge {command} {args.item}")
 
 
-def require_active(item: str, top: Path | None = None) -> None:
+def require_active(item: str, top: Path | None = None, *, allow_size: bool = False) -> None:
     """A retained checkout cannot resume a dropped fix without an explicit restore."""
-    from forge import nextstep
+    from forge import nextstep, owner_choices, story
 
+    if "/" in item:
+        key = item.split("/", 1)[0]
+        git("fetch", "-q", "origin", cwd=top)  # a clone that has not fetched the drop must still refuse
+        if _dropped(key, top, None):
+            refuse(REFUSALS["dropped"], key=key)
+    location = top or repo.root()
+    location = next((path for branch, path in story.worktrees(location).items()
+                     if branch == f"fix/{item}"), location)
+    state = repo.read_state(item, location) or {}
+    if not allow_size:
+        owner_choices.require_size(location, state)
     if re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", item):
         top = top or repo.root()
         for branch in (f"fix/{item}", f"forge/{item}"):
@@ -945,3 +1106,24 @@ GROUP_HELP = {
     "task": "Start a task",
     "fix": "Start a fix, let it go over the fix limit, or change its done-when",
 }
+
+
+def warn_fix_kind(top: Path, state: dict[str, Any], base: str) -> None:
+    kind = state.get("fix_kind")
+    if not kind:
+        return
+    files = repo.git("diff", "--name-only", "-z", "--no-renames", f"{base}...HEAD",
+                     "--", ".", *[path.replace(":(glob)", ":(exclude,glob)")
+                                    for path in repo.TEST_PATHS], cwd=top).split("\0")
+    # This is advice: paths can suggest a mismatch, but cannot decide what a change does.
+    code = [Path(path) for path in files if path and not path.startswith(
+        (".factory/", "plans/", "docs/"))]
+    ui = any(path.suffix in {".html", ".css", ".scss", ".jsx", ".tsx", ".vue", ".svelte"}
+             or set(path.parts) & {"web", "frontend", "components", "screens", "pages"}
+             for path in code)
+    backend = any(path.suffix in {".py", ".ts", ".js", ".go", ".rs", ".java", ".rb"}
+                  for path in code)
+    if (kind == "backend" and ui or kind == "ui" and backend and not ui
+            or kind == "mechanical" and (ui or backend)):
+        print("Warning: The changed files do not match this fix's worker kind "
+              f"({kind}). Check the kind before the next round.")

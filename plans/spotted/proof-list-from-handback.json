@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/native.py\tFunctional: The proof commit also commits staged worker edits\tproof-list-from-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 300,
+      "text": "Functional: The proof commit also commits staged worker edits",
+      "from": "blocking",
+      "item": "proof-list-from-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tFunctional: The proof commit hides the worker's functional check\tproof-list-from-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 300,
+      "text": "Functional: The proof commit hides the worker's functional check",
+      "from": "blocking",
+      "item": "proof-list-from-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tNot done: Check the whole branch before writing the report's proof\tproof-list-from-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 299,
+      "text": "Not done: Check the whole branch before writing the report's proof",
+      "from": "blocking",
+      "item": "proof-list-from-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tNot done: Preserve the complete proof from the worker's report\tproof-list-from-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 298,
+      "text": "Not done: Preserve the complete proof from the worker's report",
+      "from": "blocking",
+      "item": "proof-list-from-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "simplify\tsrc/forge/native.py\tSimpler: Unrecorded approach \u2192 document the need and reuse",
+      "kind": "simplify",
+      "path": "src/forge/native.py",
+      "line": 298,
+      "text": "Simpler: Unrecorded approach \u2192 document the need and reuse",
+      "from": "review",
+      "item": "proof-list-from-handback",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

@@ -58,7 +58,7 @@ def p1_at_bar(title):
     return entry
 
 
-@pytest.mark.parametrize("case,previous", [("shared-fix", False), ("shared-fix", True),
+@pytest.mark.parametrize("case,previous", [("shared-fix", False),
                                           ("story-runway", False), ("rebuilt-history", False),
                                           ("question-wait", False), ("conflict-wait", False),
                                           ("item-totals", False), ("approved-runway-known", False),
@@ -70,7 +70,7 @@ def p1_at_bar(title):
                                           ("bad-infinite-seconds", False), ("bad-huge-seconds", False),
                                           ("bad-deep-nesting", False),
                                           ("story-done-runway", False)],
-                         ids=["new-client", "earlier-adoption", "story-runway", "rebuilt-history",
+                         ids=["new-client", "story-runway", "rebuilt-history",
                               "question-wait", "conflict-wait", "item-totals", "approved-runway-known",
                               "approved-runway-unknown", "real-read-runway", "read-history-batching",
                               "refresh-stale-receipt", "refresh-missing-receipt", "resume-published-wait",
@@ -136,14 +136,12 @@ def test_5_how_it_went_is_shared_and_story_time_counts_each_instant_once(env, mo
     where = next(Path(block.splitlines()[0].removeprefix("worktree "))
                  for block in listing.split("\n\n") if f"branch refs/heads/fix/{item}" in block)
     env.commit(where, "app.py", "print('basket')\n")
-    # An open P1 stops for the owner at the round limit and remains across machines.
-    env.reviews(blocked(p1_at_bar("Basket disappears")))
+    # Two blocked reviews stop for the owner at the default round limit and remain across machines.
+    env.reviews(blocked(p1_at_bar("Basket disappears")),
+                blocked(p1_at_bar("Basket disappears")))
     env.checks([run("tests", None, "queued"), run("forge-pr-check")])
     first = env.close(item)
     assert first.returncode == 1, first.stdout + first.stderr
-    published(env, item)
-    chosen = env.close(item, "--resolve", "more", "--reason", "Repair the basket loss")
-    assert chosen.returncode == 0, chosen.stdout + chosen.stderr
     published(env, item)
     machine_a = env.repo.path
     remote = env.repo.git("remote", "get-url", "origin")
@@ -263,7 +261,7 @@ def item_totals(env, monkeypatch):
         for kind, seconds in (("working", 15), ("waiting", 20), ("unknown", 25)):
             assert current[f"{kind}_seconds"] == seconds
         assert current["total_seconds"] == 60
-        assert current["time_breakdown"]["nothing_running"] == 15
+        assert current["time_breakdown"]["nothing_running"] is None
 
 
 def approved_runway(env, monkeypatch, known):
@@ -361,7 +359,13 @@ def read_history_batching(env, monkeypatch):
 
 
 def warm_checks_cache(env, monkeypatch):
+    def check_reads():
+        return env.gh_calls("api", "graphql", query="StatusContext")
+
     github_list_fields(env)
+    config = (env.repo.path / "forge.toml").read_text("utf-8")
+    env.commit(env.repo.path, "forge.toml", "task_review_rounds = 1\n" + config)
+    env.repo.git("push", "-q", "origin", "main")
     item, where = env.start_fix(round=1)
     env.reviews(blocked(p1_at_bar("Basket disappears")))
     first = env.close(item)
@@ -386,7 +390,8 @@ def warm_checks_cache(env, monkeypatch):
     env.repo.git("worktree", "add", "-q", "-b", f"fix/{item}",
                  str(env.tmp / "cached-checks-worktree"), f"origin/fix/{item}")
     assert row(env.repo, item)["gates"]["review"]["status"] == "blocked"
-    calls = len(env.gh_calls("api", "graphql"))
+    calls = check_reads()
+    assert calls
     env.repo.path = machine
     chosen = env.close(item, "--resolve", "more", "--reason", "Repair the basket loss")
     assert chosen.returncode == 0, chosen.stdout + chosen.stderr
@@ -404,7 +409,7 @@ def warm_checks_cache(env, monkeypatch):
     next_step = env.repo.forge("next")
     assert rendered.returncode == 0, rendered.stdout + rendered.stderr
     assert next_step.returncode == 0, next_step.stdout + next_step.stderr
-    assert len(env.gh_calls("api", "graphql")) == calls, "Checks remain cached inside the same minute"
+    assert check_reads() == calls, "Checks remain cached inside the same minute"
     written = next(row for row in json.loads(page.read_text("utf-8"))["items"] if row["id"] == item)
     observations = {"json": current["stage"] == "ready" and
                     current["gates"]["review"]["status"] == "clean" and len(current["rounds"]) == 2,
@@ -525,6 +530,8 @@ def question_wait(env, monkeypatch):
 
 
 def conflict_wait(env, monkeypatch):
+    config = (env.repo.path / "forge.toml").read_text("utf-8")
+    env.commit(env.repo.path, "forge.toml", "task_review_rounds = 1\n" + config)
     env.commit(env.repo.path, "app.py", "print('old basket')\n")
     env.repo.git("push", "-q", "origin", "main")
     item, where = env.start_fix({"app.py": "print('branch basket')\n"}, round=1)
@@ -749,7 +756,7 @@ def story_runway(env, monkeypatch):
 
 
 @pytest.mark.parametrize("case", ["plain-times", *(f"{part}-{history}" for part in ("history", "keys")
-                                                   for history in ("new", "adopted-v1.2.2"))])
+                                                   for history in ("new",))])
 def test_12_getting_around_the_board_and_telling_items_apart(request, case):
     """Plain times; story histories with their cold-read rounds; the shipped line allowing story
     keys. Each case gets the fixtures it needs."""

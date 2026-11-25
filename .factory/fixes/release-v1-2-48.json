@@ -1,0 +1,100 @@
+{
+  "allow_large": "A release version change updates every file that names the current release (about 20 files), as the v1.2.47 release fix did",
+  "base": "5074af3a482f5ddf6f9852137ef16dc9c2f44595",
+  "branch": "fix/release-v1-2-48",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a20dd5-0b6e-7f90-9d75-0d56b60447a1",
+    "head": null,
+    "start": "991f83d3cc8c63b12946882941d4d082b4f60088"
+  },
+  "done_when": "Every version reference that names the current release says v1.2.48 (as the v1.2.47 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.48.md exists, the release version tests and the release notes tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/release-notes/v1.2.48.md",
+      "file": "src/forge/release-notes/v1.2.48.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 13,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Retry the pending handback before closing",
+      "work": 1
+    },
+    {
+      "area": "src/forge/release-notes/v1.2.48.md",
+      "file": "src/forge/release-notes/v1.2.48.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 5,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Preserve the theme exception in the release notes",
+      "work": 1
+    },
+    {
+      "area": "src/forge/release-notes/v1.2.48.md",
+      "file": "src/forge/release-notes/v1.2.48.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 6,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Explain that a design waiver applies to the whole file",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "c428b05548399cf3c550fc4eda60b85a00d499ca5f288063bb09f57528b7c39b",
+    "changed": "f3ccf47a4f0c6354481b79fcf367c07ddd85bdd7e595b3a9396144d54833c7a4",
+    "commit": "399a08d9f9f327bb26c8b5e283b85148f224ddaf",
+    "dismissals": [],
+    "findings": [],
+    "id": "9139b8f7-2235-47bb-b038-8ec9bf6e0348",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-24T13:52:53.050822+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-24T13:53:13.309480+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T14:09:36.682249+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-24T14:10:33.088825+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-24T14:15:33.896615+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "75f70aad-410e-4e59-8455-7ace46b104f4",
+    "head": "58c0f7af5f20d9ab52d55857d95aef9a8dd25257",
+    "keys": {},
+    "round": 1
+  },
+  "why": "Release v1.2.48: publish what merged since v1.2.47 (design rules for app screens and their close checks, story drop parks a started story, no false GitHub quota waits, merge survives a removed task folder, stable flaky tests)",
+  "worker": "codex"
+}

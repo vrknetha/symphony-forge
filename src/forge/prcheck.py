@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
@@ -62,7 +63,10 @@ jobs:
     runs-on: <runner>
     outputs:
       docs-only: ${{ steps.docs.outputs.docs-only }}
-      test-only: ${{ steps.docs.outputs.test-only }}
+      docs-tests: ${{ steps.docs.outputs.docs-tests }}
+      one-group: ${{ steps.docs.outputs.one-group }}
+      reuse: ${{ steps.docs.outputs.reuse }}
+      parent-conclusion: ${{ steps.docs.outputs.parent-conclusion }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -70,31 +74,33 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+      - uses: astral-sh/setup-uv@v6
       - id: docs
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DOCS_ONLY_EXCLUDES: '<docs-excludes>'
-        run: python .forge/review-tests.py
+        run: <select-command>
 
   tests:
     needs: docs-check
-    if: github.event_name == 'pull_request' && needs.docs-check.outputs.docs-only != 'true'
-    name: test group ${{ matrix.group }} of ${{ needs.docs-check.outputs.test-only == 'true' && 1 || <groups> }}
+    if: always() && github.event_name == 'pull_request' && needs.docs-check.result == 'success' && needs.docs-check.outputs.docs-only != 'true'
+    name: test group ${{ matrix.group }} of ${{ needs.docs-check.outputs.one-group == 'true' && 1 || <groups> }}
     strategy:
       fail-fast: false
       matrix:
-        group: ${{ fromJSON(needs.docs-check.outputs.test-only == 'true' && '[1]' || '<group-list>') }}
+        group: ${{ fromJSON(needs.docs-check.outputs.one-group == 'true' && '[1]' || '<group-list>') }}
     runs-on: <test-runner>
     env:
       UV_FROZEN: '1'
       FORGE_GROUP: ${{ matrix.group }}
-      FORGE_GROUPS: ${{ needs.docs-check.outputs.test-only == 'true' && '1' || '<groups>' }}
+      FORGE_GROUPS: ${{ needs.docs-check.outputs.one-group == 'true' && '1' || '<groups>' }}
 <containers><tests-timeout>    steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - run: git remote set-head origin --auto
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
@@ -105,7 +111,11 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DOCS_ONLY_EXCLUDES: '<docs-excludes>'
+          PR_REUSE: ${{ needs.docs-check.outputs.reuse }}
+          PR_PARENT_CONCLUSION: ${{ needs.docs-check.outputs.parent-conclusion }}
         run: python .forge/review-tests.py
+      - if: steps.parent-tests.outputs.parent-conclusion == 'failure'
+        run: exit 1
 <npm-cache><node><test-install>      - run: <test>
         if: steps.parent-tests.outputs.reuse != 'true'
 
@@ -116,13 +126,14 @@ jobs:
     # group from skipping this one.
     needs: [docs-check, tests]
     if: always() && github.event_name == 'pull_request'
-    name: ${{ github.event_name == 'pull_request' && 'tests' || 'tests (other event)' }}
+    name: ${{ github.event_name == 'pull_request_target' && 'tests (other event)' || 'tests' }}
     runs-on: <runner>
     steps:
 <group-warning>      - env:
           TEST_GROUP_RESULT: ${{ needs.tests.result }}
           DOCS_CHECK: ${{ needs.docs-check.result }}
           DOCS_ONLY: ${{ needs.docs-check.outputs.docs-only }}
+        shell: bash
         run: test "$DOCS_CHECK" = success && { test "$TEST_GROUP_RESULT" = success || { test "$DOCS_ONLY" = true && test "$TEST_GROUP_RESULT" = skipped; }; }
       - if: needs.docs-check.outputs.docs-only == 'true'
         run: "echo 'docs only: tests skipped'"
@@ -232,16 +243,48 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
 
     if repo.sample_data(top, cfg):
         return {}
+    package = json.loads(sync.read(top / "package.json") or "{}")
+    manager = package.get("packageManager")
+    dev_manager = package.get("devEngines", {}).get("packageManager")
+    dev_manager = next((m for m in (dev_manager if isinstance(dev_manager, list) else [dev_manager])
+                        if isinstance(m, dict) and m.get("name") == "pnpm"), None)
+    # The root lockfile is read from the folder, not from git: sync's pure-upgrade check renders
+    # this from a plain snapshot folder with no git index, so git would miss it there.
+    # Forge's own repo ships starter lockfiles it never builds with pnpm.
+    lockfile = "pnpm-lock.yaml" if (top / "pnpm-lock.yaml").is_file() else None
+    named = (dev_manager or {}).get("version") or package.get("engines", {}).get("pnpm")
+    root_decides = lockfile or (isinstance(manager, str) and manager.startswith("pnpm@")) or (
+        isinstance(named, str) and named.strip())
+    if not root_decides and cfg.get("repo") != "forge-source":
+        # Only tracked lockfiles are listed: a whole-tree listing is slow on Windows.
+        found = repo.run("git", "ls-files", "-z", "--", ":(glob)**/pnpm-lock.yaml", cwd=top)
+        listing = found.stdout.split("\0") if found.returncode == 0 else [
+            path.relative_to(top).as_posix() for path in top.rglob("pnpm-lock.yaml")]
+        lockfile = next((name for name in listing if name.endswith("/pnpm-lock.yaml")), None)
+    pnpm = (isinstance(manager, str) and manager.startswith("pnpm@")) or dev_manager or lockfile
     node = ""
-    if (top / "package.json").is_file() or re.search(r"\b(?:npm|npx|pnpm|yarn|node)\b", cfg["test"]):
-        node = ("      - uses: actions/setup-node@v7\n"
-                "        if: steps.parent-tests.outputs.reuse != 'true'\n")
+    if pnpm:
+        node = "      - uses: pnpm/action-setup@v4\n        if: steps.parent-tests.outputs.reuse != 'true'\n"
+        if not (isinstance(manager, str) and manager.startswith("pnpm@")):
+            # The action reads packageManager itself; otherwise name a version: engines.pnpm, then
+            # devEngines, then the lockfile's format (9.x is written by pnpm 9 and 10: take 10; 6 -> 8).
+            # A nested project's own manifest names its pnpm range when the root has none.
+            inner = json.loads(sync.read(top / Path(lockfile).parent / "package.json") or "{}") if lockfile else {}
+            version = (package.get("engines", {}).get("pnpm") or (dev_manager or {}).get("version")
+                       or inner.get("engines", {}).get("pnpm"))
+            if not isinstance(version, str) or not version.strip():
+                head = sync.read(top / lockfile) if lockfile else ""
+                match = re.search(r"lockfileVersion: '?(\d+)", head or "")
+                version = {"5": "7", "6": "8", "9": "10"}.get(match.group(1) if match else "", "10")
+            node += f"        with:\n          version: {json.dumps(version)}\n"
+    if pnpm or (top / "package.json").is_file() or re.search(r"\b(?:npm|npx|pnpm|yarn|node)\b", cfg["test"]):
+        node += ("      - uses: actions/setup-node@v7\n"
+                 "        if: steps.parent-tests.outputs.reuse != 'true'\n")
         version_file = next((name for name in (".nvmrc", ".node-version")
                              if (top / name).is_file()), None)
         if version_file:
             node += f"        with:\n          node-version-file: {version_file}\n"
         else:
-            package = json.loads(sync.read(top / "package.json") or "{}")
             version = package.get("engines", {}).get("node")
             version = version if isinstance(version, str) and version.strip() else "22"
             node += f"        with:\n          node-version: {json.dumps(version)}\n"
@@ -264,15 +307,19 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
     test_install = ("      - run: " + ("uv tool install ." if source else sync.install_line(cfg["version"]))
                     + "\n        if: steps.parent-tests.outputs.reuse != 'true'\n"
                     if ci_tests else "")
-    test_runner = cfg.get("test_runner") or cfg.get("runner", repo.DEFAULTS["runner"])
+    regular_runner = cfg.get("runner", repo.DEFAULTS["runner"])
+    test_runner = cfg.get("test_runner") or regular_runner
+    plain_test = test
+    windows_test = test
     windows = test_runner.startswith("windows-")
-    if windows:
-        # Each attempt gets its own PowerShell process, so exit or throw cannot end the retry.
+    if windows or regular_runner.startswith("windows-"):
+        # Preserve the configured command's PowerShell exit status without replaying assertions.
         script = ("$ErrorActionPreference = 'Stop'\n& {\n" + test +
                   "\n}\nif (Test-Path variable:LASTEXITCODE) { exit $LASTEXITCODE }")
         attempt = ("& (Get-Process -Id $PID).Path -NoProfile -NonInteractive -Command '" +
                    script.replace("'", "''") + "'")
-        test = f"{attempt}\nif ($LASTEXITCODE -ne 0) {{ {attempt} }}\nexit $LASTEXITCODE"
+        windows_test = f"{attempt}\nexit $LASTEXITCODE"
+        test = windows_test if windows else plain_test
     full_node = node.replace("        if: steps.parent-tests.outputs.reuse != 'true'\n", "")
     npm_cache = ("      - uses: actions/cache@v4\n"
                  "        if: steps.parent-tests.outputs.reuse != 'true'\n"
@@ -288,8 +335,7 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                      "            ~/AppData/Local/pnpm/store\n"
                      "          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}\n")
     full_npm_cache = npm_cache.replace("        if: steps.parent-tests.outputs.reuse != 'true'\n", "")
-    full_triggers = ("  schedule:\n    - cron: '0 3 * * *'\n"
-                     "  workflow_dispatch:\n" if full_run else "")
+    full_triggers = "  schedule:\n    - cron: '0 3 * * *'\n  workflow_dispatch:\n" if full_run else ""
     full_suite = ("\n  full-suite:\n"
                   "    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'\n"
                   "    name: Full test suite\n"
@@ -300,8 +346,7 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                   "    permissions:\n"
                   "      contents: read\n"
                   "      actions: read\n"
-                  "      statuses: write\n"
-                  "    runs-on: <runner>\n"
+                  "    runs-on: <test-runner>\n"
                   "    env:\n"
                   "      UV_FROZEN: '1'\n"
                   "      FORGE_GROUP: ${{ matrix.group }}\n"
@@ -328,6 +373,9 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                   "    permissions:\n"
                   "      statuses: write\n"
                   "    steps:\n"
+                  "      - uses: actions/setup-python@v6\n"
+                  "        with:\n"
+                  "          python-version: '3.11'\n"
                   "      - name: Report full test result\n"
                   "        shell: bash\n"
                   "        env:\n"
@@ -337,7 +385,23 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                   "        run: |\n"
                   "          state=failure\n"
                   "          if [ \"$FULL_RESULT\" = success ]; then state=success; fi\n"
-                  "          gh api --method POST \"repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA\" -f context=forge-full-suite -f \"state=$state\" -f \"target_url=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"\n"
+                  "          target=\"$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID\"\n"
+                  "          if command -v gh > /dev/null; then\n"
+                  "            gh api --method POST \"repos/$GITHUB_REPOSITORY/statuses/$HEAD_SHA\" -f context=forge-full-suite -f \"state=$state\" -f \"target_url=$target\"\n"
+                  "          else\n"
+                  "            # A self-hosted runner may have no gh. The token is read inside Python, never in an argument.\n"
+                  "            python - \"$state\" \"$target\" <<'PY'\n"
+                  "          import json, os, sys\n"
+                  "          from urllib.request import Request, urlopen\n"
+                  "          env = os.environ\n"
+                  "          body = {'context': 'forge-full-suite', 'state': sys.argv[1], 'target_url': sys.argv[2]}\n"
+                  "          urlopen(Request(f\"{env.get('GITHUB_API_URL', 'https://api.github.com')}/repos/{env['GITHUB_REPOSITORY']}/statuses/{env['HEAD_SHA']}\",\n"
+                  "                          data=json.dumps(body).encode(),\n"
+                  "                          headers={'Authorization': 'Bearer ' + env['GH_TOKEN'],\n"
+                  "                                   'Accept': 'application/vnd.github+json',\n"
+                  "                                   'Content-Type': 'application/json'}), timeout=60)\n"
+                  "          PY\n"
+                  "          fi\n"
                   "          test \"$state\" = success\n" if full_run else "")
     full_suite = full_suite.replace("<groups>", str(full_groups)).replace(
         "<group-list>", str(list(range(1, full_groups + 1))))
@@ -345,7 +409,13 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
         full_suite = full_suite.replace("    steps:\n", "    steps:\n      - run: " + json.dumps(
             'echo "::warning::' + full_warning + '"') + "\n", 1)
     template = WORKFLOW
-    if groups == 1:
+    if (("{groups}" not in change_command and not repo.pytest_split(top, change_command))
+            or re.search(r"(?:\{group\}|--shard=\d+)/\d+",
+                         (cfg.get("fast_test") or "") + "\n" + cfg["test"])):
+        # A fixed shard count must keep every shard, even for a small change.
+        template = template.replace("steps.docs.outputs.one-group", "'false'")
+    # A separate test runner stays free until docs-check selects real test work.
+    if groups == 1 and test_runner == regular_runner:
         start = template.index("  docs-check:\n")
         tests = template.index("  tests:\n", start)
         runner = template.index("    runs-on:", tests)
@@ -353,12 +423,28 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
         gate = template.index("  forge-pr-check:\n", end)
         single = ("  tests:\n"
                   "    if: github.event_name == 'pull_request'\n"
-                  "    name: ${{ github.event_name == 'pull_request' && 'tests' || 'tests (other event)' }}\n"
+                  "    name: ${{ github.event_name == 'pull_request_target' && 'tests (other event)' || 'tests' }}\n"
                   + template[runner:end])
         single = single.replace("${{ matrix.group }}", "'1'").replace(
-            "${{ needs.docs-check.outputs.test-only == 'true' && '1' || '<groups>' }}", "'1'")
+            "${{ needs.docs-check.outputs.one-group == 'true' && '1' || '<groups>' }}", "'1'")
         single = single.replace("    steps:\n", "    steps:\n<group-warning>", 1)
+        for output in ("reuse", "parent-conclusion"):
+            single = single.replace("${{ needs.docs-check.outputs." + output + " }}", "''")
         template = template[:start] + single + template[gate:]
+    elif test_runner != regular_runner:
+        regular_label, tests_label = ("'" + label.replace("'", "''") + "'" for label in
+                                     (regular_runner, test_runner))
+        template = template.replace("    runs-on: <test-runner>\n",
+            "    runs-on: ${{ needs.docs-check.outputs.docs-tests == 'true' && "
+            + regular_label + " || " + tests_label + " }}\n")
+        if windows != regular_runner.startswith("windows-"):
+            docs_test = windows_test if regular_runner.startswith("windows-") else plain_test
+            template = template.replace("      - run: <test>\n"
+                "        if: steps.parent-tests.outputs.reuse != 'true'\n",
+                "      - run: " + json.dumps(docs_test) + "\n"
+                "        if: steps.parent-tests.outputs.reuse != 'true' && needs.docs-check.outputs.docs-tests == 'true'\n"
+                "      - run: <test>\n"
+                "        if: steps.parent-tests.outputs.reuse != 'true' && needs.docs-check.outputs.docs-tests != 'true'\n")
     workflow = (template.replace("<full-triggers>", full_triggers)
                 .replace("<full-suite-job>", full_suite)
                 .replace("      - uses: astral-sh/setup-uv@v6\n",
@@ -396,6 +482,9 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                 .replace("<full-install>", "uv tool install ." if source
                          else sync.install_line(cfg["version"]))
                 .replace("<test-install>", test_install)
+                .replace("<select-command>", "uv run --no-project --with " + (
+                    "." if source else sync.install_line(cfg["version"]).removeprefix("uv tool install "))
+                    + " python .forge/review-tests.py || python -I -S .forge/review-tests.py")
                 .replace("<test>", json.dumps(test))
                 .replace("<group-warning>", "      - run: " + json.dumps(
                     'echo "::warning::' + warning + '"') + "\n" if warning else "")
@@ -404,7 +493,7 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                 .replace("<test-runner>", json.dumps(test_runner))
                 .replace("<runner>", json.dumps(cfg.get("runner", repo.DEFAULTS["runner"]))))
     if not ci_tests:
-        start = workflow.index("  docs-check:\n" if groups > 1 else "  tests:\n")
+        start = workflow.index("  docs-check:\n" if "  docs-check:\n" in workflow else "  tests:\n")
         end = workflow.index("  forge-pr-check:\n")
         workflow = workflow[:start] + workflow[end:]
     return {WORKFLOW_PATH: workflow,
@@ -433,6 +522,7 @@ def pr_check(args: argparse.Namespace) -> int:
         if not task._merged(f"origin/{default}", parent, top):
             repo.refuse(REFUSALS["stacked"], item=item, parent=parent, default=default)
     changed = repo.git("diff", "--name-only", f"{base}...{head}", cwd=top).splitlines()
+    proof_base = base
     if "/" not in item:
         missing = [line for line, key in (("Why:", "why"), ("Done when:", "done_when"))
                    if not str(state.get(key) or "").strip()]
@@ -440,7 +530,7 @@ def pr_check(args: argparse.Namespace) -> int:
             repo.refuse(REFUSALS["fix_line"], branch=branch, line=" or ".join(missing))
         from forge import githooks
 
-        fix_base = githooks.fix_base(top, state, base, head)
+        fix_base = proof_base = githooks.fix_base(top, state, base, head)
         own = repo.git("diff", "--name-only", "--no-renames", fix_base, head, cwd=top).splitlines()
         problem = "" if state.get("allow_large") else promote_problem(
             own, cfg["interfaces"], top, fix_base, head)
@@ -452,6 +542,19 @@ def pr_check(args: argparse.Namespace) -> int:
     if doc_problem:
         repo.refuse(REFUSALS["story_doc"], problem=doc_problem)
     _check_specs(top, head, changed)
+    if repo.test_place(cfg) == "ci":
+        from forge import docskip, proof
+
+        passed, lines = proof.check(top, item, proof_base, "", ran=False, head=head)
+        for line in lines:
+            print(line, flush=True)
+        if not passed:
+            return 1
+        if "tests" in cfg.get("checks", []):
+            head_cfg = repo._config_text(story.show(top, head, "forge.toml") or "")
+            if docskip.only_docs(top, base, review.DOC_EXCLUDES,
+                                 allow_settings=not head_cfg["always_test"], head=head):
+                print(f"Done-when proof: {proof.CI_DOCS_ONLY}", flush=True)
     result = state.get("review")
     if isinstance(result, dict) and isinstance(result.get("findings"), list):
         review.bound_review(top, item, state, result, head)
@@ -464,7 +567,8 @@ def pr_check(args: argparse.Namespace) -> int:
         problem = "missing"
     elif not _on_branch(top, str(result.get("commit", "")), head):
         problem = "for a commit that isn't part of this branch"
-    elif result.get("changed") != review.fingerprint(head, item, top, state, base):
+    elif result.get("changed") != review.fingerprint(head, item, top, state, base,
+                                                           diff_base=_review_base(top, head, base)):
         problem = "out of date: the product files or what the change must do changed after it"
     elif review.blocking(result):
         problem = "blocked by serious findings no one fixed or dismissed"
@@ -474,6 +578,15 @@ def pr_check(args: argparse.Namespace) -> int:
         print(f"forge-pr-check passed for {branch}.")
         return 0
     repo.refuse(REFUSALS["not_reviewed"], branch=branch, problem=problem, item=item)
+
+
+def _review_base(top: Path, head: str, event_base: str) -> str:
+    """The base close reviewed against: the newest default-branch commit the head contains. The
+    event's base can be older than a default-branch commit the branch already merged."""
+    try:
+        return repo.git("merge-base", head, f"origin/{repo.default_branch(top)}", cwd=top)
+    except subprocess.CalledProcessError:
+        return event_base
 
 
 def _check_specs(top: Path, head: str, changed: list[str]) -> None:

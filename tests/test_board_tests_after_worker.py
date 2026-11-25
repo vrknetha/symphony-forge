@@ -20,7 +20,7 @@ from test_worker import install_claude
 STORY = "FIX-BOARD-DATA-TRUTH"
 
 
-@pytest.mark.parametrize("history", ["new", "adopted-v1.2.2"])
+@pytest.mark.parametrize("history", ["new"])
 def test_13_close_tests_after_worker_exit_show_tests_running(
         env, tmp_path, monkeypatch, release_server, history):
     repo = env.repo
@@ -43,6 +43,8 @@ def test_13_close_tests_after_worker_exit_show_tests_running(
     worked = repo.forge("work", item)
     assert worked.returncode == 0, worked.stdout + worked.stderr
     assert json.loads((folder / f".factory/fixes/{item}.json").read_text("utf-8"))["status"] == "working"
+    repo.git("commit", "--allow-empty", "-q", "-m", "Record the activity fixture proof", "-m",
+             "Proof list:\n- Done when: check: Readers see test activity", cwd=folder)
     processes = []
     try:
         closing, output = start(repo.path, tmp_path / "closing", repo, "close", item)

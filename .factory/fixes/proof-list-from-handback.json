@@ -1,0 +1,166 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/proof-list-from-handback",
+  "done_when": "The worker brief states the exact place and form of the Proof list (a commit message paragraph with one line per Done-when item, '<n>: <test>'), and forge handback writes a Proof list from the worker's report into a commit when the branch has none, so a native Claude round never fails the proof check for its form alone; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "_work_result() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 300,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: The proof commit hides the worker's functional check",
+      "work": 2
+    },
+    {
+      "area": "_work_result() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 300,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: The proof commit also commits staged worker edits",
+      "work": 2
+    },
+    {
+      "area": "_work_result() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 299,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Check the whole branch before writing the report's proof",
+      "work": 2
+    },
+    {
+      "area": "_work_result() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 298,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Preserve the complete proof from the worker's report",
+      "work": 2
+    },
+    {
+      "area": "_work_result() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 1,
+      "harm": 1,
+      "line": 298,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Simpler: Unrecorded approach \u2192 document the need and reuse",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "ed0e5cd215fa86ba168083735c5adfd53cb74a34cacfc57e5051431c20e985f2",
+    "changed": "cbdec0d1f1f8a1c6eb59b0392077dd769c706889d40ad5d506bdfa1891d9d4f1",
+    "commit": "763e5609f08841776c4c50d4e9979d3a76b4c182",
+    "dismissals": [],
+    "findings": [],
+    "id": "e299c482-cec0-41fc-b8f9-afde9aecdea7",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T03:23:43.872447+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T03:24:25.683058+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T03:35:02.149589+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T03:35:36.478746+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T03:42:35.288284+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T03:42:35.329058+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-23T03:43:28.592827+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-23T03:57:19.955788+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:25:50.608699+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:28:06.589281+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:30:02.626791+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:36:07.483939+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:42:49.275330+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-23T03:42:35.329058+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "src/forge/native.py",
+    "reason": "Owner chose on 23 Nov 2026: one more round so the copied proof paragraph reads past check: lines like proof.py does",
+    "wait_id": "2e3db346-4e13-4215-ac4f-8daae4dd3a52",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "f0d81601-d376-468b-8dc6-04f93c18fbfc",
+    "head": "bb811c4d9b9f22e60e6ca58c133ba2516d812aa2",
+    "keys": {},
+    "round": 4
+  },
+  "why": "Native Claude builders write their proof in the handback report instead of a Proof list paragraph in the last commit, so the Done-when proof check refuses close and items reach the round limit for that alone",
+  "worker": "claude"
+}

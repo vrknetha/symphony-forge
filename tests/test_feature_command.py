@@ -845,7 +845,7 @@ assert SHELLS[0], "The planner command must run through bash -c."
 SHELL_CASES = [SHELLS[0], shutil.which("zsh") or "zsh"]
 
 
-def _assert_feature_guidance(repo, client: Path, log: Path) -> None:
+def _assert_feature_guidance(repo, client: Path, log: Path) -> str:
     # Audit: (1) delivered planner/worker instructions are a prompt contract;
     # (2) omitting them from init/sync or work breaks it; (3) generation checks
     # do not cover prompts, so extend their new/adopted owner test;
@@ -867,7 +867,7 @@ def _assert_feature_guidance(repo, client: Path, log: Path) -> None:
     # Fixture history bypasses branch and default-push gates for these two
     # setup commands only. The real fix start and work below keep their hooks.
     hooks = f"core.hooksPath={(client.parent / 'no-fixture-hooks').as_posix()}"
-    repo.git("-c", hooks, "commit", "-q", "-m",
+    repo.git("-c", hooks, "commit", "--allow-empty", "-q", "-m",
              "Keep the starter and its generated features", cwd=client)
     if repo.git("branch", "--show-current", cwd=client) != "main":
         branch = repo.git("branch", "--show-current", cwd=client)
@@ -892,6 +892,7 @@ def _assert_feature_guidance(repo, client: Path, log: Path) -> None:
     assert "Admins have all five" in brief
     assert "keep that mapping in one place" in brief
     assert "every screen and API call" in brief
+    return brief
 
 
 @pytest.mark.platform

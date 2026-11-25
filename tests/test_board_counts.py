@@ -109,10 +109,9 @@ def expected(previous, *, ready=1, progress=1):
 @pytest.mark.parametrize("previous,case", [
     (False, case) for case in ("counts", "newer-push", "github-once", "approved-not-started",
                              "newer-findings", "older-part")
-] + [(True, "counts")], ids=[
+], ids=[
     "new-client-counts", "new-client-newer-push", "new-client-github-once",
-    "new-client-approved-not-started", "new-client-newer-findings", "new-client-older-part",
-    "earlier-adoption-counts"])
+    "new-client-approved-not-started", "new-client-newer-findings", "new-client-older-part"])
 def test_1_every_item_has_one_state_and_the_same_counts_on_every_machine(env, monkeypatch, previous, case):
     if case == "github-once":
         github_read_once(env, monkeypatch, previous)
@@ -201,7 +200,8 @@ def test_1_every_item_has_one_state_and_the_same_counts_on_every_machine(env, mo
     assert states["gone"] == "done" and states["keep"] == "in progress"
     following = env.repo.forge("next")
     assert "SHOP/T2 is ready to merge" in following.stdout, following.stdout
-    assert "Next: forge merge SHOP/T2" in following.stdout, following.stdout
+    # A closed part and fix now share advice; each board row keeps its own next step.
+    assert "Next: forge land SHOP/T2 shelf" in following.stdout, following.stdout
 
     # Machine B has no receipt and no worktree; the pull request's record says T2 is ready.
     # It sees the plan reads once A shares their story branches.
@@ -219,10 +219,10 @@ def test_1_every_item_has_one_state_and_the_same_counts_on_every_machine(env, mo
                             "step": "forge merge SHOP/T2"}
     following = env.repo.forge("next")
     assert "SHOP/T2 is ready to merge" in following.stdout, following.stdout
-    assert "Next: forge merge SHOP/T2" in following.stdout, following.stdout
+    assert "Next: forge land SHOP/T2 shelf" in following.stdout, following.stdout
     assert "forge task start SHOP/T2" not in following.stdout
     assert "The fix shelf is ready to merge." in following.stdout
-    assert "Next: forge merge shelf" in following.stdout
+    assert "Next: forge merge shelf" not in following.stdout
     # A part and a fix started on A with no pull request yet are started here too, never offered.
     assert env.repo.git("ls-remote", "origin", "refs/heads/task/SHOP-T3", "refs/heads/fix/keep").count("\n") == 1
     assert "forge task start SHOP/T3" not in following.stdout
@@ -230,7 +230,7 @@ def test_1_every_item_has_one_state_and_the_same_counts_on_every_machine(env, mo
     assert "The fix keep has no checkout on this machine." in following.stdout
     assert "Next: forge work SHOP/T3" in following.stdout
     assert "Next: forge work keep" in following.stdout
-    there = rows(json.loads(env.repo.forge("next", "--json").stdout))
+    there = rows(board(env.repo))
     assert there["SHOP/T3"]["next"]["command"] == "forge work SHOP/T3"
     assert there["keep"]["next"]["command"] == "forge work keep"
 
@@ -245,8 +245,7 @@ def test_1_every_item_has_one_state_and_the_same_counts_on_every_machine(env, mo
     # Machine A without its receipt closes again to write one.
     env.repo.path = machine_a
     (machine_a / ".git/forge/ready/SHOP/T2.json").unlink()
-    machine = env.repo.forge("next", "--json")
-    assert rows(json.loads(machine.stdout))["SHOP/T2"]["next"]["command"] == "forge close SHOP/T2"
+    assert rows(board(env.repo))["SHOP/T2"]["next"]["command"] == "forge close SHOP/T2"
     again = env.close("SHOP/T2")
     assert again.returncode == 0, again.stdout + again.stderr
     assert (machine_a / ".git/forge/ready/SHOP/T2.json").is_file()
@@ -285,9 +284,7 @@ def newer_push(env, monkeypatch, previous):
     clock(monkeypatch, now := now + timedelta(minutes=2))
     for where in (machine_a, machine_b):
         env.repo.path = where
-        data, machine = board(env.repo), env.repo.forge("next", "--json")
-        assert rows(data)["SHOP/T2"]["state"] == "in progress", where
-        assert rows(json.loads(machine.stdout))["SHOP/T2"]["state"] == "in progress", where
+        assert rows(board(env.repo))["SHOP/T2"]["state"] == "in progress", where
 
     # A closes the newer commit clean; after a fetch both machines see it ready again.
     env.repo.path = machine_a

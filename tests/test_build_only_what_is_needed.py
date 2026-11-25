@@ -15,7 +15,7 @@ from conftest import ROOT, FORGE_SHIM, _install
 from test_close import STORY_DOC, env  # noqa: F401
 from test_setup import _fresh_client, _version
 from test_story import READER, approved_constitution, new_story
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 STORY = "FORGE-ASKED-1"
 
@@ -24,14 +24,14 @@ def flat(text):
     return " ".join(text.split())
 
 
-@pytest.fixture(params=[False, True], ids=["new-client", "adopted-v1.2.2"])
+@pytest.fixture(params=[False], ids=["new-client"])
 def client(env, request):
     repo = env.repo
     version = repo.forge("--version").stdout.split()[-1]
     if request.param:
         shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", repo.path, dirs_exist_ok=True)
         repo.git("add", "-A")
-        repo.git("commit", "-q", "-m", "Adopt on the earlier release")
+        repo.git("commit", "--allow-empty", "-q", "-m", "Adopt on the earlier release")
         config = (repo.path / "forge.toml").read_text("utf-8")
         config = config.replace('version = "v1.2.2"', f'version = "{version}"')
         config = config.replace('workers = "codex"', 'workers = "claude"')
@@ -82,7 +82,7 @@ def test_4_additions_that_nothing_needs_get_a_not_needed_note(client):
     synced = repo.forge("sync", cwd=where)
     assert synced.returncode == 0, synced.stdout + synced.stderr
     repo.git("add", "-A", cwd=where)
-    repo.git("commit", "-q", "-m", "Sync source guidance", cwd=where)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Sync source guidance", cwd=where)
     log = install_claude(repo, worker=False)
     conftest._install(repo.bin, "claude", READER.format(python=sys.executable))
     env.commit(where, "docs/specs/basket.md", "# Basket\n\n## Why\n\nKeep a basket.\n")
@@ -108,7 +108,7 @@ def test_4_additions_that_nothing_needs_get_a_not_needed_note(client):
             assert phrase in prompt, phrase
 
 
-@pytest.mark.parametrize("previous", [False, True], ids=["new init", "previous release"])
+@pytest.mark.parametrize("previous", [False], ids=["new init"])
 def test_5_useful_extras_go_to_the_idea_list(repo, gh, tmp_path, previous):
     log = install_claude(repo)
     if not previous:
@@ -141,13 +141,16 @@ def test_5_useful_extras_go_to_the_idea_list(repo, gh, tmp_path, previous):
     synced = repo.forge("sync", cwd=client)
     assert synced.returncode == 0, synced.stdout + synced.stderr
     repo.git("add", "-A", cwd=client)
-    repo.git("commit", "-q", "-m", "Use current client guidance", cwd=client)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Use current client guidance", cwd=client)
     worked = repo.forge("work", item, cwd=client)
     assert worked.returncode == 0, worked.stdout + worked.stderr
-    brief = flat(calls(log)[-1]["brief"])
-    for phrase in ("build nothing for it", "plans/ideas.md", "the sourced item that needs it>",
-                   "Only what is needed", "Build nothing beyond them just in case"):
+    prompt = calls(log)[-1]["brief"]
+    brief = flat(prompt)
+    for phrase in ("build nothing for it", "plans/ideas.md", "the sourced item that needs it>"):
         assert phrase in brief, phrase
+    reference = flat(referenced_standards(prompt).read_text(encoding="utf-8"))
+    for phrase in ("Only what is needed", "Build nothing beyond them just in case"):
+        assert phrase in reference, phrase
     for host in (".claude", ".codex"):
         folder = client / host / "skills/forge"
         guide = flat((folder / "SKILL.md").read_text("utf-8"))

@@ -1,6 +1,6 @@
 """Forge sends a program's stdin as the exact UTF-8 bytes on every OS.
 
-Audit: this Mac cannot run Windows, so the forge process loads a sitecustomize that does what
+Audit: off Windows, the Forge process loads a sitecustomize that does what
 Windows text-mode stdin does (each "\\n" written becomes "\\r\\n"). The stub GitHub records the
 exact bytes of the bounded body piped to `gh pr merge` and refuses one over its limit.
 """
@@ -19,14 +19,15 @@ pytestmark = pytest.mark.platform
 
 STORY = "windows-stdin-bytes"
 
-WINDOWS_STDIN = '''import subprocess
-_save = subprocess.Popen._save_input
-def _save_input(self, input):
-    # Windows writes text-mode stdin through a TextIOWrapper that turns "\\n" into "\\r\\n".
-    if self.text_mode and isinstance(input, str):
-        input = input.replace("\\n", "\\r\\n")
-    return _save(self, input)
-subprocess.Popen._save_input = _save_input
+WINDOWS_STDIN = '''import os
+import subprocess
+if os.name != "nt":
+    _communicate = subprocess.Popen.communicate
+    def communicate(self, input=None, timeout=None):
+        if self.text_mode and isinstance(input, str):
+            input = input.replace("\\n", "\\r\\n")
+        return _communicate(self, input, timeout)
+    subprocess.Popen.communicate = communicate
 '''
 
 
@@ -59,7 +60,7 @@ def adopt_earlier_release(env):
     repo.git("switch", "-qc", "fix/upgrade-client")
     shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", repo.path, dirs_exist_ok=True)
     repo.git("add", "-A")
-    repo.git("commit", "-qm", "Adopt the previous release")
+    repo.git("commit", "--allow-empty", "-qm", "Adopt the previous release")
     env.commit(repo.path, ".factory/fixes/upgrade-client.json", json.dumps({
         "kind": "fix", "branch": "fix/upgrade-client", "why": "Upgrade Forge",
         "done_when": "The client uses this release", "status": "started"}))
@@ -69,7 +70,7 @@ def adopt_earlier_release(env):
     synced = repo.forge("sync")
     assert synced.returncode == 0, synced.stderr
     repo.git("add", "-A")
-    repo.git("commit", "-qm", "Upgrade Forge")
+    repo.git("commit", "--allow-empty", "-qm", "Upgrade Forge")
     # The owner's merge lands the upgrade; a fresh clone stands in for it (main refuses commits).
     checkout = env.tmp / "upgraded-checkout"
     remote = repo.git("remote", "get-url", "origin")

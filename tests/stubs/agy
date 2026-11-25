@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""Antigravity ACP stand-in at the process boundary."""
+import json
+import os
+from pathlib import Path
+import subprocess
+import sys
+import uuid
+
+if sys.argv[1:] == ["--version"]:
+    print(os.environ.get("STUB_AGY_VERSION", "1.5.16"))
+    sys.exit()
+
+folder = Path(__file__).parent
+log = folder / "agy-calls.jsonl"
+sessions = folder / "agy-sessions"
+sessions.mkdir(exist_ok=True)
+
+
+def record(**data):
+    with log.open("a", encoding="utf-8") as out:
+        out.write(json.dumps({"pid": os.getpid(), **data}) + "\n")
+
+
+def send(**data):
+    print(json.dumps({"jsonrpc": "2.0", **data}), flush=True)
+
+
+def update(**data):
+    send(method="session/update", params={"sessionId": session, "update": data})
+
+
+record(argv=sys.argv[1:], cwd=str(Path.cwd()))
+profile = Path(sys.argv[sys.argv.index("--gemini-dir") + 1])
+model = "gemini-4-argon"
+effort = "low"
+models = [model, "gemini-3.8-flash"]
+if os.environ.get("STUB_AGY_PLAN") != "plus":
+    models.insert(0, "gemini-4-neon")
+
+
+def options():
+    return {"configOptions": [
+        {"id": key, "currentValue": current,
+         "options": [{"value": value} for value in values]}
+        for key, current, values in [
+            ("model", model, models), ("thought_level", effort, ["low", "medium", "high", "xhigh"]),
+        ]
+    ]}
+
+
+for line in sys.stdin:
+    message = json.loads(line)
+    record(**message)
+    method = message.get("method")
+    if not method:
+        continue
+    params = message["params"]
+    identifier = message["id"]
+    if method == "initialize":
+        result = {"agentInfo": {"version": "1.5.16"},
+                  "agentCapabilities": {"sessionCapabilities": {"resume": {}}}}
+    elif method in ("session/new", "session/resume"):
+        session = params.get("sessionId") or uuid.uuid4().hex
+        signed_out_full = os.environ.get("STUB_AGY_SIGNED_OUT_FULL") and "full" in profile.parts
+        if os.environ.get("STUB_AGY_BROKEN"):
+            send(id=identifier, error={"code": -32000, "message": "Unrecognized test failure"})
+            continue
+        if os.environ.get("STUB_AGY_SIGNED_OUT") or signed_out_full:
+            send(id=identifier, error={"code": -32000, "message": "Authentication required"})
+            continue
+        if method == "session/resume" and (
+            os.environ.get("STUB_AGY_FORGET") or not (sessions / session).exists()
+        ):
+            send(id=identifier, error={"code": -32002, "message": "Unknown session"})
+            continue
+        (sessions / session).touch()
+        result = {"sessionId": session, **options()}
+    elif method == "session/set_config_option":
+        if params["configId"] == "model":
+            model = params["value"]
+        else:
+            effort = params["value"]
+        result = options()
+    elif method == "session/prompt":
+        if os.environ.get("STUB_AGY_HOLD"):
+            continue
+        if names := os.environ.get("STUB_AGY_SHOW"):
+            settings = json.loads((profile / "antigravity-cli/settings.json").read_text("utf-8"))
+            permissions = settings.get("permissions", {})
+            escape = os.environ["STUB_AGY_ESCAPE"]
+            if "write_file(*)" not in permissions.get("deny", []):
+                Path(os.environ["STUB_AGY_TOUCH"]).touch()
+                Path(escape).touch()
+            record(files={name: Path(name).read_text("utf-8") for name in names.split(",")})
+            requests = [
+                ("outside", "read", [{"path": os.environ["STUB_AGY_PEEK"]}]),
+                ("unknown", "read", []),
+                ("inside", "read", [{"path": names.split(",")[0]}]),
+            ]
+            if os.environ.get("STUB_AGY_FETCH"):
+                requests.append(("fetch", "fetch", []))
+            for label, kind, locations in requests:
+                send(id=f"read-{label}", method="session/request_permission", params={
+                    "toolCall": {"kind": kind, "locations": locations},
+                    "options": [{"kind": "allow_once", "optionId": "yes"},
+                                {"kind": "reject_once", "optionId": "no"}],
+                })
+            update(sessionUpdate="agent_message_chunk", content={
+                "type": "text", "text": f"1. Advisory: See {Path.cwd() / names.split(',')[0]}",
+            })
+            send(id=identifier, result={"stopReason": "end_turn"})
+            continue
+        command = "git push --force origin main" if os.environ.get("STUB_AGY_PUSH") else "git status"
+        payload = {"toolCall": {"name": "run_command", "args": {"CommandLine": command}}}
+        hooks = json.loads((profile / "config/hooks.json").read_text(encoding="utf-8"))
+        for entry in hooks["forge"]["PreToolUse"]:
+            if entry["matcher"] != payload["toolCall"]["name"]:
+                continue
+            for hook in entry["hooks"]:
+                check = subprocess.run(hook["command"], shell=True, input=json.dumps(payload),
+                                       text=True, capture_output=True, check=True)
+                record(guard=json.loads(check.stdout))
+        update(sessionUpdate="tool_call", kind="execute", rawInput={"CommandLine": command})
+        if os.environ.get("STUB_AGY_ASK"):
+            send(id="question", method="session/request_permission", params={
+                "toolCall": {"toolCallId": "interaction_test", "title": "Which option?"},
+                "options": [{"name": "First", "kind": "allow_once", "optionId": "yes"}],
+            })
+        if os.environ.get("STUB_AGY_DIRTY"):
+            Path("antigravity.txt").write_text("Antigravity worked.\n", encoding="utf-8")
+        if os.environ.get("STUB_AGY_COMMIT"):
+            Path("antigravity.txt").write_text(f"{session} {effort}\n", encoding="utf-8")
+            subprocess.run(["git", "add", "antigravity.txt"], check=True)
+            subprocess.run(["git", "commit", "--allow-empty", "-qm", "Build with Antigravity"], check=True)
+        update(sessionUpdate="agent_message_chunk", content={
+            "type": "text", "text": os.environ.get("STUB_AGY_REVIEW", "Built it."),
+        })
+        usage = {"inputTokens": 200, "outputTokens": 300, "thoughtTokens": 120}
+        if not os.environ.get("STUB_AGY_NO_CACHE"):
+            usage["cachedReadTokens"] = 1000
+        result = {"stopReason": "end_turn", "usage": usage}
+    else:
+        send(id=identifier, error={"code": -32601, "message": "Unknown method"})
+        continue
+    send(id=identifier, result={**result, "extra": True})

@@ -81,7 +81,7 @@ def test_1_each_clone_chooses_its_own_worker_with_no_tracked_change(repo, monkey
     config = repo.path / "forge.toml"
     config.write_text(config.read_text("utf-8").replace('repo = "client"', 'repo = "client"\nstage = "prototype"'),
                       "utf-8")
-    repo.git("commit", "-qam", "Back to the prototype stage")
+    repo.git("commit", "--allow-empty", "-qam", "Back to the prototype stage")
     repo.git("push", "-q", "origin", "main")
     (repo.path / "forge.local.toml").write_text('workers = "split"\n', "utf-8")
     fixed = repo.forge("fix", "start", "Show the demo", "--done", "The demo shows", "--kind", "ui")
@@ -102,11 +102,11 @@ def test_2_a_shared_setting_in_the_local_file_is_refused(repo, monkeypatch, sdk_
     assert ("forge.local.toml can't set merge: it holds only tools, workers and [models] tables, "
             "so settings the team shares stay in forge.toml.\n"
             "Next: move merge to forge.toml in a fix, or take it out of forge.local.toml") in refused.stderr
-    # A key it may hold, with a value Forge can't use, is refused too.
+    # Antigravity adds a worker choice. The model family name "gemini" is still invalid.
     (repo.path / "forge.local.toml").write_text('workers = "gemini"\n', "utf-8")
     refused = repo.forge("task", "start", "BOARD/PAGE")
     assert refused.returncode == 1, refused.stdout + refused.stderr
-    assert ("forge.local.toml is not usable: workers must be one of claude, codex, split.\n"
+    assert ("forge.local.toml is not usable: workers must be one of codex, claude, antigravity, split.\n"
             "Next: ask your agent to fix forge.local.toml") in refused.stderr
 
 
@@ -119,12 +119,12 @@ def test_3_new_and_upgraded_repos_ignore_the_local_file_and_doctor_names_its_set
         patient(lambda: shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", client,
                                          dirs_exist_ok=True))
         repo.git("add", "-A", cwd=client)
-        repo.git("commit", "-qm", "Adopt earlier Forge", cwd=client)
+        repo.git("commit", "--allow-empty", "-qm", "Adopt earlier Forge", cwd=client)
         config = client / "forge.toml"
         version = repo.forge("--version").stdout.split()[-1]
         config.write_text(re.sub(r'^version = .*$', f'version = "{version}"',
                                  config.read_text("utf-8"), flags=re.M), "utf-8")
-        repo.git("commit", "-qam", "Pin current Forge", cwd=client)
+        repo.git("commit", "--allow-empty", "-qam", "Pin current Forge", cwd=client)
         repo.git("push", "-q", "origin", "main", cwd=client)
     else:
         client, initialized = _fresh_client(repo, env.gh, tmp_path)

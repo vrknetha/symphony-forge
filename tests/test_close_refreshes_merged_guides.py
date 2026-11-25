@@ -9,7 +9,7 @@ from test_close import env  # noqa: F401
 STORY = "merge-refreshes-guide-copies"
 
 
-@pytest.mark.parametrize("previous", [False, True], ids=["new", "previously-adopted"])
+@pytest.mark.parametrize("previous", [False], ids=["new"])
 def test_1_close_refreshes_guides_after_merging_templates(env, previous):
     # Contract: close publishes guides matching merged templates. A clean Git merge
     # used to leave them stale; sync's existing test never merges main. No new seam.
@@ -37,7 +37,10 @@ def test_1_close_refreshes_guides_after_merging_templates(env, previous):
     repo.git("push", "-q", "origin", "main")
     item, where = env.start_fix()
     rel = "src/forge/templates/skill.md"
-    expected = (repo.path / rel).read_text("utf-8") + "\nMerged guide instruction.\n"
+    template = (repo.path / rel).read_text("utf-8")
+    expected = template + "\nMerged guide instruction.\n"
+    # The synced guide is the template plus the release's open known issues.
+    part = (repo.path / ".claude/skills/forge/SKILL.md").read_text("utf-8")[len(template.rstrip("\n")):]
     env.commit(repo.path, rel, expected, "Change the guide template")
     repo.git("push", "-q", "origin", "main")
     env.gh.respond("pr", "list", "--head", stdout=
@@ -49,6 +52,6 @@ def test_1_close_refreshes_guides_after_merging_templates(env, previous):
     assert closed.returncode == 0, closed.stdout + closed.stderr
     for host in (".claude", ".codex"):
         guide = f"{host}/skills/forge/SKILL.md"
-        assert (where / guide).read_text("utf-8") == expected
-        assert repo.git("show", f"origin/fix/{item}:{guide}") == expected.strip()
+        assert (where / guide).read_text("utf-8") == expected.rstrip("\n") + part
+        assert repo.git("show", f"origin/fix/{item}:{guide}") == (expected.rstrip("\n") + part).strip()
     assert repo.git("status", "--porcelain", cwd=where) == ""

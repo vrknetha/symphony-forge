@@ -17,13 +17,19 @@ STORY = "FORGE-STACK-1/CLOSE"
 
 
 def _stacked_pair(env, previous, child_review=None):
+    # These cases fake review and exercise stacked-close behavior; check entries
+    # keep their worker commits valid without claiming a named proof test.
     repo = configured(env, previous)
     base_work, _ = start(repo, "A")
-    base_head = env.commit(base_work, "app.py", "A_VALUE = 1\n", "Build the base part")
+    base_head = env.commit(
+        base_work, "app.py", "A_VALUE = 1\n",
+        "Build the base part\n\nProof list:\n- 1: check: The base part saves its value.")
     parent_close = env.close("STACK/A")
     assert parent_close.returncode == 0, parent_close.stdout + parent_close.stderr
     child_work, _ = start(repo, "B")
-    env.commit(child_work, "use.py", "B_VALUE = 1\n", "Build the stacked part")
+    env.commit(
+        child_work, "use.py", "B_VALUE = 1\n",
+        "Build the stacked part\n\nProof list:\n- 1: check: The stacked part reads its base.")
     env.gh.respond("pr", "create", stdout="https://github.com/acme/shop/pull/8\n")
     if child_review is not None:
         env.reviews(child_review)
@@ -66,12 +72,14 @@ def _retarget_manual_child(env):
 def test_3_stacked_close_uses_only_its_changes_and_waits_for_its_base(env, previous, main_advanced):
     repo = configured(env, previous)
     base_work, _ = start(repo, "A")
-    env.commit(base_work, "app.py", "A_VALUE = 1\n" * 300, "Build the base part")
+    env.commit(base_work, "app.py", "A_VALUE = 1\n" * 300,
+               "Build the base part\n\nProof list:\n- 1: check: The base part saves its value.")
     base_close = env.close("STACK/A")
     assert base_close.returncode == 0, base_close.stdout + base_close.stderr
 
     child_work, _ = start(repo, "B")
-    env.commit(child_work, "use.py", "B_VALUE = 1\n" * 200, "Build the stacked part")
+    env.commit(child_work, "use.py", "B_VALUE = 1\n" * 200,
+               "Build the stacked part\n\nProof list:\n- 1: check: The stacked part reads its base.")
     if main_advanced:
         moved = env.commit(repo.path, "README.md", "Updated client instructions\n",
                            "Update the default branch")
@@ -201,8 +209,8 @@ def _close_guides_a_manually_merged_base_before_replaying_the_child(env, previou
     d = repo.forge("task", "start", "STACK/D")
     assert d.returncode == 1
     assert d.stderr == (
-        "STACK/D waits for STACK/B, which builds on STACK/A, so it starts once STACK/A merges.\n"
-        "Next: forge next\n")
+        "STACK/D waits for STACK/B to include the merge of STACK/A from main.\n"
+        "Next: forge close STACK/B\n")
     github_merge(env, "task/STACK-B")
     review_count = len(env.review_calls())
     checks_count = len(env.gh_calls("api", "--paginate", "--jq", ".check_runs[]"))
