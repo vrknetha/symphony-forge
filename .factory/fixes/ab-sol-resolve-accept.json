@@ -1,0 +1,15 @@
+{
+  "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
+  "branch": "fix/ab-sol-resolve-accept",
+  "done_when": "After forge close --resolve accept, close records the choice and goes on to the checks without asking the round-limit question again.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-25T08:37:50.109251+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "forge close --resolve accept records the owner's choice, then prints the same round-limit question again, so it looks as if the choice was not taken (issue #1805)."
+}
