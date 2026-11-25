@@ -7,8 +7,44 @@
     "head": null,
     "start": "6c19d81eeed34df161d8bacb165a413c6bb14126"
   },
+  "known": [
+    {
+      "area": "test_3_codex_skips_host_context() in tests/test_codex_runs_skip_host_context.py",
+      "file": "tests/test_codex_runs_skip_host_context.py",
+      "gain": 2,
+      "harm": 1,
+      "line": 39,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: duplicate test",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "f8c1c954ae1bc3e3a2ee591af747cc72e1df20be503d2d5c70e51d4e114c55f6",
+    "changed": "af6d05939e4682c292d44e18223b020e211366c11e2fcf61067a134cf9e99f8e",
+    "commit": "0dde7f5672858502b59d4db911103a70526e6a27",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 2, Work 1, Harm 1\nThe new `[request]` case checks that a worker's `thread/start` carries both overrides. The updated `tests/test_codex_threads_are_quiet.py:42` already checks those same values on the same worker request, as well as on resume, cold read and review requests. The new case has no distinct outcome; the live comparison can remain in this file while the existing test owns the request proof.",
+        "file": "tests/test_codex_runs_skip_host_context.py",
+        "gain": 2,
+        "harm": 1,
+        "line": 39,
+        "priority": "P2",
+        "title": "Follow-up: duplicate test",
+        "work": 1
+      }
+    ],
+    "id": "468e67d7-4074-441a-9e3e-9de27f04e17f",
+    "status": "clean"
+  },
   "round": 2,
-  "status": "working",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T06:13:01.726518+00:00",
@@ -23,6 +59,10 @@
       "at": "2026-11-25T06:16:00.670900+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T06:27:57.398613+00:00",
+      "step": "review"
     }
   ],
   "stuck": {

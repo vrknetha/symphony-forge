@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "edge\ttests/test_codex_runs_skip_host_context.py\tFollow-up: duplicate test",
+      "kind": "edge",
+      "path": "tests/test_codex_runs_skip_host_context.py",
+      "line": 39,
+      "text": "Follow-up: duplicate test",
+      "from": "review",
+      "item": "FORGE-TOKENS-1/HOST",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
