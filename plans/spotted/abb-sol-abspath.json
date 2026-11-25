@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/review_process.py\tNot done: A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path\tabb-sol-abspath",
+      "kind": "bug",
+      "path": "src/forge/review_process.py",
+      "line": 81,
+      "text": "Not done: A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path",
+      "from": "blocking",
+      "item": "abb-sol-abspath",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

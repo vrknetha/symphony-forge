@@ -11,8 +11,45 @@
   "done_when": "A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path with no second review run.",
   "fix_kind": "backend",
   "kind": "fix",
+  "known": [
+    {
+      "area": "main() in src/forge/review_process.py",
+      "file": "src/forge/review_process.py",
+      "gain": 2,
+      "harm": 3,
+      "line": 81,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "8e994c42ebcd8845005e1fdd9de9af2d4b84ac04e73aba92e70b2a4fc1d3fe28",
+    "changed": "fe8e312643048827a4e6055698346e81a97bab88737c34361ec879159a8bd7c8",
+    "commit": "f637f5cc62f13749ec1bf19fa94c86aa8ea27aeb",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 2, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a reviewer cites a checkout through a symlinked absolute path.\nThe promised item is: \"A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path with no second review run.\" Git's worktree listing supplies `top` (`src/forge/story.py:822-824`), and on macOS it can return `/private/var/...` for a checkout also accessible as `/var/...`. Both source roots then use the former spelling, so the prefix comparison at `src/forge/review_process.py:116-119` leaves a `/var/...` citation absolute. The pinned validator rejects it (`tests/fixtures/autoreview-ce14dcca/scripts/autoreview:6811`), and `src/forge/review.py:997-1014` starts another review. The same comparison also rejects Windows citations whose root differs in case from both recorded spellings. The new test supplies only one spelling of `checkout`, so it does not cover either case.",
+        "file": "src/forge/review_process.py",
+        "gain": 2,
+        "harm": 3,
+        "line": 81,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: A review whose findings name files by an absolute path inside the checkout is kept, and those findings show the repo-relative path",
+        "work": 2
+      }
+    ],
+    "id": "eb407436-094c-49e4-a0e6-6d993ca8ae24",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T08:40:31.598075+00:00",
@@ -22,6 +59,10 @@
       "at": "2026-11-25T08:43:05.920255+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T08:51:07.702344+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
