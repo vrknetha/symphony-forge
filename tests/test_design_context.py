@@ -64,10 +64,10 @@ def prepare(env, monkeypatch, sdk_data, family, *, adopted=False, starter=False,
 
 
 def context(prompt, folder, *, inline=True):
-    for text in ("## Design context", folder, SCREENS.strip(), "DESIGN.md", "PRODUCT.md",
+    for text in ("## Design context", folder, "DESIGN.md", "PRODUCT.md",
                  "### test-audit", "observable behavior", "credible regression"):
         assert text in prompt, text
-    for text in (DESIGN.strip(), PRODUCT.strip()):
+    for text in (DESIGN.strip(), PRODUCT.strip(), SCREENS.strip()):
         assert (text in prompt) == inline
     assert f"{folder}SCREENS.md" in prompt
 

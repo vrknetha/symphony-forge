@@ -787,7 +787,7 @@ def fix_start(args: argparse.Namespace) -> None:
     if prototype and fix_kind == "ui":
         require_prototype_design(top, base)
     state = {"kind": "fix", "why": why, "done_when": done, "base": git("rev-parse", base),
-             "fix_kind": fix_kind or "mechanical"}
+             "fix_kind": fix_kind or "mechanical", "fix_kind_explicit": fix_kind is not None}
     if base == "HEAD":
         state["stacked_on"] = parent[0]
     if prototype:

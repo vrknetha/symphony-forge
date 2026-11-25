@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -36,6 +37,13 @@ def calls(log: Path) -> list[dict]:
         if "options" in record:
             record["brief"] = record["prompt"]
     return records
+
+
+def referenced_standards(brief: str) -> Path:
+    """Open the standards page the worker is directed to read."""
+    reference = re.search(r"(?m)^Open `([^`\n]*standards\.md)`", brief)
+    assert reference, "The brief does not tell the worker where to read the standards"
+    return Path(reference[1])
 
 
 def test_17_worker(repo, gh, monkeypatch):

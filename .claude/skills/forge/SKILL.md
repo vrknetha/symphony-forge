@@ -2160,8 +2160,9 @@ Read [standards.md](standards.md) beside this skill for Forge's principles, the 
 rules and the build-simple ladder. Apply its rules in every phase.
 
 The first worker brief points to the standards and release notes. It includes the product and
-design notes for screen work and points to those files for other work. New and existing repos
-get this brief when they run the release that includes it.
+design notes for screen work and for a fix started without a kind. For work marked as non-screen,
+it points to the design files. New and existing repos get this brief when they run the release
+that includes it.
 
 **Finding forms.** `Simpler: <cut> → <replacement>` is P2, or P1 when a new moving part isn't
 named in the story. Untraced work: `Cut or defer: <item>`. An unmet Done-when item:

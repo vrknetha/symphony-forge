@@ -15,7 +15,7 @@ from conftest import ROOT, FORGE_SHIM, _install
 from test_close import STORY_DOC, env  # noqa: F401
 from test_setup import _fresh_client, _version
 from test_story import READER, approved_constitution, new_story
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 STORY = "FORGE-ASKED-1"
 
@@ -144,10 +144,13 @@ def test_5_useful_extras_go_to_the_idea_list(repo, gh, tmp_path, previous):
     repo.git("commit", "--allow-empty", "-q", "-m", "Use current client guidance", cwd=client)
     worked = repo.forge("work", item, cwd=client)
     assert worked.returncode == 0, worked.stdout + worked.stderr
-    brief = flat(calls(log)[-1]["brief"])
-    for phrase in ("build nothing for it", "plans/ideas.md", "the sourced item that needs it>",
-                   "Only what is needed", "Build nothing beyond them just in case"):
+    prompt = calls(log)[-1]["brief"]
+    brief = flat(prompt)
+    for phrase in ("build nothing for it", "plans/ideas.md", "the sourced item that needs it>"):
         assert phrase in brief, phrase
+    reference = flat(referenced_standards(prompt).read_text(encoding="utf-8"))
+    for phrase in ("Only what is needed", "Build nothing beyond them just in case"):
+        assert phrase in reference, phrase
     for host in (".claude", ".codex"):
         folder = client / host / "skills/forge"
         guide = flat((folder / "SKILL.md").read_text("utf-8"))
