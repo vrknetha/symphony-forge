@@ -18,7 +18,7 @@
       "gain": 3,
       "harm": 3,
       "line": 601,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -31,7 +31,7 @@
       "gain": 3,
       "harm": 3,
       "line": 18,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -41,38 +41,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "72722c13cb79b510326152af1d3cc2c110504461c2c025b102e94414ebe68bca",
-    "changed": "00532495fe2cca31c487181b1586d50f3f0bae0ac96985c67a91458d15acb6f0",
-    "commit": "941e525216975a94804287616c036d33e5af4b2d",
+    "branch_diff": "d60f3a44106037b52abd0b5ce9827a7b07e9217b2b25930865e418f107e25003",
+    "changed": "8326b7717551ca3768394b96ae2f578eb90fc554935d8692ee1b1698ed102b07",
+    "commit": "37e0aa6d58a691b4bc4531173842fed45135e970",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a new repo runs a Claude SDK build and the worker delegates a diagnostic task.\nThe requested Done-when item also requires these agents to use Sonnet after upgrade while preserving repos' own model entries. The new constant supplies the generated role files, but `src/forge/worker.py:343` selects a separate helper budget and `src/forge/worker.py:897` applies it to every programmatic agent. With no helper entry that budget defaults to Haiku high (`src/forge/repo.py:796`); new repos also initialize it to Haiku. The [Claude Agent SDK documentation](https://code.claude.com/docs/en/agent-sdk/subagents) says programmatic definitions override same-named role files. Consequently debugger, security and performance run on Haiku in these worker sessions, rather than the requested Sonnet. Preserve explicit repo choices while applying the requested default on this path.",
-        "file": "src/forge/repo.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 601,
-        "priority": "P1",
-        "required_done_when": true,
-        "title": "Not done: The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a Claude SDK worker delegates a diagnostic, an upgrade refreshes old role files, or a Codex coordinator starts an unconfigured Claude plan read.\nThis proof checks diagnostic role files only immediately after init; it neither checks the SDK worker's agent definitions nor verifies that sync replaces old Opus role files. In fact, `tests/test_claude_subagents.py:74` expects the SDK definitions to use Haiku. The other named proof, `tests/test_claude_implementation_defaults.py:83`, exercises only the native reader and asserts that no SDK call occurred; `tests/test_codex_reader.py:162` checks the SDK path only with an explicit Opus pin. Both named proofs can therefore pass while the promised defaults are wrong on these paths. Extend the command-level proofs to cover the SDK definitions, refresh of existing role files, and the unconfigured SDK plan read.",
-        "file": "tests/test_claude_diagnostic_model_defaults.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 18,
-        "priority": "P1",
-        "title": "Test: The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort",
-        "work": 2
-      }
-    ],
-    "id": "9deda633-23bf-4927-83a0-ac54f521f597",
-    "status": "blocked"
+    "findings": [],
+    "id": "25b35825-e776-45b3-8e50-6ac5de8b38e4",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T09:55:44.834542+00:00",
@@ -91,6 +69,10 @@
       "at": "2026-11-25T10:09:47.559341+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T10:19:44.113618+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
