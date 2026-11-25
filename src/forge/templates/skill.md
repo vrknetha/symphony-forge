@@ -576,12 +576,18 @@ preservation review, merge, cleanup and rollback. Follow it in order.
 
 Keep one coordinator chat active for the same work. Hand over to a fresh chat at
 20 to 30% of the context window, at a quiet moment after a merge or while CI runs.
-Never go past 40%. Give the next chat a short handover with the current item, any
-running work and the next step. In Claude Code, delete any session timers before
-`/clear`. They survive the clear.
+Never go past 40%. Before starting a round that needs `forge handback`, leave enough
+context to finish it. Before you switch chats, finish any such rounds, including
+native plan reads and builds, and run their printed `forge handback` commands in
+the original chat. Give the next chat the current item, any work still running and
+the next step. In Claude Code, delete any session timers before `/clear`. They
+survive the clear.
 
-Use Forge's step-end events to resume work. When you need a timed check, use a
-one-shot wait. Never use repeating flow-check timers (`CronCreate` or `/loop`).
+Forge records step-end events in its run history. The events do not start a chat
+turn. After a handover or a completion notice from the host, run `forge next` to see
+what finished and what comes next. If the run is still active, wait for its completion
+notice if the host can send it to this chat. If it cannot, use a one-shot wait, then
+run `forge next` again. Never use repeating flow-check timers (`CronCreate` or `/loop`).
 
 When a run is waiting or stopped, read the [run reference](run-reference.md) for
 machine queues, board JSON fields and the Claude Code pane. Use `forge next` for
