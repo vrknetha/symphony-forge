@@ -48,7 +48,7 @@
     "id": "3c83950e-ef17-4dae-b0c2-109eee60e64c",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -63,13 +63,18 @@
     {
       "at": "2026-11-25T16:47:20.456816+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T16:47:39.453447+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "f66d13503cb3900d8198c45f333f418f4a5841d0",
+    "close": "a2e07237-3dd1-4aeb-b614-4d3924a9e4a2",
+    "head": "0ad830eb10de985307ed9386919fdd6b8c8c5894",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "forge-pr-check reads a Proof list only when its test names are in backticks and ignores one on a merge commit, but its failure message says neither, so coordinators keep rewriting the list.",
   "worker": "codex"
