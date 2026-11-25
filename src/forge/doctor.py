@@ -7,6 +7,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 import tomllib
 from contextlib import suppress
@@ -153,21 +154,45 @@ def _removable(path: Path, ref: str, head: str) -> bool:
             and not task.worktree_files(path))
 
 
-def _remove_finished(main: Path, path: Path, ref: str, head: str, report) -> subprocess.CompletedProcess[str] | None:
+def _checkout_in_use(path: Path) -> bool:
+    """A process with this working directory can still write after the worktree moves."""
+    folder = path.resolve()
+    if sys.platform == "darwin":
+        cwd = subprocess.run(["/usr/sbin/lsof", "-a", "-u", str(os.getuid()), "-d", "cwd", "-Fn0"],
+                             capture_output=True, timeout=5, check=True)
+        return any(Path(os.fsdecode(field[1:])).is_relative_to(folder)
+                   for field in cwd.stdout.split(b"\0") if field.startswith(b"n/"))
+    if sys.platform == "linux":
+        proc = Path("/proc")
+        if not (proc / "self/cwd").is_symlink(): return True
+        for process in proc.iterdir():
+            if not process.name.isdecimal(): continue
+            with suppress(OSError):
+                if (process / "cwd").readlink().is_relative_to(folder): return True
+        return False
+    # Windows holds a process's current directory open so Git cannot move it.
+    return os.name != "nt"
+
+
+def _remove_finished(main: Path, path: Path, ref: str, head: str, report, *,
+                     restore_lock: bool) -> subprocess.CompletedProcess[str] | None:
     from forge import githooks
 
+    if not restore_lock and repo.git("status", "--porcelain", "--", "uv.lock", cwd=path):
+        return None
     # Git's removal check skips ignored files. Move away from the editor's path before checking them again.
     scratch = Path(tempfile.mkdtemp(prefix=".forge-tidy-", dir=path.parent))
     moved = scratch / "worktree"
     try:
         done = repo.run("git", "worktree", "move", str(path), str(moved), cwd=main)
         if done.returncode: return done
-        if not _removable(moved, ref, head): return None
+        if _checkout_in_use(moved) or not _removable(moved, ref, head): return None
 
-        if repo.run("git", "diff", "--cached", "--quiet", "--", "uv.lock", cwd=moved).returncode:
-            return None  # Tests do not stage their lockfile changes.
-        if repo.run("git", "diff", "--quiet", "--", "uv.lock", cwd=moved).returncode == 1:
-            repo.git("checkout", "--", "uv.lock", cwd=moved)
+        if restore_lock:
+            if repo.run("git", "diff", "--cached", "--quiet", "--", "uv.lock", cwd=moved).returncode:
+                return None  # Tests do not stage their lockfile changes.
+            if repo.run("git", "diff", "--quiet", "--", "uv.lock", cwd=moved).returncode == 1:
+                repo.git("checkout", "--", "uv.lock", cwd=moved)
 
         untracked = {moved / name for name in repo.git(
             "ls-files", "--others", "--exclude-standard", "-z", cwd=moved).split("\0")}
@@ -186,7 +211,7 @@ def _remove_finished(main: Path, path: Path, ref: str, head: str, report) -> sub
             scratch.rmdir()  # Never delete files if Git could not move the worktree back.
 
 
-def tidy_finished(top: Path, *, inspect: bool = False, report=None) -> int:
+def tidy_finished(top: Path, *, inspect: bool = False, restore_lock: bool = False, report=None) -> int:
     """Remove only worktrees whose exact local work is available on GitHub."""
     from forge import board
 
@@ -209,7 +234,7 @@ def tidy_finished(top: Path, *, inspect: bool = False, report=None) -> int:
             if inspect:
                 clean.append(str(path))
                 continue
-            removed = _remove_finished(main, path, ref, head, report)
+            removed = _remove_finished(main, path, ref, head, report, restore_lock=restore_lock)
             if removed is None: continue
             if removed.returncode:
                 if report is not None:
@@ -583,7 +608,7 @@ def doctor(args: argparse.Namespace) -> int:
                 problem, _, fix = str(refused).partition("\nNext: ")
                 add(problem, fix)
     rows += _unbuilt(top)
-    tidy_finished(top, inspect=not args.fix, report=add)
+    tidy_finished(top, inspect=not args.fix, restore_lock=args.fix, report=add)
     rows += _files(top, cfg, wanted, args.fix and pinned == f"v{__version__}")
     if not shutil.which("sh"): add("sh isn't on PATH, so no host hook can run.", "install Git, which brings sh, and put it on PATH")
     elif wanted and sync.read(top / sync.LAUNCHER) != wanted.get(sync.LAUNCHER):

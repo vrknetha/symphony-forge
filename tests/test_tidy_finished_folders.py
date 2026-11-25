@@ -2,6 +2,7 @@
 import json
 import os
 import shutil
+import subprocess
 import sys
 
 import pytest
@@ -71,10 +72,8 @@ def test_2_closed_folders_need_the_same_remote_head(repo, gh, tmp_path):
     assert _gone(repo, clean, "fix/on-remote")
 
 
-@pytest.mark.parametrize("late_file, lock_change", [
-    ("notes.txt", False), ("notes.txt", True), (".env", False),
-], ids=["untracked", "after-lockfile", "ignored"])
-def test_3_cleanup_preserves_an_edit_during_the_sweep(repo, gh, tmp_path, late_file, lock_change):
+@pytest.mark.parametrize("case", ["untracked", "lockfile", "ignored"])
+def test_3_cleanup_preserves_an_edit_during_the_sweep(repo, gh, tmp_path, case):
     _client(repo)
     repo.write(".gitignore", ".env\n")
     repo.write("uv.lock", "version = 1\n")
@@ -82,11 +81,19 @@ def test_3_cleanup_preserves_an_edit_during_the_sweep(repo, gh, tmp_path, late_f
     repo.git("commit", "-qm", "Track the lockfile and ignore local settings")
     first, first_head = _work(repo, tmp_path, "fix/a-first")
     second, second_head = _work(repo, tmp_path, "fix/b-second")
-    if lock_change:
+    if case == "lockfile":
         (first / "uv.lock").write_text("version = 2\n", encoding="utf-8")
     _prs(gh, ("fix/a-first", first_head, "MERGED"), ("fix/b-second", second_head, "MERGED"))
+    if case == "lockfile":
+        done = repo.forge("next")
+        assert _gone(repo, second, "fix/b-second"), done.stdout + done.stderr
+        assert _kept(repo, first, "fix/a-first"), done.stdout + done.stderr
+        assert (first / "uv.lock").read_text(encoding="utf-8") == "version = 2\n"
+        return
+
+    late_file = ".env" if case == "ignored" else "notes.txt"
     target = tmp_path / "first-removal-path"
-    # Run real Git and write at the first opportunity after Forge's status check.
+    # Run real Git. Write just before removal even when the checkout has moved.
     _install(repo.bin, "git", f"""#!{sys.executable}
 from pathlib import Path
 import subprocess, sys
@@ -96,18 +103,29 @@ target = Path({target.as_posix()!r})
 late_file = {late_file!r}
 if args[:2] == ["worktree", "move"] and Path(args[-2]).resolve() == first:
     target.write_text(Path(args[-1]).as_posix(), encoding="utf-8")
-    if late_file == ".env":
-        (first / late_file).write_text("New work", encoding="utf-8")
 if "remove" in args[:-1]:
     checkout = Path(args[-1]).resolve()
     moved = Path(target.read_text(encoding="utf-8")).resolve() if target.exists() else first
-    if checkout == moved and (not {lock_change!r} or "--force" in args
-                              or "version = 1" in (checkout / "uv.lock").read_text(encoding="utf-8")):
+    if checkout == moved:
         (checkout / late_file).write_text("New work", encoding="utf-8")
 sys.exit(subprocess.call([{shutil.which("git")!r}, *args]))
 """)
 
-    done = repo.forge("next")
+    if case == "ignored":
+        # A terminal inside the folder follows its rename and can still write relative files.
+        with subprocess.Popen([sys.executable, "-c",
+                               "import sys; from pathlib import Path; sys.stdin.read(); "
+                               "Path('.env').write_text('New work', encoding='utf-8')"],
+                              cwd=first, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE) as shell:
+            try:
+                done = repo.forge("next")
+            finally:
+                _, error = shell.communicate(timeout=10)
+            assert _kept(repo, first, "fix/a-first"), done.stdout + done.stderr
+            assert shell.returncode == 0, error.decode("utf-8")
+    else:
+        done = repo.forge("next")
 
     assert _gone(repo, second, "fix/b-second"), done.stdout + done.stderr
     assert _kept(repo, first, "fix/a-first"), done.stdout + done.stderr
