@@ -19,8 +19,8 @@
       "text": "Test: Checkout paths cited through a symlink alias are kept in one review",
       "from": "blocking",
       "item": "a-review-finding-that-names-a-file-by-it",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     }
   ]
 }
