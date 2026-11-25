@@ -3,6 +3,7 @@ pre-push keeps the default branch pull-request-only and checks release tags."""
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -14,6 +15,7 @@ from forge import __version__, repo, task
 from forge.repo import git, refuse, run
 
 LIMIT = 5  # code files a fix may change before it has to become a story
+ANTIGRAVITY_SKILLS = ".agents/skills.json"
 
 # Each host's hook file: event -> (the tools it matches, or None for all; the forge hook it runs).
 HOSTS = {
@@ -76,10 +78,34 @@ def shims(top: Path, cfg: dict[str, Any]) -> dict[Path, str]:
     return wanted
 
 
+def _antigravity_skills(path: Path) -> str:
+    try:
+        text = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        text = None
+    except (OSError, UnicodeError):
+        refuse(REFUSALS["skills_json"])
+    try:
+        data = {} if text is None else json.loads(text)
+    except (ValueError, RecursionError):
+        refuse(REFUSALS["skills_json"])
+    if not isinstance(data, dict) or not isinstance(data.get("entries", []), list):
+        refuse(REFUSALS["skills_json"])
+    entries = data.setdefault("entries", [])
+    skill_path = ".codex/skills"
+    if text is not None and any(isinstance(entry, dict) and entry.get("path") == skill_path
+                                for entry in entries):
+        return text
+    entries.append({"path": skill_path})
+    return json.dumps(data, indent=2) + "\n"
+
+
 def ships(top: Path, cfg: dict[str, Any], *, husky: str | None = None) -> dict[str, str]:
     from forge import sync
 
     hooks = {}
+    if "antigravity" in (cfg.get("workers"), cfg.get("reviews")):
+        hooks[ANTIGRAVITY_SKILLS] = _antigravity_skills(top / ANTIGRAVITY_SKILLS)
     # None discovers the folder; an empty string means the caller already found none.
     folder = husky_folder(top) if husky is None else top / husky if husky else None
     if folder:
@@ -105,6 +131,8 @@ def ships(top: Path, cfg: dict[str, Any], *, husky: str | None = None) -> dict[s
     }
 
 REFUSALS = {
+    "skills_json": (".agents/skills.json is not valid JSON, so Forge can't add its entry safely.",
+                    "fix the file, then forge sync"),
     "not_forge": ("{branch} was not started by Forge, so it has no story, task or fix.",
                   'forge fix start "<why>" --done "<done when>"'),
     "promote": ("Fix {fix} {problem}, so it has to become a story, unless the human allows it "

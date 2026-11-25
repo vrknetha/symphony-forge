@@ -776,7 +776,7 @@ def _merge_default(top: Path, item: str, branch: str, default: str,
                     generated.add("docs/commands.md")
             finally:
                 repo.git("worktree", "remove", "-f", str(base), cwd=top)
-        if set(files) <= generated:
+        if githooks.ANTIGRAVITY_SKILLS not in files and set(files) <= generated:
             repo.git("restore", f"--source=origin/{default}", "--staged", "--worktree", "--",
                      *files, cwd=top)
             release = "v" + repo._pin((top / "forge.toml").read_text(encoding="utf-8"))  # pyright: ignore[reportPrivateUsage]

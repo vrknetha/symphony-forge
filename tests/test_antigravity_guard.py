@@ -21,6 +21,7 @@ def test_4_antigravity_runs_share_lanes_stop_and_always_run_with_the_guard(
 ):
     log = setup(repo, gh, monkeypatch, local=True)
     machine_cores(repo, 2)
+    sdk_data = os.environ["XDG_DATA_HOME"]
     monkeypatch.setenv("XDG_DATA_HOME", ".cache")
     monkeypatch.setenv("STUB_AGY_HOLD", "1")
     first, first_output = start(repo.path, tmp_path / "first", repo, "work", "BOARD/HELP")
@@ -98,3 +99,43 @@ def test_4_antigravity_runs_share_lanes_stop_and_always_run_with_the_guard(
         if not args:
             assert answer["reason"] == "Forge cannot read this command, so it does not run."
         assert not marker.exists()
+
+    monkeypatch.setenv("XDG_DATA_HOME", sdk_data)
+    repo.git("switch", "-c", "check-skills")
+    rel = ".agents/skills.json"
+    synced = repo.forge("sync")
+    assert synced.returncode == 0, synced.stdout + synced.stderr
+    assert not (repo.path / rel).exists()
+
+    original = {"entries": [{"path": "tools/skills", "enabled": True}], "custom": {"keep": True}}
+    skills = repo.path / rel
+    settings = repo.path / "forge.toml"
+    shared = settings.read_text(encoding="utf-8")
+    repo.write("forge.toml", shared + 'workers = "antigravity"\n')
+    synced = repo.forge("sync")
+    assert synced.returncode == 0, synced.stdout + synced.stderr
+    assert json.loads(skills.read_text(encoding="utf-8")) == {"entries": [{"path": ".codex/skills"}]}
+
+    for key in ("workers", "reviews"):
+        repo.write(rel, json.dumps(original))
+        repo.write("forge.toml", shared + f'{key} = "antigravity"\n')
+        synced = repo.forge("sync")
+        assert synced.returncode == 0, synced.stdout + synced.stderr
+        assert json.loads(skills.read_text(encoding="utf-8")) == {
+            **original, "entries": [*original["entries"], {"path": ".codex/skills"}],
+        }
+
+    existing = {**original, "entries": [*original["entries"], {"path": ".codex/skills", "enabled": True}]}
+    original_text = json.dumps(existing)
+    skills.write_text(original_text, encoding="utf-8")
+    synced = repo.forge("sync")
+    assert synced.returncode == 0, synced.stdout + synced.stderr
+    assert skills.read_text(encoding="utf-8") == original_text
+
+    for invalid in ("{", '{"entries": {}}'):
+        skills.write_text(invalid, encoding="utf-8")
+        refused = repo.forge("sync")
+        assert refused.returncode == 1, refused.stdout + refused.stderr
+        assert ".agents/skills.json is not valid JSON, so Forge can't add its entry safely." in refused.stderr
+        assert "fix the file, then forge sync" in refused.stderr
+        assert skills.read_text(encoding="utf-8") == invalid

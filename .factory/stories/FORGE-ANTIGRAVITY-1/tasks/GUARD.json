@@ -1,0 +1,130 @@
+{
+  "branch": "task/FORGE-ANTIGRAVITY-1-GUARD",
+  "chat": {
+    "approval": "35b0d7fb00126418189ed83705349871a04568dd080156d88770a7bc2e79b341",
+    "claude": null,
+    "conversation": "01a210e4-9fb7-7621-b932-acb8c1262c67",
+    "head": null,
+    "start": "23ca3fc0cf18f466b9deba47f0462b3e2453cc99"
+  },
+  "known": [
+    {
+      "area": "ships() in src/forge/githooks.py",
+      "file": "src/forge/githooks.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 108,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Preserve client entries when close resolves a manifest conflict",
+      "work": 2
+    },
+    {
+      "area": "ships() in src/forge/githooks.py",
+      "file": "src/forge/githooks.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 108,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Include the existing manifest when identifying sync output",
+      "work": 2
+    },
+    {
+      "area": "_antigravity_skills() in src/forge/githooks.py",
+      "file": "src/forge/githooks.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 98,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: they always run with Forge's block on destructive commands and with the skills Forge ships",
+      "work": 3
+    },
+    {
+      "area": "test_4_antigravity_runs_share_lanes_stop_and_always_run_with_the_guard() in tests/test_antigravity_guard.py",
+      "file": "tests/test_antigravity_guard.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 115,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: register Forge skills when no manifest exists",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "c8b7ec0e882733b3c74aed5ba7d3c8f2011dded9fcc265e13d7dcf408ee27957",
+    "changed": "830ab577075aa07cde6a73ac3aa37310f6e309ece7b083c9384848dbe5462ada",
+    "commit": "d4c02d341cbccbe2976c9d22d51dd8a598b80fcc",
+    "dismissals": [],
+    "findings": [],
+    "id": "e6a4b079-851c-4f8f-8514-aa8ba7875e02",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T04:08:39.517739+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T04:09:03.564554+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T04:22:13.663456+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T04:22:46.939138+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T04:31:13.121195+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T04:32:26.013368+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-25T04:36:28.786450+00:00",
+      "by": "owner",
+      "choice": "same",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-25T04:39:17.778262+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T04:44:22.725485+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "13d12bd9-a805-472b-b699-98f61211af8d",
+    "head": "234f7b1429c9de377ff0178ba8aebca9d5b21cde",
+    "keys": {
+      "the open P0 preserve client entries when close resolves a manifest conflict in src/forge/githooks.py": 2
+    },
+    "round": 2
+  },
+  "worker": "codex"
+}
