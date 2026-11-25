@@ -1680,9 +1680,10 @@ without old check-run requests. Retries keep the same batch and never take anoth
 Older items keep their text or show unmeasured time. New and existing repos get this
 behavior on upgrade.
 
-A repo pinned to a release unavailable from PyPI can run a newer release's upgrade directly:
-`uvx --from symphony-forge==X.Y.Z forge upgrade vX.Y.Z`. Use a published release that
-includes the switch to PyPI. If the default branch's workflow still installs from the
+A repo pinned to a release unavailable from PyPI can install a newer release and then upgrade.
+Use a published release that includes the switch to PyPI. Run
+`uv tool install --force symphony-forge==X.Y.Z`, then `forge upgrade vX.Y.Z`.
+If the default branch's workflow still installs from the
 retired GitHub repository, Forge opens the upgrade pull request and the owner follows the
 [upgrade recovery steps](https://github.com/vrknetha/symphony-forge/blob/main/docs/guide.md#recovering-upgrades-from-the-retired-github-repository).
 Until the upgrade merges, the default branch keeps working with the new release installed.

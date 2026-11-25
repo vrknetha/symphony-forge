@@ -1,4 +1,6 @@
 """Client CI, hook and pinned runner package requirements."""
+import os
+import subprocess
 import sys
 
 import pytest
@@ -8,7 +10,7 @@ from test_close import run
 from test_fix_when_the_installed_forge_differs_from_th import _calls, _uv
 from test_setup import _on_a_branch_with_forge_toml, _version
 from test_upgrade_check import (
-    BASH, UV_STUB, _install_release, _release_shim, _review_job_steps, _run_pr_check_job,
+    BASH, UV_STUB, _release_shim, _review_job_steps, _run_pr_check_job,
 )
 from test_upgrade_command import NAME, RELEASE, env, unsynced_up  # noqa: F401
 from test_upgrade_pending import OLD, _pin_old
@@ -63,7 +65,7 @@ def test_4_sync_replaces_the_disabled_claude_marketplace(repo):
 
 
 @BASH
-def test_5_upgrade_opens_a_recovery_pull_request_on_a_protected_branch(unsynced_up):
+def test_5_upgrade_opens_a_recovery_pull_request_on_a_protected_branch(unsynced_up, monkeypatch):
     up = unsynced_up
     repo = up.repo
     workflow = ".github/workflows/forge.yml"
@@ -77,7 +79,13 @@ def test_5_upgrade_opens_a_recovery_pull_request_on_a_protected_branch(unsynced_
                     'done\nexit 0\n', encoding="utf-8")
     hook.chmod(0o755)
     up.env.checks([run("tests")], [{"context": "forge-pr-check", "state": "failure"}])
-    done = up.run(RELEASE)
+    guide = (ROOT / "docs/guide.md").read_text("utf-8")
+    recovery = guide.split("### Recovering upgrades from the retired GitHub repository", 1)[1]
+    _, fence, script = recovery.split("\n## ", 1)[0].partition("```bash\n")
+    assert fence, "The recovery guide must give a persistent install command before the upgrade."
+    commands = script.split("```", 1)[0].replace("X.Y.Z", RELEASE.removeprefix("v"))
+    done = subprocess.run(["bash", "-e", "-c", commands], cwd=repo.path,
+                          capture_output=True, text=True, encoding="utf-8", timeout=120)
     assert done.returncode == 1, done.stdout + done.stderr
     assert up.env.gh_calls("pr", "create"), done.stdout + done.stderr
     assert "Checks failed on the pull request: forge-pr-check." in done.stderr
@@ -86,7 +94,10 @@ def test_5_upgrade_opens_a_recovery_pull_request_on_a_protected_branch(unsynced_
     assert up.show("forge.toml").splitlines() == [
         f'version = "{RELEASE}"', 'checks = ["tests", "forge-pr-check"]',
     ]
-    assert up.uv()[0]["args"][-1] == f"symphony-forge=={RELEASE.removeprefix('v')}"
+    assert up.uv()[0]["args"] == [
+        "tool", "install", "--force", f"symphony-forge=={RELEASE.removeprefix('v')}",
+    ]
+    assert up.launched()[0]["via"] == "installed"
     assert up.uv()[-1]["args"][5:] == ["close", NAME]
 
     # Simulate the owner's reviewed GitHub merge. The server forbids direct pushes, so the
@@ -95,16 +106,19 @@ def test_5_upgrade_opens_a_recovery_pull_request_on_a_protected_branch(unsynced_
     repo.git("--git-dir", str(remote), "update-ref", "refs/heads/main", head, base)
     repo.git("pull", "--ff-only", "origin", "main")
 
-    # The restored check runs from the upgraded trusted base and installs its pinned release.
-    (up.tmp / "uvbin" / "forge").unlink()
-    _install_release(up.env, RELEASE)
     up.env.checks([run("tests"), run("forge-pr-check")])
     item, where = up.env.start_fix()
-    closed = up.env.close(item)
+    closed = subprocess.run(["forge", "close", item], cwd=where, capture_output=True,
+                            text=True, encoding="utf-8", timeout=120)
     assert closed.returncode == 0, closed.stdout + closed.stderr
+    assert up.launched()[-1]["via"] == "installed"
+
+    # The restored CI check has its own tool environment and installs the upgraded base pin.
     _install(repo.bin, "uv", UV_STUB.format(python=sys.executable, release=_release_shim()))
     steps = _review_job_steps(repo.git("show", f"main:{workflow}"))
-    checked = _run_pr_check_job(up.env, where, steps, branch=f"fix/{item}")
+    with monkeypatch.context() as runner:
+        runner.setenv("PATH", os.environ["PATH"].removeprefix(str(up.tmp / "uvbin") + os.pathsep))
+        checked = _run_pr_check_job(up.env, where, steps, branch=f"fix/{item}")
     assert checked.returncode == 0, checked.stdout + checked.stderr
     assert f"forge-pr-check passed for fix/{item}." in checked.stdout
 

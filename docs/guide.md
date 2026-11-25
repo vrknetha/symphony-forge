@@ -681,8 +681,8 @@ fix. Close's last line says who merges, as described in Merging a ready item. Wh
 refuses, follow its `Next:` line; running it again picks up where it stopped.
 If the machine's lanes still have runs, the command names them and asks you to wait.
 
-A repo pinned to a release older than the command upgrades once with
-`uvx --from symphony-forge==X.Y.Z forge upgrade vX.Y.Z`.
+If your installed Forge is too old to run `forge upgrade`, use the install and upgrade
+commands in [Recovering upgrades from the retired GitHub repository](#recovering-upgrades-from-the-retired-github-repository).
 
 ### Recovering upgrades from the retired GitHub repository
 
@@ -690,10 +690,16 @@ If the default branch's `.github/workflows/forge.yml` still installs Forge from 
 GitHub repository, the review check fails before it can review an upgrade pull request.
 GitHub runs this check using the workflow it already trusts on the default branch.
 
-1. Choose a published Forge release newer than the repo's pin
-   that includes the switch to PyPI. Run
-   `uvx --from symphony-forge==X.Y.Z forge upgrade vX.Y.Z`, with that version in both places.
-   This opens the upgrade pull request even if the old pin has no PyPI package.
+1. Choose a published Forge release newer than the repo's pin that includes the switch to PyPI.
+   Install it first, then run the upgrade. Use the same version in both commands.
+
+   ```bash
+   uv tool install --force symphony-forge==X.Y.Z
+   forge upgrade vX.Y.Z
+   ```
+
+   The upgrade opens a pull request even if the old pin has no PyPI package. The installed Forge
+   stays on PATH after the upgrade command exits.
 2. The repository owner reviews the exact pull request commit. Check that only the pin,
    Forge-generated files and Forge records changed, that the new workflow installs from
    PyPI, and that all other required checks pass. Confirm the Forge review check failed
