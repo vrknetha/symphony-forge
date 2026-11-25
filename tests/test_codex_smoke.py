@@ -65,11 +65,12 @@ finally:
 """
 
 
-def _drive(cwd: Path, name: str, prompt: str, thread: str | None = None) -> list[dict]:
+def _drive(cwd: Path, name: str, prompt: str, thread: str | None = None,
+           *, config: dict | None = None) -> list[dict]:
     """One read-only turn through Forge's driver, answering it as Forge does: the request once the
     driver runs, and "recorded" for the app-server and the conversation. Its lines, in order."""
     request = {"cwd": str(cwd), "name": name, "prompt": prompt, "sandbox": "read-only",
-               "config": CONFIG, "thread": thread}
+               "config": CONFIG if config is None else config, "thread": thread}
     driver = subprocess.Popen([str(PYTHON), str(TURN)], cwd=cwd, stdin=subprocess.PIPE,
                               stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True,
                               encoding="utf-8", start_new_session=os.name != "nt")

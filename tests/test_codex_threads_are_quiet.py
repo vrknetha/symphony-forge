@@ -16,6 +16,8 @@ STORY = "FIX-CODEX-WORKER-READER-AND-REVIEW-THREADS-S"
 QUIET = {
     "model_verbosity": "low",
     "model_reasoning_summary": "none",
+    "memories.use_memories": False,
+    "skills.bundled.enabled": False,
     "developer_instructions": "Write no progress commentary. Write only the final handoff and any question.",
 }
 
@@ -26,7 +28,8 @@ def test_1_worker_start_resume_and_review_force_quiet_config(env, monkeypatch, s
     repo = env.repo
     folder, calls, _ = _resuming(repo, monkeypatch, sdk_data)
     noisy = ('model_verbosity = "high"\nmodel_reasoning_summary = "detailed"\n'
-             'developer_instructions = "Report progress after every step."\n')
+             'developer_instructions = "Report progress after every step."\n'
+             'memories.use_memories = true\nskills.bundled.enabled = true\n')
     home = Path(os.environ["CODEX_HOME"]) / "config.toml"
     home.write_text(noisy + home.read_text(encoding="utf-8"), encoding="utf-8")
     (folder / ".codex").mkdir(exist_ok=True)

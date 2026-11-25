@@ -33,6 +33,7 @@ SOL = {"model": "gpt-6-sol", "effort": "medium", "subagents": "gpt-6-luna", "sub
 MODELS = {"build": SOL, "fix": SOL, "lite": {"model": "gpt-6-sol", "effort": "low"}}
 # The output policy is now mandatory alongside each kind's model settings.
 QUIET = {"model_verbosity": "low", "model_reasoning_summary": "none",
+         "memories.use_memories": False, "skills.bundled.enabled": False,
          "developer_instructions": "Write no progress commentary. Write only the final handoff and any question."}
 # What [models.build] becomes on the new conversation: Codex's own names for those settings.
 # Workers now explicitly enable delegation as well as selecting their models.

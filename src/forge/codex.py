@@ -60,8 +60,8 @@ GROUP = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP} if os.name == "n
 OVERRIDES = {"model": "model", "effort": "model_reasoning_effort",
              "subagents": "agents.default_subagent_model",
              "subagent_effort": "agents.default_subagent_reasoning_effort"}
-# Every Forge-owned thread stays quiet, regardless of user or project Codex settings.
 QUIET = {"model_verbosity": "low", "model_reasoning_summary": "none",
+         "memories.use_memories": False, "skills.bundled.enabled": False,
          "developer_instructions": "Write no progress commentary. Write only the final handoff and any question."}
 # Forge's own Codex hooks as Codex's hooks/list defines them, Codex's defaults for what forge sync
 # leaves out included: the driver trusts a hook only when its whole definition is one of these.

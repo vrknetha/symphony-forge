@@ -14,6 +14,7 @@ on:
       - src/forge/claude_turn.py
       - tests/test_claude_agent_sdk_smoke.py
       - tests/test_codex_smoke.py
+      - tests/test_codex_runs_skip_host_context.py
       - tests/test_worker_approval_requests.py
       - tests/test_fix_codex_test_home.py
       - tests/conftest.py
@@ -50,3 +51,5 @@ jobs:
       - run: uv run --python 3.11 pytest tests/test_claude_agent_sdk_smoke.py -v -s
       - if: env.OPENAI_API_KEY != ''
         run: uv run --python 3.11 pytest tests/test_codex_smoke.py tests/test_fix_codex_test_home.py tests/test_worker_approval_requests.py::test_2_builder_runs_forge_test_and_observes_its_failure -v -s
+      - if: env.OPENAI_API_KEY != ''
+        run: uv run --python 3.11 pytest 'tests/test_codex_runs_skip_host_context.py::test_3_codex_skips_host_context[live]' -v -s
