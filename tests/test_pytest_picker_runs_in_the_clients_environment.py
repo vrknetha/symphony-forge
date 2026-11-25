@@ -1,7 +1,6 @@
 """The Forge tool selects tests while the client's Python runs pytest without Forge."""
 import json
 import os
-import re
 import subprocess
 import shutil
 import venv
@@ -134,10 +133,26 @@ def test_2_doctor_names_the_replacement_for_the_old_module_command(repo):
 
 def test_4_forges_own_fast_command_works_with_an_older_release_on_path(repo, tmp_path, monkeypatch):
     # Reproduce close's cold PATH with the real earlier release, not a fake refusal.
-    # CI's unfrozen uv run can dirty the harness lock; the picker now tests dirty inputs.
-    # This no-change contract needs its own clean checkout, not the running suite's ROOT.
+    # Keep Forge's real commands and install inputs in a clean checkout, but give the nested
+    # pytest run one always-run test instead of collecting this suite inside itself in CI.
     source = tmp_path / "source"
-    repo.git("clone", "-q", "--no-hardlinks", str(ROOT), str(source))
+    repo.git("clone", "-q", "--no-hardlinks", "--no-checkout", str(ROOT), str(source))
+    witness = "tests/test_picker_witness.py"
+    repo.git("sparse-checkout", "set", "--no-cone", "/*", "!/tests/*", f"/{witness}", cwd=source)
+    repo.git("checkout", "-q", "--detach", "HEAD", cwd=source)
+    (source / "tests").mkdir(exist_ok=True)
+    (source / witness).write_text(
+        "from pathlib import Path\n\n"
+        "def test_always():\n"
+        "    Path('.git/picker-witness').touch()\n\n"
+        "def test_unselected():\n"
+        "    raise AssertionError('A no-change run must select only the always-run test')\n",
+        encoding="utf-8",
+    )
+    always = ".forge/always-tests.txt"
+    (source / always).write_text(f"{witness}::test_always\n", encoding="utf-8")
+    repo.git("add", always, witness, cwd=source)
+    repo.git("commit", "-qm", "Set up an isolated picker witness", cwd=source)
     old = tmp_path / "release"
     shutil.copytree(ROOT / "tests/fixtures/forge-v1.2.2/src/forge", old / "forge")
     (old / "forge/cli-py.txt").rename(old / "forge/cli.py")
@@ -159,11 +174,9 @@ def test_4_forges_own_fast_command_works_with_an_older_release_on_path(repo, tmp
     command = tomllib.loads((source / "forge.toml").read_text("utf-8"))["fast_test"]
     command = command.replace("{base}", repo.git("rev-parse", "HEAD", cwd=source))
     result = subprocess.run(command, shell=True, cwd=source, capture_output=True,
-                            text=True, timeout=600)  # the always-run list holds slow tests
+                            text=True, timeout=60)
     assert result.returncode == 0, result.stdout + result.stderr
-    # Forge's repo runs its always-run tests even with no changed files, so tests ran and passed.
-    # The earlier release on PATH must still forward to the current picker.
-    assert re.search(r"\b[1-9]\d* passed", result.stdout), result.stdout
+    assert (source / ".git/picker-witness").is_file(), result.stdout
 
 
 def _client_tests(client, python):
@@ -216,7 +229,10 @@ def test_5_new_pytest_client_runs_the_proposed_picker_through_close(env, tmp_pat
                          "--kind", "mechanical", cwd=client)
     assert started.returncode == 0, started.stdout + started.stderr
     folder = client.parent / "client-fix-change-prices"
-    env.commit(folder, "prices.py", "PRICE = 2\n")
+    env.commit(folder, "prices.py", "PRICE = 2\n",
+               "Work\n\nProof list:\n- Done when: tests/test_prices.py::test_client "
+               "(reuse; closest tests/test_prices.py::test_client; proves client tests run "
+               "without the Forge package)")
     closed = repo.forge("close", "change-prices", cwd=client)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     assert "Ready:" in closed.stdout
@@ -290,7 +306,8 @@ def test_6_previously_adopted_client_preserves_legacy_setting_until_owner_replac
         json.dumps(legacy), '"forge test --pytest {base}"')
     env = up.env
     up.on_main("forge.toml", replacement, "Use the proposed picker")
-    env.commit(up.folder, "prices.py", "PRICE = 2\n")
+    env.commit(up.folder, "prices.py", "PRICE = 2\n",
+               "Work\n\nProof list:\n- Done when: check: the upgrade pins this Forge and uses the client's test command")
     closed = subprocess.run([str(installed), "close", NAME], cwd=up.folder,
                             capture_output=True, text=True, timeout=60)
     # Close now refuses the stale merge settings instead of restoring main's copy.

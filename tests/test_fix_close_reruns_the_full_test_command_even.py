@@ -132,8 +132,9 @@ def test_5_close_runs_the_test_command_when_the_worktree_has_an_untracked_file(e
     item, where = env.start_fix()
     env.reviews(FAILED, FAILED, CLEAN)
     assert env.close(item).returncode != 0
-    (where / "test_new_case.py").write_text("def test_new():\n    assert True\n", "utf-8")
+    (where / "untracked.txt").write_text("not part of the committed change\n", "utf-8")
     closed = env.close(item)
-    assert closed.returncode == 0, closed.stderr
-    assert _runs(log) == ["start fix-tidy-readme", "end"] * 2
-    assert "already passed" not in closed.stdout
+    output = closed.stdout + closed.stderr
+    assert closed.returncode == 1, output
+    assert "checkout has uncommitted changes" in output
+    assert _runs(log) == ["start fix-tidy-readme", "end"]

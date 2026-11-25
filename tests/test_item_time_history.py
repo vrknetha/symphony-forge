@@ -114,15 +114,18 @@ def test_1_looping_item_retains_findings_ci_give_up_owner_wait_and_pull_request_
             monkeypatch.delenv("FORGE_NOW")
         worked = env.repo.forge("work", item)
         assert worked.returncode == 0, worked.stdout + worked.stderr
-        title = "Basket disappears" if number < 3 else "Basket loses quantities"
-        # P1s at the bar retain the blocked-history contract at the round limit.
-        env.reviews(blocked({**finding("P1", title, "app.py"), "body": "Gain 4, Work 1, Harm 2\nSaving loses basket contents."}))
+        # Keep the earlier blocker in the extra round; the new P1 is only advice.
+        defects = [{**finding("P1", "Basket disappears", "app.py"),
+                    "body": "Gain 4, Work 1, Harm 2\nSaving loses basket contents."}]
+        if number == 3:
+            defects.append(finding("P1", "Basket loses quantities", "app.py"))
+        env.reviews(blocked(*defects))
         if number == 1:
             queued_first_close(env, item, where)
         else:
             closed = env.close(item)
             assert closed.returncode == 1, closed.stdout + closed.stderr
-    # The new P1 in the owner's extra round records another stop before review four.
+    # The unresolved P1 in the owner's extra round records another stop before review four.
     env.commit(where, "app.py", "print('attempt another review')\n")
     closed = env.close(item)
     assert closed.returncode == 1, closed.stdout + closed.stderr
@@ -134,16 +137,21 @@ def test_1_looping_item_retains_findings_ci_give_up_owner_wait_and_pull_request_
         assert held["time_breakdown"][category] is not None
     assert [round_["round"] for round_ in held["rounds"]] == [1, 2, 3]
     assert [(round_["new_findings"], round_["repeat_findings"]) for round_ in held["rounds"]] == [
-        (1, 0), (0, 1), (1, 0)]
+        (1, 0), (0, 1), (1, 1)]
     assert [(round_["findings"][0]["title"], round_["findings"][0]["priority"],
              round_["findings"][0]["file"]) for round_ in held["rounds"]] == [
         ("Basket disappears", "P1", "app.py"),
         ("Basket disappears", "P1", "app.py"),
-        ("Basket loses quantities", "P1", "app.py")]
+        ("Basket disappears", "P1", "app.py")]
+    assert [(entry["title"], entry["priority"], entry["file"])
+            for entry in held["rounds"][-1]["findings"]] == [
+        ("Basket disappears", "P1", "app.py"), ("Basket loses quantities", "P1", "app.py")]
     reviews = [event for event in records(env.repo, "events.jsonl")
                if event["item"] == item and event["event"] == "review result"]
     assert [event["findings"][0]["title"] for event in reviews] == [
-        "Basket disappears", "Basket disappears", "Basket loses quantities"]
+        "Basket disappears", "Basket disappears", "Basket disappears"]
+    assert [entry["title"] for entry in reviews[-1]["findings"]] == [
+        "Basket disappears", "Basket loses quantities"]
     assert all(event["findings"][0]["priority"] == "P1"
                and event["findings"][0]["file"] == "app.py" for event in reviews)
     loop_wait = next(event for event in reversed(records(env.repo, "events.jsonl"))
@@ -278,10 +286,11 @@ def test_4_board_subtracts_nested_tests_and_includes_idle_time_for_tasks_and_fix
         assert current["time_breakdown"]["building"] == 10
         assert current["time_breakdown"]["own_tests"] == 10
         assert current["time_breakdown"]["reviewing"] == 5
-        assert current["time_breakdown"]["nothing_running"] >= 5
+        assert current["time_breakdown"]["nothing_running"] is None
+        assert current["unknown_seconds"] >= 5
         assert current["total_seconds"] >= 60
         assert current["total_seconds"] == pytest.approx(sum(
-            value for value in current["time_breakdown"].values() if value is not None), abs=1)
+            value for value in current["time_breakdown"].values() if value is not None) + current["unknown_seconds"], abs=1)
     parent = row(env.repo, "SHOP")
     # RECORD now gives stories a runway derived from their parts without counting overlaps twice.
     assert parent["time_breakdown"]["working"] == 25
@@ -416,8 +425,9 @@ def test_10_adopted_item_time_before_its_first_new_log_is_not_invented_as_idle(e
     current = row(env.repo, item)
     assert current["total_seconds"] >= 60
     assert current["time_breakdown"]["building"] == 10
-    # Thirty earlier seconds have no activity log; only the time after the known end is idle.
-    assert current["time_breakdown"]["nothing_running"] == pytest.approx(current["total_seconds"] - 40, abs=1)
+    # Gaps on either side of a recorded run stay unmeasured.
+    assert current["time_breakdown"]["nothing_running"] is None
+    assert current["unknown_seconds"] == pytest.approx(current["total_seconds"] - 10, abs=1)
 
 
 @pytest.mark.parametrize("step,outcome,category", [

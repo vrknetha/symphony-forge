@@ -47,8 +47,8 @@ def test_3_reviews_and_reads_hold_a_query_on_another_modules_tables(env, tmp_pat
     setup_client(env, tmp_path, adopted)
     env.checks(GREEN)
     repo = env.repo
-    # A part's first review returns the serious-finding message. A fix instead reaches
-    # its one-round owner-choice stop; that policy has its own command coverage.
+    # A part's first review returns the serious-finding message. The default fix limit
+    # now follows the same two-round owner-choice policy, covered at its own command boundary.
     no_hooks = tmp_path / "fixture-no-hooks"
     no_hooks.mkdir(exist_ok=True)
     git = repo.git
@@ -102,7 +102,8 @@ def test_3_reviews_and_reads_hold_a_query_on_another_modules_tables(env, tmp_pat
     released = env.close(item)
     assert released.returncode == 0, released.stdout + released.stderr
     published = body(env.gh_calls("pr", "edit")[-1])
-    assert "Later: " + title + " (app.py:1): Gain 2, Work 3, Harm 1" in published
+    assert ("Later: " + title + " (app.py:1): Follow-up: new finding below P0 in a repair review; "
+            "Gain 2, Work 3, Harm 1") in published
 
     # Sign-off uses the same path for both adoption histories. Use the untouched fixture repo.
     if not adopted:

@@ -174,6 +174,10 @@ def land(args: argparse.Namespace) -> int:
                     return 0
             elif close.merger(top, state) != "agent":
                 url = json.loads(close._gh(top, "pr", "view", branch, "--json", "url"))["url"]
+                repo.git("fetch", "-q", "origin", repo.default_branch(top), cwd=top)
+                nightly = merge.red(top, item=item)
+                if nightly:
+                    repo.refuse(merge.REFUSALS["red_default"], run=nightly)
                 say(f"{item} is ready; a human merges its pull request: {url}")
                 return 0
             if hold:
@@ -249,6 +253,8 @@ def _rerun(top: Path, item: str, branch: str) -> bool:
     logs = _failed_logs(top, branch)
     if not logs or any(_attempt(top, run) != 1 for run in logs):
         return False
+    if not all(_infrastructure(text) for texts in logs.values() for text in texts):
+        return False
     changed = [path for path in repo.git("diff", "--name-only", "-z", "--no-renames",
                                          f"origin/{default}...HEAD", cwd=top).split("\0") if path]
     if _names(logs, changed):
@@ -262,7 +268,7 @@ def _rerun(top: Path, item: str, branch: str) -> bool:
         for name in names:
             say(f"Re-running {name} once: its failure names none of this change's files and "
                 "CI runs this repo's tests.")
-    late = _restart(top, list(runs))
+    late = _restart(top, list(runs), logs)
     if late == "gh":
         return False
     if late:
@@ -290,21 +296,28 @@ def _own(check: dict, skip: set[int]) -> bool:
 def _failed_logs(top: Path, branch: str, skip: set[int] = frozenset()) -> dict[str, list[str]] | None:
     """Run id to the full failed-job logs of the checks that failed, leaving out Forge's own review (its
     status, and the "Review pull request" job of a run in skip). None when any other failing check is not
-    a "fail" with a job link, or its log cannot be read."""
+    a "fail" with a job link."""
     listed = _listed(top, branch)
     if listed is None:
         return None
-    runs: dict[str, list[str]] = {}
+    failed: dict[str, list[tuple[str, str]]] = {}
     for check in listed:
         if check.get("bucket") in ("pass", "skipping") or _own(check, skip):
             continue
         job = re.search(r"/runs/(\d+)/job/(\d+)", check.get("link") or "")
         if check.get("bucket") != "fail" or not job:
             return None
-        log = repo.run("gh", "run", "view", "--job", job[2], "--log-failed", cwd=top)
-        if log.returncode:
-            return None
-        runs.setdefault(job[1], []).append(log.stdout)
+        failed.setdefault(job[1], []).append((check.get("name", ""), job[2]))
+    runs: dict[str, list[str]] = {}
+    for run, jobs in failed.items():
+        groups = any(re.fullmatch(r"test group \d+ of \d+", name) for name, _ in jobs)
+        for name, job_id in jobs:
+            if groups and name == "tests":
+                continue  # The generated aggregate can fail its shell check after a failed group.
+            text = _job_log(top, job_id)
+            if text is None:
+                return None
+            runs.setdefault(run, []).append(text)
     return runs
 
 
@@ -314,9 +327,83 @@ def _names(logs: dict[str, list[str]], paths) -> bool:
                for texts in logs.values() for text in texts for path in paths)
 
 
-def _restart(top: Path, runs: list[str]) -> str:
+PYTEST_TIMEOUT = r"Failed: Timeout (?:>[^\s]+s|\(>[^\s]+s\) from pytest-timeout\.)"
+
+
+def _product_failure(text: str) -> bool:
+    text = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]", "", text).replace("\r", "\n")
+    text = re.sub(r"(?m)^(?:[^\t\n]*\t){2}\d{4}-\d\d-\d\dT\S+[ \t]?", "", text)
+    progress = "".join(re.findall(
+        r"(?m)^[ \t]*(?:[^\n]*\.py[ \t]+)?([.FEsxXR]+)(?:[ \t]+\[[ \t]*\d+%\])?[ \t]*$", text))
+    reports = re.findall(r"\b(?:FAILED|ERROR)\b[^\n]*", text)
+    timeouts = sum(bool(re.fullmatch(r"FAILED [^\n]+ - " + PYTEST_TIMEOUT, report.strip()))
+                   for report in reports)
+    # A completed test-body timeout accounts for its own F. Any other progress
+    # failure still blocks when a later hang prevents pytest's final traceback.
+    # Inspect failure reports, not rendered source such as threading.py's RuntimeError.
+    return ("E" in progress or progress.count("F") > timeouts or len(reports) > timeouts
+            or bool(re.search(r"AssertionError|Error: expect|"
+                              r"\bE\s+(?:\w*(?:Error|Exception):|assert\b|Failed: (?!Timeout (?:>|\(>)))", text)))
+
+
+def _infrastructure(text: str) -> bool:
+    return not _product_failure(text) and bool(re.search(
+        r"The (?:self-hosted |hosted )?runner[^\n]*lost communication|"
+        r"the runner lost its network|The job(?: running on runner [^\n]*)? (?:has )?exceeded the maximum execution time|"
+        r"The runner[^\n]*(?:shutdown|shut down)|" + PYTEST_TIMEOUT, text, re.I))
+
+
+def _job_log(top: Path, job: str, run: str = "", conclusion: str = "") -> str | None:
+    """Read test output, or GitHub's runner-loss annotation when no log survived."""
+    # gh's failed-step filter omits cancelled jobs and cancelled steps of a timed-out job.
+    option = "--log" if conclusion in ("cancelled", "timed_out") else "--log-failed"
+    log = repo.run("gh", "run", "view", *([run] if run else []), "--job", job, option, cwd=top)
+    text = log.stdout
+    if _product_failure(text):
+        return text
+    if not log.returncode and (conclusion in ("cancelled", "timed_out") or _infrastructure(text)):
+        return text
+    if log.returncode and "log not found" not in (log.stderr + log.stdout).lower():
+        return None
+    try:
+        jobs = checks._ask(top, "", "[.]", f"repos/{{owner}}/{{repo}}/actions/jobs/{job}")
+        url = jobs[0].get("check_run_url") if jobs else None
+        annotations = checks._ask(top, "", ".", f"{url}/annotations") if url else []
+    except repo.Refused:
+        annotations = []
+    evidence = "\n".join(str(entry.get("message", "")) for entry in annotations)
+    if _infrastructure(evidence):
+        return text + "\n" + evidence
+    return text if not log.returncode else None
+
+
+def _restart(top: Path, runs: list[str], logs: dict[str, list[str]] | None = None) -> str:
     """Run the failed jobs of each run again and wait for their second attempt. "" when they started,
     "gh" when GitHub refused, else the run that had not started in time."""
+    # All automatic job retries meet here, including combined-check recovery.
+    # A red test or a log that names no changed file is not infrastructure evidence.
+    for run in runs:
+        if logs is not None:
+            if not logs.get(run) or not all(_infrastructure(text) for text in logs[run]):
+                return "gh"
+            continue
+        shown = repo.run("gh", "run", "view", run, "--json", "jobs", cwd=top)
+        try:
+            jobs = json.loads(shown.stdout)["jobs"] if not shown.returncode else []
+        except (ValueError, KeyError, TypeError):
+            jobs = []
+        failed = [job for job in jobs if job.get("conclusion") in
+                  ("failure", "cancelled", "timed_out", "startup_failure")]
+        if not failed:
+            return "gh"
+        groups = any(re.fullmatch(r"test group \d+ of \d+", job.get("name", "")) for job in failed)
+        for job in failed:
+            if groups and job.get("name") == "tests":
+                continue  # The generated aggregate can fail its shell check after a failed group.
+            text = _job_log(top, str(job.get("databaseId", "")), run, job.get("conclusion", ""))
+            if (text is None or _product_failure(text)
+                    or job.get("conclusion") not in ("cancelled", "timed_out") and not _infrastructure(text)):
+                return "gh"
     for run in runs:
         if repo.run("gh", "run", "rerun", run, "--failed", cwd=top).returncode:
             return "gh"
@@ -327,7 +414,7 @@ def _restart(top: Path, runs: list[str]) -> str:
             left = deadline - time.monotonic()
             if left <= 0:
                 return run
-            time.sleep(min(15, left))
+            time.sleep(min(checks.POLL, left))
     return ""
 
 
@@ -373,6 +460,32 @@ def _land_all(only: set[str]) -> int:
             codex._unlock(lock)
 
 
+def ready_items(top: Path, current: str) -> set[str]:
+    """Other active agent-merge items with close evidence at their current head.
+
+    Read close receipts directly: a report can hide tasks during a plan read,
+    and its cached optional checks do not revoke a completed local close.
+    """
+    found = set()
+    main = story.landed_ref(top)
+    for branch, tree in story.worktrees(top).items():
+        entry = None if branch.startswith("story/") else task.branch_item(branch, tree)
+        if not entry:
+            continue
+        item, state = entry
+        if item == current:  # close already established this item's readiness
+            continue
+        state = nextstep.at_ref(top, item, state)
+        if (state.get("status") not in IN_CLOSE or close.merger(tree, state) != "agent"
+                or state.get("stop") and not state["stop"].get("choice")
+                or task._merged(main, item, top)
+                or state.get("stacked_on") and not task._merged(main, state["stacked_on"], top)):
+            continue
+        if nextstep._item_readiness(item, state, tree)[0] == "ready":
+            found.add(item)
+    return found
+
+
 def _queue(top: Path, only: set[str]) -> int:
     """Close and merge every change in close, bases before stacked fixes, otherwise oldest first.
     Run up to the agent places at once. A change
@@ -416,7 +529,7 @@ def _queue(top: Path, only: set[str]) -> int:
             files = {path for path in repo.git("diff", "--name-only", "-z", "--no-renames",
                                                f"origin/{default}...HEAD", cwd=tree).split("\0")
                      if path and path != spotted.PATH and not path.startswith(".factory/")}
-            pr = prs.get(branch)  # the board's readiness: its checks and pull request, as they are
+            pr = prs.get(branch)
             ready = nextstep._item_readiness(item, state, tree, board._checks(
                 pr, repo.config(tree)["checks"])[0], pr=pr)[0] == "ready"
             changes.append((age, item, files, ready))
@@ -696,8 +809,10 @@ def _red(top: Path, members: list, branch: str, tip: str, reran: bool, leave: bo
         return "leave", named[0]
     if named:
         return "alone", f"the combined check failed in files of {', '.join(named[:-1])}{' and ' if named[1:] else ''}{named[-1]}"
+    if _restart(top, list(logs), logs):
+        return "alone", "Forge could not run the failed jobs again"
     say("Train: the combined check failed in no change's files. Forge runs the failed jobs again once.")
-    return ("alone", "Forge could not run the failed jobs again") if _restart(top, list(logs)) else ("rerun", "")
+    return "rerun", ""
 
 
 def _settled(top: Path, branch: str, own: set[int]) -> bool:
@@ -711,7 +826,7 @@ def _settled(top: Path, branch: str, own: set[int]) -> bool:
         left = deadline - time.monotonic()
         if left <= 0:
             return False
-        time.sleep(min(15, left))
+        time.sleep(min(checks.POLL, left))
 
 
 def _train(top: Path, default: str, plan: dict, merged: list[str], needs: dict, notes: list[str],
@@ -759,7 +874,7 @@ def _train(top: Path, default: str, plan: dict, merged: list[str], needs: dict, 
             try:
                 checks.wait(top, members[0][0], tip,
                             [name for name in repo.default_config(top)["checks"] if name != "forge-pr-check"],
-                            branch=branch, progress=True, train=True)
+                            branch=branch, progress=True, train=True, command="merge train")
                 break
             except repo.Refused as error:
                 # A red check, and a job that ran out of time, say which files broke it in their logs.

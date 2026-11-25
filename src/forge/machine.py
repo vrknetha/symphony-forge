@@ -252,7 +252,7 @@ def join(kind: str, repo: Path, item: str | None, model: str | None, effort: str
             round_number = (round_number + 1 if isinstance(round_number, int)
                             else 1 if state.get("status") == "started" else None)
             near_end = bool(state.get("tests") or (round_number and round_number > 1))
-    title = _title(repo, item, state, kind == "read", kind == "read")
+    title = _title(repo, item, state, kind == "read", kind == "read") or ("A question" if kind == "ask" else None)
     entry = {"id": str(uuid.uuid4()), "version": __version__, "kind": kind, "repo_root": root.as_posix(),
              "checkout_root": repo.resolve().as_posix(),
              "repo_name": root.name, "item": item, "title": title, "model": model, "effort": effort,

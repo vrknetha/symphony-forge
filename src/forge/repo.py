@@ -372,15 +372,27 @@ def generated_files(top: Path, paths: list[str], head: str = "") -> set[str]:
     if not paths:
         return set()
     with tempfile.TemporaryDirectory() as folder:
-        env = dict(os.environ)
+        env, cached = None, ("--cached",)
         if head:
-            env["GIT_INDEX_FILE"] = str(Path(folder) / "index")
-            git("read-tree", head, cwd=top, env=env)
-        attrs = run("git", "check-attr", "--cached", "--stdin", "-z", "linguist-generated",
+            # Git 2.39 has no check-attr --source. Give its parser only the attributes,
+            # with an empty index so missing attributes cannot fall back to this checkout.
+            attributes = {(parent / ".gitattributes").as_posix()
+                          for path in paths for parent in Path(path).parents}
+            for spec, data in blob_bytes(top, [f"{head}:{path}" for path in attributes]).items():
+                target = Path(folder) / spec.partition(":")[2]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            dot = top / ".git"
+            gitdir = (top / dot.read_text(encoding="utf-8").strip().removeprefix("gitdir: ")
+                      if dot.is_file() else dot).resolve()
+            env = {**os.environ, "GIT_DIR": str(gitdir), "GIT_WORK_TREE": folder,
+                   "GIT_INDEX_FILE": str(Path(folder) / "index")}
+            cached = ()
+        attrs = run("git", "check-attr", *cached, "--stdin", "-z", "linguist-generated",
                     cwd=top, env=env, input="\0".join(paths))
-        attrs.check_returncode()
-        values = attrs.stdout.split("\0")
-        return {path for path, value in zip(values[::3], values[2::3]) if value in ("set", "true")}
+    attrs.check_returncode()
+    values = attrs.stdout.split("\0")
+    return {path for path, value in zip(values[::3], values[2::3]) if value in ("set", "true")}
 
 
 def commit_log(top: Path, base: str, head: str = "HEAD") -> list[tuple[str, str, list[str]]]:
@@ -422,6 +434,11 @@ def current_branch(cwd: str | os.PathLike[str] | None = None) -> str:
     return git("branch", "--show-current", cwd=cwd)
 
 
+def replayed_tags(branch: str) -> str:
+    """The refspec for the pre-replay heads that earlier reviews of `branch` cite."""
+    return f"+refs/tags/forge-replayed/{branch}/*:refs/tags/forge-replayed/{branch}/*"
+
+
 def default_branch(cwd: str | os.PathLike[str] | None = None) -> str:
     # ponytail: origin/HEAD, else "main". A remote-less repo on another name needs origin/HEAD set.
     done = command_fact("default branch", cwd, lambda: run(
@@ -443,10 +460,11 @@ def work_log(top: Path, item: str) -> Path:
 
 
 def record_timing(top: Path, item: str, step: str, start: str, clock: float,
-                  outcome: str, model: dict[str, str] | None = None) -> None:
+                  outcome: str, model: dict[str, str] | None = None, *, worker_round: int | None = None) -> None:
     """Append a best-effort timing in the shared, uncommitted Git directory."""
-    line = {"item": item, "round": (read_state(item, top) or {}).get("round", 0),
-            "step": step, "start": start,
+    if worker_round is None:
+        worker_round = (read_state(item, top) or {}).get("round", 0)
+    line = {"item": item, "round": worker_round, "step": step, "start": start,
             "seconds": round(time.monotonic() - clock, 3), "outcome": outcome}
     if model:
         line.update({key: model[key] for key in ("model", "effort") if key in model})
@@ -460,8 +478,9 @@ def record_timing(top: Path, item: str, step: str, start: str, clock: float,
 def record_event(top: Path, item: str, event: str, **fields: Any) -> str:
     """Write an occurrence once; consumers use its random id, never its text or timestamp."""
     identity = str(uuid.uuid4())
-    line = {"id": identity, "item": item, "event": event, "at": now(),
-            "round": (read_state(item, top) or {}).get("round", 0), **fields}
+    if "round" not in fields:
+        fields["round"] = (read_state(item, top) or {}).get("round", 0)
+    line = {"id": identity, "item": item, "event": event, "at": now(), **fields}
     from forge import event_log
     event_log.append(top, line)
     return identity
@@ -532,7 +551,7 @@ def record_run(top: Path, item: str, kind: str, **fields: Any):
     """Keep starts and ends even for a run entirely between two board refreshes."""
     identity = record_event(top, item, "run start", kind=kind, **fields)
     result = {"outcome": "failed", "run_id": identity,
-              **{key: fields[key] for key in ("model", "effort") if fields.get(key)}}
+              **{key: fields[key] for key in ("family", "model", "effort") if fields.get(key)}}
     if "round" in fields:
         result["round"] = fields["round"]
     try:
@@ -544,7 +563,7 @@ def record_run(top: Path, item: str, kind: str, **fields: Any):
 # --- forge.toml, the pin and the roadmap -----------------------------------------------
 
 # ponytail: stop_default only loads settings from earlier releases; it no longer chooses a stop action.
-KEYS = {"version": str, "repo": str, "stage": str, "workers": str, "tools": str, "test": str, "fast_test": str,
+KEYS = {"version": str, "repo": str, "stage": str, "workers": str, "reviews": str, "tools": str, "test": str, "fast_test": str,
         "signoff": str, "sample_data": bool, "runner": str, "test_runner": str, "codex_fast": str, "stop_default": str,
         "merge": str, "stack": str, "auto_more_round": bool, "test_place": str, "checks": list, "interfaces": list,
         "always_test": list, "groups": int, "models": dict, "full_suite_workflow": str,
@@ -555,8 +574,10 @@ DEFAULTS = {"repo": "client", "stage": "live", "workers": "codex", "tools": "bot
             "stop_default": "narrow", "merge": "human", "stack": "on", "checks": [], "interfaces": [], "always_test": [],
             "models": {}, "cold_read_rounds": 2, "task_review_rounds": 2, "auto_more_round": False, "boxes": "off"}
 # ponytail: retain stop_default's old values so existing forge.toml files still load.
+FAMILIES = ("codex", "claude", "antigravity")
 CHOICES = {"repo": ("client", "forge-source"), "stage": ("live", "prototype"),
-           "workers": ("claude", "codex", "split"), "tools": ("both", "claude", "codex"), "merge": ("agent", "human"),
+           "workers": (*FAMILIES, "split"), "reviews": FAMILIES,
+           "tools": ("both", "claude", "codex"), "merge": ("agent", "human"),
            "codex_fast": ("needed", "off", "always"), "stop_default": ("narrow", "off"), "stack": ("on", "off"),
            "test_place": ("ci", "local"), "boxes": ("off", "ssh")}
 # signoff pins the client's sign-off record: a decision directly under docs/decisions whose slug
@@ -568,16 +589,17 @@ VERSION = re.compile(r"v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.]+)?")
 # effort is optional); build, fix, lite and explore may add their subagents' model and effort,
 # as a pair.
 # The cold read and design work have one entry per family.
-KINDS = ("build", "fix", "lite", "explore", "grill", "design", "review", "light_review")
+KINDS = ("build", "fix", "lite", "explore", "grill", "design", "review", "light_review", "ask")
 SUBAGENTS = ("subagents", "subagent_effort")
-FAMILIES = ("codex", "claude")
 # A worker's models when forge.toml has no entry for its family, so Forge always names them.
 WORKER_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "low"},
-                   "codex": {"model": "gpt-6.1-sol", "effort": "low"}}
+                   "codex": {"model": "gpt-6.2-sol", "effort": "low"},
+                   "antigravity": {"model": "default", "effort": "low"}}
 DESIGN_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "xhigh"},
-                   "codex": {"model": "gpt-6.1-sol", "effort": "high"}}
+                   "codex": {"model": "gpt-6.2-sol", "effort": "high"},
+                   "antigravity": {"model": "default", "effort": "high"}}
 CLAUDE_GRILL_DEFAULT = {"model": "claude-opus-5-5", "effort": "high"}
-TOP_EFFORT = {"codex": "high", "claude": "xhigh"}
+TOP_EFFORT = {"codex": "high", "claude": "xhigh", "antigravity": "high"}
 SUBAGENT_DEFAULT = {"model": "claude-haiku-5-5", "effort": "high"}
 
 
@@ -755,9 +777,9 @@ def models(cfg: dict[str, Any], kind: str, family: str) -> dict[str, str]:
     if "model" not in chosen:
         return chosen.get(family) or (CLAUDE_GRILL_DEFAULT
                                      if kind == "grill" and family == "claude" else {})
-    # ponytail: gpt models are Codex's and every other model Claude's; name the family's entry
-    # when another Codex model family arrives.
-    return chosen if chosen["model"].startswith("gpt") == (family == "codex") else {}
+    model = chosen["model"]
+    owner = "codex" if model.startswith("gpt") else "antigravity" if model.startswith("gemini") else "claude"
+    return chosen if owner == family else {}
 
 
 def user_facing(cfg: dict[str, Any], row: dict[str, str]) -> bool:
@@ -787,7 +809,7 @@ def worker(cfg: dict[str, Any], kind: str, design: bool,
     chosen = design_models(cfg, family) if design else worker_models(cfg, kind, family)
     why = ("the owner chose it for this item" if tool else f"tools = {family}"
            + (", with the design model as it is user-facing" if design else "")
-           if cfg["tools"] != "both" else
+           if cfg["tools"] != "both" and family != "antigravity" else
            ("it is user-facing" if design else "it isn't user-facing") + " (workers = split)"
            if cfg["workers"] == "split" else f"workers = {family}"
            + (", with the design model as it is user-facing" if design else ""))
@@ -796,6 +818,8 @@ def worker(cfg: dict[str, Any], kind: str, design: bool,
 
 def worker_family(cfg: dict[str, Any], design: bool) -> str:
     """Which tool runs work: one tool overrides workers; split sends design work to Claude."""
+    if cfg["workers"] == "antigravity":
+        return "antigravity"
     return (cfg["tools"] if cfg["tools"] != "both" else
             cfg["workers"] if cfg["workers"] != "split" else "claude" if design else "codex")
 
@@ -853,7 +877,7 @@ def _models_problem(table: Any) -> str:
         per_family = kind in ("grill", "design") or any(family in chosen for family in FAMILIES)
         wrong = [key for key in chosen if key not in FAMILIES] if per_family else []
         if wrong:
-            return (f"models.{kind} has one entry per family, codex and claude, "
+            return (f"models.{kind} has one entry per family, codex, claude and antigravity, "
                     f"so it can't set {wrong[0]}")
         entries = ({f"{kind}.{family}": entry for family, entry in chosen.items()}
                    if per_family else {kind: chosen})
@@ -861,11 +885,15 @@ def _models_problem(table: Any) -> str:
             if not isinstance(entry, dict):
                 return f"models.{name} must be a table"
             for key, value in entry.items():
-                if key not in ("model", "effort", *(SUBAGENTS if kind in ("build", "fix", "lite", "explore") else ())):
+                helpers = SUBAGENTS if kind in ("build", "fix", "lite", "explore") and not name.endswith(".antigravity") else ()
+                if key not in ("model", "effort", *helpers):
                     return f"models.{name} can't set {key}"
                 if not isinstance(value, str):
                     return f"models.{name}.{key} must be a string"
-            for key in ("model",) if kind in ("review", "light_review") else ("model", "effort"):
+            required = ("model",) if kind in ("review", "light_review") else ("model", "effort")
+            if name in ("review.antigravity", "light_review.antigravity") and "effort" in entry:
+                required = ()
+            for key in required:
                 if key not in entry:
                     return f"models.{name} has no {key}"
             if (SUBAGENTS[0] in entry) != (SUBAGENTS[1] in entry):
@@ -985,6 +1013,9 @@ def resume_pin(top: Path, previous: str, rounds: int | None = None, *, accepted:
         os.environ["FORGE_LAND_ROUNDS"] = str(rounds)
     if accepted:
         os.environ["FORGE_CLOSE_ACCEPTED"] = "1"
+    # The selected release can remove this checkout. A waiting parent must not
+    # hold its current directory open on Windows; children still start in top.
+    os.chdir(forge_dir(top).parent.parent)
     if before and (status := run_release(release, before, top)):
         sys.exit(status)
     sys.exit(run_release(release, sys.argv[1:], top))
@@ -1108,6 +1139,8 @@ def write_state(item: str, data: dict[str, Any], top: Path | None = None) -> str
     """Write an item's state in a checkout on a work branch. Returns the repo-relative path."""
     top = top or root()
     _work_branch(top)
+    from forge import time_records
+    time_records.date_transitions(data, read_state(item, top) or {})
     rel = state_path(item)
     path = top / rel
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -43,6 +43,8 @@ def launcher(release, via):
                         ignore=shutil.ignore_patterns("__pycache__"))
         for host in (".claude", ".codex"):
             shutil.copytree(pathlib.Path({root!r}, host, "skills"), src.parent / host / "skills")
+        for note in (here / "extra-notes").glob("*.md"):
+            shutil.copyfile(note, src / "forge" / "release-notes" / note.name)
         for rel, old, new in (("__init__.py", re.compile(r'__version__ = ".*"'), f'__version__ = "{{release[1:]}}"'),
                               ("templates/skill.md", re.compile(r"\\Z"), f"\\n<!-- {mark} {{release}} -->\\n")):
             path = src / "forge" / rel
@@ -66,11 +68,47 @@ def put(path, text):
         path.with_name(path.name + ".cmd").write_text(f'@"{{sys.executable}}" "%~dp0{{path.name}}" %*\\n', "utf-8")
     return path
 
+if args[0] == "venv":
+    subprocess.run([sys.executable, "-m", "venv", "--without-pip", args[-1]], check=True)
+    sys.exit(0)
+if args[:2] == ["pip", "install"]:
+    package, pin = args[-1].rsplit("==", 1)
+    python = args[args.index("--python") + 1]
+    site = pathlib.Path(subprocess.run(
+        [python, "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
+        capture_output=True, text=True, check=True).stdout.strip())
+    if package == "claude-agent-sdk":
+        shutil.copyfile(pathlib.Path({root!r}) / "tests" / "stubs" / "claude_agent_sdk.py",
+                        site / "claude_agent_sdk.py")
+        info = site / f"claude_agent_sdk-{{pin}}.dist-info"
+        info.mkdir()
+        (info / "METADATA").write_text(
+            f"Name: claude-agent-sdk\\nVersion: {{pin}}\\n", "utf-8")
+    elif package == "openai-codex":
+        (site / "openai_codex").mkdir()
+        (site / "openai_codex" / "__init__.py").write_text("", "utf-8")
+        (site / "openai_codex" / "client.py").write_text(
+            "class CodexClient:\\n    def __init__(self): self._approval_handler = None\\n", "utf-8")
+        program = here.parent / ("codex.cmd" if os.name == "nt" else "codex")
+        program.write_text((f"@echo codex-cli {{pin}}\\n" if os.name == "nt" else
+                            f"#!/bin/sh\\necho codex-cli {{pin}}\\n"), "utf-8")
+        program.chmod(0o755)
+        (site / "codex_cli_bin.py").write_text(
+            "def bundled_codex_path(): return " + repr(str(program)) + "\\n", "utf-8")
+        for name in ("openai-codex", "openai-codex-cli-bin"):
+            info = site / (name.replace("-", "_") + f"-{{pin}}.dist-info")
+            info.mkdir()
+            (info / "METADATA").write_text(f"Name: {{name}}\\nVersion: {{pin}}\\n", "utf-8")
+    else:
+        sys.exit("stub uv: unsupported SDK requirement: " + args[-1])
+    sys.exit(0)
 if args[:2] == ["tool", "install"]:
     if (here / "uv-install-fails").exists():
         sys.exit("error: Failed to fetch the release: network is unreachable")
     put(here.parent / "uvbin" / "forge", launcher(args[-1].rsplit("@", 1)[1], "installed"))
     sys.exit(0)
+if args[:2] != ["tool", "run"]:
+    sys.exit("stub uv: unsupported command: " + " ".join(args))
 release = args[3].rsplit("@", 1)[1]
 ran = put(here.parent / "releases" / release / "forge", launcher(release, "run"))
 sys.exit(subprocess.run([sys.executable, str(ran), *args[5:]]).returncode)
@@ -343,8 +381,19 @@ def _close_refuses(up):
     up.repo.git("add", "docs/notes.md", cwd=up.folder)
     up.repo.git("-c", f"core.hooksPath={up.tmp / 'no-hooks'}", "commit", "-q", "-m", "Add a note",
                 cwd=up.folder)
-    up.env.reviews(blocked({**finding("P1", "The launcher pins the wrong release", ".forge/hooks.sh"),
-                            "body": "Gain 4, Work 1, Harm 2\nThe launcher runs the wrong release."}))
+    blocker = blocked({**finding("P1", "The launcher pins the wrong release", ".forge/hooks.sh"),
+                       "body": "Gain 4, Work 1, Harm 2\nThe launcher runs the wrong release."})
+    up.env.reviews(blocker, blocker)
+
+    first = up.run(RELEASE)
+    assert first.returncode == 1, first.stdout + first.stderr
+    assert "The review left serious findings open" in first.stderr
+    assert "One more round, split or accept?" not in first.stderr
+    # The upgrade command must also return the owner question after a second blocked review.
+    (up.folder / "docs" / "notes.md").write_text("repaired hand edit\n", encoding="utf-8")
+    up.repo.git("add", "docs/notes.md", cwd=up.folder)
+    up.repo.git("-c", f"core.hooksPath={up.tmp / 'no-hooks'}", "commit", "-q", "-m", "Repair the note",
+                cwd=up.folder)
 
     done = up.run(RELEASE)
 

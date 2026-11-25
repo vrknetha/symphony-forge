@@ -1,0 +1,110 @@
+{
+  "base": "3618ce820595d49f726c77b4d459d4ce310410c0",
+  "branch": "fix/ci-timing-real-retries",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a2012d-eff5-7492-89f6-039d9e22d09a",
+    "head": null,
+    "start": "ad6cded958f984a5b447161e12f0da97bcd54896"
+  },
+  "done_when": "Close's CI timing reports retry time only for test jobs or test files that really ran again after a failure, and reports no retry time for an attempt that was cancelled or replaced; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "_stages() in src/forge/citime.py",
+      "file": "src/forge/citime.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 147,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Close's CI timing reports retry time only for test jobs or test files that really ran again after a failure",
+      "work": 2
+    },
+    {
+      "area": "_recent_pushes() in tests/test_ci_time_report.py",
+      "file": "tests/test_ci_time_report.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 167,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: per-file retry timing proof",
+      "work": 2
+    },
+    {
+      "area": "_stages() in src/forge/citime.py",
+      "file": "src/forge/citime.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 136,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Retry timing is lost for the default single-job CI workflow",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "58d3028441a7e2c8d2c9eb09c579ae5733ecc9260071e7e22283cc67ab6cf7fe",
+    "changed": "669fa494094fbdbc0adce0e8916099317006e8964f0041807a1c6aacb34a698e",
+    "commit": "47a0e6e8c9bdc9e6f51cd7d137225e941aa508e9",
+    "dismissals": [],
+    "findings": [],
+    "id": "af6ae8e3-7977-4710-93cc-420dea44e290",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T02:55:08.829557+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T02:55:16.370561+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T03:06:12.526366+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T03:11:41.725430+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T03:25:07.599728+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T03:26:02.073095+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T03:31:13.394207+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "8b085656-d7b9-450a-b976-fe7544e50a92",
+    "head": "5b5c0e939785bcbc4865bcaf2424e84118ea4f0c",
+    "keys": {
+      "the open P0 retry timing is lost for the default single-job ci workflow in src/forge/citime.py": 1
+    },
+    "round": 2
+  },
+  "why": "Close's CI timing line reports many minutes of retries when no test ran again (issue 1751)",
+  "worker": "codex"
+}

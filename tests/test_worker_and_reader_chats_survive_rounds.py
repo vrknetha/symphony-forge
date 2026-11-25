@@ -17,14 +17,14 @@ import pytest
 
 from conftest import FORGE_SHIM, ROOT, _install
 from test_codex_resume import FIX_CONFIG, RESUMING, _resuming
-from test_codex_worker import _lines, _sent, sdk_data  # noqa: F401
+from test_codex_worker import PIN, _lines, _sent, sdk_data  # noqa: F401
 from test_fix_claude_workers_start_a_fresh_session_eve import _session
 from test_readloop_rounds import CODEX, FIRST, _native_round, _no_claude, _no_codex, _setup
 from test_readloop_rounds import reader_sessions  # noqa: F401 (shared host cleanup fixture)
 from test_records import SPEC
 from test_setup import _fresh_client
 from test_story import worktree
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 STORY = "reuse-worker-chats"
 
@@ -109,6 +109,11 @@ def _previous_release(repo, tmp_path):
     # The text fixture omits transport and prompts; the old command owners are unchanged.
     for rel in ("codex_turn.py", "templates/cold-read.md", "templates/brief.md"):
         shutil.copy2(ROOT / "src/forge" / rel, old / "src/forge" / rel)
+    # The copied transport uses the test harness's SDK; retain the historical
+    # command and chat owners while updating their transport dependency together.
+    sdk = old / "src/forge/codex.py"
+    sdk.write_text(sdk.read_text("utf-8").replace('SDK_PIN = "0.159.2"',
+                                               f'SDK_PIN = "{PIN}"'), encoding="utf-8")
     _install(repo.bin, "old-forge", FORGE_SHIM.format(python=sys.executable, src=(old / "src").as_posix()))
 
 
@@ -756,7 +761,8 @@ def test_15_previous_release_split_worker_follows_its_last_successful_tool(
         assert "The earlier brief in this conversation still applies." not in prompt
         assert "# Worker brief" in prompt
         assert "1. The board shows every story." in prompt
-        assert (ROOT / "src/forge/standards.md").read_text("utf-8").strip() in prompt
+        assert referenced_standards(prompt).read_text("utf-8") == (
+            ROOT / "src/forge/standards.md").read_text("utf-8")
         continued = _work(repo, item)
         assert "Starting a new" not in continued.stdout
         assert _chat(claude, "claude", resumed=True) == replacement

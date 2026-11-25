@@ -3,10 +3,9 @@ from __future__ import annotations
 
 import contextlib
 import json
-import os
 import re
-import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +13,97 @@ from forge import machine, repo, score
 
 PRIORITIES = ("P0", "P1", "P2", "P3")
 TOKENS = ("input_tokens", "cached_input_tokens", "output_tokens", "reasoning_output_tokens")
+REPAIR_FOLLOWUP = "Follow-up: new finding below P0 in a repair review"
+
+
+def repair_findings(findings: list[dict[str, Any]], previous: dict[str, Any],
+                    history: list[dict[str, Any]]) -> None:
+    """Keep repair reviews on earlier findings, new P0s and mandatory gates."""
+    repair = previous.get("status") == "blocked" and not previous.get("skipped")
+    earlier = {score.identity(f["file"], f["title"]) for f in previous.get("findings", [])}
+    followups = {score.identity(f["file"], f["title"]) for old in history
+                 for f in old.get("findings", []) if f.get("follow_up") == REPAIR_FOLLOWUP}
+    for finding in findings:
+        title = re.sub(r"^\[P[0-3]\]\s*", "", finding["title"].strip())
+        key = score.identity(finding["file"], finding["title"])
+        if not score.holds(finding, "P0") and (key in followups or (repair and key not in earlier
+                and not score.MUST.match(title)
+                and not re.match(r"Gate\s*:", title, re.I))):
+            finding["follow_up"] = REPAIR_FOLLOWUP
+
+
+def generated_paths(tree: Path, start: str, head: str, paths: list[str]) -> set[str]:
+    """Generated text on either side, shared by the diff and its design context."""
+    marked = {path for path in paths if path.lower().endswith((".map", ".min.js", ".min.css"))}
+    if not paths:
+        return marked
+    attributes = sorted({(parent / ".gitattributes").as_posix()
+                         for path in paths for parent in Path(path).parents})
+    blobs = repo.blob_bytes(tree, [f"{ref}:{path}" for path in attributes for ref in (start, head)])
+    marked |= repo.generated_files(tree, paths, start)
+    if any(blobs.get(f"{start}:{path}") != blobs.get(f"{head}:{path}") for path in attributes):
+        marked |= repo.generated_files(tree, paths, head)
+    for path in paths:
+        if path in marked:
+            continue
+        for ref in (start, head):
+            lines = repo.blob_texts(tree, [f"{ref}:{path}"]).get(f"{ref}:{path}", "").splitlines()
+            if sum(len(line) > 1000 for line in lines) > len(lines) / 2:
+                marked.add(path)
+                break
+    return marked
+
+
+def hide_generated(tree: Path, start: str, head: str, *, source: Path | None = None,
+                   source_head: str = "") -> tuple[str, str]:
+    """Summaries and a filtered base; omit exact paths from both review trees."""
+    records = repo.git("diff", "--raw", "--numstat", "-z", "--no-renames",
+                       start, head, cwd=tree).split("\0")
+    deleted, index = [], 0
+    while records[index].startswith(":"):
+        if records[index].split()[-1] == "D":
+            deleted.append(records[index + 1])
+        index += 2
+    counts = {row[2]: row[:2] for record in records[index:]
+              if len(row := record.split("\t", 2)) == 3}
+    active = [path for path in counts if path not in deleted]
+    # Ordinary reviews read original commits through the command's existing reader.
+    # Sign-off's synthetic trees are available only inside the review clone.
+    marked = generated_paths(source or tree, start, source_head or head,
+                             [path for path in active if "-" not in counts[path]])
+    generated = [path for path in active if path in marked or "-" in counts[path]]
+    omitted = deleted + generated
+    if not omitted:
+        return "", ""
+    sizes = {}
+    for ref in (start, head):
+        sizes[ref] = {path: fields[3] for record in repo.git(
+            "ls-tree", "-r", "-l", "-z", ref, cwd=tree).split("\0")
+            if (path := record.partition("\t")[2])
+            and len(fields := record.partition("\t")[0].split()) == 4}
+    # update-index removes exact entries: a deleted file must not hide its new descendants.
+    # Feed paths on stdin so large folder removals cannot exceed Windows' argv limit.
+    filtered = {}
+    for ref in (head, start):
+        repo.git("read-tree", ref, cwd=tree)
+        repo.run("git", "update-index", "--force-remove", "-z", "--stdin", cwd=tree,
+                 input="\0".join(omitted) + "\0").check_returncode()
+        filtered[ref] = repo.git("write-tree", cwd=tree)
+    base = repo.git("commit-tree", filtered[start], "-p", start,
+                    "-m", "Review base without deleted and generated files' contents", cwd=tree)
+    snapshot = repo.git("commit-tree", filtered[head], "-p", base,
+                        "-m", "Branch head without deleted and generated files' contents", cwd=tree)
+    repo.git("checkout", "-q", "-f", "--detach", snapshot, cwd=tree)
+    summaries = [f"deleted: {path} ({sizes[start][path]} bytes)" for path in deleted]
+    summaries += [f"{path}: - added, - removed" for path in deleted if "-" in counts[path]]
+    summaries += [f"generated: {path} ({sizes[head][path]} bytes)\n"
+                  f"  {path}: {counts[path][0]} added, {counts[path][1]} removed"
+                  for path in generated]
+    return ("\n\n## Generated files\n\nEach listed change is committed at the real branch head with the listed line counts. "
+            "The review tree omits these paths from both sides to keep their contents out of "
+            "the diff. A missing or untracked copy in the review tree is not a finding. "
+            "Review these files by path and size only; do not read their content:\n"
+            + "\n".join(f"- {line}" for line in summaries)), base
 
 
 def spent(folder: Path) -> dict[str, Any]:
@@ -47,27 +137,52 @@ def spent(folder: Path) -> dict[str, Any]:
 
 def attempt(argv: list[str], cwd: Path, out: Path,
             selected: dict[str, str], top: Path, item: str, run_id: str,
-            strict: bool = False) -> tuple[list[dict[str, Any]], str]:
+            strict: bool = False, *, env: dict[str, str] | None = None) -> tuple[list[dict[str, Any]], str]:
+    """Retry temporary Codex capacity failures before counting an unfinished review."""
+    for retry in range(4):
+        findings, reason = _attempt(argv, cwd, out, selected, top, item, run_id, strict, env=env)
+        if not reason or retry == 3 or "codex" not in argv:
+            break
+        # A long failure trailer can truncate the capacity event from its last line.
+        detail = (repo.forge_dir(top) / f"review-{run_id}.log").read_text(
+            encoding="utf-8", errors="replace")
+        if not re.search(r"at capacity|overloaded", reason + "\n" + detail, re.I):
+            break
+        delay = 30 * 2 ** retry
+        print(f"Codex is at capacity. Waiting {delay} seconds before trying the review again.",
+              file=sys.stderr)
+        time.sleep(delay)
+    return findings, reason
+
+
+def _attempt(argv: list[str], cwd: Path, out: Path,
+             selected: dict[str, str], top: Path, item: str, run_id: str,
+             strict: bool = False, *, env: dict[str, str] | None = None) -> tuple[list[dict[str, Any]], str]:
     """Run Autoreview once: its findings, or the reason the run doesn't count."""
-    from forge import codex  # importing it here avoids sync's hook-import cycle
+    from forge import review_process  # importing it here avoids sync's hook-import cycle
     out.unlink(missing_ok=True)
-    proc = subprocess.Popen(argv, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, env={**os.environ, "FORGE_WORKER": "1"},
-                            **codex.GROUP)
     # The run's output file: what a person sees when they open the run from the pane.
     log = repo.forge_dir(top) / f"review-{run_id}.log"
-    with proc, log.open("wb") as saved, machine.agent_process(proc, log):
+    antigravity = env is not None and env.get("FORGE_REVIEW_ENGINE") == "antigravity"
+    engine_started = not antigravity
+    with (review_process.owned(argv, cwd, env=env) as proc, log.open("wb") as saved,
+          machine.agent_process(proc, log)):
         last = ""
         pending = b""
         for line in proc.stdout or []:  # streamed as bytes: its progress is how a person watches it
             line = line.replace(b"\0", b"")
             # Claude's failure trailer contains its result JSON. Hold it until we
             # can name a sign-in failure without printing the raw result first.
-            if "claude" in argv and (pending or line.lstrip().startswith(b"{")
-                                      or b"claude engine failed" in line):
+            if not antigravity and "claude" in argv and (pending or line.lstrip().startswith(b"{")
+                                                        or b"claude engine failed" in line):
                 pending += line
                 last = line.decode("utf-8", "replace").strip() or last
                 continue
+            if not engine_started:
+                # The helper's engine label and model describe its placeholder runner.
+                if line.startswith((b"engine: ", b"model: ", b"thinking: ", b"fallback_model: ")):
+                    continue
+                engine_started = line.startswith(b"Antigravity runs ")
             sys.stderr.buffer.write(line)
             sys.stderr.flush()
             saved.write(line)

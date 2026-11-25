@@ -221,6 +221,34 @@ disagree, the frontend conventions settle it:
   readers. Everyone can read the numbers.
 - Loading skeletons and empty states match the rest of the app. The dashboard is no exception.
 
+## Owner's design rules
+
+These rules are mandatory for every screen. Close checks the ones marked (checked) in each changed
+screen file under `apps/` or `libs/` (not an email template or a saved design canvas) and refuses
+it. Set one aside only with `forge-ui-ignore <rule>: <reason>`.
+
+Never:
+
+- Gradients. (checked)
+- Glow.
+- Icons in rounded boxes.
+- All caps. (checked)
+- Eyebrow labels.
+- Nested cards.
+- Decorative pills.
+- Bold text: regular and medium weights only. (checked)
+
+Always:
+
+- Sentence case everywhere.
+- Semantic tokens, never a hex value outside the theme. (checked)
+- Shadows only on things that float.
+- Motion under 300 ms. (checked)
+- No bounce.
+- Check the screen at 390 px width.
+- Check the screen in dark mode.
+- Check the screen with the keyboard.
+
 ## 12. Done means
 
 Run this before calling any UI change finished:

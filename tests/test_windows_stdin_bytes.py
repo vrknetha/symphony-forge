@@ -1,6 +1,6 @@
 """Forge sends a program's stdin as the exact UTF-8 bytes on every OS.
 
-Audit: this Mac cannot run Windows, so the forge process loads a sitecustomize that does what
+Audit: off Windows, the Forge process loads a sitecustomize that does what
 Windows text-mode stdin does (each "\\n" written becomes "\\r\\n"). The stub GitHub records the
 exact bytes of the bounded body piped to `gh pr merge` and refuses one over its limit.
 """
@@ -19,14 +19,15 @@ pytestmark = pytest.mark.platform
 
 STORY = "windows-stdin-bytes"
 
-WINDOWS_STDIN = '''import subprocess
-_save = subprocess.Popen._save_input
-def _save_input(self, input):
-    # Windows writes text-mode stdin through a TextIOWrapper that turns "\\n" into "\\r\\n".
-    if self.text_mode and isinstance(input, str):
-        input = input.replace("\\n", "\\r\\n")
-    return _save(self, input)
-subprocess.Popen._save_input = _save_input
+WINDOWS_STDIN = '''import os
+import subprocess
+if os.name != "nt":
+    _communicate = subprocess.Popen.communicate
+    def communicate(self, input=None, timeout=None):
+        if self.text_mode and isinstance(input, str):
+            input = input.replace("\\n", "\\r\\n")
+        return _communicate(self, input, timeout)
+    subprocess.Popen.communicate = communicate
 '''
 
 

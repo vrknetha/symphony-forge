@@ -1,0 +1,114 @@
+{
+  "items": [
+    {
+      "key": "bug\tdocs/commands.md\tNot done: update the existing guide with the ask syntax\tforge-ask",
+      "kind": "bug",
+      "path": "docs/commands.md",
+      "line": 8,
+      "text": "Not done: update the existing guide with the ask syntax",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/ask.py\tFunctional: preserve a valid transport when disabling plugin MCP servers\tforge-ask",
+      "kind": "bug",
+      "path": "src/forge/ask.py",
+      "line": 27,
+      "text": "Functional: preserve a valid transport when disabling plugin MCP servers",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/ask.py\tFunctional: prevent a worker waiting behind its own agent place\tforge-ask",
+      "kind": "bug",
+      "path": "src/forge/ask.py",
+      "line": 17,
+      "text": "Functional: prevent a worker waiting behind its own agent place",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tsrc/forge/ask.py\tFunctional: show ask runs in the existing lane views\tforge-ask",
+      "kind": "bug",
+      "path": "src/forge/ask.py",
+      "line": 17,
+      "text": "Functional: show ask runs in the existing lane views",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/ask.py\tFunctional: use the bundled Codex program to list MCP servers\tforge-ask",
+      "kind": "bug",
+      "path": "src/forge/ask.py",
+      "line": 21,
+      "text": "Functional: use the bundled Codex program to list MCP servers",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/ask.py\tNot done: make the pinned SDK available to forge ask\tforge-ask",
+      "kind": "bug",
+      "path": "src/forge/ask.py",
+      "line": 19,
+      "text": "Not done: make the pinned SDK available to forge ask",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/ask.py\tSecurity: keep MCP writes out of read-only ask turns\tforge-ask",
+      "kind": "bug",
+      "path": "src/forge/ask.py",
+      "line": 20,
+      "text": "Security: keep MCP writes out of read-only ask turns",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/ask.py\tStandard: fail loud, early, once\tforge-ask",
+      "kind": "bug",
+      "path": "src/forge/ask.py",
+      "line": 22,
+      "text": "Standard: fail loud, early, once",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_ask_command.py\tGate: check ask run records at the owning boundary\tforge-ask",
+      "kind": "bug",
+      "path": "tests/test_ask_command.py",
+      "line": 39,
+      "text": "Gate: check ask run records at the owning boundary",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_ask_command.py\tGate: prove ask waits for a place and ships its guide\tforge-ask",
+      "kind": "bug",
+      "path": "tests/test_ask_command.py",
+      "line": 24,
+      "text": "Gate: prove ask waits for a place and ships its guide",
+      "from": "blocking",
+      "item": "forge-ask",
+      "status": "done",
+      "closed_by": "dismissed"
+    }
+  ]
+}

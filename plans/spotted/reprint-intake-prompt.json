@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/native.py\tFunctional: Do not offer an intake the current session cannot hand back\treprint-intake-prompt",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 108,
+      "text": "Functional: Do not offer an intake the current session cannot hand back",
+      "from": "blocking",
+      "item": "reprint-intake-prompt",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tFunctional: Reprint the original intake context\treprint-intake-prompt",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 110,
+      "text": "Functional: Reprint the original intake context",
+      "from": "blocking",
+      "item": "reprint-intake-prompt",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/nextstep.py\tFunctional: Keep forge next usable outside a coordinator\treprint-intake-prompt",
+      "kind": "bug",
+      "path": "src/forge/nextstep.py",
+      "line": 569,
+      "text": "Functional: Keep forge next usable outside a coordinator",
+      "from": "blocking",
+      "item": "reprint-intake-prompt",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/nextstep.py\tNot done: forge next omits the pending intake's prompt and handback command\treprint-intake-prompt",
+      "kind": "bug",
+      "path": "src/forge/nextstep.py",
+      "line": 570,
+      "text": "Not done: forge next omits the pending intake's prompt and handback command",
+      "from": "blocking",
+      "item": "reprint-intake-prompt",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/nextstep.py\tSecurity: Quote the pending idea safely in the suggested shell command\treprint-intake-prompt",
+      "kind": "bug",
+      "path": "src/forge/nextstep.py",
+      "line": 570,
+      "text": "Security: Quote the pending idea safely in the suggested shell command",
+      "from": "blocking",
+      "item": "reprint-intake-prompt",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_reprint_intake_prompt.py\tGate: Check both reprints and the complete handback command\treprint-intake-prompt",
+      "kind": "bug",
+      "path": "tests/test_reprint_intake_prompt.py",
+      "line": 19,
+      "text": "Gate: Check both reprints and the complete handback command",
+      "from": "blocking",
+      "item": "reprint-intake-prompt",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "simplify\tsrc/forge/native.py\tSimpler: Unrecorded approach \u2192 state the need, simplest option and reuse",
+      "kind": "simplify",
+      "path": "src/forge/native.py",
+      "line": 106,
+      "text": "Simpler: Unrecorded approach \u2192 state the need, simplest option and reuse",
+      "from": "review",
+      "item": "reprint-intake-prompt",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

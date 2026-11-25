@@ -102,11 +102,11 @@ def test_2_a_shared_setting_in_the_local_file_is_refused(repo, monkeypatch, sdk_
     assert ("forge.local.toml can't set merge: it holds only tools, workers and [models] tables, "
             "so settings the team shares stay in forge.toml.\n"
             "Next: move merge to forge.toml in a fix, or take it out of forge.local.toml") in refused.stderr
-    # A key it may hold, with a value Forge can't use, is refused too.
+    # Antigravity adds a worker choice. The model family name "gemini" is still invalid.
     (repo.path / "forge.local.toml").write_text('workers = "gemini"\n', "utf-8")
     refused = repo.forge("task", "start", "BOARD/PAGE")
     assert refused.returncode == 1, refused.stdout + refused.stderr
-    assert ("forge.local.toml is not usable: workers must be one of claude, codex, split.\n"
+    assert ("forge.local.toml is not usable: workers must be one of codex, claude, antigravity, split.\n"
             "Next: ask your agent to fix forge.local.toml") in refused.stderr
 
 

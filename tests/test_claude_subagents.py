@@ -108,6 +108,9 @@ def test_6_claude_builder_gets_haiku_helpers(repo, gh, tmp_path, monkeypatch, sd
     monkeypatch.setenv("STUB_CLAUDE_COMMIT_FROM", "1")
     first = repo.forge("work", item)
     assert first.returncode == 0, first.stdout + first.stderr
+    proof_key = "Done when" if case == "new-lite-retry" else "1"
+    repo.git("commit", "--allow-empty", "-q", "-m", "Record the helper retry proof", "-m",
+             f"Proof list:\n- {proof_key}: check: synthetic helper retry fixture", cwd=folder)
     failed = env.close(item)
     assert failed.returncode == 1, failed.stdout + failed.stderr
     assert "intentional failed close test" in failed.stdout

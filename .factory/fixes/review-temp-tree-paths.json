@@ -1,0 +1,129 @@
+{
+  "base": "615ce7264dc312ead143de5cbbc29f88de19c9ef",
+  "branch": "fix/review-temp-tree-paths",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a1ff68-de4d-7822-99a6-edff0afd55c7",
+    "head": null,
+    "start": "76d7b0c62886122746e884a6129193e16bee4652"
+  },
+  "done_when": "A review finding that cites a file through Forge's temporary review tree path is matched to the same repo file and kept, so close does not reject it or need a retry; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "attempt() in src/forge/autoreview.py",
+      "file": "src/forge/autoreview.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 207,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A review finding that cites a file through Forge's temporary review tree path is matched to the same repo file and kept",
+      "work": 3
+    },
+    {
+      "area": "test_1_close_keeps_a_finding_through_the_temporary_review_tree() in tests/test_close_keeps_review_tree_findings.py",
+      "file": "tests/test_close_keeps_review_tree_findings.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 20,
+      "outcome": "follow-up",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_close_keeps_a_finding_through_the_temporary_review_tree",
+      "work": 3
+    },
+    {
+      "area": "main.validate_paths() in src/forge/review_process.py",
+      "file": "src/forge/review_process.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 70,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Not done: A review finding that cites a file through Forge's temporary review tree path is matched to the same repo file and kept",
+      "work": 3
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "fd3df400dfba7c6819e07806317c04ae52d9648657d626417a834478b86530bb",
+    "changed": "9afe2486eb581bb4da9d93525b73bb3fec3b0f8935289b78dc68108d7721a617",
+    "commit": "a6daa5f38ad813e2f0bd12dd3c6fd1f5405106d2",
+    "dismissals": [],
+    "findings": [],
+    "id": "e9672789-f42f-42a9-bdc0-f3c09cc3ea47",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-21T18:39:19.288250+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-21T18:40:23.786088+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T18:52:14.449775+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-21T18:52:49.237079+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T19:13:02.453416+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-21T19:13:02.469552+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-21T19:13:54.956478+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-21T19:15:13.571509+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T19:19:25.521757+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-21T19:13:02.469552+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "src/forge/review_process.py",
+    "reason": "Owner chose on 22 Nov 2026: one more round for the macOS /var and /private/var spellings of the temporary tree",
+    "wait_id": "30e82d58-0f4b-4bd3-8ed0-a0f6c9c1d277",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "4225e0a9-9595-409d-beb1-2430034a9f8d",
+    "head": "47a8469980553ebb182d101f778790e2141a9fa8",
+    "keys": {},
+    "round": 2
+  },
+  "why": "Close rejects a review finding that cites a path inside Forge's temporary review tree, and the person must retry close",
+  "worker": "codex"
+}

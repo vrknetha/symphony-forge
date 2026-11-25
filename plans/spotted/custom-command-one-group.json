@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/review.py\tA mixed command with fixed pytest shards can reject an empty group when fewer related files are selected than shards.",
+      "kind": "bug",
+      "path": "src/forge/review.py",
+      "line": 446,
+      "text": "A mixed command with fixed pytest shards can reject an empty group when fewer related files are selected than shards.",
+      "from": "worker",
+      "item": "custom-command-one-group",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/review-tests.py\tKeep every fixed pytest shard in mixed test commands\tcustom-command-one-group",
+      "kind": "bug",
+      "path": "src/forge/templates/review-tests.py",
+      "line": 103,
+      "text": "Keep every fixed pytest shard in mixed test commands",
+      "from": "blocking",
+      "item": "custom-command-one-group",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/review-tests.py\tNot done: Custom commands do not reliably select the required CI groups\tcustom-command-one-group",
+      "kind": "bug",
+      "path": "src/forge/templates/review-tests.py",
+      "line": 104,
+      "text": "Not done: Custom commands do not reliably select the required CI groups",
+      "from": "blocking",
+      "item": "custom-command-one-group",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_custom_commands_choose_groups.py\tGate: test_1_custom_command_uses_related_test_share\tcustom-command-one-group",
+      "kind": "bug",
+      "path": "tests/test_custom_commands_choose_groups.py",
+      "line": 45,
+      "text": "Gate: test_1_custom_command_uses_related_test_share",
+      "from": "blocking",
+      "item": "custom-command-one-group",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

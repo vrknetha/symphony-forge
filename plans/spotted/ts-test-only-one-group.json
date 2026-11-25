@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/templates/review-tests.py\tNot done: Check that Vitest selects tests within each listed file\tts-test-only-one-group",
+      "kind": "bug",
+      "path": "src/forge/templates/review-tests.py",
+      "line": 74,
+      "text": "Not done: Check that Vitest selects tests within each listed file",
+      "from": "blocking",
+      "item": "ts-test-only-one-group",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tsrc/forge/templates/review-tests.py\tNot done: Exclude Forge records when choosing one group\tts-test-only-one-group",
+      "kind": "bug",
+      "path": "src/forge/templates/review-tests.py",
+      "line": 138,
+      "text": "Not done: Exclude Forge records when choosing one group",
+      "from": "blocking",
+      "item": "ts-test-only-one-group",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/review-tests.py\tNot done: Prepare direct test runners before CI discovery\tts-test-only-one-group",
+      "kind": "bug",
+      "path": "src/forge/templates/review-tests.py",
+      "line": 79,
+      "text": "Not done: Prepare direct test runners before CI discovery",
+      "from": "blocking",
+      "item": "ts-test-only-one-group",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/review-tests.py\tSecurity: Prevent test discovery from forging the CI result\tts-test-only-one-group",
+      "kind": "bug",
+      "path": "src/forge/templates/review-tests.py",
+      "line": 79,
+      "text": "Security: Prevent test discovery from forging the CI result",
+      "from": "blocking",
+      "item": "ts-test-only-one-group",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_javascript_test_changes_choose_one_group.py\tGate: test_1_javascript_test_changes_choose_one_group\tts-test-only-one-group",
+      "kind": "bug",
+      "path": "tests/test_javascript_test_changes_choose_one_group.py",
+      "line": 36,
+      "text": "Gate: test_1_javascript_test_changes_choose_one_group",
+      "from": "blocking",
+      "item": "ts-test-only-one-group",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

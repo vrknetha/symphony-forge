@@ -1,0 +1,125 @@
+{
+  "base": "c8a997b2d72c2d9761ff22ce1012e7cbe4706633",
+  "branch": "fix/codex-capacity-retry",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a1ff4d-6f61-7c43-8e36-0b06e1ac7315",
+    "head": null,
+    "start": "92ebd6efee0c1c7bd53ab6d5377ab48391da699f"
+  },
+  "done_when": "When Codex reports that the model is at capacity, forge work and close wait and retry the same turn a few times before they fail, and say in one line that they wait for capacity; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "attempt() in src/forge/autoreview.py",
+      "file": "src/forge/autoreview.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 147,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as a known issue: a busy report after long review output gets close's normal retry without the capacity wait",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Retry capacity failures after a long review turn",
+      "work": 2
+    },
+    {
+      "area": "_work() in tests/test_codex_capacity_recovery.py",
+      "file": "tests/test_codex_capacity_recovery.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 42,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: tests/test_codex_capacity_recovery.py::test_1_commands_retry_capacity_before_failing",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "0aaa3c73585dddfa1173893d8c13e1fb488ab82edf7fcc1d00aae158ac936d37",
+    "changed": "16d47574ebe9805ae142cb4c61aecdebfe1edb5f3365e12714d0126078af091f",
+    "commit": "18e0e3a167d3f545e30bc121ab02c0de105d1190",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as a known issue: a busy report after long review output gets close's normal retry without the capacity wait",
+        "finding": 1
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a Codex review emits more than 4,000 characters of stdout before a capacity failure and has empty stderr.\nThe log scan still cannot see the capacity event. `src/forge/review.py:975\u2013979` starts the pinned helper without enabling streaming, so the helper buffers Codex output. On failure, it uses stdout when stderr is empty and truncates the detail to 4,000 characters ([failure handling](https://github.com/openclaw/agent-skills/blob/ce14dcca09b3affb922ddcca11465619e67f5114/skills/autoreview/scripts/autoreview#L5583-L5590), [truncation](https://github.com/openclaw/agent-skills/blob/ce14dcca09b3affb922ddcca11465619e67f5114/skills/autoreview/scripts/autoreview#L7826-L7830)). The capacity event therefore never reaches the log, and close starts an ordinary attempt without the capacity wait or message. The new test at `tests/test_codex_capacity_recovery.py:94\u201399` instead makes the fake helper print the complete event before its truncated trailer, so it passes despite this failure.",
+        "file": "src/forge/autoreview.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 149,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: Retry capacity failures after a long review turn",
+        "work": 2
+      }
+    ],
+    "id": "83ff93c5-6031-4fdd-9d0a-ff8269cdd915",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-21T18:10:11.325048+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-21T18:10:25.045307+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T18:24:16.199642+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-21T18:24:58.335573+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-21T18:39:48.773414+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-21T18:39:48.790105+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-21T18:41:21.366915+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 2,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-21T18:39:48.790105+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/autoreview.py",
+    "reason": "Owner accepted on 22 Nov 2026 as a known issue: a busy report after long review output gets close's normal retry without the capacity wait",
+    "wait_id": "63f3bc46-823c-4748-b25e-e87c3f73d51a",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "12b5b601-d27c-4624-b20f-3c8ed9b0b192",
+    "head": "e96692a4e2e1cb071bd8d162f589d6d448cb18b1",
+    "keys": {},
+    "round": 1
+  },
+  "why": "A Codex worker or review turn fails at once when the model reports that it is at capacity, and the whole forge work or close run stops",
+  "worker": "codex"
+}

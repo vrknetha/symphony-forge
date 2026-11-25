@@ -36,7 +36,10 @@ def configured(env, previous):
 def started(repo, why, cwd=None):
     done = repo.forge("fix", "start", why, "--done", "Only this fix's changes count", cwd=cwd)
     assert done.returncode == 0, done.stdout + done.stderr
-    return done.stdout.split()[2], Path(done.stdout.splitlines()[0].split(" in ", 1)[1])
+    fix, where = done.stdout.split()[2], Path(done.stdout.splitlines()[0].split(" in ", 1)[1])
+    repo.git("commit", "--allow-empty", "-q", "-m", "Record fixture proof", "-m",
+             "Proof list:\n- Done when: check: the fixture exercises the fix size gate", cwd=where)
+    return fix, where
 
 
 def pr_check(repo, fix, head):

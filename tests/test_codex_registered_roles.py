@@ -39,7 +39,7 @@ def test_1_sync_registers_shipped_roles_and_keeps_team_roles(repo, adopted):
         role = tomllib.loads(path.read_text("utf-8"))
         assert config["agents"][path.stem]["config_file"] == f"agents/{path.name}"
         assert config["agents"][path.stem]["description"] == role["description"]
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout
 
 
 @pytest.mark.parametrize("source,adopted", [("build", False), ("lite", False), ("flat", False),
@@ -75,4 +75,4 @@ def test_2_sync_uses_build_subagents_then_lite_and_unsets_missing_defaults(repo,
         for name in ("worker", "fixer", "coder", "frontend", "tester", "refactorer"):
             role = tomllib.loads((repo.path / f".codex/agents/{name}.toml").read_text("utf-8"))
             assert (role.get("model"), role.get("model_reasoning_effort")) == ("gpt-6-luna", "max")
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout

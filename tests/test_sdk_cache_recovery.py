@@ -22,7 +22,7 @@ def test_1_cached_sdk_recovers_without_manual_cleanup(tmp_path, damage):
     if REAL_UV is None:
         pytest.skip("uv is missing, so the Codex SDK test environment can't be built")
     cache = tmp_path / "cache"
-    env = cache / "d" / f"codex-sdk-{PIN}" / "forge" / "codex-sdk" / f"openai-codex-{PIN}"
+    env = cache / "d" / f"codex-sdk-{PIN}-sync" / "forge" / "codex-sdk" / f"openai-codex-{PIN}"
     subprocess.run([REAL_UV, "venv", "-q", "--python", sys.executable, str(env)], check=True)
     python = env / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
     if damage == "missing-python":

@@ -15,7 +15,6 @@ import itertools
 import json
 import os
 import re
-import shutil
 import subprocess
 import tempfile
 import time
@@ -26,7 +25,7 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
-from forge import claude_sdk, codex, design, machine, native, plan_scope, repo, review, score, task, worker
+from forge import claude_sdk, codex, design, machine, native, plan_scope, repo, review, review_process, score, task, worker
 
 REFUSALS = {
     "bad_key": ("{key!r} is not a story key; a key is capital letters, digits and hyphens.",
@@ -82,17 +81,14 @@ BUILDERS = re.compile(r"^## For the builders[ \t]*$", re.M)
 DETAILS = re.compile(r"^### Done-when details[ \t]*\n(.*?)(?=^#{1,3} |\Z)", re.M | re.S)
 DISPOSITION = re.compile(r"^[ \t]*(?:[-*][ \t]+)?\**disposition:\**[ \t]*(cut|defer|keep)\b"
                          r"[ \t:\u2014\u2013-]*(\S?)", re.I | re.M)
-NAMES = {"claude": "Claude Code", "codex": "Codex"}
+NAMES = {"claude": "Claude Code", "codex": "Codex", "antigravity": "Antigravity"}
 
 
 def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
     from forge import sync
 
-    skill = (TEMPLATES / "skill.md").read_text(encoding="utf-8")
     return {
         ".forge/design/support.js": (TEMPLATES / "design/support.js").read_text(encoding="utf-8"),
-        ".claude/skills/forge/SKILL.md": skill,
-        ".codex/skills/forge/SKILL.md": skill,
         **{f"{host}/skills/forge/standards.md":
            (TEMPLATES.parent / "standards.md").read_text(encoding="utf-8")
            for host in (".claude", ".codex")},
@@ -163,12 +159,23 @@ def new(args: Any) -> int:
 
 
 def read(args: Any) -> int:
-    from forge import records  # records imports story
-    target = args.target
-    top, doc, notes, is_story = _paths(target)
-    # ponytail: CORE's branch rule, so a read never writes on the default branch.
+    from forge import antigravity, routing
+    top, doc, notes, is_story = _paths(args.target)
     repo._work_branch(top)  # pyright: ignore[reportPrivateUsage]
-    config, here = repo.config(top), repo.coordinator()
+    config = repo.config(top)
+    if not (args.resolve or args.reason) and "reviews" not in config.get("local", {}):
+        routing.refresh_reviews(top, args.target)
+    config = routing.routed_reviews(top, config)
+    if config.get("reviews") != "antigravity":
+        return _read(args, top, doc, notes, is_story, config)
+    with tempfile.TemporaryDirectory() as tmp, antigravity.clean_git(Path(tmp), checkout=top):
+        antigravity.require_unfiltered(top, [_rel(top, doc), _rel(top, notes)])
+        return _read(args, top, doc, notes, is_story, config)
+
+
+def _read(args: Any, top: Path, doc: Path, notes: Path, is_story: bool, config: dict[str, Any]) -> int:
+    from forge import antigravity, records, roles  # records imports story
+    target, here = args.target, repo.coordinator()
     if here is None:
         repo.route(config, config["tools"], command="read", item=target)
     rel, old = _rel(top, doc), _text(notes)
@@ -190,8 +197,10 @@ def read(args: Any) -> int:
                     findings = findings.replace(block, settled + f"\n   Disposition: keep - {reason}", 1)
             record["read_hash"] = _store(top, doc.read_bytes(), rel)
         _write(notes, _notes(record, findings))
-        repo.commit_state(f"Record the human's cold-read choice: {choice}", rel, _rel(top, notes),
-                          *([folder] if folder else []), top=top)
+        changed = [rel, _rel(top, notes), *([folder] if folder else [])]
+        if config.get("reviews") == "antigravity":
+            antigravity.require_unfiltered(top, changed)
+        repo.commit_state(f"Record the human's cold-read choice: {choice}", *changed, top=top)
         print(f"Recorded the human's choice: {choice}. " + (
             "Next: forge next" if choice == "accept" else
             f"Next: forge read {target}" if choice == "more" else
@@ -220,38 +229,33 @@ def read(args: Any) -> int:
         repo.refuse(REFUSALS["no_disposition"], number=number, notes=_rel(top, notes))
     if here is None:  # neither app, or one running inside the other
         repo.refuse(REFUSALS["coordinator"], target=target)
-    installed = {"claude": not claude_sdk.sdk_problem(), "codex": codex.installed()}
-    installed[here] = True  # the coordinating app needs no external driver to read natively
-    other = "claude" if here == "codex" else "codex"
-    # One tool always reads its own plans; both keep the earlier reader while it is installed.
     saved = codex.record(top, target, "Grill")
     recorded = ("codex" if record.get("conversation") else "claude" if record.get("session") else
                 record.get("reader", "").split(" ")[0])
     if not recorded:
         recorded = "codex" if saved.get("conversation") else "claude" if saved.get("claude") else ""
-    gone = recorded in NAMES and not installed[recorded]
-    reader = (config["tools"] if config["tools"] != "both" else
-              recorded if recorded in NAMES and not gone else other if installed[other] else here)
-    why = (f"forge.toml's tools is now {reader}" if recorded in NAMES and reader != recorded
-           and config["tools"] != "both" else
+    reader, gone = roles.read_family(config, here, recorded)
+    why = (f"forge.toml's {'reviews' if config.get('reviews') else 'tools'} is now {reader}"
+           if recorded in NAMES and reader != recorded and (config.get("reviews") or config["tools"] != "both") else
            f"its reader, {NAMES[recorded]}, is no longer installed" if gone else "")
     left = codex.record(top, target, "Grill") if gone else {}
     left = left.get("conversation") if recorded == "codex" else (left.get("claude") or {}).get("id")
     is_native = repo.route(config, reader, command="read", item=target) == "native"
-    models = worker.ready(top, config, "Grill", reader == "codex", native=is_native)
+    models = (antigravity.ready(config, "grill", False) if reader == "antigravity" else
+              worker.ready(top, config, "Grill", reader == "codex", native=is_native))
     if gone:
         codex._record(codex._item_file(top, target, ".json", "Grill"),
                       **{"conversation" if recorded == "codex" else "claude": None})
     first, again, head = re.split(r"<!-- forge:(?:round|notes) -->\n",
                                  (TEMPLATES / "cold-read.md").read_text(encoding="utf-8"))
-    before = _snapshot(top)  # first, so any change from here on discards the read
+    before = review_process.snapshot(top, isolated=reader == "antigravity")
 
     def remember_reader(chat: str) -> None:
         nonlocal before
-        if _snapshot(top) != before:
+        if review_process.snapshot(top) != before:
             repo.refuse(REFUSALS["discarded"], doc=rel, target=target)
         if keep_reader_chat(top, target, reader, chat):
-            before = _snapshot(top)
+            before = review_process.snapshot(top)
 
     text = doc.read_bytes()  # one read: the reader gets exactly the bytes that are hashed
     read_hash = _store(top, text, rel)
@@ -306,20 +310,25 @@ def read(args: Any) -> int:
               "reader": reader, "left": left,
               "native": is_native,
               "model": repo.models(config, "grill", reader).get("model", "its own default model"),
-              "reason": f"forge.toml's tools is {reader}" if config["tools"] != "both" else
+              "reason": f"forge.toml's reviews is {reader}" if config.get("reviews") else
+                        f"forge.toml's tools is {reader}" if config["tools"] != "both" else
                         "the reader is this session's tool"}
     if is_native:
         return native.offer(top, target, result, prompt, fresh_prompt, why,
                             repo.models(config, "grill", reader))
     ran = {}
-    if reader == "claude":
+    if reader in ("claude", "antigravity"):
         if later and not why and not session:
             why = "Forge has no record of its Claude session on this machine"
         with codex.hold(top, target, "Grill"), machine.agent_slot(
                 top, "read", target, read_round=round_number, **repo.models(config, "grill", reader)):
             clock = time.monotonic()
-            done = _sdk_read(top, target, models, prompt, fresh_prompt, session and session["id"],
-                             why, round_number, remember_reader)
+            if reader == "antigravity":
+                done = antigravity.read(top, target, models, prompt, fresh_prompt)
+                result["model"] = models["model"]
+            else:
+                done = _sdk_read(top, target, models, prompt, fresh_prompt, session and session["id"],
+                                 why, round_number, remember_reader)
             read_seconds = time.monotonic() - clock
         said, failed = done.stdout.strip(), done.returncode
         problem = (done.stderr.strip().splitlines() or [f"it wrote nothing (exit code {done.returncode})"])[-1]
@@ -366,10 +375,9 @@ def read_result(top: Path, target: str, result: dict[str, Any], said: str,
     recorded = record.get("reader", "").split(" ")[0]
     ran = ran or {}
     said = _repo_root_paths(said, {str(top), str(top.resolve())})
-    if _snapshot(top) != before or failed or not said:
-        # Chat bindings survive failed reads; accepted findings stay unchanged.
-        if _snapshot(top) != before:
-            repo.refuse(REFUSALS["discarded"], doc=rel, target=target)
+    if review_process.snapshot(top, isolated=reader == "antigravity") != before:
+        repo.refuse(REFUSALS["discarded"], doc=rel, target=target)
+    if failed or not said:
         repo.refuse(REFUSALS["reader_failed"], doc=rel, target=target, problem=problem)
     if is_story:  # advice from this plan's own Scope cells, before any write; it cannot refuse the read
         plan_scope.say(text.decode("utf-8"), top)
@@ -429,6 +437,9 @@ def read_result(top: Path, target: str, result: dict[str, Any], said: str,
         changed.append(repo.write_state(target, repo.add_step(state, "read"), top))
     if clean:  # a passing round is committed, so tasks and pull requests carry what passed
         outcome = "found nothing" if said == "No findings." else "had no blocking notes"
+        if reader == "antigravity":
+            from forge.antigravity import require_unfiltered
+            require_unfiltered(top, changed)
         repo.commit_state(f"Round {round_number} of the cold read of {rel} {outcome}", *changed,
                           top=top)
     if stopped(record, f"{kept}\n\n## Round {round_number}\n\n{said}\n", repo.config(top)["cold_read_rounds"]):
@@ -545,6 +556,14 @@ def plan_ref(top: Path, key: str, history: dict[str, Any] | None = None) -> str:
     return found[key]
 
 
+def state_of(top: Path, key: str, ref: str, history: dict[str, Any] | None = None) -> dict[str, Any]:
+    """The story's state record at a ref, from the snapshot when there is one."""
+    if history is None:
+        return json_of(show(top, ref, repo.state_path(key)))
+    full = f"refs/heads/{ref}" if ref.startswith("story/") else f"refs/remotes/{ref}" if ref.startswith("origin/story/") else ref
+    return history["ref_states"].get(full, {}).get(repo.state_path(key), {})
+
+
 def _plan_ref(top: Path, key: str, history: dict[str, Any] | None = None) -> str:
     local, remote = f"story/{key}", f"origin/story/{key}"
     landed = landed_ref(top)
@@ -557,15 +576,10 @@ def _plan_ref(top: Path, key: str, history: dict[str, Any] | None = None) -> str
         same = tips.get(f"refs/heads/{local}") is not None and tips.get(f"refs/heads/{local}") == tips.get(f"refs/remotes/{remote}")
         if local_doc is None or (not same and repo.run("git", "merge-base", "--is-ancestor", remote, local, cwd=top).returncode):
             source = remote
-    def state_at(ref: str) -> dict[str, Any]:
-        if history is None:
-            return json_of(show(top, ref, repo.state_path(key)))
-        full = f"refs/heads/{ref}" if ref.startswith("story/") else f"refs/remotes/{ref}" if ref.startswith("origin/story/") else ref
-        return history["ref_states"].get(full, {}).get(repo.state_path(key), {})
-    state = state_at(source)
+    state = state_of(top, key, source, history)
     # A failed approval push leaves the initial claim behind the first merged part.
     if (not state.get("approval") and all(step.get("step") == "start" for step in state.get("steps", []))
-            and state_at(landed).get("approval")):
+            and state_of(top, key, landed, history).get("approval")):
         return landed
     return source
 
@@ -1119,20 +1133,6 @@ def _repo_root_paths(said: str, roots: Any) -> str:
         head = r"[\\/]".join(map(re.escape, re.split(r"[\\/]", root)))
         said = re.sub(head + r"[\\/]([^\s`'\")\]>]*)", lambda m: "/" + m[1].replace("\\", "/"), said)
     return said
-
-
-def _snapshot(top: Path) -> str:
-    """HEAD plus a tree of every file in the checkout, tracked or not, so any change shows."""
-    index = Path(repo.git("rev-parse", "--path-format=absolute", "--git-path", "index", cwd=top))
-    with tempfile.TemporaryDirectory() as tmp:
-        temp = Path(tmp) / "index"
-        if index.is_file():
-            shutil.copyfile(index, temp)  # a copy keeps git's stat cache, so this stays fast
-        env = {**os.environ, "GIT_INDEX_FILE": str(temp)}
-        for args in (["add", "-A"], ["write-tree"]):
-            done = subprocess.run(["git", *args], cwd=top, env=env, capture_output=True, text=True,
-                                  check=True)
-    return done.stdout + repo.run("git", "rev-parse", "-q", "--verify", "HEAD", cwd=top).stdout
 
 
 def add_to_roadmap(top: Path, entries: list[dict[str, str]]) -> list[str]:

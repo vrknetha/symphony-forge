@@ -80,6 +80,8 @@ if args[:2] == ["pr", "checks"] and args[2].startswith("forge-merge-train/") and
             {"name": "test group 2 of 2", "bucket": "pending" if first else "pass", "link": link(2, 22)},
             {"name": "Review pull request", "bucket": "fail", "link": link(1, 11)},
             {"name": "forge-pr-check", "bucket": "fail", "link": ""}]
+    if red.get("aggregate"):
+        rows.insert(1, {"name": "tests", "bucket": "fail", "link": link(2, 20)})
     answer(json.dumps(rows), 1)
 if args[:2] == ["pr", "checks"] and cfg.get("fresh") and args[2] == "fix/%s" % cfg["fresh"].get("red"):
     # the red member's pull request lists its failing check, as GitHub does (job 70 of run 7)
@@ -117,6 +119,9 @@ if args[:1] == ["api"] and "/commits/" in endpoint and train_sha(sha_of(endpoint
                  "status": "completed"}
         if red.get("settle") and not (here / "polled").exists():
             later.update(status="in_progress", conclusion=None)
+            # The job finishes on its next status read, whichever GitHub API reads it.
+            (here / "polled").touch()
+            append_json(here / "gh-calls.jsonl", ["settle-pending"])
         rows = [{**tests, "name": "test group 1 of 2", "status": "completed",
                  "conclusion": red.get("conclusion", "failure")}, later, rows[1]]
     elif red is not None and red.get("slow"):  # a re-run's jobs run again: still running, then green
@@ -134,13 +139,12 @@ if args[:1] == ["api"] and "/commits/" in endpoint and train_sha(sha_of(endpoint
 fresh = cfg.get("fresh")
 if fresh and args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"] and sha_of(endpoint) not in fresh["closed"]:
     sha = sha_of(endpoint)
-    own = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
     ok = {"name": "forge-pr-check", "status": "completed", "conclusion": "success"}
     if not (here / ("pending-" + sha)).exists():
         (here / ("pending-" + sha)).touch()
         append_json(here / "gh-calls.jsonl", ["check-pending", sha, str(time.time())])
         answer(lines([{"name": "tests", "status": "in_progress", "conclusion": None}, ok]))
-    if own == "fix/%s" % fresh.get("red"):
+    if heads().get("refs/heads/fix/%s" % fresh.get("red")) == sha:
         if not (here / ("red-" + sha)).exists():
             (here / ("red-" + sha)).touch()
             append_json(here / "gh-calls.jsonl", ["check-red", sha, str(time.time())])
@@ -154,13 +158,18 @@ if fresh and args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"] and sha_
 if cfg.get("late") and args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"]:
     if (here / "acted").exists() and not (here / "late").exists():
         (here / "late").touch()
-        own = subprocess.run(["git", "branch", "--show-current"], capture_output=True, text=True).stdout.strip()
-        push("main" if cfg["late"] == "main" else own, "late.py", "x = 2\n")
+        branch = "main" if cfg["late"] == "main" else next(
+            ref.removeprefix("refs/heads/") for ref, head in heads().items()
+            if ref.startswith("refs/heads/fix/") and head == sha_of(endpoint))
+        push(branch, "late.py", "x = 2\n")
 if args[:4] == ["api", "--paginate", "--jq", ".workflow_runs[]"] and any(a.startswith("head_sha=") for a in args):
     runs = [{"id": 1, "check_suite_id": 1, "event": "pull_request_target", "path": ".github/workflows/forge.yml@refs/heads/main"},
             {"id": 2, "check_suite_id": 2, "event": "pull_request", "path": ".github/workflows/forge.yml@refs/pull/1/merge"}]
     if cfg.get("same_name"):
         runs.append({"id": 3, "check_suite_id": 3, "event": "pull_request", "path": ".github/workflows/review.yml@refs/pull/1/merge"})
+    # These workflows have reported jobs; queued/running jobs above still hold the wait.
+    for run in runs:
+        run["status"] = "completed"
     answer(lines(runs))
 if args[:1] == ["api"] and "/rules/branches/" in endpoint or "/protection/required_status_checks" in endpoint:
     if cfg.get("rules") == "unreadable":
@@ -199,9 +208,9 @@ LATER = "so the ready changes merge one at a time, each with its own check."
 
 
 def _fast_polls(repo) -> None:
-    """The wait loops' 15-second polls last 1 second in every Forge and gh process, and the monotonic
-    clock shows the 15: a first answer of "still running" is read again after four polls, when the
-    60-second status snapshot ends, not after a minute. Another process still has time to act between two
+    """The wait loops' 60-second polls last 4 seconds in every Forge and gh process, and the monotonic
+    clock shows the 60: a first answer of "still running" is read again when the
+    status snapshot ends, not after a minute. Another process still has time to act between two
     polls, which the train waits for. Every other pause stays real."""
     startup = repo.bin / "sitecustomize.py"
     startup.write_text((startup.read_text("utf-8") if startup.exists() else "") + """
@@ -211,9 +220,9 @@ _skipped, _sleep, _monotonic = 0.0, time.sleep, time.monotonic
 
 def _poll(seconds):
     global _skipped
-    if seconds == 15:
-        _skipped += 14
-        _sleep(1)
+    if seconds == 60:
+        _skipped += 56
+        _sleep(4)
     else:
         _sleep(seconds)
 
@@ -229,6 +238,7 @@ def train(client, monkeypatch):
     gh.write_text(gh.read_text("utf-8").replace(MARKER, TRAIN_GH + MARKER, 1), "utf-8")
     machine_cores(env.repo, 20)  # ten agent places, so no change waits for a place
     _fast_polls(env.repo)
+    monkeypatch.setenv("FORGE_CHECKS_POLL", "60")
     monkeypatch.setenv("FORGE_CHECKS_WAIT", "4500")  # 300 s of the shortened polls
     env.remote = Path(env.repo.git("remote", "get-url", "origin")).as_posix()
     env.common = Path(env.repo.git("rev-parse", "--path-format=absolute", "--git-common-dir"))
@@ -248,7 +258,8 @@ def _ready(env, monkeypatch, slugs, first=1, files=None) -> dict[str, str]:
     heads = {}
     for day, slug in enumerate(slugs, first):
         changed = (files or {}).get(slug, {f"{slug}.py": f"print('{slug}')\n"})
-        where = _fix(env, monkeypatch, slug, day, changed, status="working")
+        where = _fix(env, monkeypatch, slug, day, changed, status="working",
+                     message=f"Worker round\n\nProof list:\n- Done when: check: {slug} is changed")
         if "forge.toml" in changed:  # close accepts a settings change only when the fix says so
             amended = env.repo.forge("fix", "amend", slug, "--done", "forge.toml sets cold_read_rounds",
                                      "--because", "The fix changes a setting", cwd=where)
@@ -407,11 +418,13 @@ def _on_main(env, path: str, text: str) -> None:
 def _stacked(env, monkeypatch, base_merged: bool) -> None:
     """A fix built on another fix, closed ready. The base's pull request merges before the run (the
     fix is then closed ready again) or stays open."""
-    base = _fix(env, monkeypatch, "jb", 7, {"jb.py": "print('jb')\n"}, status="working")
+    base = _fix(env, monkeypatch, "jb", 7, {"jb.py": "print('jb')\n"}, status="working",
+                message="Worker round\n\nProof list:\n- Done when: check: jb is changed")
     assert env.repo.forge("close", "jb").returncode == 0
     main, env.repo.path = env.repo.path, base
     try:
-        _fix(env, monkeypatch, "jj", 8, {"jj.py": "print('jj')\n"}, status="working")
+        _fix(env, monkeypatch, "jj", 8, {"jj.py": "print('jj')\n"}, status="working",
+             message="Worker round\n\nProof list:\n- Done when: check: jj is changed")
     finally:
         env.repo.path = main
     assert env.repo.forge("close", "jj").returncode == 0
@@ -666,15 +679,19 @@ def test_4_a_failure_naming_no_change_runs_again_once(train, monkeypatch, reques
         pytest.skip("new repos only")
     heads = _ready(env, monkeypatch, ("aa", "bb", "cc"))
     logs = {"flake": "ConnectionResetError: the runner lost its network\n",
-            "timeout": "The job exceeded the maximum execution time\n", "still-red": "Process exited with code 1\n",
+            "timeout": "The job has exceeded the maximum execution time\n", "still-red": "The runner was shut down\n",
             "several": _failed_log("aa.py", "bb.py")}[variant]
     # A healed re-run still runs at first. A re-run that fails again has a second group still running. In
     # the fallbacks, main has moved, so each change closes anew on a new head whose tests run at first;
     # in several, bb's heads turn red.
-    red = {"flake": {"heal": "2", "slow": True}, "timeout": {"heal": "2", "slow": True, "conclusion": "timed_out"},
+    red = {"flake": {"heal": "2", "slow": True, "aggregate": True},
+           "timeout": {"heal": "2", "slow": True, "conclusion": "timed_out"},
            "still-red": {"settle": True}, "several": {}}[variant]
     fallback = variant in ("still-red", "several")
-    _stub(env, red_train=red, logs={"21": logs}, moved=fallback,
+    failed_logs = {"21": logs}
+    if red.get("aggregate"):
+        failed_logs["20"] = "Error: Process completed with exit code 1"
+    _stub(env, red_train=red, logs=failed_logs, moved=fallback,
           fresh={"closed": list(heads.values()), "red": "bb" if variant == "several" else None} if fallback else None)
     done = _all(env)
     lines = done.stdout.splitlines()

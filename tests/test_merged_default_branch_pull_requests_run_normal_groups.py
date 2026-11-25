@@ -1,9 +1,13 @@
-"""A pull request whose branch merged the default branch in runs the normal test groups.
+"""In local-test repos, a branch that merged main keeps the normal test groups.
 
 Test-audit: `forge test --change` widens its selection to what a merged-in default branch
 brought, so one group would run past its time limit. This runs the shipped CI script on the
 checkout GitHub gives a pull request (a merge of the branch into the base) and reads the groups
 the generated workflow starts. No fake decides the selection.
+
+The command uses Forge's automatic split. Custom commands with their own shards
+always keep every group, as test_custom_commands_choose_groups.py proves. That
+separate rule cannot exercise the one-group to normal-groups transition here.
 """
 import json
 import os
@@ -44,9 +48,9 @@ def test_1_pull_request_that_merged_the_default_branch_runs_normal_groups(
     if not adopted:
         # A new repo starts with one group; the pull request needs several to show the fan-out.
         _branch(repo, client, "merged-default")
-    # The one-group shortcut now requires an explicit Forge-controlled count.
-    _settings(client, test=PYTEST + " --splits {groups} --group {group}",
-              groups=6 if adopted else 2)
+    # Use Forge's automatic splitter for the merge-only group transition.
+    # Commands with their own shard flags now keep all groups even before a merge.
+    _settings(client, test=PYTEST, groups=6 if adopted else 2)
     ignore = client / ".gitignore"
     ignore.write_text((ignore.read_text("utf-8") if ignore.exists() else "")
                       + "\n__pycache__/\n", encoding="utf-8")
@@ -60,6 +64,10 @@ def test_1_pull_request_that_merged_the_default_branch_runs_normal_groups(
     repo.git("commit", "-qm", "Set up", cwd=client)
     synced = repo.forge("sync", cwd=client)
     assert synced.returncode == 0, synced.stdout + synced.stderr
+    # Exercise the legacy classifier with local settings and the existing CI workflow.
+    config = (client / "forge.toml").read_text("utf-8")
+    config = re.sub(r"^test_place = .*\n", "", config, flags=re.M)
+    (client / "forge.toml").write_text('test_place = "local"\n' + config, encoding="utf-8")
     repo.git("add", "-A", cwd=client)
     repo.git("commit", "-qm", "Sync", "--allow-empty", cwd=client)
     workflow = (client / ".github/workflows/forge.yml").read_text("utf-8")

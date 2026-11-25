@@ -25,7 +25,8 @@ def test_1_close_keeps_clean_review_only_for_identical_stacked_content(env, prev
     where = repo.path.parent / f"{repo.path.name}-STACK-B"
     if scenario == "merge-edits":
         env.commit(where, "use.py", "B_VALUE = 2\n", "Build the child\n\n"
-                   "Functional check: Read the child value.\n\nProof list: Check the child.")
+                   "Functional check: Read the child value.\n\n"
+                   "Proof list:\n- 1: check: Replay keeps the child value.")
         env.commit(repo.path, "notes.txt", "An unrelated default update.\n")
         repo.git("push", "-q", "origin", "main")
         repo.git("merge", "-q", "--no-commit", "origin/main", cwd=where)

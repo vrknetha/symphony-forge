@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, NoReturn
 
-from forge import __version__, githooks, repo, story, sync
+from forge import __version__, antigravity, githooks, repo, story, sync
 
 COMMANDS = [{
     # False: init checks the pin itself, after adoption lists a forge.toml Forge didn't write.
@@ -76,7 +76,7 @@ NODE_TEST = "[ ! -f package.json ] || (npm ci && npm test)"
 # Implementation, cold-read and review models for each host.
 MODELS = """
 [models.build.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "low"
 
 [models.build.claude]
@@ -86,7 +86,7 @@ subagents = "claude-haiku-5-5"
 subagent_effort = "high"
 
 [models.fix.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "low"
 
 [models.fix.claude]
@@ -96,7 +96,7 @@ subagents = "claude-haiku-5-5"
 subagent_effort = "high"
 
 [models.lite.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "low"
 subagents = "gpt-6-luna"
 subagent_effort = "max"
@@ -108,7 +108,7 @@ subagents = "claude-haiku-5-5"
 subagent_effort = "high"
 
 [models.explore.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "medium"
 subagents = "gpt-6-luna"
 subagent_effort = "max"
@@ -142,7 +142,7 @@ model = "claude-sonnet-5-5"
 effort = "xhigh"
 
 [models.design.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "high"
 
 """
@@ -180,6 +180,10 @@ def signed_in(tool: str, top: Path | None = None) -> bool | None:
 def _settings(stage: str, test_place: str, test: str, checks: list[str], interfaces: list[str],
               merge: str = "", runner: str = "ubuntu-24.04", fast_test: str = "") -> str:
     claude, codex = signed_in("claude"), signed_in("codex")
+    installed = antigravity.version()
+    if not antigravity.problem(installed):
+        print(f"Antigravity {installed} is installed. Ask your agent if you want it to "
+              "build or review; forge doctor checks its sign-in.")
     workers = 'workers = "claude"\n'  # Claude builds; reviews and cold reads go to Codex when it is there
     if claude is True and codex is False:
         workers = 'tools = "claude"\nworkers = "claude"\n'

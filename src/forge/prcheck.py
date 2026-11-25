@@ -65,6 +65,8 @@ jobs:
       docs-only: ${{ steps.docs.outputs.docs-only }}
       docs-tests: ${{ steps.docs.outputs.docs-tests }}
       one-group: ${{ steps.docs.outputs.one-group }}
+      reuse: ${{ steps.docs.outputs.reuse }}
+      parent-conclusion: ${{ steps.docs.outputs.parent-conclusion }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -72,17 +74,18 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+      - uses: astral-sh/setup-uv@v6
       - id: docs
         env:
           GH_TOKEN: ${{ github.token }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DOCS_ONLY_EXCLUDES: '<docs-excludes>'
-        run: python .forge/review-tests.py
+        run: <select-command>
 
   tests:
     needs: docs-check
-    if: github.event_name == 'pull_request' && needs.docs-check.outputs.docs-only != 'true'
+    if: always() && github.event_name == 'pull_request' && needs.docs-check.result == 'success' && needs.docs-check.outputs.docs-only != 'true'
     name: test group ${{ matrix.group }} of ${{ needs.docs-check.outputs.one-group == 'true' && 1 || <groups> }}
     strategy:
       fail-fast: false
@@ -97,6 +100,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+      - run: git remote set-head origin --auto
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
@@ -107,7 +111,11 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           DOCS_ONLY_EXCLUDES: '<docs-excludes>'
+          PR_REUSE: ${{ needs.docs-check.outputs.reuse }}
+          PR_PARENT_CONCLUSION: ${{ needs.docs-check.outputs.parent-conclusion }}
         run: python .forge/review-tests.py
+      - if: steps.parent-tests.outputs.parent-conclusion == 'failure'
+        run: exit 1
 <npm-cache><node><test-install>      - run: <test>
         if: steps.parent-tests.outputs.reuse != 'true'
 
@@ -118,7 +126,7 @@ jobs:
     # group from skipping this one.
     needs: [docs-check, tests]
     if: always() && github.event_name == 'pull_request'
-    name: ${{ github.event_name == 'pull_request' && 'tests' || 'tests (other event)' }}
+    name: ${{ github.event_name == 'pull_request_target' && 'tests (other event)' || 'tests' }}
     runs-on: <runner>
     steps:
 <group-warning>      - env:
@@ -305,12 +313,12 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
     windows_test = test
     windows = test_runner.startswith("windows-")
     if windows or regular_runner.startswith("windows-"):
-        # Each attempt gets its own PowerShell process, so exit or throw cannot end the retry.
+        # Preserve the configured command's PowerShell exit status without replaying assertions.
         script = ("$ErrorActionPreference = 'Stop'\n& {\n" + test +
                   "\n}\nif (Test-Path variable:LASTEXITCODE) { exit $LASTEXITCODE }")
         attempt = ("& (Get-Process -Id $PID).Path -NoProfile -NonInteractive -Command '" +
                    script.replace("'", "''") + "'")
-        windows_test = f"{attempt}\nif ($LASTEXITCODE -ne 0) {{ {attempt} }}\nexit $LASTEXITCODE"
+        windows_test = f"{attempt}\nexit $LASTEXITCODE"
         test = windows_test if windows else plain_test
     full_node = node.replace("        if: steps.parent-tests.outputs.reuse != 'true'\n", "")
     npm_cache = ("      - uses: actions/cache@v4\n"
@@ -327,8 +335,7 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                      "            ~/AppData/Local/pnpm/store\n"
                      "          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}\n")
     full_npm_cache = npm_cache.replace("        if: steps.parent-tests.outputs.reuse != 'true'\n", "")
-    full_triggers = ("  schedule:\n    - cron: '0 3 * * *'\n"
-                     "  workflow_dispatch:\n" if full_run else "")
+    full_triggers = "  schedule:\n    - cron: '0 3 * * *'\n  workflow_dispatch:\n" if full_run else ""
     full_suite = ("\n  full-suite:\n"
                   "    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'\n"
                   "    name: Full test suite\n"
@@ -402,7 +409,7 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
         full_suite = full_suite.replace("    steps:\n", "    steps:\n      - run: " + json.dumps(
             'echo "::warning::' + full_warning + '"') + "\n", 1)
     template = WORKFLOW
-    if ("{groups}" not in change_command
+    if (("{groups}" not in change_command and not repo.pytest_split(top, change_command))
             or re.search(r"(?:\{group\}|--shard=\d+)/\d+",
                          (cfg.get("fast_test") or "") + "\n" + cfg["test"])):
         # A fixed shard count must keep every shard, even for a small change.
@@ -416,11 +423,13 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
         gate = template.index("  forge-pr-check:\n", end)
         single = ("  tests:\n"
                   "    if: github.event_name == 'pull_request'\n"
-                  "    name: ${{ github.event_name == 'pull_request' && 'tests' || 'tests (other event)' }}\n"
+                  "    name: ${{ github.event_name == 'pull_request_target' && 'tests (other event)' || 'tests' }}\n"
                   + template[runner:end])
         single = single.replace("${{ matrix.group }}", "'1'").replace(
             "${{ needs.docs-check.outputs.one-group == 'true' && '1' || '<groups>' }}", "'1'")
         single = single.replace("    steps:\n", "    steps:\n<group-warning>", 1)
+        for output in ("reuse", "parent-conclusion"):
+            single = single.replace("${{ needs.docs-check.outputs." + output + " }}", "''")
         template = template[:start] + single + template[gate:]
     elif test_runner != regular_runner:
         regular_label, tests_label = ("'" + label.replace("'", "''") + "'" for label in
@@ -473,6 +482,9 @@ def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
                 .replace("<full-install>", "uv tool install ." if source
                          else sync.install_line(cfg["version"]))
                 .replace("<test-install>", test_install)
+                .replace("<select-command>", "uv run --no-project --with " + (
+                    "." if source else sync.install_line(cfg["version"]).removeprefix("uv tool install "))
+                    + " python .forge/review-tests.py || python -I -S .forge/review-tests.py")
                 .replace("<test>", json.dumps(test))
                 .replace("<group-warning>", "      - run: " + json.dumps(
                     'echo "::warning::' + warning + '"') + "\n" if warning else "")
@@ -510,6 +522,7 @@ def pr_check(args: argparse.Namespace) -> int:
         if not task._merged(f"origin/{default}", parent, top):
             repo.refuse(REFUSALS["stacked"], item=item, parent=parent, default=default)
     changed = repo.git("diff", "--name-only", f"{base}...{head}", cwd=top).splitlines()
+    proof_base = base
     if "/" not in item:
         missing = [line for line, key in (("Why:", "why"), ("Done when:", "done_when"))
                    if not str(state.get(key) or "").strip()]
@@ -517,7 +530,7 @@ def pr_check(args: argparse.Namespace) -> int:
             repo.refuse(REFUSALS["fix_line"], branch=branch, line=" or ".join(missing))
         from forge import githooks
 
-        fix_base = githooks.fix_base(top, state, base, head)
+        fix_base = proof_base = githooks.fix_base(top, state, base, head)
         own = repo.git("diff", "--name-only", "--no-renames", fix_base, head, cwd=top).splitlines()
         problem = "" if state.get("allow_large") else promote_problem(
             own, cfg["interfaces"], top, fix_base, head)
@@ -529,6 +542,19 @@ def pr_check(args: argparse.Namespace) -> int:
     if doc_problem:
         repo.refuse(REFUSALS["story_doc"], problem=doc_problem)
     _check_specs(top, head, changed)
+    if repo.test_place(cfg) == "ci":
+        from forge import docskip, proof
+
+        passed, lines = proof.check(top, item, proof_base, "", ran=False, head=head)
+        for line in lines:
+            print(line, flush=True)
+        if not passed:
+            return 1
+        if "tests" in cfg.get("checks", []):
+            head_cfg = repo._config_text(story.show(top, head, "forge.toml") or "")
+            if docskip.only_docs(top, base, review.DOC_EXCLUDES,
+                                 allow_settings=not head_cfg["always_test"], head=head):
+                print(f"Done-when proof: {proof.CI_DOCS_ONLY}", flush=True)
     result = state.get("review")
     if isinstance(result, dict) and isinstance(result.get("findings"), list):
         review.bound_review(top, item, state, result, head)

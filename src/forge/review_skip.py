@@ -18,6 +18,10 @@ REFUSALS = {
                     'the person runs forge close {item} --no-review --by "<name>" --reason "<why>"'),
     "skip_blocked": ("A review already blocked {item}, so the model review cannot be skipped.",
                      "forge work {item}, then forge close {item} the normal way"),
+    "no_stop": ("--resolve needs a review stopped at the round limit or a stuck worker loop; this item has not stopped.",
+                "{next_step}"),
+    "chosen_already": ("The human's choice for this stop is already recorded, so --resolve has nothing to record.",
+                       "{next_step}"),
     "show_none": ("This checkout has no saved review of {item}.", "forge close {item}"),
 }
 

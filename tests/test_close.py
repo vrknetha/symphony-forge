@@ -179,8 +179,14 @@ class Forge:
         # Historical all-attempt reads have independent snapshots, not live polling queues.
         self.gh.respond("api", "--paginate", "--method", "GET", "--raw-field", "filter=all", stdout=lines(runs))
         self.gh.respond("api", "--paginate", "--jq", ".statuses[]", stdout=lines(statuses or []))
+        # Full-run status reads are independent of the pull request's checks.
+        self.gh.respond("api", "--paginate", "--jq", ".[]", stdout="")
+        # Ordinary PR fixtures have no nightly history; gate tests supply it.
+        self.gh.respond("api", "repos/{owner}/{repo}/actions/workflows/forge.yml/runs",
+                        stdout=json.dumps({"workflow_runs": []}))
         # No old queued workflow unless the case supplies one explicitly.
         self.gh.respond("api", "--paginate", "--jq", ".workflow_runs[]", stdout="")
+        self.gh.respond("api", "--jq", ".workflow_runs[]", stdout="")
 
     def open_pr(self, body: str, state: str = "OPEN", draft: bool = False) -> None:
         self.gh.respond("pr", "list", "--head", stdout=json.dumps(
@@ -222,8 +228,22 @@ class Forge:
         where = self.tmp / branch.replace("/", "-")
         self.repo.git("worktree", "add", "-q", "-b", branch, str(where))
         self.commit(where, rel, json.dumps({"branch": branch, "status": "working", **state}), "Start")
+        if "/" in item:
+            key, task = item.split("/", 1)
+            plan = (where / "plans" / f"{key}.md").read_text("utf-8")
+            done = plan.partition("## Done when")[2].partition("\n## ")[0]
+            descriptions = {number: text.strip() for number, text in
+                            re.findall(r"(?m)^\s*(\d+)\.\s*(.+)$", done)}
+            row = next((line for line in plan.splitlines()
+                        if line.startswith("|") and line.split("|")[1].strip() == task), "")
+            covers = row.split("|")[4].strip() if row else "1"
+            numbers = re.findall(r"\d+", covers) or ["1"]
+            proof = "\n".join(f"- {number}: check: {descriptions.get(number, number)}"
+                               for number in numbers)
+        else:
+            proof = f"- Done when: check: {state.get('done_when', 'the fix is done')}"
         for path, text in changes.items():
-            self.commit(where, path, text, "Work")
+            self.commit(where, path, text, f"Work\n\nProof list:\n{proof}")
         return item, where
 
     def start_fix(self, changes: dict[str, str] | None = None, **state: str) -> tuple[str, Path]:
@@ -249,8 +269,12 @@ class Forge:
         started = self.repo.forge("task", "start", f"SHOP/{task}")
         assert started.returncode == 0, started.stderr
         where = Path(started.stdout.splitlines()[0].rsplit(" in ", 1)[1])
+        row = next(line for line in doc.splitlines()
+                   if line.startswith("|") and line.split("|")[1].strip() == task)
+        proof = "\n".join(f"- {number}: check: Covered Done-when {number}"
+                          for number in re.findall(r"\d+", row.split("|")[4]))
         for path, text in (changes or {"app.py": "print('saved')\n", "other.py": "x = 1\n"}).items():
-            self.commit(where, path, text, "Work")
+            self.commit(where, path, text, f"Work\n\nProof list:\n{proof}")
         return f"SHOP/{task}", where
 
     def close(self, item: str, *extra: str):
@@ -357,7 +381,7 @@ def _pending_check(env):
     # An explicit zero wait reports its limit as well as the running check.
     env.checks([run("tests (ubuntu-latest)", None, "in_progress"), run("forge-pr-check")])
     return {"draft": True, "item": env.start_fix()[0],
-            "problem": "The checks are not green yet: GitHub has shown no check progress for 0 minutes: tests is still running.",
+            "problem": "The checks are not green yet: GitHub has shown no check progress for 0 minutes: tests (ubuntu-latest) is still running.",
             "next": "forge close tidy-readme"}
 
 
@@ -420,6 +444,25 @@ def _merge_conflict(env):
     return {"item": item, "clean": where,
             "problem": "Merging main into fix/tidy-readme conflicts in README.md.",
             # The normal worker finishes the merge before it continues the item's work.
+            "next": "forge work tidy-readme to merge the default branch and continue this work, then forge close tidy-readme"}
+
+
+def _antigravity_skills_conflict(env):
+    repo = env.repo
+    manifest = ".agents/skills.json"
+    settings = (repo.path / "forge.toml").read_text("utf-8")
+    env.commit(repo.path, "forge.toml",
+               settings.replace('workers = "claude"', 'workers = "antigravity"'))
+    entries = [{"path": ".codex/skills"}]
+    env.commit(repo.path, manifest, json.dumps({"entries": entries}))
+    task_skills = {"entries": [*entries, {"path": "tools/task-skills"}]}
+    main_skills = {"entries": [*entries, {"path": "tools/main-skills"}]}
+    item, where = env.start_fix({manifest: json.dumps(task_skills)})
+    env.commit(repo.path, manifest, json.dumps(main_skills))
+    repo.git("push", "-q", "origin", "main")
+    return {"item": item, "clean": where,
+            "kept": {(where, manifest): task_skills, (repo.path, manifest): main_skills},
+            "problem": f"Merging main into fix/tidy-readme conflicts in {manifest}.",
             "next": "forge work tidy-readme to merge the default branch and continue this work, then forge close tidy-readme"}
 
 
@@ -486,7 +529,7 @@ GATES = [_review_fails_twice, _review_incomplete_twice, _open_serious_finding, _
          _missing_required_check, _github_api_error,
          pytest.param(_unnamed_check_run, marks=pytest.mark.platform),
          pytest.param(_unnamed_commit_status, marks=pytest.mark.platform), _no_checks_named,
-         _not_started, _merge_conflict, _bad_dismissal, _dismissal_of_replaced_finding,
+         _not_started, _merge_conflict, _antigravity_skills_conflict, _bad_dismissal, _dismissal_of_replaced_finding,
          _dismissal_cites_no_such_line, _dismissal_cites_no_such_file, _helper_not_pinned,
          _task_row_missing]
 
@@ -499,6 +542,8 @@ def test_2_gates_check_outcomes(env, case, request):
     if want.get("draft"):  # a draft left by an earlier blocked review
         env.open_pr("", draft=True)
     done = env.close(want["item"], *want.get("args", []))
+    for (where, path), manifest in want.get("kept", {}).items():
+        assert json.loads(env.repo.git("show", f"HEAD:{path}", cwd=where)) == manifest
     assert done.returncode == 1, done.stdout + done.stderr
     problem, next_line = done.stderr.splitlines()[-2:]
     assert problem == want["problem"]
@@ -524,6 +569,9 @@ def test_2_gates_check_outcomes(env, case, request):
 
 @pytest.mark.parametrize("kind", ["task", "fix"])
 def test_18_close(env, kind):
+    if kind == "fix":
+        config = (env.repo.path / "forge.toml").read_text("utf-8")
+        env.commit(env.repo.path, "forge.toml", "task_review_rounds = 1\n" + config)
     # This existing close flow exercises the configured human merge after client sign-off.
     env.commit(env.repo.path, "docs/decisions/0001-client-signoff.md",
                '---\nstatus: accepted\nconfirmed_by: "A Client"\n---\n')
@@ -572,7 +620,7 @@ def test_18_close(env, kind):
                      "`Not done: The readme opens with a greeting`"):
             assert line in prompt
     assert "## Test audit" in prompt and "`Simpler: <what to cut> → <what replaces it>`" in prompt
-    # The owner accepts a fix at its review limit. Story parts retain one repair round.
+    # The owner accepts a fix at its configured one-round limit.
     if kind == "fix":
         assert "reached the round limit with open findings" in first.stderr
         env.open_pr(body(env.gh_calls("pr", "create")[-1]), draft=True)

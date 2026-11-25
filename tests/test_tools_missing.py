@@ -13,7 +13,7 @@ from test_codex_setup import PIN, UV_STUB, _program
 from test_story import approved_constitution, new_story
 
 STORY = "FORGE-TOOLS-1"
-CLAUDE_PIN = "0.2.161"
+CLAUDE_PIN = "0.2.187"
 
 
 def _hide(repo, names):
@@ -80,9 +80,9 @@ def test_8_missing_tools_stop_plainly_and_doctor_repairs_them(env, tmp_path, mon
         "import sysconfig; print(sysconfig.get_path('purelib'))"],
         capture_output=True, text=True, check=True).stdout.strip())
     (site / "claude_agent_sdk.py").write_text("class ClaudeAgentOptions:\\n    def __init__(self, **kwargs): pass\\nasync def query(): pass\\n", encoding="utf-8")
-    info = site / "claude_agent_sdk-0.2.161.dist-info"
+    info = site / "claude_agent_sdk-0.2.187.dist-info"
     info.mkdir()
-    (info / "METADATA").write_text("Name: claude-agent-sdk\\nVersion: 0.2.161\\n", encoding="utf-8")
+    (info / "METADATA").write_text("Name: claude-agent-sdk\\nVersion: 0.2.187\\n", encoding="utf-8")
 else:
     site ='''
         _install(repo.bin, "uv", uv.replace("else:\n    site =", claude_install))

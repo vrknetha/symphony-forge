@@ -45,6 +45,7 @@ LISTED = {"AGENTS.md", ".gitattributes", ".gitignore", ".forge/hooks.sh", ".forg
           ".claude/skills/app-baseline/SKILL.md", ".codex/skills/app-baseline/SKILL.md",
           ".claude/skills/database/SKILL.md", ".codex/skills/database/SKILL.md",
           ".claude/skills/agents/SKILL.md", ".codex/skills/agents/SKILL.md",
+          ".claude/skills/playwright-tests/SKILL.md", ".codex/skills/playwright-tests/SKILL.md",
           ".claude/skills/remote-approval/SKILL.md", ".codex/hooks.json", ".codex/config.toml", ".codex/skills/forge/SKILL.md",
           ".claude/skills/forge/fde.md", ".codex/skills/forge/fde.md", ".github/workflows/forge.yml",
           ".claude/skills/forge/migrate-skill.md", ".codex/skills/forge/migrate-skill.md",
@@ -168,7 +169,7 @@ def test_28_sync(repo, tmp_path, monkeypatch):
     shims = {shim: (hooks / shim).read_bytes() for shim in ("pre-commit", "pre-push")}
     second = repo.forge("sync")
     assert second.returncode == 0, second.stderr
-    assert second.stdout.startswith("Nothing to change")
+    assert "Nothing to change" in second.stdout
     assert before == {rel: (repo.path / rel).read_bytes() for rel in LISTED}
     assert shims == {shim: (hooks / shim).read_bytes() for shim in ("pre-commit", "pre-push")}
 

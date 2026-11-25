@@ -41,6 +41,9 @@ def test_1_only_the_setting_can_skip_client_tests(env, tmp_path, case, enabled):
     assert started.returncode == 0, started.stdout + started.stderr
     where = Path(re.search(r" in (.+)\n", started.stdout)[1])
     env.commit(where, "app.py", "print('working app')\n", "Keep the app working")
+    if not enabled:
+        repo.git("commit", "--allow-empty", "-q", "-m", "Record the setting proof", "-m",
+                 "Proof list:\n- Done when: check: The app is tidy", cwd=where)
     env.reviews(CLEAN)
     env.open_pr("")
     env.checks(GREEN)

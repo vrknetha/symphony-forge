@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/citime.py\tNot done: Close's CI timing reports retry time only for test jobs or test files that really ran again after a failure\tci-timing-real-retries",
+      "kind": "bug",
+      "path": "src/forge/citime.py",
+      "line": 147,
+      "text": "Not done: Close's CI timing reports retry time only for test jobs or test files that really ran again after a failure",
+      "from": "blocking",
+      "item": "ci-timing-real-retries",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/citime.py\tRetry timing is lost for the default single-job CI workflow\tci-timing-real-retries",
+      "kind": "bug",
+      "path": "src/forge/citime.py",
+      "line": 136,
+      "text": "Retry timing is lost for the default single-job CI workflow",
+      "from": "blocking",
+      "item": "ci-timing-real-retries",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_ci_time_report.py\tGate: per-file retry timing proof\tci-timing-real-retries",
+      "kind": "bug",
+      "path": "tests/test_ci_time_report.py",
+      "line": 167,
+      "text": "Gate: per-file retry timing proof",
+      "from": "blocking",
+      "item": "ci-timing-real-retries",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

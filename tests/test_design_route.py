@@ -68,6 +68,11 @@ def test_3_user_facing_task_uses_design_claude_with_split_workers(repo, monkeypa
                                                      'repo = "forge-source"').replace(
         'workers = "split"', 'workers = "codex"'), encoding="utf-8")
     repo.git("commit", "--allow-empty", "-qam", "Use the source repo", cwd=folder)
+    # Workers come from the default branch unless the task changed them from where it started.
+    main = repo.path / "forge.toml"
+    main.write_text(main.read_text("utf-8").replace('workers = "split"', 'workers = "codex"'), encoding="utf-8")
+    repo.git("commit", "-qam", "Use Codex workers")
+    repo.git("push", "-q", "origin", "main")
     source = repo.forge("work", "BOARD/PAGE")
     assert source.returncode == 0, source.stdout + source.stderr
     assert len(_sent(codex_log, "turn/start")) == 1
@@ -159,7 +164,7 @@ def test_4_missing_or_cleanly_failed_claude_falls_back_to_sol(repo, monkeypatch,
     assert missing.returncode == 0, missing.stdout + missing.stderr
     assert "fell back to Codex" in missing.stdout and "exit code 3" in missing.stdout
     assert _sent(codex_log, "thread/start")[-1]["config"] == {
-        **QUIET, "features.multi_agent": True, "model": "gpt-6.1-sol", "model_reasoning_effort": "high"}
+        **QUIET, "features.multi_agent": True, "model": "gpt-6.2-sol", "model_reasoning_effort": "high"}
     install_claude(repo)
     assert len(calls(claude_log)) == 2
     # The round started on Claude after a round that ended on Codex, so its fallback starts a new

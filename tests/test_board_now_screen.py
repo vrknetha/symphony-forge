@@ -8,8 +8,11 @@ import json
 import subprocess
 from datetime import datetime, timedelta, timezone
 
+import pytest
+
 import board_fixture
 from conftest import REAL_UV, Repo
+from test_board import DOC
 from test_board_server import client, clone, fix, live, pushed, snapshot  # noqa: F401
 
 STORY = "FORGE-BOARD-4"
@@ -23,6 +26,7 @@ STAGE = {"unstarted": "Planned", "started": "Planned", "Not started": "Planned",
 
 BROWSER = r"""
 import json, re, sys
+from datetime import datetime
 from axe_playwright_python.sync_playwright import Axe
 from playwright.sync_api import expect, sync_playwright
 url, mode, expected = sys.argv[1], sys.argv[2], json.loads(sys.argv[3])
@@ -71,6 +75,8 @@ SPILLS = '''() => [...document.querySelectorAll('main button')].flatMap(card => 
 })'''
 
 def opened(page, url, scheme):
+    if 'now' in expected:
+        page.clock.set_fixed_time(datetime.fromisoformat(expected['now']))
     page.goto(url)
     expect(page.get_by_role('status')).to_have_text('Live', timeout=60000)
     expect(page.get_by_role('region', name='In flight')).to_be_visible()
@@ -120,7 +126,7 @@ with sync_playwright() as p:
             text = page.locator('body').inner_text()
             # The board's own words carry no command text, and an unknown fact says unknown.
             assert not re.search(r'\bforge [a-z]|--[a-z]|`', text), text  # a command, never the Forge name
-            assert 'unknown median item' in ' '.join(page.get_by_role('region', name='Figures').inner_text().split())
+            assert 'No measured merges today (UTC)' in ' '.join(page.get_by_role('region', name='Figures').inner_text().split())
             for name, count in expected['stages'].items():
                 region = page.get_by_role('region', name=name, exact=True)
                 if count > 4:
@@ -156,9 +162,18 @@ with sync_playwright() as p:
             page.get_by_role('button', name='Fixes', exact=True).click()
             expect(flight).to_contain_text('Readers see theirs')
             page.get_by_role('button', name='Me', exact=True).click()
+            expect(figures).to_contain_text('Median start to merge today (UTC): 1h0m')
             expect(page.get_by_role('region', name='Needs you')).to_contain_text('@asha')
             expect(flight).to_contain_text('Readers see mine')
             expect(flight).not_to_contain_text('Readers see theirs')
+            page.get_by_role('button', name='Story parts', exact=True).click()
+            expect(figures).to_contain_text('Median start to merge today (UTC): 4h0m')
+            page.get_by_role('button', name='All', exact=True).click()
+            expect(figures).to_contain_text('Median start to merge today (UTC): 2h30m')
+            page.get_by_role('button', name='Team', exact=True).click()
+            expect(figures).to_contain_text('Median start to merge today (UTC): 3h0m')
+            page.get_by_role('button', name='Fixes', exact=True).click()
+            expect(figures).to_contain_text('Median start to merge today (UTC): 2h0m')
             accessible(page)
     finally:
         browser.close()
@@ -172,18 +187,24 @@ def look(url, mode, expected):
     assert shown.returncode == 0, shown.stdout + shown.stderr
 
 
-def test_12_the_first_screen_fits_a_laptop_window_and_keeps_every_item_reachable(repo, gh, tmp_path):
+@pytest.mark.parametrize("now", ["2026-11-19T19:00:00+00:00", "2026-11-20T09:59:59+00:00"])
+def test_12_the_first_screen_fits_a_laptop_window_and_keeps_every_item_reachable(repo, gh, tmp_path, monkeypatch, now):
     """The client-sized repo includes a real decision wait and an assigned story with a long key.
-    Its owner and part progress must fit beside the stages, with every overflow item reachable."""
+    Its owner and part progress must fit beside the stages, with every overflow item reachable.
+    One clock covers the late-day daily-figure regression and the seven-day cutoff just before
+    10:00 UTC. Server and browser dates stay fixed while real process deadlines still run."""
+    now = datetime.fromisoformat(now)
+    for name in ("FORGE_NOW", "GIT_AUTHOR_DATE", "GIT_COMMITTER_DATE"):
+        monkeypatch.setenv(name, now.isoformat())
     (tmp_path / "shop").mkdir()
-    shop = Repo(board_fixture.build(tmp_path / "shop", repo.forge("--version").stdout.split()[-1]), repo.bin)
+    shop = Repo(board_fixture.build(tmp_path / "shop", repo.forge("--version").stdout.split()[-1], now=now), repo.bin)
     long = "SHOP-DELIVERY-SLOTS-12"
     plan = shop.path.joinpath("plans/SHOP-1.md").read_text(encoding="utf-8").replace("shop-1", long.lower())
     shop.write(f"plans/{long}.md", plan.replace("Shoppers can save a basket", "Couriers book slots", 1)
                + "\nOwner: asha\n")
     shop.write(f".factory/stories/{long}/story.json", json.dumps({
         "doc": f"plans/{long}.md", "title": "Couriers book slots", "status": "approved",
-        "approval": {"at": datetime.now(timezone.utc).isoformat()}}))
+        "approval": {"at": now.isoformat()}}))
     roadmap = json.loads(shop.path.joinpath("plans/roadmap.json").read_text(encoding="utf-8"))
     roadmap["items"].insert(0, {"key": long, "title": "Couriers book slots"})  # first in Planned
     shop.write("plans/roadmap.json", json.dumps(roadmap, indent=2))
@@ -193,7 +214,7 @@ def test_12_the_first_screen_fits_a_laptop_window_and_keeps_every_item_reachable
     shop.git("switch", "-q", "fix/open-1")
     stopped = json.loads(shop.path.joinpath(".factory/fixes/open-1.json").read_text(encoding="utf-8"))
     stopped["why"] = "Basket totals"
-    stopped["stop"] = {"question": "Which total does the basket need?", "at": datetime.now(timezone.utc).isoformat()}
+    stopped["stop"] = {"question": "Which total does the basket need?", "at": now.isoformat()}
     shop.write(".factory/fixes/open-1.json", json.dumps(stopped))
     shop.git("add", "-A")
     shop.git("commit", "-qm", "Ask which basket total to show")
@@ -212,14 +233,14 @@ def test_12_the_first_screen_fits_a_laptop_window_and_keeps_every_item_reachable
         assert len(stages["Planned"]) > 6 and len(stages["Building"]) > 6, stages
         stories = [plan for plan in board["dependency_maps"] if plan["id"] != "fixes"
                    and plan["stage"] not in ("done", "needs a spec")]
-        look(url, "client", {"stages": {name: len(found) for name, found in stages.items()},
+        look(url, "client", {"now": now.isoformat(), "stages": {name: len(found) for name, found in stages.items()},
                              "last_building": stages["Building"][-1]["id"], "stories": len(stories)})
 
 
 def merged_fixes(repo, tmp_path, times):
-    """Fixes merged an hour ago, each (hours long, seconds of it waiting for a person), written as a
+    """Fixes merged today, each (hours long, seconds of it waiting for a person), written as a
     merged fix's record on the default branch and the events Forge logs while it waits and finishes."""
-    end = datetime.now(timezone.utc).replace(microsecond=0) - timedelta(hours=1)
+    end = datetime.now(timezone.utc).replace(microsecond=0)
     events, records = [], {}
     for n, (took, waited) in enumerate(times, 1):
         records[f".factory/fixes/done-{n}.json"] = json.dumps({
@@ -230,17 +251,30 @@ def merged_fixes(repo, tmp_path, times):
                    {"id": f"waited-{n}", "item": f"done-{n}", "event": "owner wait end", "wait_id": f"wait-{n}",
                     "at": end.isoformat()},
                    {"id": f"end-{n}", "item": f"done-{n}", "event": "item finished", "at": end.isoformat()}]
-    pushed(clone(repo, tmp_path), "Merge three fixes", records)
+    records.update({"plans/SHOP.md": DOC.replace("## Tasks\n", "## Tasks\n\nOwner: asha\n", 1),
+                    ".factory/stories/SHOP/story.json": json.dumps({"title": "Shoppers can save a basket", "status": "approved"}),
+                    ".factory/stories/SHOP/tasks/SAVE.json": json.dumps({"branch": "task/SHOP-SAVE", "status": "merged",
+                        "finished": end.isoformat(), "steps": [{"step": "start", "at": (end - timedelta(hours=4)).isoformat()}]})})
+    events += [{"item": "SHOP/SAVE", "event": "owner wait start", "id": "part-wait", "at": end.isoformat()},
+               {"item": "SHOP/SAVE", "event": "owner wait end", "wait_id": "part-wait", "at": end.isoformat()},
+               {"item": "SHOP/SAVE", "event": "item finished", "at": end.isoformat()}]
+    pushed(clone(repo, tmp_path), "Merge three fixes and a story part", records)
     repo.git("fetch", "-q", "origin")
     with (repo.path / ".git/forge/events.jsonl").open("a", encoding="utf-8") as log:
         log.writelines(json.dumps(event) + "\n" for event in events)
+    return end
 
 
 def test_13_the_figures_and_the_me_view_follow_forges_records(client, gh, tmp_path):
-    """Three fixes merged this week took 1, 2 and 9 hours and waited 10, 30 and 60 minutes for a person:
-    a median of 2 h and 6000 of 43200 seconds waiting. One open fix's checks fail. The viewer, asha,
-    opened one of the two open fixes, so Me shows only that one."""
-    merged_fixes(client, tmp_path, [(1, 600), (2, 1800), (9, 3600)])
+    """Today's fixes took 1, 2 and 9 hours and a story part took 4 hours. Asha owns the
+    one-hour fix and the part. Team, Me and kind filters must select their own median.
+    The 6000 seconds of person wait cover 57600 seconds. Existing tests checked only
+    the unfiltered figure, so a global median could hide inside Me. No new seam is needed."""
+    end = merged_fixes(client, tmp_path, [(1, 600), (2, 1800), (9, 3600)])
+    gh.respond("pr", "list", "--state", "merged", stdout=json.dumps([
+        {"number": n, "state": "MERGED", "headRefName": f"fix/done-{n}", "mergedAt": end.isoformat(),
+         "title": f"Readers see total {n}", "author": {"login": "asha" if n == 1 else "ben"},
+         "body": "", "files": []} for n in range(1, 4)]))
     fix(client, "mine")
     fix(client, "theirs")
 
@@ -256,10 +290,10 @@ def test_13_the_figures_and_the_me_view_follow_forges_records(client, gh, tmp_pa
         opened("mine", "asha", "SUCCESS"), opened("theirs", "ben", "FAILURE")]}}}}))
     gh.respond("api", "user", stdout="asha\n")
     with live(client) as url:
-        # The earlier-adopted repo also merged its upgrade fix this week, with no recorded time.
         board = snapshot(url)
         merged = sum(board["team"]["counts"]["finished_last_7_days"].values())
         timed = [row["id"] for row in board["items"] if row["stage"] == "merged" and row["total_seconds"] is not None]
-        assert merged >= 3 and sorted(timed) == ["done-1", "done-2", "done-3"], (merged, timed)
-        look(url, "figures", {"figures": [f"{merged} merged, 7 days", "2 h median item", "13.9% waiting on people",
+        assert merged >= 4 and sorted(timed) == ["done-1", "done-2", "done-3"], (merged, timed)
+        # The median now covers today's merges in UTC, rather than the last seven days.
+        look(url, "figures", {"figures": [f"{merged} merged, 7 days", "Median start to merge today (UTC): 3h0m", "10.4% waiting on people",
                                           "1 red checks"]})

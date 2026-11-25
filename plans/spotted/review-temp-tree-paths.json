@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/autoreview.py\tNot done: A review finding that cites a file through Forge's temporary review tree path is matched to the same repo file and kept\treview-temp-tree-paths",
+      "kind": "bug",
+      "path": "src/forge/autoreview.py",
+      "line": 207,
+      "text": "Not done: A review finding that cites a file through Forge's temporary review tree path is matched to the same repo file and kept",
+      "from": "blocking",
+      "item": "review-temp-tree-paths",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/review_process.py\tNot done: A review finding that cites a file through Forge's temporary review tree path is matched to the same repo file and kept\treview-temp-tree-paths",
+      "kind": "bug",
+      "path": "src/forge/review_process.py",
+      "line": 70,
+      "text": "Not done: A review finding that cites a file through Forge's temporary review tree path is matched to the same repo file and kept",
+      "from": "blocking",
+      "item": "review-temp-tree-paths",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

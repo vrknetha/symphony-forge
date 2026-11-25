@@ -13,7 +13,7 @@ from forge import checks, repo
 
 CHECKS = """checkSuites(first:20) { nodes { workflowRun { databaseId }
     checkRuns(first:100, filterBy: { checkType: ALL }) { nodes {
-      name status conclusion startedAt completedAt
+      name status conclusion startedAt completedAt detailsUrl
     } pageInfo { hasNextPage } }
   } pageInfo { hasNextPage } }"""
 COMMIT_CHECKS = "commits(last:100) { nodes { commit { oid " + CHECKS + " } } pageInfo { hasPreviousPage } }"
@@ -82,8 +82,20 @@ def _measure(top: Path, pr: dict[str, Any], current: bool = False) -> dict[str, 
             continue  # A multi-commit push starts checks only on its head commit.
         limit = (checks.timeout_limit(top, node["commit"].get("oid", ""))
                  if any(str(run.get("conclusion")).lower() == "cancelled" for run in runs) else None)
-        runs = [dict(run, conclusion="TIMED_OUT") if str(run.get("conclusion")).lower() == "cancelled" else run
-                for run in runs if _eligible(run, limit)]
+        measured = []
+        for run in runs:
+            if str(run.get("conclusion")).lower() == "cancelled":
+                try:
+                    job = checks._action_job(top, "CI timing", run)
+                except repo.Refused:
+                    job = None
+                if job is None:
+                    continue  # Missing Actions evidence must not turn queue time into a timeout.
+                run = {**run, **job}
+            if _eligible(run, limit):
+                measured.append(dict(run, conclusion="TIMED_OUT")
+                                if str(run.get("conclusion")).lower() == "cancelled" else run)
+        runs = measured
         heads += 1
         ended = [run for run in runs if str(run.get("status")).lower() == "completed"]
         try:
@@ -117,15 +129,25 @@ def _job_name(run: dict[str, Any]) -> str:
 def _stages(jobs: list[dict[str, Any]]) -> str:
     totals: dict[str, float] = {name: 0 for name in ("queue", "setup", "selection", "tests", "retries")}
     reported = set()
+    seen = set()
     try:
         latest = {}
         for job in jobs:
-            latest[job["name"]] = max(latest.get(job["name"], 1), job.get("run_attempt", 1))
+            if ((job["name"] == "tests" or re.fullmatch(r"test group \d+ of \d+", job["name"]))
+                    and any(step.get("started_at") and step.get("completed_at") for step in job.get("steps", []))):
+                latest[job["name"]] = max(latest.get(job["name"], 1), job.get("run_attempt", 1))
         for job in jobs:
+            if job.get("id") is not None:
+                identity = (job.get("run_id"), job["id"])
+                if identity in seen:
+                    continue
+                seen.add(identity)
             if job.get("created_at") and job.get("started_at"):
                 totals["queue"] += _seconds(job["created_at"], job["started_at"])
                 reported.add("queue")
-            if job.get("run_attempt", 1) < latest[job["name"]] and job.get("completed_at"):
+            if (job.get("run_attempt", 1) < latest.get(job["name"], 1)
+                    and job.get("conclusion") in ("failure", "timed_out") and job.get("completed_at")
+                    and any(step.get("started_at") and step.get("completed_at") for step in job.get("steps", []))):
                 totals["retries"] += _seconds(job["started_at"], job["completed_at"])
                 reported.add("retries")
                 continue
@@ -133,8 +155,7 @@ def _stages(jobs: list[dict[str, Any]]) -> str:
                 if not step.get("started_at") or not step.get("completed_at"):
                     continue
                 name = step["name"].lower()
-                stage = ("retries" if re.search(r"retr(y|ies)|rerun", name) else
-                         "selection" if "review-tests.py" in name or "select" in name or "pick" in name else
+                stage = ("selection" if "review-tests.py" in name or "select" in name or "pick" in name else
                          "tests" if "test" in name else "setup")
                 totals[stage] += _seconds(step["started_at"], step["completed_at"])
                 reported.add(stage)

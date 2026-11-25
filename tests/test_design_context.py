@@ -63,10 +63,12 @@ def prepare(env, monkeypatch, sdk_data, family, *, adopted=False, starter=False,
     return log
 
 
-def context(prompt, folder):
-    for text in ("## Design context", folder, SCREENS.strip(), DESIGN.strip(), PRODUCT.strip(),
+def context(prompt, folder, *, inline=True):
+    for text in ("## Design context", folder, "DESIGN.md", "PRODUCT.md",
                  "### test-audit", "observable behavior", "credible regression"):
         assert text in prompt, text
+    for text in (DESIGN.strip(), PRODUCT.strip(), SCREENS.strip()):
+        assert (text in prompt) == inline
     assert f"{folder}SCREENS.md" in prompt
 
 
@@ -113,13 +115,14 @@ def run_design_flow(env, monkeypatch, sdk_data, family, adopted, starter, none):
     monkeypatch.delenv("CLAUDECODE", raising=False)
     monkeypatch.setenv("CLAUDECODE" if family == "codex" else "CODEX_THREAD_ID", "1")
     claude_log = install_claude(repo)
-    for _ in range(2):
+    for round_index in range(2):
         built = repo.forge("work", item)
         assert built.returncode == 0, built.stdout + built.stderr
         prompt = (_sent(codex_log, "turn/start")[-1]["input"][0]["text"] if family == "codex"
                   else calls(claude_log)[-1]["brief"])
         briefs.append(prompt)
-        context(prompt, folder)
+        # The first backend brief now names the files. Review and continued context stay inline.
+        context(prompt, folder, inline=not none or round_index > 0)
         assert f"{folder}{'canvas' if none else 'screen'}.svg" in prompt
         if not none:
             # Both briefs now scope fields to Build now / named Done-when screens.

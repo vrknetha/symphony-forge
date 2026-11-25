@@ -24,9 +24,7 @@ from types import SimpleNamespace
 import pytest
 
 from conftest import Repo
-from test_close import env  # noqa: F401
 from test_githooks import hooked
-from test_merge_command import _merge_at_github
 from test_proto_signoff import SOL_HIGH, _client, _decision
 from test_setup import _fresh_client
 from test_testplace_upgrade import prepare_adopted_client
@@ -51,8 +49,11 @@ def _status_post_endpoint(sha: str) -> str:
 
 
 def _set_status(gh, sha: str, state: str | None) -> None:
-    statuses = [] if state is None else [{"context": "forge-full-suite", "state": state}]
+    statuses = [] if state is None else [{"context": "forge-full-suite", "state": state,
+                                         "created_at": "2026-11-18T10:00:00Z"}]
     gh.respond("api", _status_endpoint(sha), stdout=json.dumps(statuses))
+    gh.respond("api", "--paginate", "--jq", ".[]", _status_endpoint(sha) + "?per_page=100",
+               stdout=json.dumps(statuses))
 
 
 def _status_posts(gh) -> list[list[str]]:
@@ -442,10 +443,16 @@ def test_4_failed_full_run_opens_a_fix(repo, gh, tmp_path, monkeypatch):
 
 
 @pytest.mark.platform
-def test_5_release_and_signoff_wait_for_a_green_full_run(repo, gh, tmp_path, monkeypatch, env):
+def test_5_release_and_signoff_wait_for_a_green_full_run(repo, gh, tmp_path, monkeypatch):
     monkeypatch.delenv("PYTEST_ADDOPTS", raising=False)
-    # Each flow owns its repository; GitHub alone supplies the external status and merge result.
+    # Full-suite statuses still gate releases and sign-off. Task merges now use the
+    # nightly result; test_nightly_result_controls_merges.py owns that separate rule.
+    # Each flow owns its repository; GitHub alone supplies the external status.
     tagged_repo = _adopted_repo(repo, tmp_path / "release-client")
+    # Forge's own repo needs the release's notes file before a tag can be pushed.
+    tagged_repo.write("src/forge/release-notes/v1.0.0.md", "# Forge v1.0.0\n")
+    tagged_repo.git("add", "-A")
+    tagged_repo.git("commit", "-q", "-m", "Add the release notes")
     hooked(tagged_repo)
     main = tagged_repo.git("rev-parse", "origin/main")
     older = tagged_repo.git("rev-parse", f"{main}^")
@@ -515,23 +522,3 @@ def test_5_release_and_signoff_wait_for_a_green_full_run(repo, gh, tmp_path, mon
     assert refused.returncode != 0
     assert "has no green full test run" in refused.stderr
     assert "forge test --full" in refused.stderr
-
-    settings = (repo.path / "forge.toml").read_text("utf-8")
-    settings = settings.replace('checks = ["tests", "forge-pr-check"]', "checks = []")
-    repo.write("forge.toml", settings + '\ntest_place = "local"\nmerge = "agent"\n')
-    _commit(repo, "Use local change tests", "forge.toml")
-    item, _ = env.start_fix()
-    env.open_pr("")
-    closed = env.close(item)
-    assert closed.returncode == 0, closed.stdout + closed.stderr
-    _set_status(gh, repo.git("rev-parse", "origin/main"), "failure")
-    gh.respond("pr", "view", stdout=json.dumps({
-        "number": 7, "state": "OPEN", "baseRefName": "main", "headRefName": "fix/tidy-readme",
-        "headRefOid": repo.git("rev-parse", "fix/tidy-readme"), "title": "Tidy readme",
-        "isDraft": False, "body": ""}))
-    _merge_at_github(env)
-    before = len(status_reads())
-    merged = repo.forge("merge", item)
-    assert merged.returncode == 0, merged.stdout + merged.stderr
-    assert env.gh_calls("pr", "merge")
-    assert len(status_reads()) == before

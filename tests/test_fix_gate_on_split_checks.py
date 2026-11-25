@@ -38,9 +38,11 @@ def gate_passes(gate, result):
 
 def check_gate(workflow):
     gate = jobs(workflow)["tests-passed"]
-    assert "&& 'tests' || 'tests (other event)'" in gate
+    # Only pull requests use this required check; merges no longer start tests.
+    # Its executable group-result contract below stays the same.
+    assert "'pull_request_target' && 'tests (other event)' || 'tests'" in gate
     assert "needs: [docs-check, tests]" in gate
-    assert "if: always() && github.event_name == 'pull_request'" in gate
+    assert "if: always() && github.event_name == 'pull_request'\n" in gate
     assert gate_passes(gate, "success")
     for result in ("failure", "cancelled", "skipped"):
         assert not gate_passes(gate, result)
@@ -133,6 +135,8 @@ def test_2_small_split_suite_passes_without_hiding_errors(repo):
     workflow = (repo.path / ".github/workflows/forge.yml").read_text(encoding="utf-8")
     command = json.loads(re.findall(r"^      - run: (.+)$", jobs(workflow)["tests"], re.M)[-1])
     assert command == "forge test --change"
+    # These synthetic CI commits test group outcomes, not local commit admission.
+    repo.git("config", "core.hooksPath", str(repo.path.parent / "fixture-hooks"))
     # Actions checks out the tested commit detached, without a local Forge item.
     repo.git("checkout", "-q", "--detach", "HEAD")
 
@@ -147,10 +151,16 @@ def test_2_small_split_suite_passes_without_hiding_errors(repo):
         if group == 6:
             assert "This group got no tests to run." in result.stdout
     repo.write("tests/test_small.py", "def test_small():\n    assert False\n")
+    repo.git("add", "tests/test_small.py")
+    repo.git("commit", "-qm", "Fail the selected test group")
     assert run(1).returncode != 0
     repo.write("tests/test_small.py", "raise RuntimeError('collection failed')\n")
+    repo.git("add", "tests/test_small.py")
+    repo.git("commit", "-qm", "Break test collection")
     assert run(6).returncode != 0
     repo.write("tests/test_small.py", "# The changed group now has no tests to run.\n")
+    repo.git("add", "tests/test_small.py")
+    repo.git("commit", "-qm", "Empty the selected test group")
     empty = run(6)
     assert empty.returncode == 0, empty.stdout + empty.stderr
     assert "This group got no tests to run." in empty.stdout

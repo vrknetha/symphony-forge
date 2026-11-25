@@ -9,8 +9,8 @@ from test_setup import _fresh_client
 from test_worker import calls, install_claude
 
 STORY = "FIX-REVIEWS-FIND-MISSING-CASES-TWO-OR-THREE"
-WORKER_RULE = "each Done-when item you cover and every detail next to the test or check that proves it, or marked `missing`"
-NAMES_RULE = "Name each test by its pytest node ID or file and write no test results"
+WORKER_RULE = "each covered item has a numbered line"
+NAMES_RULE = "Write no test results: close refuses an item with no test, a named test that is not on the branch, and a named pytest test that did not run, failed or was skipped"
 REVIEW_RULE = "Check every entry against the code and its named proof, including every Done-when detail"
 
 

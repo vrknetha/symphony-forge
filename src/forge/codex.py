@@ -22,7 +22,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from forge import machine, repo, sync
+from forge import machine, repo, routing, sync
 
 if os.name == "nt":
     import msvcrt
@@ -31,7 +31,7 @@ else:
 
 # The one SDK version Forge drives. Moving it is a deliberate change that reruns the contract and
 # smoke tests.
-SDK_PIN = "0.159.2"
+SDK_PIN = "0.171.0"
 # Written last by the install, so a half-finished install never looks ready.
 READY = "forge-sdk-ready"
 # Loads the SDK and makes its client, which starts no server, to see it has the approval handler
@@ -565,7 +565,7 @@ def run(checkout: Path, item: str, kind: str, name: str, prompt: str, sandbox: s
         require_trust(checkout)
     root = Path(repo.git("rev-parse", "--path-format=absolute", "--git-common-dir",
                          cwd=checkout)).resolve().parent
-    config = repo.config(checkout)
+    config = routing.routed(checkout, repo.config(checkout))
     chosen = (repo.design_models(config, "codex") if design else None)
     request = {"cwd": str(checkout), "root": str(root), "name": name, "prompt": prompt, "sandbox": sandbox,
                "config": ({} if archive_thread or attach_request else
@@ -589,7 +589,7 @@ def run(checkout: Path, item: str, kind: str, name: str, prompt: str, sandbox: s
     request["config"].update(QUIET)
     log = repo.work_log(checkout, item)
     record, turns = (_item_file(checkout, item, suffix, kind) for suffix in (".json", ".log"))
-    command = "read" if kind == "Grill" else "work"
+    command = {"Grill": "read", "Ask": "ask"}.get(kind, "work")
     started: dict[str, Any] = {}
     continued: dict[str, Any] = {}
     result: dict[str, Any] = {"conversation": None, "turn": None, "status": None, "text": None,
@@ -825,7 +825,7 @@ def _item_file(checkout: Path, item: str, suffix: str, kind: str) -> Path:
     worktree shares: threads/task/<STORY>/<TASK>, threads/fix/<name>, threads/read/<item>."""
     # A cold read's item is its story key or spec slug, so reads get their own folder: a spec and
     # a fix of one name never share a conversation.
-    folder = ("read" if kind == "Grill" else "task" if "/" in item else "fix")
+    folder = {"Grill": "read", "Ask": "ask"}.get(kind) or ("task" if "/" in item else "fix")
     path = repo.forge_dir(checkout) / "threads" / folder / f"{item}{suffix}"
     path.parent.mkdir(parents=True, exist_ok=True)
     return path

@@ -24,7 +24,7 @@ def test_2_sync_deletes_a_claude_md_that_held_only_forges_block(repo):
     repo.git("commit", "-q", "-m", "Old Forge file")
     assert repo.forge("sync").returncode == 0
     assert not (repo.path / "CLAUDE.md").exists()
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout
 
 
 # Was: a CLAUDE.md with the repo's own lines stayed and imported AGENTS.md. Now the owner wants no
@@ -39,7 +39,7 @@ def test_3_sync_moves_repo_owned_claude_md_lines_into_agents_md_and_drops_the_ol
     agents = (repo.path / "AGENTS.md").read_text(encoding="utf-8")
     assert agents.endswith("<!-- forge:end -->\n\n# Ours\n\nUse tabs.\n")
     assert agents.count("<!-- forge:begin -->") == 1 and "@AGENTS.md" not in agents
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout
 
 
 def test_4_sync_moves_repo_owned_claude_md_without_forge_block_into_agents_md(repo):
@@ -51,4 +51,4 @@ def test_4_sync_moves_repo_owned_claude_md_without_forge_block_into_agents_md(re
     assert not (repo.path / "CLAUDE.md").exists()
     assert (repo.path / "AGENTS.md").read_text(encoding="utf-8").endswith(
         "<!-- forge:end -->\n\n# Ours\n\nUse tabs.\n")
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout

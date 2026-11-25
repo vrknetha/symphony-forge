@@ -361,12 +361,15 @@ def test_5_one_short_instruction_moves_an_idea_and_leaves_one_item(intake, move,
         dropped = repo.forge("story", "drop", "WELCOME", "--because", "Just fix it", cwd=top)
         assert dropped.returncode == 0, dropped.stdout + dropped.stderr
         assert repo.git("show", "origin/story/WELCOME:plans/WELCOME.md", cwd=top)
-        # Promotion has already started SPEC while the story still plans.
-        # Dropping it must refuse even though no approval exists yet.
-        refused = repo.forge("story", "drop", "WELCOME-MOBILE", "--because", "Just fix it", cwd=top)
-        assert refused.returncode == 1
-        assert refused.stderr == ("WELCOME-MOBILE has started parts, so it cannot be dropped.\n"
-                                  "Next: forge close WELCOME-MOBILE/SPEC\n")
+        # Promotion has already started SPEC, still unmerged: dropping the story parks it.
+        rows = json.loads(database.read_text("utf-8"))
+        rows.append({"number": 8, "headRefName": "task/WELCOME-MOBILE-SPEC", "state": "OPEN",
+                     "title": "Part", "body": "", "isDraft": False, "baseRefName": "main",
+                     "url": "https://github.com/acme/shop/pull/8"})
+        database.write_text(json.dumps(rows), "utf-8")
+        parked = repo.forge("story", "drop", "WELCOME-MOBILE", "--because", "Just fix it", cwd=top)
+        assert parked.returncode == 0, parked.stdout + parked.stderr
+        assert next(row for row in json.loads(database.read_text("utf-8")) if row["number"] == 8)["state"] == "CLOSED"
     elif move == "fix":
         if age == "new":
             for key, because, problem in (

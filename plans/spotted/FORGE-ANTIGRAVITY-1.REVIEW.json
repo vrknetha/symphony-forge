@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tFilter design context before sending the review prompt\tFORGE-ANTIGRAVITY-1/REVIEW",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 201,
+      "text": "Filter design context before sending the review prompt",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/REVIEW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tResolve review executables outside the reviewed checkout\tFORGE-ANTIGRAVITY-1/REVIEW",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 197,
+      "text": "Resolve review executables outside the reviewed checkout",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/REVIEW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/brief.md\tAllow the documented effort-only review configuration\tFORGE-ANTIGRAVITY-1/REVIEW",
+      "kind": "bug",
+      "path": "src/forge/templates/brief.md",
+      "line": 147,
+      "text": "Allow the documented effort-only review configuration",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/REVIEW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_antigravity_review.py\tGate: Test Antigravity findings with absolute paths\tFORGE-ANTIGRAVITY-1/REVIEW",
+      "kind": "bug",
+      "path": "tests/test_antigravity_review.py",
+      "line": 235,
+      "text": "Gate: Test Antigravity findings with absolute paths",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/REVIEW",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

@@ -43,6 +43,8 @@ def test_13_close_tests_after_worker_exit_show_tests_running(
     worked = repo.forge("work", item)
     assert worked.returncode == 0, worked.stdout + worked.stderr
     assert json.loads((folder / f".factory/fixes/{item}.json").read_text("utf-8"))["status"] == "working"
+    repo.git("commit", "--allow-empty", "-q", "-m", "Record the activity fixture proof", "-m",
+             "Proof list:\n- Done when: check: Readers see test activity", cwd=folder)
     processes = []
     try:
         closing, output = start(repo.path, tmp_path / "closing", repo, "close", item)

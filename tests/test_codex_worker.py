@@ -17,14 +17,14 @@ from pathlib import Path
 
 import pytest
 
-from conftest import REAL_UV, _cached_sdk, _claude_sdk_env, _install, _install_claude_sdk, patient
+from conftest import _install, _install_claude_sdk, patient, sdk_data  # noqa: F401
 from test_task import story
 from test_worker import calls as claude_calls, install_claude
 
 pytestmark = pytest.mark.platform
 
 STORY = "FORGE-WARM-1"
-PIN = "0.159.2"
+PIN = "0.171.0"
 ROOT = Path(__file__).resolve().parents[1]
 NOW = "2026-09-26T10:00:00+00:00"
 ACCEPT = {"decision": "accept"}
@@ -42,16 +42,6 @@ BUILD = {**QUIET, "features.multi_agent": True, "model": "gpt-6-sol", "model_rea
 MODELS_REFUSAL = ("forge.toml's [models] table is not usable: {}.\n"
                   "Next: ask your agent to fix forge.toml's [models] table\n")
 
-# The SDK finds its Codex program through the codex_cli_bin package, which the test environment
-# replaces with this: the program is whatever CODEX_BIN names, here the stub app-server.
-PROGRAM = """import os
-from pathlib import Path
-
-
-def bundled_codex_path():
-    return Path(os.environ["CODEX_BIN"])
-"""
-
 # A later SDK that keeps its approval handler under another name. On PYTHONPATH, every Python
 # loads it; only the SDK's has openai_codex.
 MOVED = """try:
@@ -67,40 +57,6 @@ else:
 
     client.CodexClient.__init__ = moved
 """
-
-
-@pytest.fixture(scope="session")
-def sdk_data(pytestconfig: pytest.Config) -> Path:
-    """An XDG_DATA_HOME holding Forge's SDK environment: the pinned SDK and the libraries its
-    METADATA requires, but not its Codex program. Built once, then kept in pytest's cache."""
-    uv = REAL_UV
-    if uv is None:
-        pytest.skip("uv is missing, so the Codex SDK test environment can't be built")
-    data = pytestconfig.cache.mkdir(f"codex-sdk-{PIN}")
-    # Forge checks both SDKs under one XDG_DATA_HOME, and many tests point it here directly.
-    _claude_sdk_env(data)
-    env = data / "forge" / "codex-sdk" / f"openai-codex-{PIN}"
-    with _cached_sdk(env, PIN) as build:
-        if build is None:
-            return data
-        python = build / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
-        # The cache outlives repo fixtures and their private uv Python install homes.
-        subprocess.run([uv, "venv", "-q", "--python", sys.executable, str(build)], check=True)
-        subprocess.run([uv, "pip", "install", "-q", "--python", str(python), "--no-deps",
-                        f"openai-codex=={PIN}"], check=True)
-        site = Path(subprocess.run([python, "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
-                                   capture_output=True, text=True, check=True).stdout.strip())
-        metadata = (next(site.glob("openai_codex-*.dist-info")) / "METADATA").read_text(encoding="utf-8")
-        needs = [line.split(":", 1)[1].strip() for line in metadata.splitlines()
-                 if line.startswith("Requires-Dist:") and "openai-codex-cli-bin" not in line]
-        subprocess.run([uv, "pip", "install", "-q", "--python", str(python), *needs], check=True)
-        (site / "codex_cli_bin.py").write_text(PROGRAM, encoding="utf-8")
-        info = site / f"openai_codex_cli_bin-{PIN}.dist-info"
-        info.mkdir()
-        (info / "METADATA").write_text(f"Name: openai-codex-cli-bin\nVersion: {PIN}\n", encoding="utf-8")
-    return data
-
-
 def _toml(version: str, workers: str, models: dict[str, dict],
           repo_kind: str = "forge-source") -> str:
     """A forge.toml with these workers and this [models] table."""
@@ -317,7 +273,7 @@ def test_3_models_per_kind(repo, monkeypatch, sdk_data, claude_session):
              "models.fix sets only one of subagents and subagent_effort; set both or neither"),
             ({**MODELS, "debug": lite},
              "debug is not a kind of work; the kinds are "
-             "build, fix, lite, explore, grill, design, review and light_review")):
+             "build, fix, lite, explore, grill, design, review, light_review and ask")):
         toml.write_text(_toml(version, "codex", models), encoding="utf-8")
         refused = repo.forge("work", "BOARD/PAGE")
         assert refused.stderr == MODELS_REFUSAL.format(problem), refused.stderr
