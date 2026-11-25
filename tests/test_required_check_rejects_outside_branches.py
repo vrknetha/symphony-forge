@@ -34,8 +34,9 @@ def test_1_required_check_rejects_outside_branch_with_fix_flow(env, tmp_path, ad
     gate = job.split("      - id: review\n", 1)[1].split("      - name:", 1)[0]
     # The reporter maps the command's refusal to a failed required commit status.
     assert "test \"$state\" != failure" in job
-    command = shlex.split(re.search(r"^        run: (forge hook pr-check .+)$", gate, re.M)[1]
-                          .split(" 2>", 1)[0])  # run the command directly, without CI's log redirect
+    run = re.search(r"^        run: (forge hook pr-check .+)$", gate, re.M)[1]
+    # Run the command directly, without the workflow's shell redirections.
+    command = shlex.split(re.split(r" [12]?>", run, maxsplit=1)[0])
     # The author makes a real commit in a clone without Forge's local hooks.
     outside = tmp_path / "outside"
     repo.git("clone", "-q", repo.git("remote", "get-url", "origin"), str(outside))

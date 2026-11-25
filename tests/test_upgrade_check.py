@@ -85,9 +85,8 @@ def _pr_check_steps(env) -> list[str]:
     job = re.split(r"\n  [a-z0-9_-]+:\n", jobs, maxsplit=1)[0]
     steps = []
     for step in re.split(r"^      - ", job, flags=re.M)[1:]:
-        # Advisory reporting now has its own real-script proof in test_client_setup_and_migration;
-        # this harness preserves the required gate's output and refusal checks.
-        if "Report pull request size" in step or "Report review status" in step:
+        # The status step prints the check's output. The size step has its own test.
+        if "Report pull request size" in step:
             continue
         found = re.search(r"^ *run: (\|\n)?(.*)", step, re.M | re.S)
         if found:
@@ -108,15 +107,18 @@ def _on_v1_2_0(env) -> list[str]:
 def _run_pr_check_job(env, where, steps) -> subprocess.CompletedProcess[str]:
     """The whole job, run like the runner does on the base checkout, where no Forge is installed
     until the job installs one: each step in bash -e, each seeing what earlier steps added to
-    $GITHUB_ENV, stopping at the first failure."""
+    $GITHUB_ENV. Stop on a refusal so this harness can check its output directly."""
     (env.repo.bin / "forge").unlink()
     env.repo.git("push", "-q", "origin", "HEAD:refs/pull/1/head", cwd=where)
     github_env = env.tmp / "github-env"
     github_env.write_text("", "utf-8")
+    env.gh.respond("api", stdout="{}")
     variables = {**os.environ, "PR": "1", "GITHUB_ENV": str(github_env), "RUNNER_TEMP": str(env.tmp),
                  "BASE_SHA": env.repo.git("rev-parse", "main"),
                  "HEAD_SHA": env.repo.git("rev-parse", "HEAD", cwd=where),
-                 "HEAD_REF": "fix/tidy-readme"}
+                 "HEAD_REF": "fix/tidy-readme", "GITHUB_RUN_ID": "1", "GITHUB_REPOSITORY": "acme/shop",
+                 # The loop reaches the status step only if the check passed.
+                 "REVIEW_OUTCOME": "success", "REVIEW_PENDING": ""}
     for step in steps:
         variables.update(line.split("=", 1) for line in github_env.read_text("utf-8").splitlines())
         done = subprocess.run(["bash", "-e", "-c", step], cwd=env.repo.path, env=variables,
