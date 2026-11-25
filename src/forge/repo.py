@@ -551,7 +551,7 @@ def record_run(top: Path, item: str, kind: str, **fields: Any):
     """Keep starts and ends even for a run entirely between two board refreshes."""
     identity = record_event(top, item, "run start", kind=kind, **fields)
     result = {"outcome": "failed", "run_id": identity,
-              **{key: fields[key] for key in ("model", "effort") if fields.get(key)}}
+              **{key: fields[key] for key in ("family", "model", "effort") if fields.get(key)}}
     if "round" in fields:
         result["round"] = fields["round"]
     try:
@@ -563,7 +563,7 @@ def record_run(top: Path, item: str, kind: str, **fields: Any):
 # --- forge.toml, the pin and the roadmap -----------------------------------------------
 
 # ponytail: stop_default only loads settings from earlier releases; stops always wait for the owner.
-KEYS = {"version": str, "repo": str, "stage": str, "workers": str, "tools": str, "test": str, "fast_test": str,
+KEYS = {"version": str, "repo": str, "stage": str, "workers": str, "reviews": str, "tools": str, "test": str, "fast_test": str,
         "signoff": str, "sample_data": bool, "runner": str, "test_runner": str, "codex_fast": str, "stop_default": str,
         "merge": str, "stack": str, "test_place": str, "checks": list, "interfaces": list,
         "always_test": list, "groups": int, "models": dict, "full_suite_workflow": str,
@@ -574,8 +574,10 @@ DEFAULTS = {"repo": "client", "stage": "live", "workers": "codex", "tools": "bot
             "stop_default": "narrow", "merge": "human", "stack": "on", "checks": [], "interfaces": [], "always_test": [],
             "models": {}, "cold_read_rounds": 2, "task_review_rounds": 2, "boxes": "off"}
 # ponytail: retain stop_default's old values so existing forge.toml files still load.
+FAMILIES = ("codex", "claude", "antigravity")
 CHOICES = {"repo": ("client", "forge-source"), "stage": ("live", "prototype"),
-           "workers": ("claude", "codex", "split"), "tools": ("both", "claude", "codex"), "merge": ("agent", "human"),
+           "workers": (*FAMILIES, "split"), "reviews": FAMILIES,
+           "tools": ("both", "claude", "codex"), "merge": ("agent", "human"),
            "codex_fast": ("needed", "off", "always"), "stop_default": ("narrow", "off"), "stack": ("on", "off"),
            "test_place": ("ci", "local"), "boxes": ("off", "ssh")}
 # signoff pins the client's sign-off record: a decision directly under docs/decisions whose slug
@@ -589,14 +591,15 @@ VERSION = re.compile(r"v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.]+)?")
 # The cold read and design work have one entry per family.
 KINDS = ("build", "fix", "lite", "explore", "grill", "design", "review", "light_review", "ask")
 SUBAGENTS = ("subagents", "subagent_effort")
-FAMILIES = ("codex", "claude")
 # A worker's models when forge.toml has no entry for its family, so Forge always names them.
 WORKER_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "low"},
-                   "codex": {"model": "gpt-6.2-sol", "effort": "low"}}
+                   "codex": {"model": "gpt-6.2-sol", "effort": "low"},
+                   "antigravity": {"model": "default", "effort": "low"}}
 DESIGN_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "xhigh"},
-                   "codex": {"model": "gpt-6.2-sol", "effort": "high"}}
+                   "codex": {"model": "gpt-6.2-sol", "effort": "high"},
+                   "antigravity": {"model": "default", "effort": "high"}}
 CLAUDE_GRILL_DEFAULT = {"model": "claude-opus-5-5", "effort": "high"}
-TOP_EFFORT = {"codex": "high", "claude": "xhigh"}
+TOP_EFFORT = {"codex": "high", "claude": "xhigh", "antigravity": "high"}
 SUBAGENT_DEFAULT = {"model": "claude-haiku-5-5", "effort": "high"}
 
 
@@ -774,9 +777,9 @@ def models(cfg: dict[str, Any], kind: str, family: str) -> dict[str, str]:
     if "model" not in chosen:
         return chosen.get(family) or (CLAUDE_GRILL_DEFAULT
                                      if kind == "grill" and family == "claude" else {})
-    # ponytail: gpt models are Codex's and every other model Claude's; name the family's entry
-    # when another Codex model family arrives.
-    return chosen if chosen["model"].startswith("gpt") == (family == "codex") else {}
+    model = chosen["model"]
+    owner = "codex" if model.startswith("gpt") else "antigravity" if model.startswith("gemini") else "claude"
+    return chosen if owner == family else {}
 
 
 def user_facing(cfg: dict[str, Any], row: dict[str, str]) -> bool:
@@ -806,7 +809,7 @@ def worker(cfg: dict[str, Any], kind: str, design: bool,
     chosen = design_models(cfg, family) if design else worker_models(cfg, kind, family)
     why = ("the owner chose it for this item" if tool else f"tools = {family}"
            + (", with the design model as it is user-facing" if design else "")
-           if cfg["tools"] != "both" else
+           if cfg["tools"] != "both" and family != "antigravity" else
            ("it is user-facing" if design else "it isn't user-facing") + " (workers = split)"
            if cfg["workers"] == "split" else f"workers = {family}"
            + (", with the design model as it is user-facing" if design else ""))
@@ -815,6 +818,8 @@ def worker(cfg: dict[str, Any], kind: str, design: bool,
 
 def worker_family(cfg: dict[str, Any], design: bool) -> str:
     """Which tool runs work: one tool overrides workers; split sends design work to Claude."""
+    if cfg["workers"] == "antigravity":
+        return "antigravity"
     return (cfg["tools"] if cfg["tools"] != "both" else
             cfg["workers"] if cfg["workers"] != "split" else "claude" if design else "codex")
 
@@ -872,7 +877,7 @@ def _models_problem(table: Any) -> str:
         per_family = kind in ("grill", "design") or any(family in chosen for family in FAMILIES)
         wrong = [key for key in chosen if key not in FAMILIES] if per_family else []
         if wrong:
-            return (f"models.{kind} has one entry per family, codex and claude, "
+            return (f"models.{kind} has one entry per family, codex, claude and antigravity, "
                     f"so it can't set {wrong[0]}")
         entries = ({f"{kind}.{family}": entry for family, entry in chosen.items()}
                    if per_family else {kind: chosen})
@@ -880,7 +885,8 @@ def _models_problem(table: Any) -> str:
             if not isinstance(entry, dict):
                 return f"models.{name} must be a table"
             for key, value in entry.items():
-                if key not in ("model", "effort", *(SUBAGENTS if kind in ("build", "fix", "lite", "explore") else ())):
+                helpers = SUBAGENTS if kind in ("build", "fix", "lite", "explore") and not name.endswith(".antigravity") else ()
+                if key not in ("model", "effort", *helpers):
                     return f"models.{name} can't set {key}"
                 if not isinstance(value, str):
                     return f"models.{name}.{key} must be a string"

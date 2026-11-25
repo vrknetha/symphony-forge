@@ -15,7 +15,7 @@ from test_close import ROOT, env  # noqa: F401
 from test_codex_worker import _codex_repo, _sent, sdk_data  # noqa: F401
 from test_land import _workers, land  # noqa: F401
 from test_setup import _fresh_client
-from test_worker import install_claude
+from test_worker import calls, install_claude
 from test_upgrade_command import _repo_adopted_on_the_previous_release, unsynced_up  # noqa: F401
 
 STORY = "stuck-worker-asks"
@@ -129,6 +129,22 @@ def test_3_switch_runs_the_next_round_on_the_other_tool(land, sdk_data, monkeypa
     assert f"Building {item} with Codex" in switched.stdout
     assert (env.repo.bin / "codex-app-server.jsonl").exists()
     assert len(_workers(env)) == before  # Claude ran no round
+
+    # Antigravity's stuck question offers Claude, and close must honor that choice.
+    item, _ = env.start(
+        "antigravity-switch", "fix/antigravity-switch", ".factory/fixes/antigravity-switch.json",
+        {"kind": "fix", "why": "Switch from Antigravity", "done_when": "The item runs on Claude",
+         "tool": "antigravity", "stop": {"question": "Choose Claude", "tool": "antigravity"}},
+        {"antigravity-only.py": "print('hello')\n"})
+    chosen = env.close(item, "--resolve", "switch", "--reason", "Try Claude")
+    assert chosen.returncode == 0, chosen.stdout + chosen.stderr
+    claude_log = install_claude(env.repo)
+    before = len(calls(claude_log))
+    switched = env.repo.forge("work", item)
+    assert switched.returncode == 0, switched.stdout + switched.stderr
+    assert f"Building {item} with Claude" in switched.stdout
+    assert any("Switch from Antigravity" in turn["brief"]
+               for turn in calls(claude_log)[before:])
 
 
 @pytest.mark.parametrize("adoption", ["new init", "previous release upgrade and sync"])

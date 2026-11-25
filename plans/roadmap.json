@@ -708,6 +708,12 @@
       "title": "Builder rounds send fewer input tokens",
       "status": "pending",
       "order": 129
+    },
+    {
+      "key": "FORGE-ANTIGRAVITY-1",
+      "title": "Google Antigravity as a third coding agent",
+      "status": "pending",
+      "order": 128
     }
   ],
   "epics": [

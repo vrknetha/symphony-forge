@@ -14,8 +14,6 @@ import shlex
 import sys
 from collections.abc import Iterator
 
-from forge.repo import refuse
-
 REFUSALS = {
     "payload": ("The hook input is not a JSON object, so Forge cannot check the command.",
                 "forge doctor"),
@@ -38,25 +36,55 @@ CONFIG_GETS ={"--get", "--get-all", "--get-regexp"}
 CONFIG_SCOPES = {"--global", "--local", "--system", "--worktree"}
 
 
-def hook(args: argparse.Namespace) -> None:
+def hook(args: argparse.Namespace | None) -> None:
     try:
         payload = json.loads(sys.stdin.read())
     except ValueError:
         payload = None
-    if not isinstance(payload, dict):  # fail closed: a command Forge can't read doesn't run
+    if __name__ == "__main__" or isinstance(payload, dict) and "toolCall" in payload:
+        reason = _antigravity_reason(payload.get("toolCall") if isinstance(payload, dict) else None)
+        print(json.dumps({"decision": "deny", "reason": reason} if reason else {"decision": "allow"}))
+        return
+    from forge.repo import refuse
+    if not isinstance(payload, dict):
         refuse(REFUSALS["payload"], code=2)
     tool_input = payload.get("tool_input")
     command = tool_input.get("command") if isinstance(tool_input, dict) else None
     if isinstance(command, list):  # ponytail: an argv-shaped command, should a host send one
         command = shlex.join(map(str, command))
-    command = _without_data(str(command or ""))
+    if blocked := _violation(str(command or "")):
+        rule, found = blocked
+        refuse(REFUSALS[rule], code=2, found=found)
+
+
+def _antigravity_reason(tool: object) -> str:
+    if isinstance(tool, dict) and isinstance(args := tool.get("args"), dict):
+        if tool.get("name") == "manage_task":
+            action = args.get("Action")
+            if action in ("list", "kill", "status"):
+                return ""
+            if action == "send_input":
+                # A shell can assemble one command across several inputs.
+                return "Forge blocks input to background tasks.\nNext: run the command directly"
+        if tool.get("name") == "run_command" and isinstance(command := args.get("CommandLine"), str):
+            if blocked := _violation(command):
+                rule, found = blocked
+                problem, next_step = REFUSALS[rule]
+                return f"{problem.format(found=found)}\nNext: {next_step}"
+            return ""
+    return "Forge cannot read this command, so it does not run."
+
+
+def _violation(command: str) -> tuple[str, str] | None:
+    command = _without_data(command)
     # A command that is only rm: nothing before it can change the folder or a variable it uses.
     alone = not set(command) & ALONE_BREAKERS
     for words in _commands(command):
         for i, word in enumerate(words):  # a program may follow sudo, env, xargs or find -exec
             rule = _rule(word.rsplit("/", 1)[-1], words[i + 1:], alone and i == 0)
             if rule:
-                refuse(REFUSALS[rule], code=2, found=" ".join(words))
+                return rule, " ".join(words)
+    return None
 
 
 def _commands(text: str, depth: int = 0) -> Iterator[list[str]]:
@@ -251,3 +279,7 @@ COMMANDS = [{
     "args": [], "position": 260,
     "listing": "| `forge hook deny` | Before each shell command: blocks destructive commands, `--no-verify` and `gh pr merge` |",
 }]
+
+
+if __name__ == "__main__":
+    hook(None)
