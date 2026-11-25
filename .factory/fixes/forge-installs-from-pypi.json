@@ -1,6 +1,13 @@
 {
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/forge-installs-from-pypi",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21349-ef85-76a3-9dbf-4c876f949bac",
+    "head": null,
+    "start": "8dd18e78773158e15970d11c0ccfd10f36b0dc05"
+  },
   "done_when": "Every install, upgrade, hook fallback and pinned-release command Forge prints or generates uses symphony-forge==<version> from PyPI and no command names the knacklabs GitHub repo, the plugin marketplace points at vrknetha/symphony-forge, and the package metadata carries the README and the project links so the PyPI page shows them.",
   "fix_kind": "backend",
   "kind": "fix",
