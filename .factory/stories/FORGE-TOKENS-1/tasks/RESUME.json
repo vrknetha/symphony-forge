@@ -91,7 +91,7 @@
     "id": "9354c4dc-affd-4e5f-bd37-8fc0f2bcb0b4",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "stacked_on": "FORGE-TOKENS-1/BRIEF",
   "status": "fixing",
   "steps": [
@@ -107,13 +107,18 @@
     {
       "at": "2026-11-25T07:52:41.263109+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T07:53:03.583465+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "a9bccab15a2c86216234f14c0a4b26fb9905c598",
+    "close": "a9fce388-b258-4ae8-9d3e-cd2779e01d9c",
+    "head": "56c9141a6c428f8e4fbf7d93d28da0f1493e2a83",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "worker": "codex"
 }
