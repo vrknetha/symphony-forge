@@ -1,72 +1,59 @@
 # Finished work is cleaned up every time, and leftover work is listed with one next step
 
-<n> parts · Risks: ... · New moving parts: ...
+3 parts · Risks: removes folders of merged or closed work · New moving parts: none
 
 ## What changes for you
 
-- Every Forge command tidies merged work on this machine. It removes the folder and local branch of each merged item that has no uncommitted files and whose local branch still points at the merged pull request's last commit, then prints one line with the count. The rule reuses the check forge doctor already makes before it removes a folder (src/forge/doctor.py, _finished), and keeps the merge rule that a folder with later local commits stays (src/forge/merge.py, the advanced check). Owner's wording "no uncommitted changes" alone would drop that protection, so the story must keep it.
-- The session-start context hook gets the same tidy-up. Decision 0093 says host hooks only block destructive commands, capture approval and load context, and forge hook context is marked read-only (src/forge/nextstep.py, changes_state False). The story must decide whether the hook may delete folders, or whether the tidy-up runs only inside the Forge command the hook calls.
-- forge next shows every unmerged leftover in one block, with one next step each: land it, or drop it with a reason. A clean folder whose pull request closed without merge is removed only when its branch is still on GitHub, because otherwise removing it deletes the only copy of that work (doctor's existing check does not test this). A folder with uncommitted files is never removed.
-- forge land with no item, in a repo where the agent merges, drives every open item to merge, including items whose builder stopped, and collects the owner's decisions (round limit, approval) into one list at the end. Today src/forge/land.py refuses when no item and no all option is given, so this changes the command's interface. It overlaps the pending FORGE-LAND-1 story, which the story doc should name.
-- The overlap with the pending FORGE-DOCTORFIX-1 story (doctor repairs, including removing folders of finished work) must be stated, so the two do not both change the same removal code without a plan.
-- A new client repo and an existing client repo both get these rules on upgrade. Each ordinary rule gets one test on a new repo. Coordinator-facing steps update src/forge/templates/skill.md in the same change, as the review rules require.
+- When `forge next`, `forge start` or `forge land` runs, Forge removes the folder and local branch of every finished item on this machine. An item is finished when its pull request is merged, wherever the merge happened: on this machine, on another machine or on GitHub. Forge then prints one line with how many folders it removed.
+- Forge never removes a folder that has uncommitted files, or local commits that its pull request does not have.
+- A folder whose pull request was closed without a merge is removed only when its branch is still on GitHub, so the work can come back.
+- The session-start hook stays fast and does not ask GitHub. It already tells the agent to run `forge next`, and that run does the cleanup.
+- `forge next` shows every item that is not merged and not moving, in one block. Each item gets one next step: land it, or drop it with a reason. This covers an item with no pull request, a pull request closed without a merge, and a builder that stopped before it finished.
+- `forge land` with no item lands every open item. That now includes items whose builder stopped before it finished. Forge merges only where the repo lets the agent merge. At the end, it shows one list of the decisions that are yours (a round limit, an approval).
+- A new client repo and an existing client repo both get this when they upgrade. Nothing in the repo needs to change.
 
 ## Why
 
-Forge removes a folder only when forge merge runs on the same machine, so finished folders pile up. The owner reports about 115 local folders in one client repo, and on one machine 8 of 10 leftover folders belonged to pull requests already merged elsewhere.
+Forge removes a finished folder only when `forge merge` runs on the same machine. A merge made on another machine, or by a person on GitHub, leaves the folder behind. `forge doctor --fix` can remove these folders, but only when someone runs it. At one client, about 115 local folders piled up. Some had merged pull requests, some had pull requests closed without a merge, and some never had a pull request. On one machine, 8 of 10 leftover folders belonged to pull requests that were already merged. `forge land --all` also leaves out items whose builder stopped, so those items never reach a merge.
 
 ## Done when
 
-1. **After any Forge command, merged work with no uncommitted files and no local commits beyond its merged pull request is removed, and one line says how many were removed.**
-2. **forge next lists every unmerged leftover in one block, with one next step for each.**
-3. **A folder with uncommitted files, or with local commits its pull request does not have, is never removed.**
-4. **In a repo where the agent merges, forge land with no item merges every open item and ends with one list of the owner's decisions.**
+1. **After `forge next`, `forge start` or `forge land`, the folder and local branch of each merged item with no uncommitted files and no extra local commits is gone, and one line says how many Forge removed.**
+2. **A folder whose pull request was closed without a merge is removed only when its branch is on GitHub. A folder with uncommitted files, or with local commits its pull request does not have, is never removed.**
+3. **`forge next` lists every item that is not merged and not moving in one block, with one next step for each.**
+4. **In a repo where the agent merges, `forge land` with no item merges every open item, including items whose builder stopped, and ends with one list of the owner's decisions.**
 
 ## Risks
 
-<!-- Each one-way step: deleting data, a destructive migration, a new vendor. -->
-
-Risks: none
+Risks: removes folders of merged or closed work. Forge removes a folder only when its work is on GitHub (a merged pull request, or a closed pull request whose branch is still there) and the folder has no uncommitted files and no extra local commits. `forge doctor --fix` already uses the same check.
 
 ## For the builders
 
-<!-- Everything from here down is for the agents. The owner doesn't see it when approving, and
-tightening it needs no new approval. -->
-
 ### Done-when details
 
-<!-- Under each Done-when item's number: its evidence, edge cases and the tests that prove it.
-Workers and reviewers get the entries of the items they cover. An item with nothing to add has
-no entry. -->
+1. Reuse the check that `forge doctor --fix` uses today (`src/forge/doctor.py` `_finished`, with `task.worktree_files`): the local branch head must equal a merged pull request's head (this is the "no extra local commits" rule, the same as `merge.py`'s advanced check), there is no open pull request for the branch, and `worktree_files` is empty. Move the check and the removal loop (doctor.py, near `finished = _finished(top, main)`) into one function in doctor.py. `forge doctor --fix` and the three commands call it. The other commands print only `Removed <n> finished folders.` when n > 0. Doctor keeps its per-folder lines.
+   Speed: today `_finished` makes one `gh pr list` call per folder. With 115 folders that is 115 calls. Get every pull request for the local `story/`, `task/`, `fix/` and `forge/` branches in one `gh pr list --state all` request (or a few pages of it), and use one cache file for 60 seconds, as `board_facts.machine_prs` does. Without `gh`, or when GitHub fails, remove nothing and print nothing. A failure here never stops the command.
+   Never remove the main checkout, the folder that the command runs in, a folder with a live run (`machine.entries()` / `board.active_runs`), or a folder with `.gitmodules`.
+   Tests (new repo, one test per rule): a pull request merged on GitHub with no local `forge merge` -> `forge next` removes the folder and branch and prints the count; a folder with an uncommitted file is kept.
+2. Closed without a merge: remove the folder only when `git ls-remote --heads origin <branch>` returns the same head (one `ls-remote` call for all branches). Otherwise keep it, and done-when 3 lists it. Doctor's current check removes these without the remote check, so this change also makes doctor safer. Test: a closed pull request whose remote branch was deleted -> the folder stays and `forge next` lists it.
+3. `nextstep.py` is at 1,197 lines (the ceiling is 1,200). Put the leftover block in `doctor.py` and have `nextstep.py` call it in one or two lines. "Not moving" means: no live run, not in close or ready, and one of: no pull request and no commit for 7 days (reuse `doctor._unbuilt`'s rule, now for every branch kind); a pull request closed without a merge that done-when 2 kept; or status working/started with no live builder (the interrupted check that `nextstep.py` already makes for one item). Each row: the item's title, why it is stuck in plain words, and one `Next:` line: `forge land <item>`, or `forge fix drop <item> --because "<reason>"` / `forge story drop` for a story part. Test: one stalled fix with no pull request -> the block lists it with `forge land <item>`.
+4. `land.py`: no item and no `--all` now means `--all`. Remove the `one_or_all` refusal for that case and keep it for "both". In `_queue`, an item whose builder is not done and has no live run is no longer "Left out": it runs through the single-item land path, which already builds when nothing is built. Items with a live run stay left out. The `needs` decisions print once, together, at the end of the run. Human-merge repos keep stopping at Ready with the pull request link. Test: one fix in close and one fix whose builder stopped -> `forge land` with no item merges both, using a fake worker.
+   Update `src/forge/templates/skill.md` in the same part: `forge land` with no item lands everything, and finished folders clean themselves up.
+   New client repo: gets the rules from the release. Existing client repo: gets them on upgrade with no file change. No upgrade test is needed, because no record changes.
 
-1. <Evidence, edge cases and the tests that prove item 1.>
+Related stories: FORGE-LAND-1 (done) made `forge land`; this story widens its no-item run. FORGE-DOCTORFIX-1 (done) made `forge doctor --fix` remove finished folders; this story moves that removal into a shared function and adds the remote-branch check.
 
 ## Tasks
 
-<!-- One row per task. Covers: the Done-when numbers it delivers, at most three. Scope: the paths
-it may change. Before writing each Scope, search the code for the files the task needs. The plan
-check refuses two tasks whose Scope paths have the same prefix up to the first wildcard, unless
-one waits for the other through After, directly or through another task; it names both tasks.
-Paths with a segment named `tests`, `test`, `__tests__` or `spec` do not cause Scope overlaps
-and can be shared without an After link. Explicit After links still apply.
-When tasks need the same production file, put it in the first task's Scope with the shared names and stubs;
-tasks that need them wait for that task through After and then own only their files. Keep a file
-that a script can make at build time out of the repo and out of every Scope; when the repo keeps such
-a file on purpose, give its change to one part that the others wait for. Tests: the
-tests it adds or changes. After: the tasks it waits for. When two tasks share a function, field,
-file format or command, the first task pins it: it commits the shared names and stubs plus one
-test that crosses both sides, and the tasks that use it list it under After. Split tasks so each
-owns its files; shared lines (command table, guide list, registry) go to one task or a small last
-wiring task; After only when a task needs another task's code. The
-Developer column is optional: the lead fills or changes a GitHub username here, below For the
-builders, without another approval. Leave it blank for an unassigned part. Forge next uses
-the caller's GitHub login; another developer may start it with a warning. Existing tables
-without Developer still work. The moving-parts line stays last: "none", or each new dependency, service, datastore,
-queue, background job or abstraction layer, with the Done-when item that needs it. -->
-
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
+| TIDY | Finished folders clean themselves up | One shared removal used by doctor, next, start and land, with one GitHub request | 1, 2 | src/forge/doctor.py, src/forge/nextstep.py, src/forge/intake.py | tests/test_tidy_finished_folders.py | | no | |
+| LEFTOVERS | Stuck items listed with one next step | The forge next block for items that are not merged and not moving | 3 | src/forge/doctor.py, src/forge/nextstep.py | tests/test_next_lists_stuck_items.py | TIDY | no | |
+| SWEEP | Land with no item lands everything | forge land with no item, including stopped builders, with one decision list at the end | 4 | src/forge/land.py, src/forge/templates/skill.md | tests/test_land_sweeps_all_items.py | TIDY | no | |
 
 New moving parts: none
 
 ## Notes
+
+- Owner choices, 25 Nov 2026: removal on every command, no new command; leftovers listed with land or drop; `forge land` sweeps everything.
+- The owner chose cleanup in the session-start hook too. The hook is offline on purpose (`nextstep.context_hook`: no GitHub). The plan keeps it offline, because the hook already sends the agent to `forge next`, which does the cleanup. This is stated in "What changes for you" so that the approval covers it.
