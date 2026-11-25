@@ -1,6 +1,13 @@
 {
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/no-opus-outside-coordinator",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21222-3187-7842-9f47-2535117b4adb",
+    "head": null,
+    "start": "d9528f782013b6b3d7737326c5440538250e17ec"
+  },
   "done_when": "The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort in new repos and after upgrade in existing repos, and repos with their own model entries keep them.",
   "fix_kind": "mechanical",
   "kind": "fix",
