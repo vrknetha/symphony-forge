@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/native.py\tDo not submit a stopped reader's result as the replacement round\tabb-neon-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 260,
+      "text": "Do not submit a stopped reader's result as the replacement round",
+      "from": "blocking",
+      "item": "abb-neon-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tGate: Update the existing session-hold test for the new refusal\tabb-neon-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 262,
+      "text": "Gate: Update the existing session-hold test for the new refusal",
+      "from": "blocking",
+      "item": "abb-neon-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/native.py\tNot done: Handback must distinguish a live round from an abandoned one\tabb-neon-handback",
+      "kind": "bug",
+      "path": "src/forge/native.py",
+      "line": 258,
+      "text": "Not done: Handback must distinguish a live round from an abandoned one",
+      "from": "blocking",
+      "item": "abb-neon-handback",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_handback_wrong_round.py\tTest: Prove recovery for replaced and abandoned handback rounds\tabb-neon-handback",
+      "kind": "bug",
+      "path": "tests/test_handback_wrong_round.py",
+      "line": 32,
+      "text": "Test: Prove recovery for replaced and abandoned handback rounds",
+      "from": "blocking",
+      "item": "abb-neon-handback",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
