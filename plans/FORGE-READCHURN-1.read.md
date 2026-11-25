@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-25T06:25:18.996855+00:00
-seconds: 473.028
-read_hash: da9a83f4c4c90cd1961084d326f5ba10e2ba6107
-round: 1
+read_at: 2026-11-25T06:31:31.043746+00:00
+seconds: 324.662
+read_hash: 60d68af23d585cdb28a7bc4930f278caed7aae08
+round: 2
 passed: no
-doc_seen: da9a83f4c4c90cd1961084d326f5ba10e2ba6107
+doc_seen: 60d68af23d585cdb28a7bc4930f278caed7aae08
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: ab551a32e5be60581a7c9cfcab6a02390d9f11f4
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a2115a-1dc6-7df3-b9d6-4d1c5ee13d88
 session:
@@ -92,3 +92,23 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - A reader writes `Adds work: protect branch ownership; F 1 x H 3 ...`, as the [read template](/src/forge/templates/cold-read.md:122) requires. The [plan](/plans/FORGE-READCHURN-1.md:41) recognizes only an `Adds work:` line that starts with `F 1`, so this valid note will not receive the promised treatment.  
     Gain 3, Work 1, Harm 3
    Disposition: cut (F 1 x anywhere on the Adds work line)
+
+## Round 2
+
+11. Blocking: A frequency score can make a normal-use data-loss note pass.  
+    Raise: Data loss  
+    Case: normal use - A repository already has a branch that a planned force-push and cleanup would overwrite and delete. The earlier [branch-ownership note](/plans/FORGE-TRAIN-1.read.md:36) describes that case as normal use, scores it Harm 4, and includes `F 1 x`. The amended [plan](/plans/FORGE-READCHURN-1.md:41) now treats that line as rare regardless of its case or Harm, so the note would no longer hold the read.  
+    Gain 5, Work 2, Harm 4
+    Disposition: cut (the rare rule applies only below Harm 4)
+
+12. Advisory: Later notes that do not hold still do not reach builders.  
+    Raise: Not done  
+    Case: normal use - Round two contains only a new advisory note. The read passes, so the limit handler does not copy it into Notes; advisory notes are also forbidden from the plan. [worker.py](/src/forge/worker.py:610) does not send the separate read-notes file to the worker.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+13. Advisory: The new required checks are treated as accepted notes during review.  
+    Raise: Not done  
+    Case: normal use - A builder omits a test required only by a check added at the read limit. The amended plan marks that note kept, so [review.py](/src/forge/review.py:630) presents it as accepted; the [review instructions](/src/forge/templates/review.md:266) say Notes cannot block as `Not done`. The planned limit test does not check that the builder performs the check.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
