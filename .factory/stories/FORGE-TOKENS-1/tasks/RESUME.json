@@ -1,6 +1,13 @@
 {
   "base": "92865a83ee7f1de5c4173694f403104731189e66",
   "branch": "task/FORGE-TOKENS-1-RESUME",
+  "chat": {
+    "approval": "7d4867b7bbecf40bbfbb9ce76341befef2f40a59da4d8bc44c10c125080843fc",
+    "claude": null,
+    "conversation": "01a211a4-21d4-7812-bcaa-86e0dc8c30f9",
+    "head": null,
+    "start": "df8d22adc69ec479d833842889b4e764d51430e2"
+  },
   "round": 1,
   "stacked_on": "FORGE-TOKENS-1/BRIEF",
   "status": "working",
