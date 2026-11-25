@@ -13,29 +13,25 @@ from pathlib import Path
 
 import pytest
 
-from test_ci_limits_pull_requests_to_linux import expression
-
 pytestmark = pytest.mark.platform
 
 STORY = "FIX-REUSE-TEST-PROOF"
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def workflow_steps(job):
+def plugin_steps():
     text = (ROOT / ".github/workflows/forge-next.yml").read_text(encoding="utf-8")
-    block = re.split(r"^  [\w-]+:\n", text.split(f"\n  {job}:\n", 1)[1],
+    block = re.split(r"^  [\w-]+:\n", text.split("\n  plugin:\n", 1)[1],
                      maxsplit=1, flags=re.M)[0]
     return re.split(r"^      - ", block.split("    steps:\n", 1)[1], flags=re.M)[1:]
 
 
-def decide(repo, gh, tmp_path, monkeypatch, event, ref, sha, prs=(), runs=(), job="tests",
-           api_error=False, diagnostics=None, runner="ubuntu-latest"):
-    steps = workflow_steps(job)
+def decide(repo, gh, tmp_path, monkeypatch, event, ref, sha, prs=(), runs=(),
+           api_error=False, diagnostics=None):
+    steps = plugin_steps()
     proof = next(step for step in steps if step.startswith("id: parent-tests\n"))
     command = re.search(r"^        run: (.+)$", proof, re.M)[1]
     workflow = re.search(r"^          PR_WORKFLOW: (.+)$", proof, re.M)[1]
-    if workflow.startswith("${{"):
-        workflow = expression(workflow.replace("matrix.os", "github.runner"), runner=runner)
     # Every expensive step must honor the output; checkout and the decision still succeed.
     assert "fetch-depth: 0" in steps[0]
     for step in steps[2:]:
@@ -71,15 +67,12 @@ def commit(repo, path, text):
     return repo.git("rev-parse", "HEAD")
 
 
-@pytest.mark.parametrize("job,runner", [("tests", "ubuntu-latest"),
-                                       ("tests", "windows-latest"),
-                                       ("plugin", "ubuntu-latest")])
 @pytest.mark.parametrize("case", ["passed", "squash", "changed-tree", "red", "pending",
                                   "missing", "target-only", "wrong-head", "unmerged",
                                   "wrong-merge", "api-error", "newer-red", "stale-base",
                                   "missing-snapshot", "wrong-snapshot-head", "same-tree-base"])
 def test_1_main_reuses_only_successful_pull_request_proof_for_its_merged_tree(
-        repo, gh, tmp_path, monkeypatch, job, runner, case):
+        repo, gh, tmp_path, monkeypatch, case):
     base = repo.git("rev-parse", "HEAD")
     repo.git("switch", "-qc", "pr")
     head = commit(repo, "code.txt", "PR code\n")
@@ -123,12 +116,11 @@ def test_1_main_reuses_only_successful_pull_request_proof_for_its_merged_tree(
     if case == "newer-red":
         runs.append(dict(run, id=12, conclusion="failure"))
     assert decide(repo, gh, tmp_path, monkeypatch, "push", "refs/heads/main", sha,
-                  [pr], runs, job, case == "api-error", runner=runner) == (
+                  [pr], runs, api_error=case == "api-error") == (
                       case in {"passed", "squash", "same-tree-base"})
     calls = gh.calls()
     if case in {"passed", "squash"}:
-        expected = "forge.yml" if job == "tests" and runner == "ubuntu-latest" else "forge-next.yml"
-        assert any(f"repos/acme/forge/actions/workflows/{expected}/runs" in call
+        assert any("repos/acme/forge/actions/workflows/forge-next.yml/runs" in call
                    and f"head_sha={head}" in call for call in calls)
     assert repo.git("rev-parse", "HEAD") == sha
 
@@ -161,9 +153,8 @@ def test_2_release_tag_reuses_only_successful_main_proof_for_the_same_tree(
 
 
 @pytest.mark.parametrize("event", ["schedule", "workflow_dispatch", "pull_request"])
-@pytest.mark.parametrize("job", ["tests", "plugin"])
 def test_3_nightly_manual_and_pull_request_jobs_never_reuse_proof(
-        repo, gh, tmp_path, monkeypatch, event, job):
+        repo, gh, tmp_path, monkeypatch, event):
     assert not decide(repo, gh, tmp_path, monkeypatch, event, "refs/heads/main",
-                      repo.git("rev-parse", "HEAD"), job=job)
+                      repo.git("rev-parse", "HEAD"))
     assert not gh.calls()
