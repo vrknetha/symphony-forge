@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-25T03:51:13.057724+00:00
-seconds: 623.935
-read_hash: 482b3666bf4a1b1f9eaf6161ffc9c630ed366eef
-round: 1
+read_at: 2026-11-25T03:59:42.958862+00:00
+seconds: 438.884
+read_hash: 4370a52a2b3e000b1758e194af40475b90e58c80
+round: 2
 passed: no
-doc_seen: 482b3666bf4a1b1f9eaf6161ffc9c630ed366eef
+doc_seen: 4370a52a2b3e000b1758e194af40475b90e58c80
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 93b951770c6f4cfb35510453db826083270e63cf
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a210ca-c20a-78e2-ab26-1b563ed55f3c
 session:
@@ -67,3 +67,40 @@ Only a genuine trade-off goes to the human, as a question with options.
    [review.py](/src/forge/review.py:564) retains a bounded tail and the full list of failed names; [worker.py](/src/forge/worker.py:566) similarly selects a tail and the names block for CI. The planned test can find every failing test while the promised failure lines are missing.  
    Gain 3, Work 2, Harm 3
    Disposition: cut (item 1 detail now takes failure lines per test from the results or named failure report, up to 20 lines each, not the log tail)
+
+## Round 2
+
+6. Blocking: Item 1 names failure reports that contain no failure details.
+   Raise: Plan gap  
+   Case: normal use - a pytest failure needs its assertion message in the repair brief.  
+   The newly named [test-results report](/src/forge/fasttest.py:640) records only outcomes and test names. The [CI named-failure report](/src/forge/review.py:576) likewise lists names and a log path. Neither supplies the promised per-test failure lines, so finding 5 remains open.  
+   Gain 3, Work 2, Harm 3
+
+7. Advisory: The required live Codex check has no planned CI runner.
+   Raise: Test  
+   Case: normal use - HOST adds its named test file and submits the change.  
+   [AGENTS.md](/AGENTS.md:184) forbids enabling real Codex tests locally. The [smoke workflow](/.github/workflows/codex-smoke.yml:51) runs a fixed list that excludes HOST’s new test file, so the newly required live comparison would not run.  
+   Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+8. Advisory: The new token comparison does not prove Forge’s skills remain visible.
+   Raise: Test  
+   Case: normal use - a Codex worker has both host skills and Forge’s project skills.  
+   The [pinned Codex source](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/ext/skills/src/extension.rs) shows that disabling `skills.include_instructions` suppresses the automatic skills context as a whole. A lower token count can therefore pass the planned check even if it also hides Forge’s skills.  
+   Adds work: check that Forge skills remain visible; F 3 x H 2 = 6; 2 x C = 4.  
+   Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+9. Advisory: The new report-saving rule omits Claude SDK builders.
+   Raise: Plan gap  
+   Case: normal use - a Claude SDK builder reports an unsuccessful attempt before a repair round.  
+   The amendment names native handbacks and Codex app-server endings, but [Claude SDK workers](/src/forge/worker.py:337) use a separate path. Their output goes to a [work log](/src/forge/worker.py:853), and the plan does not say how the new per-round report is obtained from it. The Codex-only repair test can pass while those attempts are missing.  
+   Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+10. Advisory: The new native-run share has no identified source for cold reads.
+    Raise: Plan gap  
+    Case: normal use - the comparison week includes native cold reads.  
+    [Native cold reads](/src/forge/native.py:113) do not write the run-start and run-end records used for the stated baseline. Their [read record](/src/forge/story.py:400) describes the latest read. The plan does not identify how the coordinator will count all native reads for each week or mark that share unknown.  
+    Gain 3, Work 3, Harm 2
+   Disposition: keep - below the bar (follow-up)

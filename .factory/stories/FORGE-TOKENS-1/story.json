@@ -1,10 +1,18 @@
 {
   "doc": "plans/FORGE-TOKENS-1.md",
-  "status": "planning",
+  "status": "read",
   "steps": [
     {
       "at": "2026-11-25T03:37:48.737446+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T03:51:13.073389+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T03:59:42.974629+00:00",
+      "step": "read"
     }
   ],
   "title": "Builder rounds send fewer input tokens",
