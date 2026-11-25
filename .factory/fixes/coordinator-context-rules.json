@@ -11,8 +11,67 @@
   "done_when": "The coordinator guide says to hand over at 20 to 30% of context and never past 40%, at a quiet moment (after a merge or while waiting on CI), to delete session timers before /clear, and to use no repeating flow-check timers (CronCreate or /loop) but Forge's step-end events and one-shot waits.",
   "fix_kind": "mechanical",
   "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 583,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Give the new chat a working way to observe completion",
+      "work": 1
+    },
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 577,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Finish session-owned rounds before handing over",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "39facdee9d8dd78215684e4645dcf16801d3d48cfb339d49d9d9e769e335fdfe",
+    "changed": "8d3cf6cd6135a6e3b9025bc51ac2a322ab4d24d136b1f531b3200ce132fc4ad8",
+    "commit": "cfda7f438e59dc62ae9aae9ee94c1e6aeb555d63",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Functional. Case: normal use - a coordinator hands over while a Forge run is waiting on CI. The guide tells the new chat to resume from Forge's step-end events, but `src/forge/event_log.py:42` appends run events to local history, and `plans/FORGE-PANE-1.md:58` records that Forge no longer starts agent turns from events. The new chat therefore receives no completion notification and can remain idle if it waits for one. The guide needs to explain how to observe completion with the available one-shot wait or host notification.",
+        "file": "src/forge/templates/skill.md",
+        "gain": 4,
+        "harm": 3,
+        "line": 583,
+        "priority": "P1",
+        "title": "Functional: Give the new chat a working way to observe completion",
+        "work": 1
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Functional. Case: normal use - one item is waiting on CI while another has a native plan read or worker running. The new guidance permits a handover with running work, but `src/forge/native.py:73` keeps the round's lock with its original session, and `src/forge/native.py:259` refuses a handback from a different session. If the old chat stays open but inactive, the new chat cannot record the result or start a replacement; ending the old session abandons the pending round. The handover guidance needs to account for session-owned rounds before switching chats.\nAdds work: check for and hand back session-owned rounds before switching; F 2 x H 2 = 4; 2 x C = 2",
+        "file": "src/forge/templates/skill.md",
+        "gain": 4,
+        "harm": 3,
+        "line": 577,
+        "priority": "P1",
+        "title": "Functional: Finish session-owned rounds before handing over",
+        "work": 1
+      }
+    ],
+    "id": "abe839b7-6c5b-4cd1-8b74-db2ef15463a3",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T16:07:59.323838+00:00",
@@ -22,6 +81,10 @@
       "at": "2026-11-25T16:09:32.994140+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:46:51.910268+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
