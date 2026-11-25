@@ -24,7 +24,7 @@ from test_readloop_rounds import reader_sessions  # noqa: F401 (shared host clea
 from test_records import SPEC
 from test_setup import _fresh_client
 from test_story import worktree
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 STORY = "reuse-worker-chats"
 
@@ -761,7 +761,8 @@ def test_15_previous_release_split_worker_follows_its_last_successful_tool(
         assert "The earlier brief in this conversation still applies." not in prompt
         assert "# Worker brief" in prompt
         assert "1. The board shows every story." in prompt
-        assert (ROOT / "src/forge/standards.md").read_text("utf-8").strip() in prompt
+        assert referenced_standards(prompt).read_text("utf-8") == (
+            ROOT / "src/forge/standards.md").read_text("utf-8")
         continued = _work(repo, item)
         assert "Starting a new" not in continued.stdout
         assert _chat(claude, "claude", resumed=True) == replacement

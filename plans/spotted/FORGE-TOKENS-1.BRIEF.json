@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/worker.py\tRelated tests still require the inlined standards page\tFORGE-TOKENS-1/BRIEF",
+      "kind": "bug",
+      "path": "src/forge/worker.py",
+      "line": 716,
+      "text": "Related tests still require the inlined standards page",
+      "from": "blocking",
+      "item": "FORGE-TOKENS-1/BRIEF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_brief_names_reference_files.py\tTest: screen work keeps its design rules inline\tFORGE-TOKENS-1/BRIEF",
+      "kind": "bug",
+      "path": "tests/test_brief_names_reference_files.py",
+      "line": 31,
+      "text": "Test: screen work keeps its design rules inline",
+      "from": "blocking",
+      "item": "FORGE-TOKENS-1/BRIEF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/worker.py\tNot done: screen work keeps its design rules inline",
+      "kind": "edge",
+      "path": "src/forge/worker.py",
+      "line": 652,
+      "text": "Not done: screen work keeps its design rules inline",
+      "from": "review",
+      "item": "FORGE-TOKENS-1/BRIEF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/worker.py\tNot done: the design notes for non-screen work",
+      "kind": "edge",
+      "path": "src/forge/worker.py",
+      "line": 766,
+      "text": "Not done: the design notes for non-screen work",
+      "from": "review",
+      "item": "FORGE-TOKENS-1/BRIEF",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
