@@ -12,6 +12,17 @@
       "closed_by": null
     },
     {
+      "key": "bug\tsrc/forge/checks.py\tFunctional: The repair rejects stale reviews whose runs report the base SHA\tclose-reruns-stale-review-check",
+      "kind": "bug",
+      "path": "src/forge/checks.py",
+      "line": 540,
+      "text": "Functional: The repair rejects stale reviews whose runs report the base SHA",
+      "from": "blocking",
+      "item": "close-reruns-stale-review-check",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "bug\tsrc/forge/checks.py\tNot done: Retry and wait for the only failed required review from an older commit\tclose-reruns-stale-review-check",
       "kind": "bug",
       "path": "src/forge/checks.py",
