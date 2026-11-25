@@ -141,6 +141,12 @@ It keeps the same model calls and result order.
 Normal reviews, reviews of docs and assets, and sign-off reviews use the selected tool's model and optional effort from
 `[models.review]` in `forge.toml`, including its per-tool entries. An unset entry or effort
 uses Autoreview's default. New and earlier-adopted repos get this behaviour on the current release.
+When `reviews` names a family in `forge.toml`, Forge uses that family for cold reads and code reviews.
+If that family built the change, close asks the owner to choose another reviewer.
+Open work folders follow that change after Forge sees it on the default branch, unless they set their own review family.
+Antigravity cold reads need plans and notes that Git can store without a filter.
+Over SSH, `forge task start` checks the new Antigravity work folder and gives its sign-in step if needed.
+New and existing repos keep their current review and read choices until they set `reviews`.
 
 After a red close test, a blocking review finding or a failed required check, a build, fix or
 lite round raises only its effort. Codex uses at least high and Claude at least xhigh.

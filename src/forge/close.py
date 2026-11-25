@@ -85,7 +85,7 @@ def close(args: argparse.Namespace) -> int:
 
 
 def _close(args: argparse.Namespace, top: Path) -> int:
-    from forge import backfill, nextstep, records
+    from forge import backfill, nextstep, records, routing
     from forge.merge import ENABLE
 
     item = args.item
@@ -199,7 +199,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
 
     checks.required(top, default)
     if not (skip or (state.get("review") or {}).get("skipped")):
-        review.require_engine(cfg)  # before merging or committing state
+        review.require_engine(routing.routed_reviews(top, cfg), state, item)  # before merging or committing state
     repairs = bool(stacked_on and (state.get("review") or {}).get("commit") and
                    merge_review.repairs(top, state["review"]["commit"]))
     try:
@@ -255,7 +255,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     task.check_settings_change(item, top, state, default)
     repo.resume_pin(top, cfg["version"], getattr(args, "land_rounds", None), accepted=choice == "accept",
                     before=getattr(args, "pin_before", None))
-    cfg = records.sample_data_off(top, item)
+    cfg = routing.routed_reviews(top, records.sample_data_off(top, item))
     local_tests = cfg["test_place"] == "local"
     if not local_tests and "tests" in state:
         state.pop("tests")

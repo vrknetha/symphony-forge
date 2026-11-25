@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, NoReturn
 
-from forge import __version__, githooks, repo, story, sync
+from forge import __version__, antigravity, githooks, repo, story, sync
 
 COMMANDS = [{
     # False: init checks the pin itself, after adoption lists a forge.toml Forge didn't write.
@@ -180,6 +180,10 @@ def signed_in(tool: str, top: Path | None = None) -> bool | None:
 def _settings(stage: str, test_place: str, test: str, checks: list[str], interfaces: list[str],
               merge: str = "", runner: str = "ubuntu-24.04", fast_test: str = "") -> str:
     claude, codex = signed_in("claude"), signed_in("codex")
+    installed = antigravity.version()
+    if not antigravity.problem(installed):
+        print(f"Antigravity {installed} is installed. Ask your agent if you want it to "
+              "build or review; forge doctor checks its sign-in.")
     workers = 'workers = "claude"\n'  # Claude builds; reviews and cold reads go to Codex when it is there
     if claude is True and codex is False:
         workers = 'tools = "claude"\nworkers = "claude"\n'

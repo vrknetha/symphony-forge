@@ -24,7 +24,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
-from forge import autoreview, docskip, machine, noise, proof, repo, score, spotted
+from forge import autoreview, docskip, machine, noise, proof, repo, roles, score, spotted
 from forge.task import branch_item, sections
 
 # The helper Forge runs: the upstream commit its installer stamps in the skill's .upstream-sha.
@@ -838,16 +838,9 @@ def round_number(top: Path, item: str, state: dict[str, Any]) -> int | None:
     return max([finished, *recorded]) + 1
 
 
-def require_engine(cfg: dict[str, Any]) -> str:
-    """Select the review program and refuse a missing single-tool engine before any writes."""
-    tool = cfg["tools"]
-    if tool == "both":
-        return "codex" if shutil.which(os.environ.get("CODEX_BIN") or "codex") else "claude"
-    program = (os.environ.get("CODEX_BIN") or "codex") if tool == "codex" else "claude"
-    if not shutil.which(program):
-        repo.refuse(repo.REFUSALS["tool_missing"], tool=tool,
-                    name="Codex" if tool == "codex" else "Claude Code")
-    return tool
+def require_engine(cfg: dict[str, Any], state: dict[str, Any], item: str) -> str:
+    """Select the review family and check it before close changes state."""
+    return roles.review_family(cfg, state.get("worker"), item)
 
 
 def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
@@ -855,8 +848,9 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
         signoff_prompt: str = "", light: bool = False, tested: str = "",
         images: set[str] | None = None, only: set[str] | None = None) -> dict[str, Any]:
     """Review the branch head once, retrying once when a run doesn't finish. Returns the result."""
-    selected_engine = require_engine(cfg)
-    from forge import design, records, story  # story imports review indirectly
+    selected_engine = require_engine(
+        {**cfg, "reviews": ""} if signoff_prompt and cfg.get("reviews") == "antigravity" else cfg, state, item)
+    from forge import antigravity, design, records, story  # story imports review indirectly
     prototype = (light and not signoff_prompt and state.get("kind") == "fix"
                  and repo.is_prototype(top, cfg, (base, "HEAD")) and design.working_build(top, base))
     prompt = signoff_prompt or instructions(top, item, state, cfg, base, previous, tested, prototype)
@@ -876,13 +870,17 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                    and (images is None or Path(name).suffix.lower() not in design.IMAGES
                         or name in images)]
     _sweep()
-    with tempfile.TemporaryDirectory(prefix="forge-review-", ignore_cleanup_errors=True) as folder:
+    with (tempfile.TemporaryDirectory(prefix="forge-review-", ignore_cleanup_errors=True) as folder,
+          antigravity.clean_git(Path(folder)) if selected_engine == "antigravity" else contextlib.nullcontext() as hooks):
         tmp = Path(folder)
         tree, out = tmp / "tree", tmp / "review.json"
         saved = repo.forge_dir(top) / f"review-{item.replace('/', '-')}.json"
         saved.unlink(missing_ok=True)
         # Git's transport avoids copying an object store while another close changes it.
         repo.git("clone", "-q", "--no-local", str(top), str(tree), cwd=top)
+        if hooks is not None:
+            repo.git("config", "--local", "core.hooksPath", str(hooks), cwd=tree)
+            repo.git("config", "--local", "core.fsmonitor", "false", cwd=tree)
         if signoff_prompt:
             if only is not None:
                 review_base = repo.git("commit-tree", EMPTY_TREE, "-m", "Empty product review base",

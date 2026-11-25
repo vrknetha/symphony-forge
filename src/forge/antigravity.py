@@ -1,6 +1,7 @@
 """Antigravity's newline-delimited Agent Client Protocol."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import json
 import os
@@ -11,6 +12,7 @@ import shutil
 import subprocess
 import sys
 from tempfile import TemporaryDirectory
+from threading import Timer
 from typing import Any
 
 from forge import __version__, codex, deny, machine, repo
@@ -19,6 +21,12 @@ MINIMUM = (1, 5, 12)
 PROGRAM = os.environ.get("AGY_BIN") or "agy"
 INSTALL = "install Antigravity CLI 1.5.12 or newer (https://antigravity.google/docs/getting-started), then run agy and sign in"
 OLD = "Antigravity {version} is installed, and Forge needs 1.5.12 or newer."
+SIGNED_OUT = "Antigravity is not signed in."
+# Keep evidence preparation on the pinned review helper's Git settings.
+SAFE_GIT_CONFIG_ARGS = (
+    "core.fsmonitor=false", "core.pager=cat", "diff.external=", "diff.renames=false",
+    "pager.diff=cat", "pager.log=cat", "pager.show=cat", "diff.suppressBlankEmpty=false",
+)
 
 
 class NoSession(Exception):
@@ -36,6 +44,9 @@ def home(top: Path) -> Path:
     for data in (Path(os.environ.get("XDG_DATA_HOME") or default), default):
         folder = (data / "forge" / "antigravity" / _key(main)).resolve()
         if not any((parent / ".git").exists() for parent in (folder, *folder.parents)):
+            folder.mkdir(mode=0o700, parents=True, exist_ok=True)
+            if os.name != "nt":
+                folder.chmod(0o700)  # Also protect copies made by earlier releases.
             return folder
     raise ValueError("Forge needs an Antigravity data folder outside Git checkouts")
 
@@ -90,14 +101,161 @@ def _version(text: str) -> tuple[int, ...]:
     return tuple(map(int, match.groups())) if match else ()
 
 
-def problem() -> str:
+def version() -> str:
     try:
         result = subprocess.run([PROGRAM, "--version"], capture_output=True,
                                 text=True, check=True, timeout=15)
     except (OSError, subprocess.SubprocessError):
+        return ""
+    return result.stdout.strip()
+
+
+def problem(installed: str | None = None) -> str:
+    installed = version() if installed is None else installed
+    if not installed:
         return "Forge cannot run the Antigravity CLI (agy)."
-    version = result.stdout.strip()
-    return OLD.format(version=version) if _version(version) < MINIMUM else ""
+    return OLD.format(version=installed) if _version(installed) < MINIMUM else ""
+
+
+@contextmanager
+def clean_git(tmp: Path, *, checkout: Path | None = None):
+    """Keep personal Git configuration from running code while preparing evidence."""
+    config, hooks = tmp / "gitconfig", tmp / "hooks"
+    config.touch()
+    hooks.mkdir()
+    overrides = {"GIT_CONFIG_NOSYSTEM": "1", "GIT_CONFIG_GLOBAL": str(config)}
+    for field in ("name", "email"):
+        value = repo.run("git", "config", "--get", f"user.{field}", cwd=checkout).stdout.strip()
+        if value:
+            for role in ("AUTHOR", "COMMITTER"):
+                key = f"GIT_{role}_{field.upper()}"
+                overrides[key] = os.environ.get(key) or value
+    options = [*SAFE_GIT_CONFIG_ARGS, f"core.hooksPath={hooks}"]
+    if checkout is not None:
+        # Keep declarative ignore and attribute rules, and disable executable filters.
+        for key in ("core.excludesFile", "core.attributesFile"):
+            setting = repo.run("git", "config", "--null", "--path", "--get", key, cwd=checkout)
+            if setting.returncode == 0:
+                options.append(f"{key}=" + setting.stdout.removesuffix("\0"))
+        filters = repo.run("git", "config", "--null", "--name-only", "--get-regexp",
+                           r"^filter\..*\.(clean|smudge|process|required)$", cwd=checkout)
+        if filters.returncode not in (0, 1):
+            filters.check_returncode()
+        for key in filter(None, filters.stdout.split("\0")):
+            options.append(f"{key}=" + ("false" if key.endswith(".required") else ""))
+        options.append("commit.gpgSign=false")
+    count = int(os.environ.get("GIT_CONFIG_COUNT", "0"))
+    for index, option in enumerate(options, count):
+        key, value = option.split("=", 1)
+        overrides.update({f"GIT_CONFIG_KEY_{index}": key, f"GIT_CONFIG_VALUE_{index}": value})
+    overrides["GIT_CONFIG_COUNT"] = str(count + len(options))
+    previous = {key: os.environ.get(key) for key in overrides}
+    os.environ.update(overrides)
+    try:
+        yield hooks
+    finally:
+        for key, value in previous.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+
+def copy_for_reading(source: Path, dest: Path, paths: list[str], drop: set[str]) -> None:
+    source = source.resolve()
+    drop = {os.path.normcase(name) for name in drop}
+    listed = {os.path.normcase(name) for name in paths}
+
+    def allowed(path: Path) -> bool:
+        name = os.path.normcase(path.as_posix())
+        return (name in listed and name not in drop
+                and not {part.lower() for part in path.parts} &
+                {".git", ".agents", ".agent", "_agents", "_agent", ".gemini"}
+                and path.name.lower() not in {"agents.md", "gemini.md", "claude.md"})
+
+    if dest.exists():
+        shutil.rmtree(dest)
+    dest.mkdir(mode=0o700, parents=True)
+    for name in paths:
+        path = Path(name)
+        if path.anchor or ".." in path.parts or not allowed(path):
+            continue
+        try:
+            resolved = (source / path).resolve(strict=True)
+        except (OSError, RuntimeError):
+            continue
+        if not resolved.is_relative_to(source) or not allowed(resolved.relative_to(source)) or not resolved.is_file():
+            continue
+        target = dest / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(resolved, target, follow_symlinks=False)
+
+
+def require_unfiltered(top: Path, paths: list[str]) -> None:
+    """Do not publish a file whose filter might change what Git is allowed to store."""
+    names = [name for name in paths if not (top / name).is_dir()]
+    folders = [name for name in paths if (top / name).is_dir()]
+    if folders:
+        listing = repo.run("git", "ls-files", "-z", "--cached", "--others", "--exclude-standard",
+                           "--", *folders, cwd=top)
+        listing.check_returncode()
+        names.extend(name for name in listing.stdout.split("\0") if name)
+    if not names:
+        return
+    attrs = repo.run("git", "check-attr", "-z", "filter", "--", *names, cwd=top)
+    attrs.check_returncode()
+    fields = attrs.stdout.split("\0")
+    for name, value in zip(fields[::3], fields[2::3]):
+        if value not in ("unspecified", "unset", "set"):
+            repo.refuse(("Forge cannot safely record an Antigravity read with a Git filter on {path}.",
+                         "use a plan and read records that Git can store as written"), path=name)
+
+
+def read(top: Path, target: str, models: dict, prompt: str, fresh: str) -> subprocess.CompletedProcess[str]:
+    """Run inside the cold read's clean Git context."""
+    from forge import review, story
+    helper = Path(__file__).with_name("review_process.py")
+    pinned = review.helper().resolve()
+    listed = repo.run("git", "ls-files", "-z", "--cached", "--others", "--exclude-standard", cwd=top)
+    listed.check_returncode()
+    paths = sorted(set(listed.stdout.split("\0")) - {""})
+    sensitive = subprocess.run([sys.executable, str(helper), "sensitive", str(pinned)],
+                               input=json.dumps(paths), encoding="utf-8",
+                               capture_output=True, check=True)
+    cwd = home(top) / "read" / target
+    copy_for_reading(top, cwd, paths, set(json.loads(sensitive.stdout)))
+    rules = story.agents_section(top, "Review rules")
+    suffix = "\n\nThis repo's Review rules, from its AGENTS.md on the default branch:\n" + rules
+    path = codex._item_file(top, target, ".json", "Grill")
+    saved = codex.record(top, target, "Grill").get("antigravity") or {}
+    resume = saved.get("id")
+    with repo.record_run(top, target, "read", family="antigravity", **models) as ran:
+        ran["model_kind"] = "grill"
+        kwargs = dict(cwd=cwd, mode="read", model=models["model"], effort=models["effort"],
+                      again=f"forge read {target}", ran=ran)
+        try:
+            result = turn(top, target, (prompt if resume else fresh) + suffix, resume=resume, **kwargs)
+        except NoSession:
+            result = turn(top, target, fresh + suffix, **kwargs)
+        finally:
+            if ran.get("chat"):
+                codex._record(path, antigravity={"id": ran["chat"]})
+        ran["outcome"] = "completed"
+    said = result["text"].replace(str(cwd), str(top)).replace(cwd.as_posix(), top.as_posix())
+    return subprocess.CompletedProcess([PROGRAM], 0, said, "")
+
+
+def signed_in(top: Path, *, mode: str = "read",
+              again: str = "forge doctor") -> tuple[bool | None, str]:
+    try:
+        with TemporaryDirectory() as temp:
+            turn(top, "doctor", "", cwd=Path(temp), mode=mode, model="default", effort="",
+                 again=again, ran={}, probe=True)
+    except (OSError, NoSession, repo.Refused) as error:
+        if isinstance(error, repo.Refused) and error.entry and error.entry[0] == SIGNED_OUT:
+            return False, str(error).partition("\nNext: ")[2]
+        return None, str(error).partition("\n")[0].rstrip(".") or "Antigravity gave no reason"
+    return True, ""
 
 
 def ready(cfg: dict, kind: str, design: bool) -> dict:
@@ -134,14 +292,16 @@ def _permission(params: dict, cwd: Path, mode: str, questions: list[str]) -> dic
 
 
 def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
-         effort: str, again: str, ran: dict, resume: str | None = None, group: bool = True) -> dict:
-    log = repo.work_log(top, item)
+         effort: str, again: str, ran: dict, resume: str | None = None, group: bool = True,
+         probe: bool = False) -> dict:
+    log = cwd / "agy.log" if probe else repo.work_log(top, item)
     questions, chunks = [], []
     kind = ran.pop("model_kind", "build")
-    unfinished = ("Antigravity ended its turn without finishing ({detail}); see {log}.", "{again}")
+    unfinished = (("{detail}", "") if probe else
+                  ("Antigravity ended its turn without finishing ({detail}); see {log}.", "{again}"))
     try:
         cwd = cwd.resolve()
-        folder = profile(top, mode, cwd)
+        folder = profile(top, mode, top if probe else cwd)
         program = shutil.which(PROGRAM)
         if not program:
             raise FileNotFoundError(PROGRAM)
@@ -152,7 +312,7 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
             command, cwd=cwd, env=machine.worker_env(), stdin=subprocess.PIPE,
             stdout=subprocess.PIPE, stderr=out, text=True, encoding="utf-8",
             **(codex.GROUP if group else {}),
-        ) as process, machine.agent_process(process, log):
+        ) as process, machine.agent_process(process, log), _probe_deadline(process, probe):
             assert process.stdin is not None and process.stdout is not None
             serial = 0
 
@@ -182,7 +342,7 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                         if update.get("sessionUpdate") == "tool_call":
                             raw = update.get("rawInput") or {}
                             action = update.get("kind")
-                            if action in ("execute", "edit", "read"):
+                            if not probe and action in ("execute", "edit", "read"):
                                 step = repo.worker_step("Edit" if action == "edit" else action,
                                     {"command": raw.get("CommandLine"), "path": raw.get("Path") or
                                      next(iter(update.get("locations", [])), {}).get("path")})
@@ -204,7 +364,7 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                             step = "run agy and sign in with Google, or with a Gemini API key or Vertex AI"
                             if os.environ.get("SSH_CONNECTION"):
                                 step += f" (over ssh, sign in for Forge's profile: agy acp --gemini-dir {repo.quote(folder)} --login)"
-                            repo.refuse(("Antigravity is not signed in.", f"{step}, then {{again}}"), again=again)
+                            repo.refuse((SIGNED_OUT, f"{step}, then {{again}}"), again=again)
                         repo.refuse(unfinished, detail=detail, log=log, again=again)
                 repo.refuse(unfinished, detail="no answer", log=log, again=again)
 
@@ -218,6 +378,14 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
             context = {"cwd": str(cwd), "mcpServers": []}
             session = (call("session/resume", {**context, "sessionId": resume}) if resume
                        else call("session/new", context))
+            if probe:
+                if not session.get("sessionId"):
+                    repo.refuse(unfinished, detail="Antigravity did not start a session")
+                process.stdin.close()
+                process.wait()
+                if process.returncode:
+                    repo.refuse(unfinished, detail="Antigravity did not finish the sign-in check")
+                return session
             chat = resume or session["sessionId"]
             ran["chat"] = chat
             options = {option["id"]: option for option in session.get("configOptions", [])}
@@ -262,3 +430,20 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                     "model": current, "tokens": tokens}
     except (OSError, ValueError, KeyError, TypeError) as error:
         repo.refuse(unfinished, detail=str(error), log=log, again=again)
+
+
+@contextmanager
+def _probe_deadline(process: subprocess.Popen[str], probe: bool):
+    if not probe:
+        yield
+        return
+    def stop() -> None:
+        if process.poll() is None:
+            codex._stop(codex.identity(process.pid) or {"pid": process.pid}, True)
+    timer = Timer(30, stop)
+    timer.start()
+    try:
+        yield
+    finally:
+        timer.cancel()
+        timer.join()
