@@ -1,4 +1,11 @@
 {
+  "amendments": [
+    {
+      "at": "2026-11-25T16:53:22.509156+00:00",
+      "because": "Owner: do not say Windows is not supported; a Windows bug still gets fixed when it is reported. Add nothing else.",
+      "done_when": "Forge's nightly full run and its before-release check run no Windows job, a release no longer waits on Windows, Linux tests on pull requests and the macOS tests stay, and the release notes say Windows is not supported for now."
+    }
+  ],
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/drop-windows-tests",
   "chat": {
@@ -8,7 +15,7 @@
     "head": null,
     "start": "ed98a8ad60eba8c3d46b791e03296d107415ccbc"
   },
-  "done_when": "Forge's nightly full run and its before-release check run no Windows job, a release no longer waits on Windows, Linux tests on pull requests and the macOS tests stay, and the release notes say Windows is not supported for now.",
+  "done_when": "Forge's nightly full run and its before-release check run no Windows job, a release no longer waits on Windows, and Linux tests on pull requests and the macOS tests stay.",
   "fix_kind": "mechanical",
   "kind": "fix",
   "round": 1,
