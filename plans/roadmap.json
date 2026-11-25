@@ -708,6 +708,12 @@
       "title": "Make agent-written tests prove real behaviour",
       "status": "pending",
       "order": 128
+    },
+    {
+      "key": "FORGE-TIDYUP-1",
+      "title": "Finished work is cleaned up every time, and leftover work is listed with one next step",
+      "status": "pending",
+      "order": 129
     }
   ],
   "epics": [

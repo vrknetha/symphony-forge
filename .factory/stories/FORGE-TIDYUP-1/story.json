@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-TIDYUP-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-25T06:56:23.146716+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Finished work is cleaned up every time, and leftover work is listed with one next step",
+  "touches": 0
+}
