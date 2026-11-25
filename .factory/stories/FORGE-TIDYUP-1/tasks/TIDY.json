@@ -136,7 +136,7 @@
     "id": "cab785d1-d727-480f-aefc-1e193361459e",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -151,13 +151,20 @@
     {
       "at": "2026-11-25T08:48:53.038399+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T08:49:16.187216+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "d1fd9f900c9cb1f97d698dd01bd3a9b8f109f17e",
-    "keys": {},
-    "round": null
+    "close": "b83cf1e1-5326-42b0-9edd-a11d179039e5",
+    "head": "6075ac96be3490dbf59be617cf20b33d64e1ae23",
+    "keys": {
+      "the open P0 not done: a folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have in src/forge/doctor.py": 1
+    },
+    "round": 1
   },
   "worker": "codex"
 }
