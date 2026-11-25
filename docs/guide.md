@@ -684,6 +684,31 @@ If the machine's lanes still have runs, the command names them and asks you to w
 A repo pinned to a release older than the command upgrades once with
 `uvx --from symphony-forge==X.Y.Z forge upgrade vX.Y.Z`.
 
+### Recovering upgrades from the retired GitHub repository
+
+If the default branch's `.github/workflows/forge.yml` still installs Forge from the retired
+GitHub repository, the review check fails before it can review an upgrade pull request.
+GitHub runs this check using the workflow it already trusts on the default branch.
+
+1. The repository owner reviews and applies an install-source-only change to the trusted
+   default branch using the repository's approved maintenance process. In
+   `.github/workflows/forge.yml`, replace the retired Forge package URLs in the install
+   steps with PyPI requirements. For a step that uses `FORGE_RELEASE`, use
+   `uv tool install symphony-forge==${FORGE_RELEASE#v}`. Keep the step that selects and validates
+   the release. For fixed install versions, use `symphony-forge==X.Y.Z` with the same version
+   digits. Keep the workflow's permissions and required review check in place.
+2. Update the local default branch. Choose a published Forge release newer than the repo's pin
+   that includes the switch to PyPI. Run
+   `uvx --from symphony-forge==X.Y.Z forge upgrade vX.Y.Z`, with that version in both places.
+   This command starts under the newer release even if the old pin has no PyPI package.
+   If the previous upgrade already opened a pull request, run the same command again so it
+   picks up the updated default branch.
+3. Let the normal checks run and merge the upgrade when it is ready. If another work branch
+   still pins an unpublished release, merge the upgraded default branch into it.
+
+Use the upgrade pull request first if the old pin has no PyPI package. Standalone runs that
+still use the unpublished pin need the upgrade to merge before they can install Forge.
+
 ## Releasing Forge
 
 For Forge's maintainers:

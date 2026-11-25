@@ -269,16 +269,15 @@ def _pinned_to_its_own_prerelease(up):
 
 
 def _newest_then_a_newer_one(up):
-    up.env.gh.respond("release", "view", stdout=json.dumps({"tagName": RELEASE}))
+    up.repo.pypi(RELEASE[1:])
 
     done = up.run()
 
     assert_ready(up, done, ours(up))
-    assert ["release", "view", "--repo", "vrknetha/symphony-forge", "--json", "tagName"] in \
-        up.env.gh.calls()
+    assert len(up.repo.pypi_calls()) == 1
 
     # A newer release came out while the first upgrade waits for its merge.
-    up.env.gh.respond("release", "view", stdout=json.dumps({"tagName": "v9.10.0"}))
+    up.repo.pypi("9.10.0")
     before = up.snapshot()
 
     done = up.run()
@@ -497,8 +496,8 @@ REFUSED = {
                     "main already pins Forge <pinned>, so v1.0.0 would not be an upgrade.\n"
                     "Next: forge upgrade <a release newer than <pinned>>\n"),
     "no newest": (
-        lambda up: up.env.gh.respond("release", "view", stderr="HTTP 404: Not Found.\n", exit=1), [],
-        "Forge could not find its newest release: HTTP 404: Not Found.\n"
+        lambda up: up.repo.pypi(404), [],
+        "Forge could not find its newest release: HTTP Error 404: Unavailable.\n"
         "Next: forge upgrade <release>, naming the release\n"),
     "another upgrade open": (
         lambda up: up.repo.git("worktree", "add", "-q", "-b", "fix/upgrade-forge-to-v9-8-0",

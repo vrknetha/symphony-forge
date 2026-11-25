@@ -80,7 +80,11 @@ def _pr_check_steps(env) -> list[str]:
     env.repo.git("worktree", "add", "-q", "-b", "fix/sync", str(synced))
     done = env.repo.forge("sync", cwd=synced)
     assert done.returncode == 0, done.stderr
-    jobs = (synced / ".github/workflows/forge.yml").read_text("utf-8").split(
+    return _review_job_steps((synced / ".github/workflows/forge.yml").read_text("utf-8"))
+
+
+def _review_job_steps(workflow: str) -> list[str]:
+    jobs = workflow.split(
         "\n  forge-pr-check:\n", 1)[1]
     job = re.split(r"\n  [a-z0-9_-]+:\n", jobs, maxsplit=1)[0]
     steps = []
@@ -105,7 +109,7 @@ def _on_v1_2_0(env) -> list[str]:
     return _pr_check_steps(env)
 
 
-def _run_pr_check_job(env, where, steps) -> subprocess.CompletedProcess[str]:
+def _run_pr_check_job(env, where, steps, branch="fix/tidy-readme") -> subprocess.CompletedProcess[str]:
     """The whole job, run like the runner does on the base checkout, where no Forge is installed
     until the job installs one: each step in bash -e, each seeing what earlier steps added to
     $GITHUB_ENV, stopping at the first failure."""
@@ -116,7 +120,7 @@ def _run_pr_check_job(env, where, steps) -> subprocess.CompletedProcess[str]:
     variables = {**os.environ, "PR": "1", "GITHUB_ENV": str(github_env), "RUNNER_TEMP": str(env.tmp),
                  "BASE_SHA": env.repo.git("rev-parse", "main"),
                  "HEAD_SHA": env.repo.git("rev-parse", "HEAD", cwd=where),
-                 "HEAD_REF": "fix/tidy-readme"}
+                 "HEAD_REF": branch}
     for step in steps:
         variables.update(line.split("=", 1) for line in github_env.read_text("utf-8").splitlines())
         done = subprocess.run(["bash", "-e", "-c", step], cwd=env.repo.path, env=variables,
