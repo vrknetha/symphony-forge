@@ -59,6 +59,7 @@ FORGE_COMMAND = re.compile(r'forge"? hook ')
 
 
 LAUNCHER = ".forge/hooks.sh"
+CODEX_SESSION_END_TIMEOUT = 3
 EXECUTABLE = {f"{host}/skills/impeccable/scripts/impeccable" for host in (".claude", ".codex")}
 
 
@@ -239,6 +240,8 @@ def _hooks(top: Path, rel: str, events: dict[str, tuple[str | None, str]],
                 del hooks[event]
         for event, (matcher, hook) in events.items():
             group: dict[str, Any] = {"hooks": [{"type": "command", "command": command(hook)}]}
+            if event == "SessionEnd" and rel == ".codex/hooks.json":
+                group["hooks"][0]["timeout"] = CODEX_SESSION_END_TIMEOUT
             hooks.setdefault(event, []).append({"matcher": matcher, **group} if matcher else group)
         if allow:
             allowed = data.setdefault("permissions", {}).setdefault("allow", [])

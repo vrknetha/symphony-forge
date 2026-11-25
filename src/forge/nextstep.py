@@ -193,6 +193,8 @@ def startable(top: Path) -> list[str]:
 
 
 def context_hook(args: Any) -> int:
+    if native.coordinator_hook():
+        return 0
     top = repo.root()
     # Short and offline: no GitHub, story history or per-worktree settings. The step line needs
     # every story's record, so it stays in forge next.

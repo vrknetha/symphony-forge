@@ -12,6 +12,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from forge import codex, machine, repo
 
@@ -70,24 +71,88 @@ def session() -> dict[str, Any]:
     return {"id": f"{tool}:{owner['pid']}:{owner['started']}", "process": owner}
 
 
+def _coordinator_directory(chat: str) -> Path:
+    return machine._repos_file().parent / "coordinators" / hashlib.sha256(chat.encode()).hexdigest()
+
+
+def coordinator_hook() -> bool:
+    """Keep main-chat admission and exit separate from a shared host's lifetime."""
+    if sys.stdin.isatty():
+        return False
+    try:
+        payload = json.load(sys.stdin)
+    except ValueError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    event, chat = payload.get("hook_event_name"), payload.get("session_id")
+    if isinstance(chat, str) and chat and not os.environ.get("FORGE_WORKER"):
+        directory = _coordinator_directory(chat)
+        try:
+            if event == "SessionStart":
+                directory.mkdir(parents=True, exist_ok=True)
+                (directory / "started").touch()
+            elif event == "SessionEnd":
+                # shortcut: Codex retains detached chats until SessionEnd, use client presence if the host exposes it.
+                (directory / "started").unlink(missing_ok=True)
+                for path in directory.glob("*.json"):
+                    path.unlink(missing_ok=True)
+                if directory.is_dir():
+                    directory.rmdir()
+        except OSError:
+            pass  # A local warning must not break the host hook.
+    return event == "SessionEnd"
+
+
+def _coordinator_repo(top: Path) -> str:
+    origin = repo.run("git", "remote", "get-url", "origin", cwd=top).stdout.strip()
+    if not origin:
+        return str(repo._common_path(top))
+    if Path(origin).is_absolute():
+        return str(Path(origin).resolve())
+    if "://" not in origin:
+        host, colon, path = origin.partition(":")
+        if not colon:
+            return str((machine.main_checkout(top) / origin).resolve())
+        origin = f"ssh://{host}/{path}"
+    remote = urlsplit(origin)
+    if remote.scheme == "file":
+        from urllib.request import url2pathname
+
+        return str(Path(url2pathname(remote.path)).resolve())
+    port = remote.port
+    if port == {"ssh": 22, "https": 443, "http": 80, "git": 9418}.get(remote.scheme):
+        port = None
+    host = remote.hostname or ""
+    path = remote.path.strip("/").removesuffix(".git")
+    return f"{host}:{port or ''}/{path.lower() if host == 'github.com' else path}"
+
+
 def coordinator_warnings(top: Path) -> list[str]:
-    """Name other chats that ran next in this clone and still have a live host."""
+    """Name other local chats that ran next for this repository and are still live."""
     tool = repo.coordinator()
     if tool is None or os.environ.get("FORGE_WORKER"):
         return []
-    try:
-        owner = session()
-    except (repo.Refused, OSError, subprocess.CalledProcessError):
+    chat = os.environ.get("CODEX_THREAD_ID" if tool == "codex" else "CLAUDE_CODE_SESSION_ID")
+    if not chat:
         return []
-    process = owner["process"]
-    chat = os.environ.get("CODEX_THREAD_ID" if tool == "codex" else "CLAUDE_SESSION_ID")
+    directory = _coordinator_directory(chat)
+    # Codex sends SessionStart to main chats and SubagentStart to their workers.
+    if tool == "codex" and not (directory / "started").is_file():
+        return []
+    try:
+        owner = session()["process"]
+        key = hashlib.sha256(_coordinator_repo(top).encode()).hexdigest() + ".json"
+    except (repo.Refused, OSError, ValueError, subprocess.CalledProcessError):
+        return []
     app = "Codex" if tool == "codex" else "Claude Code"
-    name = f"{app} session {' '.join(chat.split()) if chat else process['pid']}"
-    key = hashlib.sha256(f"{owner['id']}:{chat}".encode()).hexdigest()
-    directory = repo.forge_dir(top)
-    current = directory / f"coordinator-{key}.json"
+    name = f"{app} session {' '.join(chat.split())}"
+    process = {field: owner[field] for field in ("pid", "started")}
+    current = directory / key
     warnings = []
     try:
+        if tool == "claude":
+            directory.mkdir(parents=True, exist_ok=True)
         pending = tempfile.NamedTemporaryFile(dir=directory, delete=False)
         path = Path(pending.name)
         try:
@@ -96,7 +161,7 @@ def coordinator_warnings(top: Path) -> list[str]:
             os.replace(path, current)
         finally:
             path.unlink(missing_ok=True)
-        for path in sorted(directory.glob("coordinator-*.json")):
+        for path in sorted(directory.parent.glob(f"*/{key}")):
             if path == current:
                 continue
             peer = codex._json(path)

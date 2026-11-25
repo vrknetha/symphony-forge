@@ -92,7 +92,7 @@ def test_3_hooks_without_forge_run_the_pinned_release_through_uvx(repo, tmp_path
     release = f"--from git+https://github.com/knacklabs/symphony-forge@v{_version(repo).removeprefix('v')}"
     assert log.read_text(encoding="utf-8").splitlines() == [
         f"{repo.path} -q {release} forge hook {hook}"
-        for hook in ("context", "handoff", "deny", "approval") * 2]
+        for hook in ("context", "handoff", "context", "deny", "approval") * 2]
 
 
 @pytest.mark.skipif(bool(INSTALLED), reason=f"hooks always search {', '.join(INSTALLED)}")
@@ -100,7 +100,7 @@ def test_4_with_nothing_installed_hooks_block_with_one_plain_line(repo, tmp_path
     commands = _synced(repo)
     pinned = "v" + _version(repo).removeprefix("v")
     home = _home(tmp_path)
-    assert len(commands) == 8
+    assert len(commands) == 10
     for rel, event, command in commands:
         done = _run(command, event, repo.path, home, HIDE)
         assert done.returncode == 2, (rel, event, done.stdout, done.stderr)
