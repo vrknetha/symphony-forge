@@ -34,10 +34,10 @@ jobs:
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       FORGE_LIVE_CODEX: "1"
-      XDG_DATA_HOME: ${{ runner.temp }}/forge-sdk-data
     steps:
       - uses: actions/checkout@v7
       - uses: astral-sh/setup-uv@v6
+      - run: echo "XDG_DATA_HOME=$RUNNER_TEMP/forge-sdk-data" >> "$GITHUB_ENV"
       # Forge's own installs, as forge doctor --fix runs them: the pinned SDKs in their own environments.
       - run: uv run --python 3.11 python -c "import sys; sys.path.insert(0, 'src'); from forge import claude_sdk, codex; codex.install(); claude_sdk.install()"
       - if: env.OPENAI_API_KEY == ''

@@ -68,7 +68,10 @@ def _review_tools(repo, tmp_path, monkeypatch):
     queue.write_text(json.dumps([{"report": {"review_status": "scoped-clean", "findings": []}}]))
     monkeypatch.setenv("AUTOREVIEW_STUB", str(queue))
     codex = tmp_path / "codex-stub"
-    codex.write_text(f"#!{sys.executable}\nimport json, pathlib, subprocess, os\n"
+    codex.write_text(f"#!{sys.executable}\nimport json, pathlib, subprocess, os, sys\n"
+                     "if sys.argv[1:] == ['--version']:\n"
+                     "    print('codex-cli 0.171.0')\n"
+                     "    sys.exit(0)\n"
                      "tree = pathlib.Path.cwd()\n"
                      "names = subprocess.check_output(['git', 'diff', '--name-only', 'HEAD^', 'HEAD'], cwd=tree, text=True, encoding='utf-8')\n"
                      "pathlib.Path(os.environ['SIGNOFF_DIFF']).write_text(names, encoding='utf-8')\n"
