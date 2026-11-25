@@ -95,7 +95,7 @@
     "id": "99afade2-7264-48ae-92f0-805d877ffca0",
     "status": "blocked"
   },
-  "round": 3,
+  "round": 4,
   "status": "fixing",
   "steps": [
     {
@@ -152,25 +152,20 @@
       "choice": "narrow",
       "round": 3,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-25T15:21:35.946053+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
-  "stop": {
-    "at": "2026-11-25T09:52:11.408983+00:00",
-    "by": "owner",
-    "choice": "narrow",
-    "question": "Finished work is cleaned up every time, and leftover work is listed with one next step: Finished folders clean themselves up is stuck. It should deliver: One shared removal used by doctor, next, start and land, with one GitHub request\nTwo rounds in a row left the open P0 not done: a folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have in src/forge/doctor.py.\nThe worker tried: Remove finished worktrees without force.\nChoose one: switch this item to Claude; keep Codex for one more round; or narrow or split it.",
-    "reason": "Owner: never force-remove; a folder whose only change is a test-made lockfile stays until forge doctor --fix, so git refuses whenever anything is unsaved.",
-    "tool": "codex",
-    "wait_id": "24a98068-79b5-4719-8b67-b9268df0532b",
-    "worker_round": 3
-  },
   "stuck": {
-    "close": "76bbebe5-922e-40d6-a5ed-153cebf4be75",
-    "head": "3b88229b726e47f5aac8364d561ed511efe3e5e1",
+    "close": "2dee4625-32d6-40fc-b627-ec636d8aece2",
+    "head": "e850dc243c703486c7b2a909d40094a0d54911e7",
     "keys": {
-      "the open P0 not done: a folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have in src/forge/doctor.py": 2
+      "the open P0 not done: a folder with uncommitted files (other than a lockfile change from tests), or with local commits its pull request does not have in src/forge/doctor.py": 3
     },
-    "round": 2
+    "round": 3
   },
   "worker": "codex"
 }
