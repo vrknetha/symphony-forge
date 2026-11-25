@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-25T07:10:00.963959+00:00
-seconds: 713.584
-read_hash: 49ca4baca02a867294a0baa5e497a9428a7bc47e
-round: 1
+read_at: 2026-11-25T07:15:24.763293+00:00
+seconds: 274.05
+read_hash: 8cb9eba20c052e718e6e9008f754eb04a2241173
+round: 2
 passed: no
-doc_seen: 49ca4baca02a867294a0baa5e497a9428a7bc47e
+doc_seen: 8cb9eba20c052e718e6e9008f754eb04a2241173
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 93b4b4869381de0f32ac4c70b12783b681e10ce4
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a2117f-64b5-7630-acfb-35ea9c984321
 session:
@@ -117,4 +117,22 @@ Only a genuine trade-off goes to the human, as a question with options.
     Gain 3, Work 2, Harm 2
 
 I did not run `forge next`: automatic approval review rejected the sandboxed command because it required approval.
+   Disposition: keep - below the bar (follow-up)
+
+## Round 2
+
+13. Blocking: Finding 1 is not closed: the test-only exception also deletes hand-edited lockfiles.
+    
+    Raise: Data loss  
+    Case: normal use - A merged folder contains a manually edited or staged `uv.lock`. [The amended plan](/plans/FORGE-TIDYUP-1.md:8) promises to keep changes that tests did not make, but the retained [worktree_files check](/src/forge/task.py:962) excludes every tracked `uv.lock` change regardless of its source. [Doctor’s removal](/src/forge/doctor.py:443) then deletes it with the folder.  
+    Gain 5, Work 3, Harm 5
+
+14. Advisory: A land sweep can repeat the uncached GitHub scan for every queued item.
+    
+    Raise: Scale  
+    Case: normal use - A sweep has ten queued changes. [The amended plan](/plans/FORGE-TIDYUP-1.md:34) calls cleanup from `forge land` without a cache, and [the queue](/src/forge/land.py:951) starts a separate `forge land` process for each item. That can make at least eleven full pull-request listings for one sweep.  
+    Adds work: avoid redundant scans in queued child processes; F 1 x H 2 = 2; 2 x C = 2.  
+    Gain 3, Work 2, Harm 2
+
+I did not run `forge next`. The story’s bookkeeping file was already modified when this read began and remained unchanged during it.
    Disposition: keep - below the bar (follow-up)
