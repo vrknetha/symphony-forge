@@ -93,7 +93,7 @@
     "id": "8c070702-3f2b-44bd-8724-312b2eda002b",
     "status": "blocked"
   },
-  "round": 2,
+  "round": 3,
   "status": "fixing",
   "steps": [
     {
@@ -113,13 +113,20 @@
     {
       "at": "2026-11-25T16:50:10.412002+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-25T16:50:30.864969+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "b1b315813cb70dcc7ecc2048bc992cc2bec608b1",
-    "keys": {},
-    "round": null
+    "close": "0e0c84fc-21f6-42c2-b2aa-f8aa505e4187",
+    "head": "5666f10bb72cdad6cf0ad29a8886a8496c5fa057",
+    "keys": {
+      "the open P0 not done: retry and wait for the only failed required review from an older commit in src/forge/checks.py": 1
+    },
+    "round": 2
   },
   "why": "A review check that failed before a CI fix stays failed until someone re-runs that job by hand, so close keeps reporting a failed check after the cause is fixed.",
   "worker": "codex"
