@@ -1,5 +1,12 @@
 {
   "branch": "task/FORGE-CHATHANDOVER-1-HANDOVER",
+  "chat": {
+    "approval": "8b9fea3590ff8cc3f2c405b780de1bee1da7029397ec8acb80427f6c9e3a2422",
+    "claude": null,
+    "conversation": "01a21726-b11e-7d20-88dc-2e1b35c6e9b6",
+    "head": null,
+    "start": "c79b60dd141dd3cfdde23213d1c91fba5ba3340e"
+  },
   "round": 1,
   "status": "working",
   "steps": [
