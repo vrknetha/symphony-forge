@@ -738,6 +738,12 @@
       "title": "Hand a long coordinator chat over to a fresh chat",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-TOKENS-2",
+      "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
+      "status": "pending",
+      "order": 130
     }
   ],
   "epics": [
