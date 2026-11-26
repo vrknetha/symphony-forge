@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-26T12:18:18.762848+00:00
-seconds: 668.6
-read_hash: 560f91a255138cfa5f22bdcebe61a6aebf833bb3
-round: 1
+read_at: 2026-11-26T12:29:52.869001+00:00
+seconds: 449.615
+read_hash: 6107633f9473560f4eec3bf2ee46007e55306c43
+round: 2
 passed: no
-doc_seen: 560f91a255138cfa5f22bdcebe61a6aebf833bb3
+doc_seen: 6107633f9473560f4eec3bf2ee46007e55306c43
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: d3d0096b8e17c37e689fa70394434b451f156ee9
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a217c0-ad7c-7862-9823-dc64613a3803
 session:
-loop_choice:
-loop_reason:
+loop_choice: more
+loop_reason: Owner chose: fix the forge ask gap (messages in Forge-started chats never approve), then one more read
 ---
 # Cold read notes
 
@@ -114,3 +114,29 @@ Only a genuine trade-off goes to the human, as a question with options.
     Not done: item 2 requires the stale approval to be refused and explained.  
     Gain 3, Work 2, Harm 3
    Disposition: cut a refusal on the typed path is caught, saved with last_refusal, printed as context and exits 0 so the prompt is not blocked; test checks exit 0 and the reason on stdout.
+
+## Round 2
+
+13. Blocking: A Forge question can approve a story without an owner reply.
+    Raise: Security  
+    Case: normal use - A coordinator runs `forge ask "approve <KEY> <code>"`. [Forge passes the question unchanged](/src/forge/ask.py:27) to a new Codex thread and [trusts its project hooks](/src/forge/codex_turn.py:187). That root thread has no [subagent marker](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/src/hook_runtime.rs), so the planned helper check misses it. The real host hook can then record the agent-authored line, despite the question being read-only. This follows the code path; it was not checked live.  
+    Not done: item 2 requires a line from anything other than the owner’s message to record nothing.  
+    Gain 5, Work 3, Harm 4
+
+14. Advisory: Adding the hook breaks two existing tests omitted from the task.
+    Raise: Plan gap  
+    The new Codex hook makes doctor probe six distinct event-and-command pairs, while [the Codex setup test](/tests/test_codex_setup.py:126) expects five. It also makes eleven host hooks, while [the launcher tests](/tests/test_fix_hooks_find_forge_in_uv_tool_folder.py:88) expect ten and an exact ten-command log. Neither file is in the task’s Tests cell.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+15. Advisory: The malformed-line rule conflicts with its own ordinary-message example.
+    Raise: Plan gap  
+    [The plan](/plans/FORGE-CODEXAPPROVE-1.md:39) says `approve the plan please` is silent, but it also says to refuse a message starting with `approve` and a word shaped like a story key. [Story keys](/src/forge/story.py:72) can consist only of letters, and the new rule accepts either case, so `the` has that shape.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+16. Advisory: An earlier refusal can hide the reason the new hook did not run.
+    Raise: Functional  
+    Case: normal use - An earlier approval was refused, then the owner tries the new line while its hook is untrusted. [Forge stores one shared last refusal](/src/forge/approval.py:100), and [forge next shows it for a waiting story](/src/forge/nextstep.py:797). The new guidance checks for a wait *without* a reason, so the old reason can prevent it from identifying the skipped hook.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
