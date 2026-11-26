@@ -1,6 +1,4 @@
-"""Smoke fixture changes select the real Linux starter jobs on pull requests."""
-from fnmatch import fnmatchcase
-import re
+"""Smoke fixture changes select the real starter jobs when comparing commits."""
 import subprocess
 import sys
 
@@ -10,15 +8,10 @@ STORY = "FIX-SMOKE-FIXTURES-SHARE-PACKAGES"
 
 
 def test_1_smoke_fixture_changes_run_the_real_starter_jobs(repo, monkeypatch):
-    # Audit: PR dispatch is the config boundary. A private-store regression in
-    # either fixture must reach the live jobs. Existing template dispatch checks
-    # exclude test files. This runs the selector against real commits, with no fake.
+    # The workflow no longer runs on pull requests. Keep checking the selector's
+    # explicit base mode with real commits that change only one fixture.
     monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
-    workflow = (ROOT / ".github/workflows/starter-smoke.yml").read_text("utf-8")
-    paths = re.search(r"  pull_request:\n    paths:\n(.*?)(?=\n\S)", workflow, re.S)[1]
-    patterns = re.findall(r"^      - (.+)$", paths, re.M)
     for fixture in ("tests/test_starter_tree.py", "tests/test_libs_layout.py"):
-        assert any(fnmatchcase(fixture, pattern) for pattern in patterns), fixture
         base = repo.git("rev-parse", "HEAD")
         repo.write(fixture, "# Changed smoke fixture\n")
         repo.git("add", fixture)
