@@ -889,13 +889,16 @@ def _run(item: str, top: Path, brief: str, models: list[str], budget: dict[str, 
     if problem := claude_sdk.sdk_problem():
         refuse(REFUSALS["claude_sdk"], problem=problem, top=repo.quote(top))
     command = [str(claude_sdk.python()), str(claude_sdk.TURN)]
+    # Init writes the stock helper pair explicitly, so compare values here.
+    diagnostic_budget = repo.CLAUDE_GRILL_DEFAULT if budget == repo.SUBAGENT_DEFAULT else budget
     request = {"prompt": brief, "cwd": str(top),
                "model": models[models.index("--model") + 1],
                "effort": models[models.index("--effort") + 1],
                "permission_mode": "bypassPermissions", "add_dirs": [str(CONVENTIONS)],
                "resume": resume, "session_id": session_id,
-               "agents": {name: {"description": description, "prompt": instructions, **budget}
-                          for name, (_, description, instructions) in
+               "agents": {name: {"description": description, "prompt": instructions,
+                                 **(diagnostic_budget if kind == "review" else budget)}
+                          for name, (kind, description, instructions) in
                           {**roles.ROLES, "general-purpose": roles.ROLES["worker"]}.items()}}
     final_result = None
     with repo.record_run(top, item, "worker", family="claude",

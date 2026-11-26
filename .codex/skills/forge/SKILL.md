@@ -2062,8 +2062,9 @@ Codex build, fix and lite default to `gpt-6.2-sol` at low effort; design uses it
 New repos pin Codex reviews, including working-prototype reviews, and cold reads to
 `gpt-6.1-terra` at max effort. Upgrade and sync keep existing model settings unchanged.
 Claude build, fix and lite accept a `subagents` and `subagent_effort` pair, or use
-`claude-haiku-5-5` at high when neither is set. The SDK's `general-purpose` helper
-gets the same pair. These options affect only the Claude builder's turn, not other
+`claude-haiku-5-5` at high when neither is set. With that stock pair, SDK debugger, security
+and performance helpers use `claude-sonnet-5-5` at high. A different pair applies to every
+SDK helper, including `general-purpose`. These options affect only the Claude builder's turn, not other
 Claude sessions or settings. Codex helpers keep their configured pair, defaulting
 to `gpt-6-luna` at max. Neither tool's helpers change effort after a failure.
 
@@ -2074,8 +2075,8 @@ build has none. With neither pair, sync leaves the defaults unset. Hands-on Code
 that same pair when set, so their worker model does not override the subagent budget.
 
 Claude build, fix and lite default to `claude-sonnet-5-5` at `low` effort.
-Claude design, including frontend, keeps `xhigh` effort. Claude plan reads with no entry use
-`claude-opus-5-5` at `high` effort, including when Claude is the only installed tool.
+Claude design, including frontend, keeps `xhigh` effort. Claude plan reads with no Claude grill
+entry use `claude-sonnet-5-5` at `high` effort, including when Claude is the only installed tool.
 `forge init` writes Sonnet at high for Claude plan reads and reviews.
 Existing model and effort entries stay unchanged after upgrade and sync.
 After a red close test, a blocking review finding or a failed required check named
@@ -2091,7 +2092,7 @@ retain its first effort. Each run records its round number and effort. The board
 and story history show `built at <effort>` in the round line, and omit it for old
 records without effort.
 Claude planner and architect roles use the plan-read entry; debugger, security
-and performance roles use Opus 5.5 at high effort. Reviews, including prototype sign-off,
+and performance roles use Sonnet 5.5 at high effort. Reviews, including prototype sign-off,
 use the selected tool's `models.review` entry, or Autoreview's defaults when unset.
 
 Existing model entries stay unchanged on upgrade. To opt in, set each of
@@ -2159,11 +2160,11 @@ For a side job inside your own session, hand it to one of Forge's subagent roles
 `performance` to diagnose; `worker`, `coder`, `frontend`, `tester` and `refactorer` to build.
 The diagnosing and planning roles change no files. Building an item still goes through
 `forge work`. To change a building or planning role's model or effort, change `forge.toml`
-and run `forge sync`; Claude diagnostic roles keep Opus at high effort.
+and run `forge sync`.
 Codex roles use their host's entry when the kind has per-tool entries. With a single entry, a model
 from the other tool is omitted so the Codex role uses the session's model. Claude building
-roles use their implementation entry or Sonnet low; Claude planning uses grill or Opus high,
-and Claude diagnosing always uses Opus high.
+roles use their implementation entry or Sonnet at low effort. Claude planning uses the grill
+entry or Sonnet at high effort. Claude diagnostic roles use Sonnet at high effort.
 
 Set a model explicitly on every ad-hoc subagent you start outside Forge's roles,
 including the built-in general-purpose agent. In Claude Code, use Sonnet for analysis and
