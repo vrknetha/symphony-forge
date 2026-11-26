@@ -1,10 +1,14 @@
 {
   "doc": "plans/FORGE-CODEXAPPROVE-1.md",
-  "status": "planning",
+  "status": "read",
   "steps": [
     {
       "at": "2026-11-26T12:05:56.230851+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T12:18:18.775974+00:00",
+      "step": "read"
     }
   ],
   "title": "Approve a story from a Codex chat",
