@@ -1,0 +1,16 @@
+{
+  "base": "b453557e7a8ceeb1dd36fe63dbe02e435b8b44ad",
+  "branch": "fix/codex-builders-refuse-to-start-in-a-repo",
+  "done_when": "A Codex builder starts in a repo whose .codex/hooks.json has Forge's userPromptSubmit approval hook, with no refusal and no owner step, and a project hook that is not Forge's still stops the turn",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-26T17:30:20.297308+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Codex builders refuse to start in a repo with the new Codex typed-approval hook: Forge's driver says Codex doesn't trust the project's userPromptSubmit hook (the 'forge hook approval' command in .codex/hooks.json) and it isn't Forge's, so Forge starts no Codex turn. The hook is Forge's own; its definition as Codex's hooks/list reports it does not equal any entry in codex.FORGE_HOOKS (likely a field Codex reports differently for userPromptSubmit, such as a missing matcher key or another default)."
+}
