@@ -455,11 +455,12 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         print("Advice that does not block the merge:" if serious else
               "Follow-ups that do not block the merge (recorded in the pull request):")
         for number, finding in advice:
+            priority = f"{score.severity(finding)} " if serious else ""
             reason = finding.get("follow_up") or (
                 "Rare case outside normal use" if score.RARE.search(finding["body"]) else
                 "Light review holds only P0 findings" if result.get("blocking_level") == "P0"
                 and score.holds(finding) else "Below the review bar")
-            print(f"{number}. {score.severity(finding)} {finding['title']} "
+            print(f"{number}. {priority}{finding['title']} "
                   f"({finding['file']}:{finding['line']})\n"
                   f"Does not block: {reason.rstrip('.')}.\n{finding['body']}\n")
     if failed:
