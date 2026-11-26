@@ -126,10 +126,8 @@ def test_4_own_repo_selects_smoke_areas_and_runs_related_tests_once(env, monkeyp
             # The Python starter smoke job ran at 45 minutes and was cancelled on release runs.
             limit = 60 if job == "python_starter_smoke" else 45
             assert f"    timeout-minutes: {limit}\n" in body
-    paths = re.search(r"  pull_request:\n    paths:\n(.*?)(?=\n\S)", workflow, re.S)[1]
-    assert re.findall(r"^      - (.+)$", paths, re.M) == [
-        ".github/workflows/starter-smoke.yml", "src/forge/templates/**", "src/forge/feature*.py",
-        "tests/test_starter_tree.py", "tests/test_libs_layout.py"]
+    # Starter smoke now runs by hand or on schedule. The selector and job
+    # wiring above still matter to those runs.
     concurrency = workflow.split("concurrency:\n", 1)[1].split("\n\n", 1)[0]
     assert "github.workflow" in concurrency and "github.event.pull_request.number || github.run_id" in concurrency
     assert "cancel-in-progress: ${{ github.event_name == 'pull_request' }}" in concurrency
