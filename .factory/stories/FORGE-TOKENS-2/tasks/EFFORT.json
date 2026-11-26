@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-TOKENS-2-EFFORT",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-26T14:34:42.642987+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T14:34:58.759031+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "0cbcba7017fbb506aad11c772b9770fe2d31a8cb",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
