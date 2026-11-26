@@ -8,8 +8,8 @@
       "text": "Point bootstrap installs at a release containing the fix",
       "from": "blocking",
       "item": "forge-installs-from-pypi",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     },
     {
       "key": "bug\tdocs/guide.md\tPersist the recovery release before merging the upgrade\tforge-installs-from-pypi",
