@@ -30,7 +30,7 @@ def test_3_builder_compaction_keeps_repair_details_in_the_next_turn(env, monkeyp
     env.reviews(blocked(finding("P1", title, "web/board.py", 2)))
     env.checks([run("tests", "failure"), run("lint", None, "in_progress")])
     closed = env.close("BOARD/PAGE")
-    assert closed.returncode == 1 and f"P1 {title}" in closed.stdout, closed.stdout + closed.stderr
+    assert closed.returncode == 1 and f"P1, blocks the merge. {title}" in closed.stdout, closed.stdout + closed.stderr
 
     failed = "FAILED tests/test_board.py::test_archived_stories"
     env.gh.respond("pr", "checks", exit=1, stdout=json.dumps([

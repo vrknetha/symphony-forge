@@ -403,7 +403,7 @@ def _close_refuses(up):
     steps = ours(up, started=False, installed=False, committed=False)
     assert done.returncode == 1  # close's own refusal code
     assert [line for line in done.stdout.splitlines() if line in steps] == steps
-    assert "1. P1 The launcher pins the wrong release (.forge/hooks.sh:1)" in done.stdout
+    assert "1. P1, blocks the merge. The launcher pins the wrong release (.forge/hooks.sh:1)" in done.stdout
     assert "reached the round limit with open findings, so Forge stopped." in done.stderr
     assert "Ask the human" in done.stderr
     assert done.stderr.endswith(

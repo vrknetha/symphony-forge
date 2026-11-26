@@ -8,6 +8,11 @@ discovery asks a question and starts no fix. Workers work only on their brief.
 Forge ignores a dropped fix whose checkout no longer exists. A worker follows
 this brief even when there are no failed checks or open review findings.
 
+Close and the pull request show each finding's reviewer-assigned severity and say if it blocks the merge.
+The migration Harm floor applies when the change adds or edits a migration across its commits.
+Close asks the reviewer to score an open finding again if an old review applied that floor
+to a change without a migration addition or edit.
+
 Settled findings stay settled. Each reader and reviewer gets earlier rounds' notes and answers,
 including findings already fixed or dismissed. Do not reopen them with the same finding text
 (cold reads) or title and file (reviews); report a new defect with distinct text and new evidence.
