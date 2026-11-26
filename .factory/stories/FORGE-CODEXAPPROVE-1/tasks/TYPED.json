@@ -14,7 +14,7 @@
       "gain": 5,
       "harm": 4,
       "line": 139,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": true,
@@ -40,7 +40,7 @@
       "gain": 4,
       "harm": 3,
       "line": 28,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -53,7 +53,7 @@
       "gain": 3,
       "harm": 3,
       "line": 45,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -66,7 +66,7 @@
       "gain": 3,
       "harm": 3,
       "line": 75,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -76,68 +76,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "ea2cd38a6adbc742f79daf89bf3fa67b16ed45371963fa8dc9741cfe90861698",
-    "changed": "eaef93d4a347ed23d63d7e2684de2128f18fee0c604ef337f25a14dca7d23cb6",
-    "commit": "5cdc4099692c34fd8d3d6e4a3fc1b86e9add473f",
+    "branch_diff": "020449b144f54b6d4a0036dcb6f34d704ae50d9c18991a8c72042d00aa364cfe",
+    "changed": "fa6b1b93745349079f1803ac0080a2b9c7f47c847e2c24f7452225e11c7662b2",
+    "commit": "8d8efea978eb3c9c76bb34ed0d89f6c7fa6f3998",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 5, Work 3, Harm 4\nRaise: Security\nCase: normal use - In a Codex chat using the v1 multi-agent tools, the coordinator can send `approve <KEY> <code>` to its own thread with `send_input`, without an owner reply. Codex's [send_input handler](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/src/tools/handlers/multi_agents/send_input.rs#L44-L51) targets a thread ID and submits the message as [user input](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/src/agent/control.rs#L129-L141). Its [prompt hook](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/src/hook_runtime.rs#L675-L695) identifies a subagent from the receiving thread, so a message delivered to the root has no `agent_id`. With `FORGE_WORKER` unset in the owner chat, this check records the agent-authored line as human approval. This uses the existing chat, so it is separate from the accepted limit for an agent starting another Codex process.",
-        "file": "src/forge/approval.py",
-        "gain": 5,
-        "harm": 4,
-        "line": 139,
-        "priority": "P1",
-        "title": "Not done: A typed line records nothing ... when it comes from anything other than the owner's own message",
-        "work": 3
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Not done\nCase: normal use - If the owner mistypes the requested line as `approve SHOP: 3f9a2c`, the colon after the story key makes the prefix match fail. The hook returns silently instead of explaining that the approval was not recorded. The line is recognizably an approval attempt, but the malformed-line refusal is never reached.",
-        "file": "src/forge/approval.py",
-        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
-        "gain": 3,
-        "harm": 3,
-        "line": 126,
-        "priority": "P1",
-        "title": "Not done: when it is an approval line typed wrongly",
-        "work": 1
-      },
-      {
-        "body": "Gain 4, Work 1, Harm 3\nRaise: Gate\nCase: normal use - Running the full test suite reaches two additional failures that plan read note 14 did not identify. `tests/test_codex_turns_trust_forge_hooks.py:105` and `:304` both expect exactly the previous five Codex event names. The stub at `tests/stubs/codex-app-server:104` reads every generated event, so adding this hook also adds `userPromptSubmit` to both actual sets. Both assertions therefore fail after sync, leaving the full suite red even if the tests named in note 14 are repaired.",
-        "file": "src/forge/githooks.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 28,
-        "priority": "P1",
-        "title": "Disputed keep Plan read note 14: two hook-trust tests also fail",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - The named proof never changes SHOP's approved sections after obtaining its code and completing a new clean read; it only sends WISH's code for SHOP. A recorder that incorrectly accepts SHOP's old code after its text changes could therefore pass. The same test sets `FORGE_WORKER` itself at line 56, so it also passes if `forge ask` stops passing that variable to Codex at `src/forge/codex.py:613`; a Forge-started root prompt could then record approval. These are separate parts of the sender and current-text behavior claimed by the proof.",
-        "file": "tests/test_codex_typed_approval.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 45,
-        "priority": "P1",
-        "title": "Test: typed approval rejects stale codes and Forge-started messages",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - The named proof checks the text from `forge next`, but it never checks the shipped coordinator guide's approval instructions. Reverting `src/forge/templates/skill.md:1810` to the old Plan Mode guidance would leave this test and the other named proofs passing while the guide no longer tells a Codex coordinator to ask for the typed line.",
-        "file": "tests/test_shortplan_docs.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 75,
-        "priority": "P1",
-        "title": "Test: The coordinator guide and forge next tell a Codex coordinator to show the story and ask the owner to type that line",
-        "work": 1
-      }
-    ],
-    "id": "1a8771df-2a06-4fca-bc7d-d27a0db511e1",
-    "status": "blocked"
+    "findings": [],
+    "id": "202b14f8-9a7b-4113-bbb2-925b3f180d0a",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-26T13:08:52.641978+00:00",
@@ -156,6 +104,10 @@
       "at": "2026-11-26T13:35:18.513658+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T13:42:30.881943+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
