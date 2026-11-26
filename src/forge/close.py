@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from forge.close_remote import push_replay, reconcile, replay_baseline, save_replay, squash_replay
-from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, pr_block, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
+from forge import __version__, app_baseline, autoreview, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, pr_block, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
 
 SWITCH_WORKER = {"claude": "codex", "codex": "claude", "antigravity": "claude"}
 REFUSALS = {
@@ -319,6 +319,8 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     if choice != "accept" and (review.blocking(result) or
                                any(d.get("accepted") for d in result.get("dismissals", []))):
         fresh = fresh and result.get("changed") == changed
+    if fresh and choice != "accept" and autoreview.stale_migration_floor(result, top, f"origin/{default}", head):
+        fresh = False
     refreshed = classified or fresh and (result.get("changed") != changed or
                                          result.get("branch_diff") != branch_diff)
     if fresh:

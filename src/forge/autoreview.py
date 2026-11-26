@@ -237,11 +237,21 @@ def _attempt(argv: list[str], cwd: Path, out: Path,
     return findings, ""  # type: ignore[return-value]
 
 
+def _changes_migration(top: Path, base: str, head: str) -> bool:
+    return bool(repo.git("diff", "--name-only", "-z", "--no-renames", "--diff-filter=AMT",
+                         f"{base}...{head}", "--", ":(glob)**/migrations/**",
+                         ":(glob)**/alembic/versions/**", cwd=top))
+
+
+def stale_migration_floor(result: dict[str, Any], top: Path, base: str, head: str) -> bool:
+    """Earlier reviews stored the floored score in place of the reviewer's score."""
+    return any((line := score.LINE.search(f["body"])) and "(floor: migration)" in line[0]
+               for f in score.open_findings(result)) and not _changes_migration(top, base, head)
+
+
 def migration_floor(findings: list[dict[str, Any]], top: Path, base: str, head: str) -> None:
     """Apply the migration floor using the full change, including earlier repair rounds."""
-    if not findings or not repo.git(
-            "diff", "--name-only", "-z", "--no-renames", "--diff-filter=AMT", f"{base}...{head}",
-            "--", ":(glob)**/migrations/**", ":(glob)**/alembic/versions/**", cwd=top):
+    if not findings or not _changes_migration(top, base, head):
         return
     for finding in findings:
         # Findings already at Harm 4 or above may carry a security or data-loss floor label.

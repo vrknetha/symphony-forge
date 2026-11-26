@@ -1988,6 +1988,8 @@ No command retires a started part: to replace one, close its pull request and de
 
 Close and the pull request show each finding's reviewer-assigned severity and say if it blocks the merge.
 The migration Harm floor applies when the change adds or edits a migration across its commits.
+Close asks the reviewer to score an open finding again if an old review applied that floor
+to a change without a migration addition or edit.
 
 **Settled findings stay settled.** Readers and reviewers receive all earlier rounds' notes,
 answers and fixed or dismissed findings, including the coordinator's recorded work notes.

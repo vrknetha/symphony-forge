@@ -531,6 +531,8 @@ previous finding, fixed or not fixed. Return each not fixed finding with its pre
 file. The supplied base shows the diff since that commit; after a merge of the default branch,
 it shows this change's full diff against its new merge base, excluding the default branch's work.
 Read unchanged code as context. Do not start a fresh review of the whole branch or proof list.
+If an earlier finding has a migration floor and this change adds or edits no migration,
+score Harm from the evidence in that finding.
 
 Raise a new finding only when it is a P0 that happens in normal use, on any line.
 A round-one fix that breaks the main path counts as a P0; score it Harm 4 or more.
