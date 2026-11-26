@@ -14,7 +14,7 @@
       "gain": 3,
       "harm": 3,
       "line": 20,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -24,27 +24,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "a8c33d77428c49283607ec62adb8b1d253812a4417a1d271dd2c1bf23049aabf",
-    "changed": "f88c1cf88667fc37b3718eed64d9f8ed8c26a2c98c809398362854a01c4adf81",
-    "commit": "81ee47018af4fe9a54ac1226bfeb49526398acb0",
+    "branch_diff": "df4e0ab5f3ac9b975bb524d7ffd42a347e94d17d631d19783981ce09c1d7b1c9",
+    "changed": "fc3b90bbb49ca98f648496abba20eb0f450bfda3134e5ef6b29342164f2b5f2d",
+    "commit": "4e9db33b4e54bf2c063747953f430e6951f0b056",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - Forge obtains failing test results from a pull request\u2019s CI checks.\nThe named proof writes the expected failure directly into `state[\"tests\"]`; it never runs close or supplies a failing GitHub check. In CI mode, `src/forge/close.py:259-262` removes that field and `src/forge/worker.py:561-574` obtains failures through a different path. Consequently, this test still passes when that path sends no failed test names, as it does for a failed job in an unfinished workflow. Exercise the close-to-repair flow with the review and GitHub services faked at their boundaries.",
-        "file": "tests/test_long_builder_chat_is_shortened.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 20,
-        "priority": "P1",
-        "title": "Test: A builder conversation over about 120K tokens is shortened by Codex, and the next repair round still lists\u2026",
-        "work": 2
-      }
-    ],
-    "id": "e85707f1-0bd2-47e3-bce1-f3b7f95c53e5",
-    "status": "blocked"
+    "findings": [],
+    "id": "452c48ee-56dd-4687-81cc-076b53bf2a17",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-26T16:45:36.241745+00:00",
@@ -63,6 +52,10 @@
       "at": "2026-11-26T17:00:48.582518+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T17:11:53.688161+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
