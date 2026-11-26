@@ -102,8 +102,8 @@
     "id": "d7c5f948-9068-4ca1-a1ec-3bf03248f467",
     "status": "clean"
   },
-  "round": 3,
-  "status": "waiting for checks",
+  "round": 4,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T12:08:51.549919+00:00",
@@ -147,6 +147,11 @@
     {
       "at": "2026-11-26T13:23:42.127213+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-26T14:03:36.369289+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
   "stop": {
@@ -159,10 +164,10 @@
     "worker_round": 2
   },
   "stuck": {
-    "close": "4e671f3a-bb27-43c7-8d6c-72b77f1ac964",
-    "head": "144984810e836505e78144681bbe5f62c319ee26",
+    "close": "2d080442-6e08-41a3-bd90-734a7764d5c3",
+    "head": "54d9b26e14fba6c1da768fb5f78e76ddd130cb7d",
     "keys": {},
-    "round": 2
+    "round": 3
   },
   "why": "The explorer does not follow the builder choice: intake.py takes the family from the session, and the explore defaults are gpt-6.2-sol for Codex and none for Antigravity.",
   "worker": "codex"
