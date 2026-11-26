@@ -12,7 +12,7 @@ from conftest import ROOT
 from test_close import CLEAN, env  # noqa: F401
 from test_machine_views import view
 from test_fix_new_repos_get_claude_as_their_worker_by import _new_repo
-from test_mod_sync import _calls, _claude
+from claude_plugin_stub import _calls, _claude
 from test_run_records import configure
 
 STORY = "FIX-PANE-READABLE"

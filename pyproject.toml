@@ -6,8 +6,14 @@ build-backend = "hatchling.build"
 name = "symphony-forge"
 dynamic = ["version"]
 description = "Forge: one small tool that takes a story from approval to a merged pull request."
+readme = "README.md"
 requires-python = ">=3.11"
 dependencies = ["pillow>=12.3.0"]
+
+[project.urls]
+Repository = "https://github.com/vrknetha/symphony-forge"
+Documentation = "https://github.com/vrknetha/symphony-forge/blob/main/docs/guide.md"
+Issues = "https://github.com/vrknetha/symphony-forge/issues"
 
 [dependency-groups]
 dev = ["pytest", "pytest-xdist", "pytest-split", "pytest-timeout", "pytest-rerunfailures==16.7"]

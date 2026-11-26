@@ -9,7 +9,7 @@
       "description": "Forge's board and machine views inside Claude Code.",
       "source": {
         "source": "git-subdir",
-        "url": "https://github.com/knacklabs/symphony-forge.git",
+        "url": "https://github.com/vrknetha/symphony-forge.git",
         "path": "src/forge/mod",
         "ref": "v1.2.48"
       }

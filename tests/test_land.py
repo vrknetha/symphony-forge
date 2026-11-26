@@ -243,7 +243,7 @@ def _unsynced_upgrade(env):
     assert _steps(done) == [f"Closing {ITEM}.", f"Stopped: {ITEM} needs you."]
     problem, next_step = _refusal(done)
     assert problem.startswith("This fix pins Forge v9.9.9, but Forge v")
-    assert next_step.endswith(f"@v9.9.9, then forge close {ITEM}")
+    assert next_step == f"Next: uv tool install symphony-forge==9.9.9, then forge close {ITEM}"
 
 
 def _already_merged(env):

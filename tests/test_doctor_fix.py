@@ -24,7 +24,7 @@ pytestmark = pytest.mark.platform
 
 STORY = "FORGE-DOCTORFIX-1"
 NEWER = "9.0.0"
-INSTALL = f"uv tool install git+https://github.com/knacklabs/symphony-forge@v{NEWER}"
+INSTALL = f"uv tool install symphony-forge=={NEWER}"
 HOOKS_FIXED = "- Fixed: installed the git hooks that check each commit and push."
 HOOKS_ROW = "The git hooks that check each commit and push aren't installed."
 
@@ -127,7 +127,7 @@ def _an_older_pin_or_a_dev_build_is_left_alone(repo, gh, tmp_path, monkeypatch, 
     for args in (("doctor",), ("doctor", "--fix")):
         done = repo.forge(*args)
         assert (f"is installed, but this repo pins v{version}.\n  Fix: uv tool install "
-                f"git+https://github.com/knacklabs/symphony-forge@v{version}\n") in done.stdout
+                f"symphony-forge=={version.removeprefix('v')}\n") in done.stdout
     assert _uv_calls(log) == []
     assert HOOKS_FIXED in done.stdout  # the other repairs still run
 

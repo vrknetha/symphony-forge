@@ -1,0 +1,158 @@
+{
+  "items": [
+    {
+      "key": "bug\tREADME.md\tPoint bootstrap installs at a release containing the fix\tforge-installs-from-pypi",
+      "kind": "bug",
+      "path": "README.md",
+      "line": 235,
+      "text": "Point bootstrap installs at a release containing the fix",
+      "from": "blocking",
+      "item": "forge-installs-from-pypi",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tdocs/guide.md\tPersist the recovery release before merging the upgrade\tforge-installs-from-pypi",
+      "kind": "bug",
+      "path": "docs/guide.md",
+      "line": 696,
+      "text": "Persist the recovery release before merging the upgrade",
+      "from": "blocking",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/repo.py\tMake historical pinned releases available on PyPI\tforge-installs-from-pypi",
+      "kind": "bug",
+      "path": "src/forge/repo.py",
+      "line": 1028,
+      "text": "Make historical pinned releases available on PyPI",
+      "from": "blocking",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/upgrade.py\tFind the newest release from a source that publishes releases\tforge-installs-from-pypi",
+      "kind": "bug",
+      "path": "src/forge/upgrade.py",
+      "line": 28,
+      "text": "Find the newest release from a source that publishes releases",
+      "from": "blocking",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/upgrade.py\tProvide a bootstrap path for existing clients' upgrade checks\tforge-installs-from-pypi",
+      "kind": "bug",
+      "path": "src/forge/upgrade.py",
+      "line": 246,
+      "text": "Provide a bootstrap path for existing clients' upgrade checks",
+      "from": "blocking",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/upgrade.py\tThe new repository has no GitHub release for an unversioned upgrade to find, so give forge upgrade an explicit PyPI version.",
+      "kind": "bug",
+      "path": "src/forge/upgrade.py",
+      "line": 412,
+      "text": "The new repository has no GitHub release for an unversioned upgrade to find, so give forge upgrade an explicit PyPI version.",
+      "from": "worker",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tdocs/guide.md\tPublish each new release to PyPI before using its pin",
+      "kind": "edge",
+      "path": "docs/guide.md",
+      "line": 761,
+      "text": "Publish each new release to PyPI before using its pin",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tdocs/guide.md\tWait for active Forge runs before the recovery install",
+      "kind": "edge",
+      "path": "docs/guide.md",
+      "line": 697,
+      "text": "Wait for active Forge runs before the recovery install",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tpyproject.toml\tMake README documentation links work on the PyPI page",
+      "kind": "edge",
+      "path": "pyproject.toml",
+      "line": 9,
+      "text": "Make README documentation links work on the PyPI page",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/repo.py\tHandle handoff from a published legacy release",
+      "kind": "edge",
+      "path": "src/forge/repo.py",
+      "line": 1028,
+      "text": "Handle handoff from a published legacy release",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/sync.py\tPreserve the user's plugin settings when moving the marketplace",
+      "kind": "edge",
+      "path": "src/forge/sync.py",
+      "line": 793,
+      "text": "Preserve the user's plugin settings when moving the marketplace",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/upgrade.py\tFollow-up: Bound the PyPI release lookup end to end",
+      "kind": "edge",
+      "path": "src/forge/upgrade.py",
+      "line": 421,
+      "text": "Follow-up: Bound the PyPI release lookup end to end",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/upgrade.py\tHandle incomplete PyPI responses as lookup failures",
+      "kind": "edge",
+      "path": "src/forge/upgrade.py",
+      "line": 432,
+      "text": "Handle incomplete PyPI responses as lookup failures",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\ttests/test_train_land_all.py\tGitHub Actions reported that Git could not find a repository while closing the third change after the train switched to individual merges. The test passed in isolation.",
+      "kind": "edge",
+      "path": "tests/test_train_land_all.py",
+      "line": 306,
+      "text": "GitHub Actions reported that Git could not find a repository while closing the third change after the train switched to individual merges. The test passed in isolation.",
+      "from": "worker",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

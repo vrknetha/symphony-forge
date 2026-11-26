@@ -79,7 +79,7 @@ def test_1_ci_workflow_installs_the_pin_and_runs_change_tests(repo, gh, tmp_path
     [encoded_step] = re.findall(r'^\s+- run: ("(?:[^"\\]|\\.)*")\s*$', tests_job, re.M)
     run = json.loads(encoded_step)
     assert run == "forge test --change"
-    assert f"uv tool install git+https://github.com/knacklabs/symphony-forge@{version}" in tests_job
+    assert f"uv tool install symphony-forge=={version.removeprefix('v')}" in tests_job
     assert "--splits" not in tests_job
 
     doctor = repo.forge("doctor", cwd=client)

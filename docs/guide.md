@@ -17,7 +17,7 @@ reader while available. A native read uses a separate `reader` subagent.
 Install the release a repo pins (uv brings Python 3.11 or later if you don't have it):
 
 ```
-uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.48
+uv tool install symphony-forge==1.2.48
 ```
 
 `forge --version` prints the installed version. Each repo pins its release in `forge.toml`, and
@@ -680,8 +680,40 @@ fix. Close's last line says who merges, as described in Merging a ready item. Wh
 refuses, follow its `Next:` line; running it again picks up where it stopped.
 If the machine's lanes still have runs, the command names them and asks you to wait.
 
-A repo pinned to a release older than the command upgrades once with
-`uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge upgrade vX.Y.Z`.
+If your installed Forge is too old to run `forge upgrade`, use the install and upgrade
+commands in [Recovering upgrades from the retired GitHub repository](#recovering-upgrades-from-the-retired-github-repository).
+
+### Recovering upgrades from the retired GitHub repository
+
+If the default branch's `.github/workflows/forge.yml` still installs Forge from the retired
+GitHub repository, the review check fails before it can review an upgrade pull request.
+GitHub runs this check using the workflow it already trusts on the default branch.
+
+1. Choose a published Forge release newer than the repo's pin that includes the switch to PyPI.
+   Install it first, then run the upgrade. Use the same version in both commands.
+
+   ```bash
+   uv tool install --force symphony-forge==X.Y.Z
+   forge upgrade vX.Y.Z
+   ```
+
+   The upgrade opens a pull request even if the old pin has no PyPI package. The installed Forge
+   stays on PATH after the upgrade command exits.
+2. The repository owner reviews the exact pull request commit. Check that only the pin,
+   Forge-generated files and Forge records changed, that the new workflow installs from
+   PyPI, and that all other required checks pass. Confirm the Forge review check failed
+   because the retired install source is unavailable. If the pull request is a draft,
+   mark it ready after review.
+3. Pause other merges. In GitHub, open **Settings → Branches** and edit the protection rule
+   for the default branch. Record the source configured for `forge-pr-check`, then temporarily
+   remove only that check from the required list. If it is the sole required status check,
+   turn off the status check requirement for this merge. Keep the pull request requirement,
+   approvals, any other required checks and administrator protection in place. Merge only
+   the reviewed upgrade pull request. Immediately restore `forge-pr-check` with its original
+   source and settings, even if the merge fails.
+4. Check that the next pull request gets a green `forge-pr-check` from the upgraded default
+   branch. If another work branch still pins an unpublished release, merge the upgraded
+   default branch into it.
 
 ## Releasing Forge
 
@@ -725,7 +757,7 @@ Hold merges from the cut until you push the tag and check the installed version.
      remote, so in the scratch folder make the app as `app` and a local bare repo as its remote:
      `git init -b main app`, `git init --bare -b main origin.git`, `git -C app remote add origin ../origin.git`.
      Run `forge init` in `app` from the tag:
-     `uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge init --starter react --actions no`.
+     `uvx --from symphony-forge==X.Y.Z forge init --starter react --actions no`.
      Init sets up the app and pushes its first commit to that remote, then stops with "Forge cannot identify
      a GitHub repository from origin". That is expected for this folder; the app is ready.
    - Start a `general-purpose` subagent, not the `worker` role. Set its model to the one in

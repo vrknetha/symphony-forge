@@ -87,7 +87,7 @@ def _mac_check_and_install(tmp_path):
     calls = log.read_text().splitlines()
     assert calls == ["brew install git", "brew install gh", "brew install node",
                      "brew install --cask docker", "brew install uv",
-                     "uv tool install --force git+https://github.com/knacklabs/symphony-forge@v1.2.48", "uv tool update-shell",
+                     "uv tool install --force symphony-forge==1.2.48", "uv tool update-shell",
                      "uv tool dir --bin", "npm install -g @anthropic-ai/claude-code",
                      "npm install -g @openai/codex",
                      f"npx --yes skills add {IMPECCABLE_URL} -g -a claude-code -a codex --yes",
@@ -231,7 +231,7 @@ def _windows_check_and_install(tmp_path):
         "winget install --id OpenJS.NodeJS.LTS --exact --source winget --accept-package-agreements --accept-source-agreements",
         "winget install --id astral-sh.uv --exact --source winget --accept-package-agreements --accept-source-agreements",
         "winget install --id Docker.DockerDesktop --exact --source winget --accept-package-agreements --accept-source-agreements",
-        "uv tool install --force git+https://github.com/knacklabs/symphony-forge@v1.2.48",
+        "uv tool install --force symphony-forge==1.2.48",
         "uv tool update-shell", "uv tool dir --bin",
         "npm install -g @anthropic-ai/claude-code", "npm install -g @openai/codex",
         f"npx --yes skills add {IMPECCABLE_URL} -g -a claude-code -a codex --yes",
