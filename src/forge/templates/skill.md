@@ -79,6 +79,8 @@ own fix that changes only `checks`, `test_place` and the generated workflow from
 that the branch and default branch share. Added checks keep their usual checks.
 
 Start with `forge next`. It says where things stand and gives the exact next command.
+If it names another coordinator session, use one chat to coordinate the repo.
+
 `forge next`, `forge start` and `forge land` also remove finished folders and
 say how many they removed. Forge keeps the current folder and folders with
 local work that GitHub does not have. For a closed pull request, GitHub must
@@ -2222,12 +2224,20 @@ restore after they fetch.
 
 In `forge.toml`, `cold_read_rounds` sets the cold-read limit and `task_review_rounds` sets the task and fix review limit. Each accepts 1 or 2 and defaults to 2. For a fix, only blocked reviews count toward this limit.
 
+The owner can set `auto_more_round = true` in `forge.toml` to permit one more review round per item.
+At the review limit, close applies this policy only when all open blocking findings are P0 or P1
+with `Raise: Functional`. Close reports the policy when it applies it. The setting is off by default.
+P0 findings already return to the worker and do not use this permission. The next worker turn
+uses the permission even if it changes no reviewed file. Land starts the authorized round even
+if local tests also fail, so the worker can address both problems.
+All other choices still wait for the owner. New and existing repos can use this setting after upgrade.
+
 For a fix, close also runs its new or changed pytest Done-when tests on the code before the fix, in a temporary copy of the repo, and refuses a test that passes there; when the test cannot start there, close warns and the review judges it.
 
 A person can ask you to skip the model review for a task or fix. Run `forge close <item> --no-review --by "<name>" --reason "<why>"` only when a person asks. Close adds the name and reason to the pull request. Close refuses if an earlier review blocked the item. Tests, CI, design checks and merge still run.
 
 At the round limit (the repo's setting, two by default), open findings below P0
-stop the item only when no P0 remains open.
+stop the item only when no P0 remains open and close does not apply the policy above.
 Forge asks the owner: one more round, split or accept.
 Accept makes the open findings follow-ups in Known issues with the owner's reason.
 An open P0 returns to the worker. When the same P0 stays open in two worker rounds in a row,

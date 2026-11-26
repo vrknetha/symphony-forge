@@ -394,9 +394,11 @@ def test_29_doctor(repo, gh, tmp_path, monkeypatch, case, rows, doctor_sdks):
         assert done.stdout.startswith("Everything checks out"), done.stdout
         # Identical hook commands and payloads shared by the hosts need one probe, not two.
         calls = log.read_text(encoding="utf-8")
-        for hook in ("context", "handoff", "deny", "approval"):
+        for hook in ("handoff", "deny", "approval"):
             assert calls.count(f"hook {hook}\n") == 1, calls
-        assert calls.count('"hook_event_name"') == 4
+        assert calls.count("hook context\n") == 2, calls
+        assert calls.count('"SessionStart"') == calls.count('"SessionEnd"') == 1, calls
+        assert calls.count('"hook_event_name"') == 5
     elif case == "missing tool":
         assert done.returncode == 0, done.stdout + done.stderr
         assert "Warning: Claude Code is missing or older than v2.1.287" in done.stdout
@@ -443,8 +445,9 @@ def test_38_host_hooks_fail_closed(repo, claude_payload, codex_payload, tmp_path
 
     commands = _hook_commands(repo.path)
     # Both new PreCompact commands must fail closed when Forge cannot launch.
-    assert len(commands) == 8
-    assert sum(event == "PreCompact" for _, event, _ in commands) == 2
+    assert len(commands) == 10
+    for lifecycle in ("PreCompact", "SessionEnd"):
+        assert sum(event == lifecycle for _, event, _ in commands) == 2
     for rel, event, command in commands:
         build = claude_payload if rel.startswith(".claude") else codex_payload
         tool, tool_input = tools.get(event, (None, None))
