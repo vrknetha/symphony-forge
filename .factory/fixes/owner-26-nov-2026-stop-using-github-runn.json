@@ -1,0 +1,16 @@
+{
+  "base": "0b7c6202c1a2cd86c096fc0db11883afac404ca5",
+  "branch": "fix/owner-26-nov-2026-stop-using-github-runn",
+  "done_when": "forge.toml sets test_place = \"local\" and checks = [\"forge-pr-check\"], so close runs only the change's related tests on this machine and waits for no GitHub test job; the generated forge.yml from forge sync runs no test groups on pull requests; starter-smoke.yml and codex-smoke.yml run only by hand (workflow_dispatch), and codex-smoke no longer creates a failed run on every push; nothing else changes",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-26T16:10:04.316022+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Owner, 26 Nov 2026: stop using GitHub runners for tests so GitHub does not ban the repo again for excessive CI (today about 86 test workflow runs at 80-140 runner minutes each, 23 Docker starter smokes, 89 failing codex-smoke runs). Run tests on this machine and only the tests related to the change."
+}
