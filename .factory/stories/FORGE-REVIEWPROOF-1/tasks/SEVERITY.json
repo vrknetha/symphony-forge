@@ -84,8 +84,8 @@
     "id": "7720bccf-cbee-49f5-903a-cc4474a6e04c",
     "status": "clean"
   },
-  "round": 3,
-  "status": "waiting for checks",
+  "round": 4,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T17:28:07.107327+00:00",
@@ -117,16 +117,18 @@
     {
       "at": "2026-11-26T18:12:15.189309+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-26T19:05:28.523428+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": "45b30c42-1453-4bed-bf92-e6d03ac61fc4",
-    "head": "bca5217920409b425b4706600231dd7cdf32be1b",
-    "keys": {
-      "the open P0 not done: a new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion. in src/forge/review.py": 1,
-      "the open P0 test: 4: migration-floor proof omits deletion and multiple findings in tests/test_review_severity_and_migration_floor.py": 1
-    },
-    "round": 2
+    "close": "ccb3e706-04f2-4c25-89ce-ab7cc0cebd91",
+    "head": "bdfb47bdfc67e8e2fb9e959eae6154daaf4056db",
+    "keys": {},
+    "round": 3
   },
-  "worker": "codex"
+  "worker": "antigravity"
 }
