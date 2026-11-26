@@ -103,7 +103,7 @@ def test_1_forge_s_own_untrusted_hooks_are_trusted_on_fresh_and_resumed_worker_t
     assert built.returncode == 0, built.stdout + built.stderr
     assert _sent(calls, "hooks/list") == [{"cwds": [str(folder)]}]
     assert {hook["eventName"] for hook in _listed(calls)} == {
-        "sessionStart", "preCompact", "preToolUse", "postToolUse"}
+        "sessionStart", "sessionEnd", "preCompact", "preToolUse", "postToolUse"}
     assert {hook["sourcePath"] for hook in _listed(calls)} == {
         str(repo.path / ".codex" / "hooks.json")}
     [start] = _sent(calls, "thread/start")
@@ -302,7 +302,7 @@ def test_5_new_and_upgraded_clients_trust_forge_hooks_and_refuse_changed_or_fore
 
     assert asked.returncode == 0, asked.stdout + asked.stderr
     assert {hook["eventName"] for hook in _listed(calls)} == {
-        "sessionStart", "preCompact", "preToolUse", "postToolUse"}
+        "sessionStart", "sessionEnd", "preCompact", "preToolUse", "postToolUse"}
     [start] = _sent(calls, "thread/start")
     assert start["config"]["hooks"] == _trusted(calls)
     assert len(_sent(calls, "turn/start")) == 1

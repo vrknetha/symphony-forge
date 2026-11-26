@@ -202,11 +202,9 @@ def context_hook(args: Any) -> int:
     # Short and offline: no GitHub, story history or per-worktree settings. The step line needs
     # every story's record, so it stays in forge next.
     print("\n".join(_hotspots(top, {}, 3) + ["Run forge next for the full picture."]))
-    notes = story.show(top, story.landed_ref(top), "docs/handover.md") or ""
-    heading = "## Decisions and lessons\n"
-    if heading in notes:
-        section = notes.split(heading, 1)[1].split("\n## ", 1)[0].rstrip()
-        print(heading + section)
+    _, heading, notes = (story.show(top, story.landed_ref(top), "docs/handover.md") or "").partition("## Decisions and lessons\n")
+    if heading:
+        print(heading + notes.split("\n## ", 1)[0].rstrip())
     return 0
 
 

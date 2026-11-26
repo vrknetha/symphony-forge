@@ -394,9 +394,11 @@ def test_29_doctor(repo, gh, tmp_path, monkeypatch, case, rows, doctor_sdks):
         assert done.stdout.startswith("Everything checks out"), done.stdout
         # Identical hook commands and payloads shared by the hosts need one probe, not two.
         calls = log.read_text(encoding="utf-8")
-        for hook in ("context", "handoff", "deny", "approval"):
+        for hook in ("handoff", "deny", "approval"):
             assert calls.count(f"hook {hook}\n") == 1, calls
-        assert calls.count('"hook_event_name"') == 4
+        assert calls.count("hook context\n") == 2, calls
+        assert calls.count('"SessionStart"') == calls.count('"SessionEnd"') == 1, calls
+        assert calls.count('"hook_event_name"') == 5
     elif case == "missing tool":
         assert done.returncode == 0, done.stdout + done.stderr
         assert "Warning: Claude Code is missing or older than v2.1.287" in done.stdout
