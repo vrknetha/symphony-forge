@@ -1,5 +1,12 @@
 {
   "branch": "task/FORGE-TOKENS-2-COMPACT",
+  "chat": {
+    "approval": "c44342117bfa7a12bda78e8fa6026daa374e2d5c685626f1386b6a6e14145656",
+    "claude": null,
+    "conversation": "01a218c0-00fd-75b2-93b3-8a73a7865d9d",
+    "head": null,
+    "start": "0de745decdfb559f9ede5ac6194b2c785c6dad10"
+  },
   "round": 1,
   "status": "working",
   "steps": [
