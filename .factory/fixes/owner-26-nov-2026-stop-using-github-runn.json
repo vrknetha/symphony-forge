@@ -162,7 +162,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-26T16:10:04.316022+00:00",
@@ -185,8 +185,19 @@
     {
       "at": "2026-11-26T16:37:09.775935+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-26T17:11:26.340264+00:00",
+      "round": 2,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-26T17:11:26.340264+00:00",
+    "question": "Owner, 26 Nov 2026: stop using GitHub runners for tests so GitHub does is stuck. It should deliver: forge.toml sets test_place = \"local\" and checks = [\"forge-pr-check\"], so close runs only the change's related tests on this machine and waits for no GitHub test job, and the generated workflow from forge sync matches; nothing else changes\nTwo rounds in a row left close's tests failing.\nTwo rounds in a row left the open P0 functional: existing tests fail against the local workflow in .github/workflows/forge.yml.\nThe worker tried: Review of owner-26-nov-2026-stop-using-github-runn: blocked.\nChoose one: switch this item to Claude; keep Codex for one more round; or narrow or split it.",
+    "tool": "codex",
+    "wait_id": "63196a15-52d3-4413-820e-ef4b0e58bd27"
+  },
   "stuck": {
     "close": "c7c7b9ca-e917-4822-adc0-ba96ae3f020d",
     "head": "59e250729d43f9887b54dce5db0a219e9e28b997",
