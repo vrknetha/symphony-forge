@@ -29,7 +29,7 @@ def _refused_as_today(result, version):
     assert result.returncode == 1
     assert result.stderr == (
         f"Forge {version} is installed, but this repo pins {OLD}.\n"
-        f"Next: uv tool install git+https://github.com/knacklabs/symphony-forge@{OLD}\n")
+        f"Next: uv tool install symphony-forge=={OLD.removeprefix('v')}\n")
 
 
 def test_3_default_branch_keeps_working_while_upgrade_waits(repo, tmp_path, claude_payload, monkeypatch):

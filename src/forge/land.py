@@ -16,7 +16,7 @@ from functools import partial
 from graphlib import TopologicalSorter
 from pathlib import Path
 
-from forge import board, checks, close, codex, machine, merge, nextstep, repo, review, score, spotted, story, task, worker
+from forge import board, checks, close, codex, machine, merge, nextstep, owner_choices, repo, review, score, spotted, story, task, worker
 
 NEEDS_CHOICE = 3
 REFUSALS = {
@@ -45,6 +45,11 @@ say = partial(print, flush=True)
 def land(args: argparse.Namespace) -> int:
     if bool(args.item) == bool(getattr(args, "all", False)):
         repo.refuse(REFUSALS["one_or_all"])
+    if os.environ.get(QUEUED) != "1":
+        from forge import doctor
+
+        if removed := doctor.tidy_finished(repo.root()):
+            say(f"Removed {removed} finished folders.")
     if len(args.item) != 1:  # --all, or several named items: the same queue, the named ones only
         if getattr(args, "note", None) is not None:
             repo.refuse(REFUSALS["note_all"])
@@ -143,15 +148,17 @@ def land(args: argparse.Namespace) -> int:
                         else "the failing checks" if red and (queued or failing) else "")
                 if not what:
                     raise
-                if queued and not (red and failing):
+                policy = (not red and owner_choices.policy_pending(repo.read_state(item, top) or {}))
+                if queued and not policy and not (red and failing):
                     raise repo.Refused(str(error).split("\nNext: ")[0], f"forge land {item}",
                                        error.code, error.entry) from None
-                if rounds >= 1:
+                if rounds >= 1 and not policy:
                     rounds += 1  # this stop says why itself, so no stop line
                     say(f"Stopped after one fix round: {item} still has {what}.")
                     raise
                 rounds += 1
-                say(f"Fix round {rounds} of 1: the worker fixes {what}.")
+                say("The owner's policy permits this repair round." if policy else
+                    f"Fix round {rounds} of 1: the worker fixes {what}.")
                 step.land_rounds = rounds
                 if _handed_out(step, top):
                     return 0

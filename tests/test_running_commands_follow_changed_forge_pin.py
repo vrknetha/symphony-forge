@@ -188,7 +188,7 @@ def test_1_running_command_continues_under_the_pin_merged_from_upgraded_default(
         sync_dispatch, dispatch = dispatches
         # Conflict regeneration uses the new release's files, keeping the repo's hooks.
         assert sync_dispatch["args"][:10] == ["run", "--isolated", "--no-project", "--with",
-            f"git+https://github.com/knacklabs/symphony-forge@{current}",
+            f"symphony-forge=={current.removeprefix('v')}",
             "--python", sys.executable, "python", "-I", "-c"]
         assert Path(sync_dispatch["cwd"]) == where
         # Full sync used to install hooks here. File-only regeneration must leave this
@@ -203,7 +203,7 @@ def test_1_running_command_continues_under_the_pin_merged_from_upgraded_default(
     else:
         [dispatch] = dispatches
     assert dispatch["args"] == ["tool", "run", "--from",
-        f"git+https://github.com/knacklabs/symphony-forge@{current}", "forge", command, ITEM]
+        f"symphony-forge=={current.removeprefix('v')}", "forge", command, ITEM]
     assert Path(dispatch["cwd"]) == where
 
 
@@ -239,7 +239,7 @@ def test_2_land_keeps_its_one_fix_round_limit_after_the_worker_changes_the_pin(
     [dispatch] = [json.loads(line) for line in
                   (env.repo.bin / "uv-calls.jsonl").read_text("utf-8").splitlines()]
     assert dispatch["args"] == ["tool", "run", "--from",
-        f"git+https://github.com/knacklabs/symphony-forge@{current}", "forge", "land", ITEM]
+        f"symphony-forge=={current.removeprefix('v')}", "forge", "land", ITEM]
     assert Path(dispatch["cwd"]) == where
 
 
@@ -275,7 +275,7 @@ def test_3_close_continues_the_current_human_accept_choice_under_changed_pin(
     [dispatch] = [json.loads(line) for line in
                   (env.repo.bin / "uv-calls.jsonl").read_text("utf-8").splitlines()]
     assert dispatch["args"] == ["tool", "run", "--from",
-        f"git+https://github.com/knacklabs/symphony-forge@{current}", "forge", *args]
+        f"symphony-forge=={current.removeprefix('v')}", "forge", *args]
     assert Path(dispatch["cwd"]) == where
 
     _install(env.repo.bin, "forge", FORGE_SHIM.format(python=sys.executable,

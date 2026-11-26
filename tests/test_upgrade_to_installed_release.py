@@ -42,8 +42,15 @@ def test_1_upgrade_to_installed_release_continues_during_runs(
         published_item, started_at = prepare_rewritten_published_task(history)
     release = upgrade.repo.forge("--version").stdout.split()[-1]
     # Both a new repo and an earlier-adopted repo can pin an older release.
-    upgrade.on_main("forge.toml", re.sub(r'^version = ".*"', 'version = "v1.0.0"',
-                                         upgrade.toml(), count=1, flags=re.M))
+    settings = re.sub(r'^version = ".*"', 'version = "v1.0.0"', upgrade.toml(), count=1, flags=re.M)
+    if not adopted:
+        diagnostics = [f".claude/agents/{name}.md" for name in ("debugger", "security", "performance")]
+        for path in diagnostics:
+            previous = upgrade.show(path, "main").replace('model: "claude-sonnet-5-5"', 'model: "claude-opus-5-5"')
+            assert 'model: "claude-opus-5-5"' in previous
+            upgrade.on_main(path, previous + "\n")
+        settings = 'models.grill.claude = { model = "opus", effort = "medium" }\n' + settings
+    upgrade.on_main("forge.toml", settings)
     other = _other_repo(tmp_path, upgrade.repo.bin)
     hold_agents(upgrade.env)
     # Hold only the other repo's reader, not this upgrade's review service.
@@ -70,6 +77,12 @@ def test_1_upgrade_to_installed_release_continues_during_runs(
         expected = (template + f"\n<!-- {MARK} {release} -->\n").strip() + part.rstrip("\n")
         for host in (".claude", ".codex"):
             assert upgrade.repo.git("show", f"fix/{name}:{host}/skills/forge/SKILL.md") == expected
+        if not adopted:
+            for path in diagnostics:
+                front = upgrade.show(path, f"fix/{name}").split("---", 2)[1].splitlines()
+                assert 'model: "claude-sonnet-5-5"' in front and 'effort: "high"' in front, path
+            expected_settings = settings.replace('version = "v1.0.0"', f'version = "{release}"', 1)
+            assert upgrade.show("forge.toml", f"fix/{name}") == expected_settings.rstrip("\n")
         assert not [call for call in upgrade.uv() if call["args"][:2] == ["tool", "install"]]
         assert reader.poll() is None, "Upgrade must leave the other repo's run alone"
     finally:
