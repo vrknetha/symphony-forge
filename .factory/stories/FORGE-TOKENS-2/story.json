@@ -1,6 +1,15 @@
 {
+  "approval": {
+    "at": "2026-11-26T14:33:51.236216+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01H4uNxzAt9JBCwGYMytzsuo",
+    "hash": "c44342117bfa7a12bda78e8fa6026daa374e2d5c685626f1386b6a6e14145656",
+    "round": 3,
+    "runtime": "claude",
+    "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
+  },
   "doc": "plans/FORGE-TOKENS-2.md",
-  "status": "read",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-26T12:25:21.485546+00:00",
@@ -17,8 +26,12 @@
     {
       "at": "2026-11-26T13:09:33.737411+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-26T14:33:51.236408+00:00",
+      "step": "approved"
     }
   ],
   "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
-  "touches": 0
+  "touches": 1
 }
