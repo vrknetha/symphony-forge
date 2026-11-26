@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-25T17:24:30.849458+00:00
-seconds: 583.473
-read_hash: 1388f8c3102449fc5969f73b390e8f1e193e5508
-round: 2
+read_at: 2026-11-25T17:40:00.067319+00:00
+seconds: 803.176
+read_hash: 74fbad5bbf971458cd3bfc41467dbab26ee6a5a8
+round: 3
 passed: no
-doc_seen: 1388f8c3102449fc5969f73b390e8f1e193e5508
+doc_seen: 74fbad5bbf971458cd3bfc41467dbab26ee6a5a8
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 9a85546ca8865999dd4be59a159247c862a2852e
+notes_seen: 0d28fcca7ff6b7d573b7e06c17fdd23147db3533
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a213a4-5b89-7bf0-8374-457a800a9e24
 session:
-loop_choice: more
-loop_reason: Owner chose one more round: fix notes 9-17 in the builder details
+loop_choice: accept
+loop_reason: Owner accepted round 3; the coordinator writes the 5 fixes into the builder details
 ---
 # Cold read notes
 
@@ -152,3 +152,49 @@ Automatic approval review rejected `forge next` because it requires approval and
     Gain 3, Work 2, Harm 3
 
    Disposition: cut Codex uses the latest request, not the session total; tested (detail 1).
+
+## Round 3
+
+18. Blocking: The worker filter also silences a coordinator in a task or fix worktree.
+    Raise: Functional.
+    Case: normal use - a coordinator opens a fix worktree to resolve a merge conflict and its chat passes half full.
+    The [guide](/src/forge/templates/skill.md:2711) tells coordinators to resolve conflicts in the item’s worktree. The [plan](/plans/FORGE-CHATHANDOVER-1.md:41) suppresses the warning for every call from such a worktree, including the coordinator’s.
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted round 3; the coordinator writes the 5 fixes into the builder details
+
+19. Advisory: Unproven: item 1: a warning can pass the test while both hosts reject it.
+    Raise: Test.
+    The [plan’s test](/plans/FORGE-CHATHANDOVER-1.md:45) checks for `additionalContext`, but an output containing that field alone lacks the required `hookEventName: "PreToolUse"`. Both [Claude’s hook documentation](https://code.claude.com/docs/en/hooks) and [Codex’s output schema](https://github.com/openai/codex/blob/main/codex-rs/hooks/schema/generated/pre-tool-use.command.output.schema.json) require that field. The test could pass while neither host delivers the warning.
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted round 3; the coordinator writes the 5 fixes into the builder details
+
+20. Advisory: Unproven: item 1: Codex never has to produce a warning in the test.
+    Raise: Test.
+    The [planned Codex case](/plans/FORGE-CHATHANDOVER-1.md:45) expects no warning at 30%. An implementation that returns no warning for every Codex transcript would pass it, even though [Codex is a configured host](/src/forge/githooks.py:25).
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted round 3; the coordinator writes the 5 fixes into the builder details
+
+21. Advisory: Unproven: item 1: a null transcript path can block shell commands.
+    Raise: Test.
+    [Codex permits a null transcript path](https://learn.chatgpt.com/docs/hooks), but the [planned cases](/plans/FORGE-CHATHANDOVER-1.md:45) use transcripts with counts. Code that handles a missing file but crashes on a null path could pass them; the [hook launcher](/src/forge/sync.py:65) turns that failure into a blocked shell command.
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted round 3; the coordinator writes the 5 fixes into the builder details
+
+22. Advisory: Unproven: item 1: later threshold warnings can be omitted.
+    Raise: Test.
+    The [plan](/plans/FORGE-CHATHANDOVER-1.md:42) requires another warning for each further tenth of the window, but tests only the first warning and suppression at the same size. Code that never warns again would pass while a coordinator waiting for an in-flight round receives no later reminder. The [guide](/src/forge/templates/skill.md:579) requires some rounds to finish before switching chats.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+23. Advisory: Haiku 5.5 can be told to hand over at 11% of its window.
+    Raise: Functional.
+    The [fallback](/plans/FORGE-CHATHANDOVER-1.md:39) assigns every Haiku model a 200,000-token window when the host does not report one. Forge already names [Haiku 5.5](/src/forge/repo.py:603), which [Anthropic specifies as having a one-million-token window](https://platform.claude.com/docs/en/models/haiku-5-5/overview). A coordinator using it would be warned at 110,000 tokens.
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted round 3; the coordinator writes the 5 fixes into the builder details
+
+24. Advisory: Disputed keep 3: The handoff hook still contacts GitHub.
+    Raise: Functional.
+    The [plan](/plans/FORGE-CHATHANDOVER-1.md:31) says the note is built offline, but [handoff](/src/forge/nextstep.py:208) calls `_report`, which [queries pull requests](/src/forge/nextstep.py:260) through `gh`. A handover can therefore wait on GitHub when the network is slow.
+    The live hook was not run during this read.
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
