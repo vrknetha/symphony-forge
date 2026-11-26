@@ -1,0 +1,16 @@
+{
+  "base": "0b7c6202c1a2cd86c096fc0db11883afac404ca5",
+  "branch": "fix/owner-26-nov-2026-the-docker-starter-smo",
+  "done_when": "starter-smoke.yml and codex-smoke.yml run only by hand (workflow_dispatch) or on their nightly schedule if they have one, and a push creates no failed codex-smoke run; nothing else changes",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-26T16:10:21.796957+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Owner, 26 Nov 2026: the Docker starter smoke and the codex-smoke workflows use GitHub runners on pull requests, and codex-smoke creates a failed run on every push (89 today); tests now run on this machine."
+}
