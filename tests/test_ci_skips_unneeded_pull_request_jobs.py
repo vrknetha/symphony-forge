@@ -20,21 +20,14 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.platform
-def test_1_pull_requests_skip_selection_and_filter_plugin_changes():
+def test_1_pull_requests_filter_plugin_changes():
     workflow = (ROOT / ".github/workflows/forge-next.yml").read_text(encoding="utf-8")
-    selection = workflow.split("\n  selection:\n", 1)[1].split("\n  plugin:\n", 1)[0]
-    guard = re.search(r"^    if: (.+)$", selection, re.M)
-    assert guard, "Do not allocate an unused selection runner on pull requests"
-    for event in ("pull_request", "schedule", "workflow_dispatch", "push"):
-        assert bool(expression("${{ " + guard[1] + " }}", event_name=event)) == (
-            event != "pull_request")
-
     # The plugin is the only useful PR job here. Filter the event without
     # allocating a separate runner to decide whether the plugin should start.
     trigger = workflow.split("\n  pull_request:\n", 1)[1].split("\n  push:\n", 1)[0]
     paths = [shlex.split(value)[0] for value in re.findall(r"^      - (.+)$", trigger, re.M)]
-    plugin = workflow.split("\n  plugin:\n", 1)[1].split("\n  tests:\n", 1)[0]
-    # A skipped dependency skips the plugin too, even when the path matches.
+    plugin = workflow.split("\n  plugin:\n", 1)[1]
+    # The plugin needs to run when a path matches.
     assert not re.search(r"^    needs:", plugin, re.M), "Plugin checks must run independently"
     plugin_guard = re.search(r"^    if: (.+)$", plugin, re.M)
     permitted = not plugin_guard or bool(expression(

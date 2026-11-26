@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/contextsize.py\tRearm the half-window warning after compaction\tFORGE-CHATHANDOVER-1/HANDOVER",
+      "kind": "bug",
+      "path": "src/forge/contextsize.py",
+      "line": 65,
+      "text": "Rearm the half-window warning after compaction",
+      "from": "blocking",
+      "item": "FORGE-CHATHANDOVER-1/HANDOVER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/contextsize.py\tUse the actual window for supported 200K Claude models\tFORGE-CHATHANDOVER-1/HANDOVER",
+      "kind": "bug",
+      "path": "src/forge/contextsize.py",
+      "line": 42,
+      "text": "Use the actual window for supported 200K Claude models",
+      "from": "blocking",
+      "item": "FORGE-CHATHANDOVER-1/HANDOVER",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tsrc/forge/templates/skill.md\tGate: keep the existing handover guide test passing\tFORGE-CHATHANDOVER-1/HANDOVER",
+      "kind": "bug",
+      "path": "src/forge/templates/skill.md",
+      "line": 661,
+      "text": "Gate: keep the existing handover guide test passing",
+      "from": "blocking",
+      "item": "FORGE-CHATHANDOVER-1/HANDOVER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_context_hook_names_handoff_note.py\tGate: mark the new hook tests for the platform subset\tFORGE-CHATHANDOVER-1/HANDOVER",
+      "kind": "bug",
+      "path": "tests/test_context_hook_names_handoff_note.py",
+      "line": 6,
+      "text": "Gate: mark the new hook tests for the platform subset",
+      "from": "blocking",
+      "item": "FORGE-CHATHANDOVER-1/HANDOVER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_context_line_past_half_window.py\tTest: the half-window proof never checks multiple transcript records\tFORGE-CHATHANDOVER-1/HANDOVER",
+      "kind": "bug",
+      "path": "tests/test_context_line_past_half_window.py",
+      "line": 14,
+      "text": "Test: the half-window proof never checks multiple transcript records",
+      "from": "blocking",
+      "item": "FORGE-CHATHANDOVER-1/HANDOVER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_fix_client_repos_lose_the_agent_s_state_the.py\tTest: the guide proof misses required handoff steps\tFORGE-CHATHANDOVER-1/HANDOVER",
+      "kind": "bug",
+      "path": "tests/test_fix_client_repos_lose_the_agent_s_state_the.py",
+      "line": 69,
+      "text": "Test: the guide proof misses required handoff steps",
+      "from": "blocking",
+      "item": "FORGE-CHATHANDOVER-1/HANDOVER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/nextstep.py\tFollow-up: prove edits made during a handoff refresh survive",
+      "kind": "edge",
+      "path": "src/forge/nextstep.py",
+      "line": 222,
+      "text": "Follow-up: prove edits made during a handoff refresh survive",
+      "from": "review",
+      "item": "FORGE-CHATHANDOVER-1/HANDOVER",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

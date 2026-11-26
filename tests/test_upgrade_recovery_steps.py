@@ -2,10 +2,9 @@
 
 These rules protect plain recovery steps and a cached release's next step.
 Existing upgrade refusal tests cover ordinary branches, and release notice tests
-cover announcements, not actionable Next lines. Only GitHub is faked. No new
+cover announcements, not actionable Next lines. GitHub and PyPI are faked. No new
 production seam is needed, and source refactoring preserves these contracts.
 """
-import json
 import shutil
 
 import pytest
@@ -14,7 +13,6 @@ from conftest import ROOT
 from test_setup import _fresh_client, _version
 
 STORY = "upgrade-from-fix-points-to-main"
-QUERY = ("release", "view", "--repo", "knacklabs/symphony-forge", "--json", "tagName")
 
 
 @pytest.fixture(params=["new", "previous release"])
@@ -63,17 +61,17 @@ def test_1_upgrade_in_fix_names_drop_and_main_checkout(repo, client, tmp_path):
             assert "fix/ordinary-upgrade" not in output
 
 
-def test_2_next_names_upgrade_from_known_newer_release(repo, gh, client, monkeypatch):
+def test_2_next_names_upgrade_from_known_newer_release(repo, client, monkeypatch):
     monkeypatch.setenv("FORGE_NOW", "2030-01-01T10:00:00+00:00")
-    gh.respond(*QUERY, stdout=json.dumps({"tagName": "v99.10.0"}))
+    repo.pypi("99.10.0")
     for _ in range(2):
         shown = repo.forge("next", cwd=client)
         assert shown.returncode == 0, shown.stderr
         assert shown.stdout.splitlines().count("Next: forge upgrade v99.10.0") == 1
-    assert [call for call in gh.calls() if call == list(QUERY)] == [list(QUERY)]
+    assert len(repo.pypi_calls()) == 1
     for day, tag in ((2, _version(repo)), (3, "v0.0.1"), (4, "not a release")):
         monkeypatch.setenv("FORGE_NOW", f"2030-01-{day:02}T10:00:00+00:00")
-        gh.respond(*QUERY, stdout=json.dumps({"tagName": tag}))
+        repo.pypi(tag.removeprefix("v"))
         shown = repo.forge("next", cwd=client)
         assert shown.returncode == 0, shown.stderr
         assert not any(line.startswith("Next: forge upgrade ")

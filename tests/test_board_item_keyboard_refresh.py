@@ -32,7 +32,8 @@ failures = []
 revision = 0
 
 def git(cwd, *args):
-    subprocess.run(['git', *args], cwd=cwd, check=True, capture_output=True, text=True, encoding='utf-8')
+    # The outer test captures stderr, so a failed fetch reports Git's reason.
+    subprocess.run(['git', *args], cwd=cwd, check=True, stdout=subprocess.DEVNULL)
 
 def update(page, container, control):
     global revision

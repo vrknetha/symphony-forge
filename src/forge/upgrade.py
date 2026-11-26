@@ -11,9 +11,12 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 from typing import Any
+from urllib.error import HTTPError
+from urllib.request import urlopen
 
 from forge import close, codex, event_log, machine, native, quicktest, repo, story, task
 
@@ -25,9 +28,12 @@ COMMANDS = [{
     "listing": "| `forge upgrade [release]` | Upgrades Forge to the release, or the newest: installs it, has it refresh Forge's files in a fix, and closes that fix |",
 }]
 
-SOURCE = "knacklabs/symphony-forge"
+PYPI = "https://pypi.org/pypi/symphony-forge/json"
+LEGACY_SOURCE = "git+https://github.com/knacklabs/symphony-forge@"
+RECOVERY = ("https://github.com/vrknetha/symphony-forge/blob/main/docs/guide.md"
+            "#recovering-upgrades-from-the-retired-github-repository")
 INSTALL = ("uv tool install --force --reinstall --no-cache --python 3.11 "
-           f"git+https://github.com/{SOURCE}@{{release}}")
+           "symphony-forge=={version}")
 PREFIX = "upgrade-forge-to-"
 WHY, DONE = "Upgrade Forge to {release}.", "This repo pins and runs Forge {release}."
 RELEASE = re.compile(r"v(\d+)\.(\d+)\.(\d+)")
@@ -89,7 +95,7 @@ def upgrade(args: argparse.Namespace) -> int:
     if dirty:
         repo.refuse(REFUSALS["dirty"], files=", ".join(entry[3:] for entry in dirty.split("\0") if entry),
                     again=again)
-    release = args.release or _newest(top)
+    release = args.release or _newest()
     if not RELEASE.fullmatch(release):
         repo.refuse(REFUSALS["bad_release"], release=release)
     needs_install = _on_path()[0] != release
@@ -243,7 +249,7 @@ def upgrade(args: argparse.Namespace) -> int:
             resume = "forge land --all" if command == "merge train" else f"forge {command} {wait['item']}"
             print(f"Ended {command} for {wait['item']} to install Forge. "
                   f"Run {resume} to resume the CI wait.", flush=True)
-        install = INSTALL.format(release=release)
+        install = INSTALL.format(version=release.removeprefix("v"))
         installed = repo.run(*install.split())
         if installed.returncode:
             reason = (installed.stderr or installed.stdout).strip().splitlines() or ["uv gave no reason"]
@@ -283,7 +289,12 @@ def upgrade(args: argparse.Namespace) -> int:
 
     # 7 and 8. The release's own close; its last line says who merges, and its exit code is ours.
     print(f"Running Forge {release}'s forge close {name}.", flush=True)
-    return repo.run_release(release, ["close", name], path)
+    status = repo.run_release(release, ["close", name], path)
+    if status and LEGACY_SOURCE in (story.show(top, ref, ".github/workflows/forge.yml") or ""):
+        print("The default branch still installs Forge from the retired GitHub repository. "
+              "If that broke the upgrade's review check, ask the repository owner to follow "
+              f"the recovery steps at {RECOVERY}", file=sys.stderr)
+    return status
 
 
 CODEX_INSTALL = ("irm https://chatgpt.com/codex/install.ps1 | iex" if os.name == "nt"
@@ -379,9 +390,9 @@ def release_notice(top: Path) -> list[str]:
     """Best-effort daily release check, shared by all of this repo's worktrees."""
     try:
         pinned = repo.config(top)["version"]
-        cache = repo.forge_dir(top) / f"release-{repo.now()[:10]}.json"
+        cache = repo.forge_dir(top) / f"pypi-release-{repo.now()[:10]}.json"
         try:
-            # Exclusive creation claims today's check before contacting GitHub. A failed or
+            # Exclusive creation claims today's check before contacting PyPI. A failed or
             # interrupted check stays claimed, so other worktrees never retry it today.
             claimed = cache.open("x", encoding="utf-8")
         except FileExistsError:
@@ -389,8 +400,8 @@ def release_notice(top: Path) -> list[str]:
         else:
             with claimed:
                 try:
-                    tag = _newest(top, timeout=3)
-                except (repo.Refused, OSError, subprocess.TimeoutExpired):
+                    tag = _newest(timeout=3)
+                except repo.Refused:
                     tag = None
                 json.dump(tag, claimed)
         if isinstance(tag, str) and RELEASE.fullmatch(tag) and _numbers(tag) > _numbers(pinned):
@@ -402,24 +413,24 @@ def release_notice(top: Path) -> list[str]:
     return []
 
 
-def _newest(top: Path, timeout: float | None = None) -> str:
-    """The newest release's tag, as GitHub has it."""
-    from forge import github
-
-    gh = shutil.which("gh")
-    if gh is None:
-        repo.refuse(REFUSALS["no_newest"], reason="gh is not installed")
-    args = ("gh", "release", "view", "--repo", SOURCE, "--json", "tagName")
-    done = github.read(args, lambda: subprocess.run(
-        [gh, *args[1:]], cwd=top, input="", capture_output=True, text=True, encoding="utf-8",
-        errors="replace", timeout=timeout))
+def _newest(timeout: float = 10) -> str:
+    """Read the release users can install. Retry one transient server error within the deadline."""
     try:
-        tag = json.loads(done.stdout).get("tagName") if done.returncode == 0 else None
-    except (ValueError, AttributeError):
-        tag = None
-    if not isinstance(tag, str):
-        lines = (done.stderr or done.stdout).strip().splitlines() or ["gh gave no release"]
-        repo.refuse(REFUSALS["no_newest"], reason=lines[-1].rstrip("."))
+        end = time.monotonic() + timeout
+        try:
+            with urlopen(PYPI, timeout=timeout) as response:
+                info = json.load(response)["info"]
+        except HTTPError as error:
+            remaining = end - time.monotonic()
+            if not 500 <= error.code < 600 or remaining <= 0:
+                raise
+            with urlopen(PYPI, timeout=remaining) as response:
+                info = json.load(response)["info"]
+        tag = f"v{info['version']}"
+        if info.get("yanked") or not RELEASE.fullmatch(tag):
+            repo.refuse(REFUSALS["no_newest"], reason="PyPI did not report an installable Forge release")
+    except (OSError, ValueError, KeyError, TypeError, AttributeError) as error:
+        repo.refuse(REFUSALS["no_newest"], reason=str(error).strip().rstrip("."))
     return tag
 
 

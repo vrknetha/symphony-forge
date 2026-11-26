@@ -1,0 +1,75 @@
+{
+  "amendments": [
+    {
+      "at": "2026-11-25T16:53:22.509156+00:00",
+      "because": "Owner: do not say Windows is not supported; a Windows bug still gets fixed when it is reported. Add nothing else.",
+      "done_when": "Forge's nightly full run and its before-release check run no Windows job, a release no longer waits on Windows, Linux tests on pull requests and the macOS tests stay, and the release notes say Windows is not supported for now."
+    }
+  ],
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/drop-windows-tests",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a2139f-3eef-7eb3-ac3c-d1d7b0eb4d26",
+    "head": null,
+    "start": "ed98a8ad60eba8c3d46b791e03296d107415ccbc"
+  },
+  "done_when": "Forge's nightly full run and its before-release check run no Windows job, a release no longer waits on Windows, and Linux tests on pull requests and the macOS tests stay.",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "f31ed39e46df89f6bf21fff66a8688349f0bb49ec504779bfd47ba0890d19c37",
+    "changed": "2648f8809ff531eb5e0701a4fcba8c09aef167cb6545a3d202bc05e8c5aa9930",
+    "commit": "7fee53fc3703e12b7dec3d1474fb3d5e9af0a41c",
+    "dismissals": [],
+    "findings": [],
+    "id": "d47153a4-2381-4e24-ab0b-a1fee7cc8ff9",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T16:52:01.246727+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T16:52:10.522835+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:02:59.358349+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T17:47:28.838960+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:52:17.853956+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T01:16:41.916184+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T01:24:22.367140+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "43a7c7b5-86e4-4eb9-8b82-99c6e14507f2",
+    "head": "4068887b31ab7327cd66997df39755f8da0d7e8c",
+    "keys": {},
+    "round": 2
+  },
+  "why": "Windows test jobs caused 48 of about 1,000 Forge fixes since 1 Oct (14 in November, about half only test-harness problems), and the Windows release check delayed four releases in a row; the owner chose on 25 Nov 2026 to stop testing Forge on Windows.",
+  "worker": "codex"
+}

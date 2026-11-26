@@ -1,0 +1,68 @@
+{
+  "branch": "task/FORGE-SLOWTEST-1-NIGHTLY",
+  "chat": {
+    "approval": "1d2523ee5c1101e40a204e7784d0455562f2110bb7cf3cbe44ed938e3dc615f3",
+    "claude": null,
+    "conversation": "01a2158a-f9d1-7862-820c-65698a19b3d5",
+    "head": null,
+    "start": "d3d6039be9ad575bd58c30af2b039cfa8fa9ad5f"
+  },
+  "known": [
+    {
+      "area": "failed_schedules.fetch() in src/forge/board_facts.py",
+      "file": "src/forge/board_facts.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 478,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Re-running a scheduled workflow can revive a cleared failure",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "c67bc85720488893fb8d5570ec74a2004604e587f5b3eb4c462f7c2395e6a229",
+    "changed": "24ab8c15fdd0ca6390d35b08b9715034859c9630f4bbd801f426bce267355aad",
+    "commit": "fb5fa2676cd016b4fe643055ad8aa163f8e60914",
+    "dismissals": [],
+    "findings": [],
+    "id": "8c2798e4-4ff0-4975-ad27-ad278e3349d3",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T17:54:12.442869+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T01:49:17.008068+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T01:59:44.461106+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T02:00:09.504584+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T02:04:59.075478+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "1dd1591e-badc-418a-a6cd-8f58d6ee42b9",
+    "head": "ff2dbdfa63dca37dbdd8bd6c17dda5cef1b3efec",
+    "keys": {},
+    "round": 1
+  },
+  "worker": "codex"
+}

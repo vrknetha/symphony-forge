@@ -29,7 +29,7 @@ def test_1_the_guide_carries_the_steps_to_score_a_release_in_claude_code():
         # The scratch folder is a git checkout with an origin remote, which forge init needs.
         "git init -b main app", "git init --bare -b main origin.git", "git -C app remote add origin ../origin.git",
         # The release's own Forge, and the one scorer command with every option it requires.
-        "uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge init --starter react --actions no",
+        "uvx --from symphony-forge==X.Y.Z forge init --starter react --actions no",
         "uv run --frozen --python 3.11 python scripts/bench_score.py <scratch app> --checks benchmark/checks.toml"
         " --release vX.Y.Z --results benchmark/results",
         # The subagent: its task, its boundary, and what it must not do.

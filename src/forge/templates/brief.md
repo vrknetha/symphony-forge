@@ -103,7 +103,8 @@ Close then reviews only conflict repairs and later edits when an earlier clean r
 $delegation
 - Claude SDK workers get their helper roles and `general-purpose` through turn options only.
   Each worker kind uses its `subagents` and `subagent_effort` pair, or `claude-haiku-5-5` at
-  high when it has no pair. Design turns use the build pair. Helper settings stay the same
+  high when it has no pair. With that stock pair, debugger, security and performance use
+  `claude-sonnet-5-5` at high. Design turns use the build pair. Helper settings stay the same
   after a failed round and set no process-wide value or `settings.json` value.
 - Edit files only inside this checkout.
 - $file_ownership
@@ -164,6 +165,7 @@ $delegation
   commit and stop instead of asking the coordinator to push or run CI. CI is the merge gate. Commit
   your local proof in the `Proof list:` without waiting for CI results or timings.
 - Close and doctor cancel only this pull request's older forge.yml runs when they block its newest queued run. Client workflows stay untouched. If a run stays active after cancellation, Forge prints GitHub's force-cancel command for the operator. It never calls that command automatically. Close keeps waiting for the new run.
+- When the Forge review is the only required check that failed, close retries its job once and waits for it to finish. Close still needs a passing review on the current commit. New repos get this at init. Existing repos get it on upgrade.
 - On new and upgraded repos, close and merge retry failed CI test jobs once only after runner
   loss, cancellation or timeout. Assertion failures get no retry. They wait for that attempt.
   Cancelled runs use the same retry limit.
@@ -333,6 +335,9 @@ their settings until that fix changes them. Keep `test` as the full suite.
 For a pytest repo, the shipped picker is `forge test --pytest <base>`; it runs the repo's own
 test command without installing Forge in the project. This picker belongs in `fast_test`;
 workers run bare `forge test` to enter the lane.
+On Windows, a builder's own bare run skips separate Playwright or Cypress steps, directly or
+through one package script. A step that reaches the browser runner through another file still runs.
+Pull request checks, close and full runs keep their configured browser steps.
 Codex full-access worker turns send permission requests to Forge, which accepts them,
 including requests to run `forge test`. Read-only turns decline permission requests.
 Root dependency files select the full test command. A nested project's dependency files
@@ -594,9 +599,15 @@ part of that address only when the listed address has one. Set `phone: true` whe
 other answer, leave it out. When the browser tests run, the check opens each listed screen in light and
 dark and fails on sideways overflow, cut text, low contrast or a page that is not the listed screen.
 To set one kind of problem aside for a screen, add `waive: { '<kind>': '<the reason>' }` to its entry.
-On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep all browser projects in the nightly full command and outside `fast_test`. Pull request CI runs the desktop Playwright project; this Windows shortcut does not change selection elsewhere.
+On Windows, a builder's own bare `forge test` run skips separate Playwright or Cypress steps.
+A step that reaches Playwright through another file still runs. Pull request checks and close
+keep their configured browser steps.
 The rendered check runs with browser tests in the full test command and nightly full run.
-Keep browser tests outside `fast_test`, even when shared settings select all other tests.
+For Forge's separate browser job, follow this default.
+Keep all browser projects in the nightly full command and outside `fast_test`.
+Pull request CI runs the desktop Playwright project. Nightly runs all projects.
+When splitting an adopted app's combined test script, keep its existing browser steps in the
+quick command for the pull request check.
 Pull request CI runs the desktop Playwright project. Nightly runs all projects.
 When you add a sample-data prototype's first
 tests, list every screen the prototype has. A new app asks the phone-view question before its build

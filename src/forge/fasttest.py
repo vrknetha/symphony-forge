@@ -282,17 +282,18 @@ def own_version_only(path: Path, base: str) -> bool:
 def skip_browser(top: Path, command: str) -> str:
     """On Windows a builder's own run leaves out separate browser-test steps and says so once."""
     # FORGE_OS lets a test pick the platform; ponytail: no user-facing setting.
-    if os.environ.get("FORGE_OS", os.name) != "nt":
+    if (os.environ.get("FORGE_OS", os.name) != "nt" or command == init.NODE_TEST
+            or any(match["operator"] != "&&" for match in quicktest._operators(command))):
         return command
     parts = quicktest.test_parts(top, command)
-    skipped = [part for _, part, _ in parts if quicktest.browser_step(top, part)]
+    skipped = [part for kind, part, _ in parts if kind == "browser"]
     if not skipped:
         return command
     if not os.environ.get("FORGE_BROWSER_SKIPPED"):
         os.environ["FORGE_BROWSER_SKIPPED"] = "1"
         print(f"On Windows this run skips the browser tests ({', '.join(skipped)}). The pull request check, "
               "the final check and the full test run still run them.", flush=True)
-    return " && ".join(part for _, part, _ in parts if part not in skipped) or "exit 0"
+    return " && ".join(part for kind, part, _ in parts if kind != "browser") or "exit 0"
 
 
 def close_tests(base: str) -> int:
@@ -378,9 +379,9 @@ def test(args) -> int:
 
     top = Path.cwd().resolve()
     command = repo.grouped(top, tomllib.loads(Path("forge.toml").read_text("utf-8"))["test"])
-    # A picker launched by close or bare forge test keeps that command's one place.
+    # The picker can start before its parent records the spawned process.
     parent = os.environ.get("FORGE_TEST_LANE")
-    if parent and any(run["id"] == parent and run["kind"] == "test" and run.get("started_at")
+    if parent and any(run["id"] == parent and run["kind"] == "test" and machine._admitted(run)
                       and run.get("checkout_root") == top.as_posix() for run in machine.entries()):
         return pytest_tests(args.base, command)
     item = review.branch_item(repo.current_branch(top), top)
@@ -812,12 +813,13 @@ def run_logged(command: str, environment: dict, entry: dict | None) -> int:
 def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
     if os.environ.get("FORGE_WORKER_TESTS") == "1":
         command = skip_browser(Path.cwd(), command)
-    parts = quicktest.test_parts(Path.cwd(), command)
+    # The picker still drops npm checks in mixed commands and retains direct browser steps.
+    parts = quicktest.test_parts(Path.cwd(), command, classify_browser=False)
     mixed = any(kind in ("vitest", "jest") for kind, _, _ in parts)
     if mixed:
         command = " && ".join(part for kind, part, _ in parts
                               if kind not in ("vitest", "jest", "node-install", "node-check"))
-        parts = quicktest.test_parts(Path.cwd(), command)
+        parts = quicktest.test_parts(Path.cwd(), command, classify_browser=False)
     environment = dict(os.environ)
     worker = environment.pop("FORGE_WORKER_TESTS", None) == "1"
     allocation = entry
