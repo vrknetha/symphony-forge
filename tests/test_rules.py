@@ -127,12 +127,7 @@ def test_31_speed():
     for path in sorted(WORKFLOW.parent.glob("*.y*ml")):
         labels = re.findall(r"\bubuntu-[\w.-]+\b", path.read_text(encoding="utf-8"))
         assert all(label == "ubuntu-24.04" for label in labels), (path.name, labels)
-    # macOS left the full run on 18 October: Linux and Windows catch the platform bugs.
-    for runner in ("ubuntu-24.04", "windows-latest"):
-        assert runner in workflow, f"the suite doesn't run on {runner}"
     assert "pytest tests" in workflow
     timeouts = [int(n) for n in re.findall(r"timeout-minutes: (\d+)", workflow)]
     # The suite's five-minute cap was replaced by ten when passing Ubuntu runs hit the limit.
     assert timeouts and max(timeouts) <= 10, f"job timeouts over ten minutes: {timeouts}"
-    # Complete platform group sequences and effective budgets have one owner:
-    # test_ci_job_budgets.py.

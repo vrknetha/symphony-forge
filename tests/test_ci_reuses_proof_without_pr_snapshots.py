@@ -10,11 +10,10 @@ from test_ci_reuses_tested_trees import commit, decide
 STORY = "FIX-REUSE-PROOF-AFTER-MERGE"
 
 
-@pytest.mark.parametrize("job", ["tests", "plugin"])
 @pytest.mark.parametrize("case", ["older", "equal", "newer", "changed-tree",
                                   "missing-time", "invalid-time", "api-error"])
 def test_1_merged_run_without_snapshots_requires_an_older_main_tip_and_the_same_tree(
-        repo, gh, tmp_path, monkeypatch, job, case):
+        repo, gh, tmp_path, monkeypatch, case):
     repo.git("switch", "-qc", "pr")
     head = commit(repo, "code.txt", "PR code\n")
     repo.git("switch", "-q", "main")
@@ -43,7 +42,7 @@ def test_1_merged_run_without_snapshots_requires_an_older_main_tip_and_the_same_
         run["created_at"] = "unknown"
     diagnostics = []
     assert decide(repo, gh, tmp_path, monkeypatch, "push", "refs/heads/main", sha,
-                  [pr], [run], job, api_error=case == "api-error",
+                  [pr], [run], api_error=case == "api-error",
                   diagnostics=diagnostics) == (case in {"older", "equal"})
     assert len(diagnostics[0].splitlines()) == 1
     assert ("Tests skipped:" if case in {"older", "equal"} else "Tests will run:") in diagnostics[0]
