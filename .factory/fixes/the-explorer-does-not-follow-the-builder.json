@@ -1,6 +1,13 @@
 {
   "base": "dba263236b9a869fde8dbc5f7369ebe8f0a4393c",
   "branch": "fix/the-explorer-does-not-follow-the-builder",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a217c2-8403-72d0-83d2-dae3490cf743",
+    "head": null,
+    "start": "8daeec0bf4b62771303943a0dfc713fb3962ea9f"
+  },
   "done_when": "An idea is sorted by the family that workers picks, and new and upgraded repos get the new explore defaults, with repos that have their own explore entries keeping them.",
   "fix_kind": "backend",
   "fix_kind_explicit": true,
