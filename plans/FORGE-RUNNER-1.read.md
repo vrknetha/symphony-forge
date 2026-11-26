@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-26T13:21:04.995277+00:00
-seconds: 805.12
-read_hash: 96110c348603236d850a6ecf6bba7e5f0b117c33
-round: 2
+read_at: 2026-11-26T15:00:23.610423+00:00
+seconds: 687.213
+read_hash: 1500058aebe9e1833e03848b83ff88b0681e29e9
+round: 3
 passed: no
-doc_seen: 96110c348603236d850a6ecf6bba7e5f0b117c33
+doc_seen: 1500058aebe9e1833e03848b83ff88b0681e29e9
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: a921304a2472b6d87a85165e85f339b1bce18c50
+notes_seen: 04c45b523545ad5240f058803a3e5b9ada93d8df
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a217d3-720e-7080-9989-1f8128bcbc7e
 session:
-loop_choice: more
-loop_reason: Owner chose one more round for notes 16, 17, 18, 21
+loop_choice: accept
+loop_reason: Owner accepted round 3; the builder gets both fixes in its first note: re-check the owner's stop right before the merge call, and the forge.toml exception is for fixes only, not story parts
 ---
 # Cold read notes
 
@@ -187,3 +187,42 @@ Not checked: runtime tests. `forge next` could not finish because the read-only 
    Disposition: cut A fix whose Done-when names `forge.toml` now gives its builder an exception to "Workers never edit `forge.toml`" (`worker.SETTINGS` and `src/forge/templates/brief.md`, both in RUNNER's scope), so it completes with no chat (Done-when detail 1 Settings and 2, with a test).
 
 Not checked: runtime tests. `forge next` could not acquire its lock in the read-only sandbox.
+
+## Round 3
+
+22. Blocking: Not done: item 5: an active merge can finish after the owner stops it.  
+    Raise: Security  
+    Case: normal use - GitHub rate-limits a merge’s read, and the owner stops the item while it waits.  
+    The planned stop check runs when the merge enters [close._worktree](/src/forge/merge.py:55). A GitHub quota wait can last a minute or longer ([github.py](/src/forge/github.py:160)) without a recorded check-wait process for `forge stop` to end. Once GitHub responds, the existing merge reaches [the merge call](/src/forge/merge.py:220) without checking the stop again.  
+    Gain 5, Work 3, Harm 4
+   Disposition: keep - Owner accepted round 3; the builder gets both fixes in its first note: re-check the owner's stop right before the merge call, and the forge.toml exception is for fixes only, not story parts
+
+23. Advisory: Stopping one item can end the whole merge queue.  
+    Raise: Functional  
+    Case: normal use - a person stops the first item in a combined merge check while other items are in the queue.  
+    The combined check runs in a thread of `forge land --all` and is recorded against its first item ([land.py](/src/forge/land.py:572), [land.py](/src/forge/land.py:879)). The planned process stop kills that queue process and its descendants ([codex.py](/src/forge/codex.py:959)), interrupting unrelated items and leaving the temporary pull request’s cleanup unrun.  
+    Gain 4, Work 4, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+24. Advisory: A stopped item prevents other explicitly named items from entering the queue.  
+    Raise: Functional  
+    Case: normal use - a coordinator runs `forge land` with two named items, one stopped and one ready.  
+    [land.py](/src/forge/land.py:58) checks every named item before entering the queue. The new `require_active` refusal therefore ends the command before the queue can skip the stopped item. The planned test uses `--all`, which bypasses this precheck.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+25. Advisory: The new stop check also prevents amending a stopped fix.  
+    Raise: Functional  
+    Case: normal use - an owner stops a fix and narrows its Done-when before continuing it.  
+    `forge fix amend` calls [task.require_active](/src/forge/task.py:894), so the proposed shared check refuses the amendment. The stated continuation, `forge land <item>`, lifts the stop and can start the old work before the amendment is made.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+26. Advisory: The settings selector also accepts story parts.  
+    Raise: Plan gap  
+    Case: normal use - a story part covers a Done-when that mentions `forge.toml`.  
+    The plan describes the worker exception as fix-only but selects it with `task.settings_allowed`. That function also returns true for [story parts](/src/forge/task.py:205), so the named selector alone gives those workers the exception. The planned test covers only fixes.  
+    Gain 3, Work 2, Harm 3
+
+Not checked: runtime tests. `forge next` could not acquire its lock in the read-only sandbox.
+   Disposition: keep - Owner accepted round 3; the builder gets both fixes in its first note: re-check the owner's stop right before the merge call, and the forge.toml exception is for fixes only, not story parts
