@@ -1,6 +1,13 @@
 {
   "base": "0b7c6202c1a2cd86c096fc0db11883afac404ca5",
   "branch": "fix/owner-26-nov-2026-the-docker-starter-smo",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a2189f-b7de-7a90-9719-338181902fc5",
+    "head": null,
+    "start": "74695d9de4bc9e120c68fb02a2f22855183f11a7"
+  },
   "done_when": "starter-smoke.yml and codex-smoke.yml run only by hand (workflow_dispatch) or on their nightly schedule if they have one, and a push creates no failed codex-smoke run; nothing else changes",
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
