@@ -1,4 +1,11 @@
 {
+  "amendments": [
+    {
+      "at": "2026-11-26T01:18:37.910960+00:00",
+      "because": "Owner chose narrow: the run's reported commit can be the base commit, so finding the reviewed commit stayed broken after two rounds",
+      "done_when": "When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it."
+    }
+  ],
   "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
   "branch": "fix/close-reruns-stale-review-check",
   "chat": {
@@ -8,7 +15,7 @@
     "head": null,
     "start": "68a18ab03e8d261f7cd1a447eec6d930fbe4b71d"
   },
-  "done_when": "When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it.",
+  "done_when": "When the only failed required check is the review check, close re-runs that review job once and waits for it, without looking up which commit the review run reports.",
   "fix_kind": "backend",
   "kind": "fix",
   "known": [
