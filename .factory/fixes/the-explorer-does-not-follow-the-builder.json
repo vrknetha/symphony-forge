@@ -19,7 +19,7 @@
       "gain": 4,
       "harm": 3,
       "line": 38,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -32,7 +32,7 @@
       "gain": 4,
       "harm": 3,
       "line": 111,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -45,7 +45,7 @@
       "gain": 4,
       "harm": 3,
       "line": 66,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -58,7 +58,7 @@
       "gain": 4,
       "harm": 3,
       "line": 68,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -71,78 +71,50 @@
       "gain": 3,
       "harm": 3,
       "line": 26,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
       "title": "Test: Prove explorer routing and defaults for new and upgraded repos",
       "work": 1
+    },
+    {
+      "area": "test_23_prototype_next_fix_commands_run_as_printed() in tests/test_fix_routing.py",
+      "file": "tests/test_fix_routing.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 203,
+      "outcome": "open",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Gate: Update existing tests for the new explorer behavior",
+      "work": 2
     }
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "735f9a3bfe29c59e976f45fd5e12975844b5e24ef97b499d2bbe907cc27b4855",
-    "changed": "f6ff0d5a82101694cf666e4b9388a6fffb2b014b94444d420af1cf9749f780f2",
-    "commit": "62fef7429440aeba119d8618d2554c0f3cdb67e0",
+    "branch_diff": "ded4012707c140aa23f16f31dff1784725f8b05fa5796b6cf7afefc1cbbaae3b",
+    "changed": "c40f6307f5abf555c3da7f1d17eba3968dee8f0aa0133e37c46de2f7c7576fb6",
+    "commit": "874fb3858743de05757a02a2b63726016af98c24",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 4, Work 1, Harm 3\nRaise: Not done\nCase: normal use - A teammate changes workers from Claude to Codex on the default branch while this checkout is behind. `start` reads the checkout's old `forge.toml` and offers a Claude explorer. A fix is subsequently based on the freshly fetched default branch (`src/forge/task.py:222` and `src/forge/task.py:804`), and the worker uses routed default-branch settings (`src/forge/worker.py:173`), so Codex builds it. Intake needs the same routed settings as the worker. The full Done-when is: An idea is sorted by the family that workers picks, and new and upgraded repos get the new explore defaults, with repos that have their own explore entries keeping them.",
-        "file": "src/forge/intake.py",
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Gate\nCase: normal use - The full pytest suite still contains a test that expects a native Codex explorer when the configured worker is Claude. This repair updates the analogous call here, but `tests/test_contracts.py:633` still parses `forge start` as a JSON handout and supplies the reply later through handback. Its fixture sets `workers = \"claude\"` (`tests/test_close.py:301`), so Forge instead runs the Claude SDK; the stub returns `No findings.`, and start refuses after two malformed replies. Consequently, `test_9_nothing_changes_outside_a_pull_request` still fails.",
+        "file": "tests/test_fix_routing.py",
         "gain": 4,
         "harm": 3,
-        "line": 38,
-        "priority": "P1",
-        "required_done_when": true,
-        "title": "Not done: An idea is sorted by the family that workers picks",
-        "work": 1
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Gate\nCase: normal use - The repository's full pytest command still contains expectations contradicted by this change. `tests/test_codex_reader.py:180` asserts that init writes the old Codex explore model and no Antigravity entry. `tests/test_claude_subagent_defaults.py:75` and `:91` expect missing explore entries to inherit lite, although `src/forge/roles.py:123` now selects the new defaults. The new-client cases in `tests/test_fix_routing.py:203` also expect a native Codex handout while their configured worker is Claude. These tests need to follow the new contract or the suite cannot pass.",
-        "file": "src/forge/init.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 111,
+        "line": 203,
         "priority": "P1",
         "title": "Gate: Update existing tests for the new explorer behavior",
         "work": 2
-      },
-      {
-        "body": "Gain 4, Work 1, Harm 3\nRaise: Functional\nCase: normal use - When Claude's authentication has expired or its SDK exits on a service error, `_sdk_read` returns a nonzero status and diagnostic stderr (`src/forge/story.py:1023`), but this branch discards the diagnostic, launches it again, and reports that it could not read the explorer's reply. Codex's failed turn status is treated the same way. The user is directed to repeat the same command without being told the actual problem.\nAdds work: distinguish provider failures from malformed replies and surface their diagnostics; F 2 x H 2 = 4; 2 x C = 2",
-        "file": "src/forge/intake.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 66,
-        "priority": "P1",
-        "title": "Functional: Report provider failures instead of malformed replies",
-        "work": 1
-      },
-      {
-        "body": "Gain 4, Work 1, Harm 3\nRaise: Scale\nCase: normal use - Sorting 100 different ideas in a repository with 200 MiB of eligible files leaves roughly 20 GiB of checkout copies. Each idea gets a distinct hash, and `src/forge/antigravity.py:272` through `:279` copies the checkout into a persistent directory for that target; `copy_for_reading` only removes an earlier copy of the same target. Successful explorations never remove these directories, so disk use grows without bound.\nAdds work: clean up the per-idea read copy after the turn; F 2 x H 2 = 4; 2 x C = 2",
-        "file": "src/forge/intake.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 68,
-        "priority": "P1",
-        "title": "Scale: Remove Antigravity's per-idea checkout after sorting",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - The named proof writes the same synthetic settings into the checkout and default branch, so it passes despite the current stale-default-branch routing defect. It also never runs init or upgrade and tests a custom entry only for Antigravity; it would pass if init wrote the wrong default or an upgrade discarded an existing Codex entry. The proof list therefore does not establish the full Done-when: An idea is sorted by the family that workers picks, and new and upgraded repos get the new explore defaults, with repos that have their own explore entries keeping them.",
-        "file": "tests/test_start_uses_builder_explorer.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 26,
-        "priority": "P1",
-        "title": "Test: Prove explorer routing and defaults for new and upgraded repos",
-        "work": 1
       }
     ],
-    "id": "97c7374e-e802-4ad2-bafe-01323ce17a2c",
+    "id": "71dbeaf0-9ec5-4fc1-95f1-c250c6317ae5",
     "status": "blocked"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-26T12:08:51.549919+00:00",
@@ -161,8 +133,22 @@
       "at": "2026-11-26T12:24:57.198286+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T12:39:27.368303+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T12:39:27.383148+00:00",
+      "round": 2,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-26T12:39:27.383148+00:00",
+    "file": "tests/test_fix_routing.py",
+    "wait_id": "4ba954e4-9ba7-4fa2-bebf-4a994c2afab6"
+  },
   "stuck": {
     "close": "1e40947a-bcad-490e-bddd-c5596b1f490d",
     "head": "32fe9e3ae3ff0661ea775f1b22115bd20864a321",

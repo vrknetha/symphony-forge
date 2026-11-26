@@ -45,6 +45,17 @@
       "closed_by": null
     },
     {
+      "key": "bug\ttests/test_fix_routing.py\tGate: Update existing tests for the new explorer behavior\tthe-explorer-does-not-follow-the-builder",
+      "kind": "bug",
+      "path": "tests/test_fix_routing.py",
+      "line": 203,
+      "text": "Gate: Update existing tests for the new explorer behavior",
+      "from": "blocking",
+      "item": "the-explorer-does-not-follow-the-builder",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "bug\ttests/test_start_uses_builder_explorer.py\tTest: Prove explorer routing and defaults for new and upgraded repos\tthe-explorer-does-not-follow-the-builder",
       "kind": "bug",
       "path": "tests/test_start_uses_builder_explorer.py",
