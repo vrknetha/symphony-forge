@@ -78,6 +78,8 @@ own fix that changes only `checks`, `test_place` and the generated workflow from
 that the branch and default branch share. Added checks keep their usual checks.
 
 Start with `forge next`. It says where things stand and gives the exact next command.
+If it names another coordinator session, use one chat to coordinate the repo.
+
 `forge next`, `forge start` and `forge land` also remove finished folders and
 say how many they removed. Forge keeps the current folder and folders with
 local work that GitHub does not have. For a closed pull request, GitHub must
