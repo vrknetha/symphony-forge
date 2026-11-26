@@ -1,0 +1,17 @@
+{
+  "base": "772c58b696a311102875aeea580b79eff660f715",
+  "branch": "fix/review-findings-split-from-owner-26-nov",
+  "done_when": "A review no longer finds: Functional: Existing tests fail against the local workflow (.github/workflows/forge.yml:17); Functional: Local mode does not wait for the remaining required review check (forge.toml:9); Functional: Local close skips selected container deployment tests (forge.toml:9); Not done: Local close runs unrelated tests and can wait for GitHub test jobs (forge.toml:9); Gate: proof list (forge.toml:8)",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "stacked_on": "owner-26-nov-2026-stop-using-github-runn",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-26T17:51:10.815765+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Review findings split from owner-26-nov-2026-stop-using-github-runn: Functional: Existing tests fail against the local workflow (.github/workflows/forge.yml:17); Functional: Local mode does not wait for the remaining required review check (forge.toml:9); Functional: Local close skips selected container deployment tests (forge.toml:9); Not done: Local close runs unrelated tests and can wait for GitHub test jobs (forge.toml:9); Gate: proof list (forge.toml:8)"
+}
