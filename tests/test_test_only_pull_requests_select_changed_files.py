@@ -95,20 +95,9 @@ def test_1_test_only_pull_requests_select_changed_files(repo, gh, tmp_path, adop
             selected_groups = [1]
         # This command owns its sharding flags, so CI keeps all configured groups.
         assert selected_groups == (list(range(1, 7)) if adopted else [1])
-        windows = (ROOT / ".github/workflows/forge-next.yml").read_text("utf-8")
-        matrix = re.search(r"include: >-\n(.+?)\n    runs-on:", windows, re.S)[1]
-        rows = expression(" ".join(matrix.splitlines()), test_only=values["test-only"])
-        assert rows == ([{"os": "windows-latest", "group": group, "groups": 5}
-                         for group in range(1, 6)] if shared else
-                        [{"os": "windows-latest", "group": 1, "groups": 1}])
         # The emitted one-group decision uses the real picker, which must never
         # collect the deliberately failing unrelated file.
         selected = repo.forge("test", "--pytest", base, cwd=client)
         assert selected.returncode == 0, selected.stdout + selected.stderr
         assert ("2 passed" if shared else "1 passed") in selected.stdout
         repo.git("revert", "--no-edit", "HEAD", cwd=client)
-
-    # Forge keeps installer coverage on unmarked test-only pull requests.
-    assert "needs.selection.outputs.run-windows != 'false'" not in windows
-    assert "ConvertFrom-Json $env:PLATFORM_FILES" in windows
-    assert "'tests/test_installers_explain_docker_start.py' | Sort-Object -Unique" in windows

@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_item_time_history.py\tThe board can count an extra millisecond because the hold and its wait event use separate start times.",
+      "kind": "bug",
+      "path": "tests/test_item_time_history.py",
+      "line": 177,
+      "text": "The board can count an extra millisecond because the hold and its wait event use separate start times.",
+      "from": "worker",
+      "item": "drop-windows-tests",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
