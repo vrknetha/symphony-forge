@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/review.py\tNot done: A new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion.\tFORGE-REVIEWPROOF-1/SEVERITY",
+      "kind": "bug",
+      "path": "src/forge/review.py",
+      "line": 1021,
+      "text": "Not done: A new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion.",
+      "from": "blocking",
+      "item": "FORGE-REVIEWPROOF-1/SEVERITY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_review_severity_and_migration_floor.py\tTest: 4: migration-floor proof omits deletion and multiple findings\tFORGE-REVIEWPROOF-1/SEVERITY",
+      "kind": "bug",
+      "path": "tests/test_review_severity_and_migration_floor.py",
+      "line": 36,
+      "text": "Test: 4: migration-floor proof omits deletion and multiple findings",
+      "from": "blocking",
+      "item": "FORGE-REVIEWPROOF-1/SEVERITY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_review_severity_and_migration_floor.py\tTest: 5: check: Review display reads the existing priority field\tFORGE-REVIEWPROOF-1/SEVERITY",
+      "kind": "bug",
+      "path": "tests/test_review_severity_and_migration_floor.py",
+      "line": 15,
+      "text": "Test: 5: check: Review display reads the existing priority field",
+      "from": "blocking",
+      "item": "FORGE-REVIEWPROOF-1/SEVERITY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\ttests/test_close_shows_the_blocking_priority.py\tNot done: A blocking finding shows its own severity next to \"blocks the merge\"",
+      "kind": "edge",
+      "path": "tests/test_close_shows_the_blocking_priority.py",
+      "line": 31,
+      "text": "Not done: A blocking finding shows its own severity next to \"blocks the merge\"",
+      "from": "review",
+      "item": "FORGE-REVIEWPROOF-1/SEVERITY",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

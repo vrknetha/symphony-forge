@@ -7,8 +7,114 @@
     "head": null,
     "start": "f8a10f14281202db94d4e8954e9fa7c26be5b4d7"
   },
+  "known": [
+    {
+      "area": "run() in src/forge/review.py",
+      "file": "src/forge/review.py",
+      "gain": 4,
+      "harm": 4,
+      "line": 1021,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion.",
+      "work": 3
+    },
+    {
+      "area": "test_1_close_shows_the_priority_that_blocks_past_the_round_limit() in tests/test_close_shows_the_blocking_priority.py",
+      "file": "tests/test_close_shows_the_blocking_priority.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 31,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A blocking finding shows its own severity next to \"blocks the merge\"",
+      "work": 2
+    },
+    {
+      "area": "test_3_close_shows_reviewer_severity_and_merge_status() in tests/test_review_severity_and_migration_floor.py",
+      "file": "tests/test_review_severity_and_migration_floor.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 15,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: 5: check: Review display reads the existing priority field",
+      "work": 2
+    },
+    {
+      "area": "tests/test_review_severity_and_migration_floor.py",
+      "file": "tests/test_review_severity_and_migration_floor.py",
+      "gain": 3,
+      "harm": 4,
+      "line": 36,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: 4: migration-floor proof omits deletion and multiple findings",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "4c66ee142977e9cf6ce308af5f191f869aee9a3fb0957a35607b919c35ef7035",
+    "changed": "ee8edf48a44281c92a069851d260db2887b38304419ff0f9cdec665476ba7b96",
+    "commit": "0a0ffca7e433e23ad0684acc47f10ae89bd0980a",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 3, Harm 4 (floor: migration)\nRaise: Not done\nCase: normal use - A repo upgrades while a pull request has a saved review of a change that does not touch a migration. The old parser stored the migration-floored Harm 4 in place of the reviewer's lower score, and `close.py:298-321` can reuse that review without entering this new floor logic. The finding therefore continues to block after upgrade. Earlier review-result events also stored the score-derived P0; `time_records.py:498` still prints that value in the pull request's history, while this change records the reviewer's priority only for new events. Existing saved reviews therefore do not get the promised behavior.",
+        "file": "src/forge/review.py",
+        "gain": 4,
+        "harm": 4,
+        "line": 1021,
+        "priority": "P1",
+        "title": "Not done: A new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion.",
+        "work": 3
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - A P1 finding with Harm 4 remains open for two worker rounds. Although each close now prints P1, `close.py:581` still calls it \"the open P0\" in the stop question. That question is shown by `forge work` and again by `forge close` while the item is stopped, so the score-based blocker is still presented as P0. The changed stop test retains this incorrect P0 assertion at line 35.",
+        "file": "tests/test_close_shows_the_blocking_priority.py",
+        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
+        "gain": 3,
+        "harm": 3,
+        "line": 31,
+        "priority": "P1",
+        "title": "Not done: A blocking finding shows its own severity next to \"blocks the merge\"",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - A previously reviewed pull request remains open when its repo upgrades. The proof list uses a prose `check:` for this runtime compatibility requirement, while this command test creates only a new client. The upgraded-client case in `test_score_notes.py:89-103` also creates its review after upgrading. Neither exercises an old saved review or event, so both pass while the old floored score and false P0 history remain in use. The saved-review behavior needs command-level proof.",
+        "file": "tests/test_review_severity_and_migration_floor.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 15,
+        "priority": "P1",
+        "title": "Test: 5: check: Review display reads the existing priority field",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 4 (floor: migration)\nRaise: Test\nCase: normal use - A change deletes an obsolete migration, or adds one while a review reports multiple findings that cite migrations. The cases here cover additions, an edit and no migration path, but no deletion-only diff; they also provide only one migration-citing finding per review, as does `test_score_notes.py:93-100`. The assertions would still pass if deletion alone applied the floor or if only the first matching finding received it, contrary to the owner ruling and the whole-change rule.",
+        "file": "tests/test_review_severity_and_migration_floor.py",
+        "gain": 3,
+        "harm": 4,
+        "line": 36,
+        "priority": "P1",
+        "title": "Test: 4: migration-floor proof omits deletion and multiple findings",
+        "work": 2
+      }
+    ],
+    "id": "bf59459d-f437-4613-a6c0-53abab3065cd",
+    "status": "blocked"
+  },
   "round": 2,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T17:28:07.107327+00:00",
@@ -23,6 +129,10 @@
       "at": "2026-11-26T17:33:51.504734+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T17:48:51.106917+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
