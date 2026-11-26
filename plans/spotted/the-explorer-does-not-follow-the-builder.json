@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/init.py\tGate: Update existing tests for the new explorer behavior\tthe-explorer-does-not-follow-the-builder",
+      "kind": "bug",
+      "path": "src/forge/init.py",
+      "line": 111,
+      "text": "Gate: Update existing tests for the new explorer behavior",
+      "from": "blocking",
+      "item": "the-explorer-does-not-follow-the-builder",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/intake.py\tFunctional: Report provider failures instead of malformed replies\tthe-explorer-does-not-follow-the-builder",
+      "kind": "bug",
+      "path": "src/forge/intake.py",
+      "line": 66,
+      "text": "Functional: Report provider failures instead of malformed replies",
+      "from": "blocking",
+      "item": "the-explorer-does-not-follow-the-builder",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/intake.py\tNot done: An idea is sorted by the family that workers picks\tthe-explorer-does-not-follow-the-builder",
+      "kind": "bug",
+      "path": "src/forge/intake.py",
+      "line": 38,
+      "text": "Not done: An idea is sorted by the family that workers picks",
+      "from": "blocking",
+      "item": "the-explorer-does-not-follow-the-builder",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/intake.py\tScale: Remove Antigravity's per-idea checkout after sorting\tthe-explorer-does-not-follow-the-builder",
+      "kind": "bug",
+      "path": "src/forge/intake.py",
+      "line": 68,
+      "text": "Scale: Remove Antigravity's per-idea checkout after sorting",
+      "from": "blocking",
+      "item": "the-explorer-does-not-follow-the-builder",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_fix_routing.py\tGate: Update existing tests for the new explorer behavior\tthe-explorer-does-not-follow-the-builder",
+      "kind": "bug",
+      "path": "tests/test_fix_routing.py",
+      "line": 203,
+      "text": "Gate: Update existing tests for the new explorer behavior",
+      "from": "blocking",
+      "item": "the-explorer-does-not-follow-the-builder",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_start_uses_builder_explorer.py\tTest: Prove explorer routing and defaults for new and upgraded repos\tthe-explorer-does-not-follow-the-builder",
+      "kind": "bug",
+      "path": "tests/test_start_uses_builder_explorer.py",
+      "line": 26,
+      "text": "Test: Prove explorer routing and defaults for new and upgraded repos",
+      "from": "blocking",
+      "item": "the-explorer-does-not-follow-the-builder",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
