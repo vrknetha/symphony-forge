@@ -13,6 +13,7 @@ from forge import repo
 
 CLAUDE_USAGE = ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens",
                 "output_tokens")
+CLAUDE_200K = re.compile(r"\bclaude-(?:haiku|opus|sonnet)-4-5\b")
 
 
 def _counts(path: str, window: object) -> tuple[object, object] | None:
@@ -35,11 +36,13 @@ def _counts(path: str, window: object) -> tuple[object, object] | None:
                 latest = info.get("last_token_usage") or {}
                 return latest.get("total_tokens"), info.get("model_context_window")
             if record.get("type") == "assistant":
-                usage = (record.get("message") or {}).get("usage")
+                message = record.get("message") or {}
+                usage = message.get("usage")
                 if isinstance(usage, dict):
                     values = [usage.get(key, 0) for key in CLAUDE_USAGE]
                     if all(type(value) is int and value >= 0 for value in values):
-                        return sum(values), window or 1_000_000
+                        fallback = 200_000 if CLAUDE_200K.search(str(message.get("model", ""))) else 1_000_000
+                        return sum(values), window or fallback
                 return None
     return None
 
@@ -56,23 +59,36 @@ def warning(payload: dict[str, Any]) -> str | None:
         used, window = counts
         if type(used) is not int or type(window) is not int or window <= 0 or used * 2 <= window:
             return None
-        tenth = used * 10 // window
-        state = repo.forge_dir(repo.root()) / "context-warnings.json"
-        from forge.codex import _one_at_a_time
+    except (OSError, ValueError, AttributeError):
+        return None
+    if not update_warning(session, used * 10 // window):
+        return None
+    return (f"This chat uses {_tokens(used)} of {_tokens(window)} tokens. "
+            "Hand over at the next quiet moment: see Handoff in the Forge guide.")
 
+
+def update_warning(session: str, tenth: int | None) -> bool:
+    """Record a new threshold, or remove it after the host compacts the session."""
+    from forge.codex import _one_at_a_time
+
+    try:
+        state = repo.forge_dir(repo.root()) / "context-warnings.json"
         with _one_at_a_time(state):
             warned = json.loads(state.read_text(encoding="utf-8")) if state.exists() else {}
-            if tenth <= warned.get(session, 0):
-                return None
-            warned[session] = tenth
+            if tenth is None:
+                if warned.pop(session, None) is None:
+                    return False
+            elif tenth <= warned.get(session, 0):
+                return False
+            else:
+                warned[session] = tenth
             pending = state.with_suffix(".new")
             pending.write_text(json.dumps(warned), encoding="utf-8")
             pending.replace(state)
     except (OSError, ValueError, AttributeError, TypeError, RecursionError,
             subprocess.CalledProcessError, repo.Refused):
-        return None
-    return (f"This chat uses {_tokens(used)} of {_tokens(window)} tokens. "
-            "Hand over at the next quiet moment: see Handoff in the Forge guide.")
+        return False
+    return True
 
 
 def _tokens(count: int) -> str:

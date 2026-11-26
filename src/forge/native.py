@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
-from forge import codex, machine, repo
+from forge import codex, contextsize, machine, repo
 
 COMMANDS = [{"words": "handback", "run": "handback", "changes_state": True, "position": 36,
              "help": "Record the result of a session subagent",
@@ -90,6 +90,8 @@ def coordinator_hook() -> bool:
         directory = _coordinator_directory(chat)
         try:
             if event == "SessionStart":
+                if payload.get("source") == "compact" and not payload.get("agent_id"):
+                    contextsize.update_warning(chat, None)
                 directory.mkdir(parents=True, exist_ok=True)
                 (directory / "started").touch()
             elif event == "SessionEnd":

@@ -1,9 +1,12 @@
 """The Bash hook gives the coordinator a structured, rate-limited handoff cue."""
 import json
 
+import pytest
+
 STORY = "FORGE-CHATHANDOVER-1"
 
 
+@pytest.mark.platform
 def test_1_context_line_past_half_window(repo, tmp_path, monkeypatch):
     transcript = tmp_path / "transcript.jsonl"
     worktree = tmp_path / "task"
@@ -11,7 +14,8 @@ def test_1_context_line_past_half_window(repo, tmp_path, monkeypatch):
     monkeypatch.delenv("FORGE_WORKER", raising=False)
 
     def record(event):
-        transcript.write_text(json.dumps(event) + "\n", encoding="utf-8")
+        with transcript.open("a", encoding="utf-8") as log:
+            log.write(json.dumps(event) + "\n")
 
     def hook(session, expected=None, *, cwd=None, **fields):
         result = repo.forge("hook", "deny", cwd=cwd, input=json.dumps({
@@ -29,10 +33,11 @@ def test_1_context_line_past_half_window(repo, tmp_path, monkeypatch):
                 "see Handoff in the Forge guide."
             )
 
-    def claude(output):
-        record({"type": "assistant", "message": {"usage": {
-            "input_tokens": 100_000, "cache_read_input_tokens": 200_000,
-            "cache_creation_input_tokens": 100_000, "output_tokens": output,
+    def claude(output, *, model="claude-haiku-5-5", input_tokens=100_000, cache=200_000,
+               creation=100_000):
+        record({"type": "assistant", "message": {"model": model, "usage": {
+            "input_tokens": input_tokens, "cache_read_input_tokens": cache,
+            "cache_creation_input_tokens": creation, "output_tokens": output,
         }}})
 
     claude(0)
@@ -55,6 +60,12 @@ def test_1_context_line_past_half_window(repo, tmp_path, monkeypatch):
     claude(110_001)
     hook("just-over-half", "510,001 of 1M")
 
+    for model in ("claude-haiku-4-5-20251001", "claude-opus-4-5-20251101", "claude-sonnet-4-5"):
+        claude(20_000, model=model, cache=0, creation=0)
+        hook(model, "120K of 200K")
+
+    transcript = tmp_path / "rollout.jsonl"
+
     def codex(latest):
         record({"type": "event_msg", "payload": {"type": "token_count", "info": {
             "model_context_window": 500_000,
@@ -66,3 +77,21 @@ def test_1_context_line_past_half_window(repo, tmp_path, monkeypatch):
     hook("codex")
     codex(300_000)
     hook("codex", "300K of 500K")
+    codex(450_000)
+    hook("codex", "450K of 500K")
+
+    def session_start(source):
+        result = repo.forge("hook", "context", cwd=worktree, input=json.dumps({
+            "hook_event_name": "SessionStart", "session_id": "codex", "source": source,
+            "transcript_path": str(transcript),
+        }))
+        assert result.returncode == 0, result.stderr
+
+    session_start("resume")
+    hook("codex")
+    session_start("compact")
+    codex(150_000)
+    hook("codex")
+    codex(260_000)
+    hook("codex", "260K of 500K")
+    hook("codex")

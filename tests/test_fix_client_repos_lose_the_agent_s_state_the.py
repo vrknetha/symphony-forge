@@ -66,7 +66,17 @@ def test_1_sync_ships_precompact_handoff_and_hook_preserves_decisions(repo, monk
     for path in (".claude/skills/forge/SKILL.md", ".codex/skills/forge/SKILL.md"):
         skill = " ".join((repo.path / path).read_text(encoding="utf-8").split())
         for phrase in ("`.git/forge/handoff.md`", "at each milestone", "read it first",
-                       "never committed", "more than half of the context window",
-                       "tell the owner to clear the chat", "when the job starts",
-                       "If the note does not exist, run `forge hook handoff` first"):
+                       "never committed", "more than half of the context window"):
             assert phrase in skill
+        fresh_chat = skill.split("## Handoff ", 1)[1].split(" ## ", 1)[0]
+        for phrase in (
+            "At the next quiet moment after the context warning, or when the owner asks",
+            "run `forge hook handoff` to refresh the note",
+            "Under `## Decisions and lessons`, add one line per open decision, lesson and log path "
+            "for your own background jobs",
+            "Add a log path when the job starts",
+            "If the note does not exist, run `forge hook handoff` first",
+            "Then tell the owner to clear the chat",
+            "In Claude, use `/clear`. In Codex, start a new chat.",
+        ):
+            assert phrase in fresh_chat, (path, phrase)

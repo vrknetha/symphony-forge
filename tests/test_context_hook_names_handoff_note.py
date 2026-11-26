@@ -1,8 +1,11 @@
 """Fresh coordinator chats find the shared note through the session context command."""
 
+import pytest
+
 STORY = "FORGE-CHATHANDOVER-1"
 
 
+@pytest.mark.platform
 def test_3_context_hook_names_handoff_note(repo, tmp_path, monkeypatch):
     monkeypatch.setenv("FORGE_NOW", "2026-11-26T12:00:00+00:00")
     monkeypatch.delenv("FORGE_WORKER", raising=False)
