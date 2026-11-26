@@ -6,12 +6,25 @@
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-26T13:09:22.519882+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T13:10:13.124021+00:00",
+      "round": 1,
+      "step": "resume"
     }
   ],
-  "why": "Release v1.2.50: publish what merged since v1.2.49 (handover past half the context window and a fresh-chat pointer to the handoff note, combined test scripts named with guide steps and Windows browser steps skipped in builder runs, failed full runs under Needs you, Antigravity review no longer ends in empty output)"
+  "stuck": {
+    "close": null,
+    "head": "0debad1af7fb2804831587b0396504c18df5e04c",
+    "keys": {},
+    "round": null
+  },
+  "why": "Release v1.2.50: publish what merged since v1.2.49 (handover past half the context window and a fresh-chat pointer to the handoff note, combined test scripts named with guide steps and Windows browser steps skipped in builder runs, failed full runs under Needs you, Antigravity review no longer ends in empty output)",
+  "worker": "codex"
 }
