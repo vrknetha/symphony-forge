@@ -1,0 +1,16 @@
+{
+  "base": "dba263236b9a869fde8dbc5f7369ebe8f0a4393c",
+  "branch": "fix/neon-s-review-ends-with-review-engine-re",
+  "done_when": "An Antigravity review whose tool call is refused either returns Neon's written review or stops with a message that names the refused step, never \"empty output\".",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-26T11:57:56.704795+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Neon's review ends with \"review engine returned empty output\" because a refused tool call cancels the turn, and the empty answer is accepted as a completed review, so close stops after two tries."
+}
