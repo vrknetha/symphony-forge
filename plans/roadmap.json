@@ -732,6 +732,12 @@
       "title": "Finished work is cleaned up every time, and leftover work is listed with one next step",
       "status": "pending",
       "order": 129
+    },
+    {
+      "key": "FORGE-REVIEWPROOF-1",
+      "title": "Separate review severity from merge decisions",
+      "status": "pending",
+      "order": 131
     }
   ],
   "epics": [

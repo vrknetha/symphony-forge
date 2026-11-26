@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-REVIEWPROOF-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-26T15:23:07.408429+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Separate review severity from merge decisions",
+  "touches": 0
+}
