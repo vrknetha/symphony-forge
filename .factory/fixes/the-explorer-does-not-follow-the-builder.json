@@ -114,7 +114,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T12:08:51.549919+00:00",
@@ -142,12 +142,23 @@
       "at": "2026-11-26T12:39:27.383148+00:00",
       "round": 2,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-26T12:40:19.232939+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-26T12:39:27.383148+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "tests/test_fix_routing.py",
-    "wait_id": "4ba954e4-9ba7-4fa2-bebf-4a994c2afab6"
+    "reason": "Owner chose one more round: update the old explorer test",
+    "wait_id": "4ba954e4-9ba7-4fa2-bebf-4a994c2afab6",
+    "worker_round": 2
   },
   "stuck": {
     "close": "1e40947a-bcad-490e-bddd-c5596b1f490d",
