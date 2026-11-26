@@ -64,7 +64,7 @@
       "gain": 5,
       "harm": 4,
       "line": 540,
-      "outcome": "open",
+      "outcome": "fixed in round 4",
       "reason": "",
       "round": 2,
       "security": false,
@@ -74,27 +74,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "330e99ca022b29085430ebefce1b195bf095069a44c20d7136f363c4ec4f97d7",
-    "changed": "bf81a7246697f4ac9df5fceb1859a6daf1a9757753700bfb6304b49282fd1a9f",
-    "commit": "1eb79a958a5f76cd9ce81bd4ef4630a0f58d2f11",
+    "branch_diff": "5fc8f2814324eecc24cf3e47dbd9f9ae256305c2e55ab9c141f6922c48b4f271",
+    "changed": "70afbb790a674c14f25c28d9de528f19c2b32885d55a522fcdcc849b7531b7b0",
+    "commit": "e39e6e614ef492e94381647242b1d564ffefa395",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 5, Work 3, Harm 4\nRaise: Functional\nCase: normal use - the review of commit A fails, the branch advances to B, and the workflow run reports the base SHA.\nThe repair still cannot find A's failed review. `_seen` requests statuses for the current head B (`src/forge/checks.py:840-842`), and [GitHub's combined-status endpoint](https://docs.github.com/en/rest/commits/statuses#get-the-combined-status-for-a-specific-reference) returns statuses for that ref. The workflow posts A's result to A (`.github/workflows/forge.yml:180-195`), so it is absent from B's response; any status returned for B names B in its URL and is rejected by this guard. Close therefore never requests or waits for the stale review retry. The test at `tests/test_close_reruns_old_review.py:41` supplies A's status as a generic response to the request for B, masking the failure.",
-        "file": "src/forge/checks.py",
-        "gain": 5,
-        "harm": 4,
-        "line": 530,
-        "priority": "P0",
-        "title": "Functional: The repair rejects stale reviews whose runs report the base SHA",
-        "work": 3
-      }
-    ],
-    "id": "fafdf721-b451-4f3f-89f0-8a53a850e30b",
-    "status": "blocked"
+    "findings": [],
+    "id": "5185336c-4223-4a3b-a8bc-39b9edccaa1d",
+    "status": "clean"
   },
   "round": 5,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T16:08:14.765442+00:00",
@@ -148,6 +137,10 @@
       "at": "2026-11-26T01:18:56.037814+00:00",
       "round": 5,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T01:26:16.796371+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
