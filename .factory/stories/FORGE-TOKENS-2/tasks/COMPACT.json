@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-TOKENS-2-COMPACT",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-26T16:45:36.241745+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T16:46:03.880634+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "1a5707558c8b3f02864e24a41ea65508f8365c16",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
