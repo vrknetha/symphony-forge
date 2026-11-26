@@ -36,8 +36,13 @@ GUIDE = (
     "that names the script and suggest no command; you write the command.",
     "Keep every step the tests need, in the order the script runs them, including any step that "
     "runs after the tests.",
+    "Limit only the unit-test steps to the changed code with the runner's own option and `{base}`",
+    "passes `--` options only to the last command of a script.",
     "Keep the browser-test steps because the pull request check also runs `fast_test`.",
     "Keep the setup a script runs before or after itself (`pre` and `post` scripts).",
+    "Run the command once with `{base}` set to the default branch.",
+    "Tell the owner that changed-only selection follows imports, so API tests that reach the code "
+    "only through a URL run only in the full test run.",
     "Then ask the owner, and set it in `forge.toml` through a fix.",
 )
 
@@ -125,8 +130,11 @@ def test_2_the_synced_guide_tells_the_agent_how_to_write_the_quicker_command(rep
         skills = [(client / host / "skills/forge/SKILL.md").read_text("utf-8") for host in hosts]
     for skill in skills:
         text = " ".join(skill.split())
-        for sentence in GUIDE:
-            assert sentence in text, sentence
+        end = 0
+        for instruction in GUIDE:
+            start = text.find(instruction, end)
+            assert start >= 0, instruction
+            end = start + len(instruction)
 
 
 def test_3_adoption_suggests_no_pytest_command_for_another_runner(repo, gh):

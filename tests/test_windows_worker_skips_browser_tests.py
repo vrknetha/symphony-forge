@@ -19,7 +19,7 @@ from test_close import env, run  # noqa: F401
 from test_close_always_tests import adopt_earlier
 
 STORY = "FIX-ON-A-WINDOWS-LAPTOP-A-BUILDER-S-OWN-TEST"
-# The Windows workflow runs only platform tests, and this is a Windows-only rule.
+# Exercise the Windows selection path even on a different host.
 pytestmark = pytest.mark.platform
 
 # npm and corepack run the repo's package scripts with their pre and post scripts, npx and `exec` run
@@ -104,10 +104,18 @@ CASES = {
     "new-repo": dict(test=ALL, ran=KEPT, said=SKIPPED),
     # One combined script with nothing to skip: both of its steps run and Forge says nothing.
     "one-combined-script": dict(test="npm run ci", ran=["unit-tests two", "playwright test combined"], said=""),
-    # npm runs pretest and posttest with `npm test`, so that step is more than the browser run.
-    "script-with-pre-and-post": dict(
-        test=NODE_SETTING, scripts={"pretest": "unit-tests pre", "posttest": "lint-tests post"},
-        ran=["npm ci", "unit-tests pre", "playwright test default", "lint-tests post"], said=""),
+    # A later API step uses the build left by the browser script's pre-script.
+    "script-with-build-hook": dict(
+        test="full-suite",
+        fast_test=('unit-tests one && npm run test:e2e && '
+                   f'"{Path(sys.executable).as_posix()}" -c "import os; from pathlib import Path; '
+                   "assert 'unit-tests build' in Path(os.environ['RAN_LOG']).read_text()\""),
+        scripts={"pretest:e2e": "unit-tests build"},
+        ran=["unit-tests one", "unit-tests build", "cypress run script"], said=""),
+    "stderr-redirection": dict(
+        test="unit-tests one 2>&1 && npm run test:e2e",
+        scripts={"test:e2e": "playwright test redirected 2>&1"},
+        ran=["unit-tests one"], said=said("npm run test:e2e")),
     # fast_test is the command a builder's run uses; test would run full-suite.
     "adopted-repo": dict(adopted=True, test="full-suite", fast_test=ALL, ran=KEPT, said=SKIPPED),
     "default-node-setting": dict(test=NODE_SETTING, ran=["npm ci", "playwright test default"], said=""),
@@ -167,8 +175,17 @@ def test_3_windows_builder_run_skips_browser_steps_and_nothing_else(env, monkeyp
     assert done.stdout.count("On Windows this run skips") == bool(notice) and notice in done.stdout
 
 
-def test_4_every_other_run_keeps_the_browser_steps(env, monkeypatch):
-    log = set_up(env, monkeypatch, test=ALL)
+@pytest.mark.parametrize("mixed_picker", [False, True], ids=["plain", "mixed-picker"])
+def test_4_every_other_run_keeps_the_browser_steps(env, monkeypatch, mixed_picker):
+    expected = EVERYTHING
+    full = EVERYTHING
+    if mixed_picker:
+        log = set_up(env, monkeypatch, test=PYTEST + " && vitest run unit && playwright test e2e",
+                     fast_test="forge test --pytest {base} && vitest run unit --changed {base}")
+        expected = ["pytest unit", "playwright test e2e", "vitest run unit"]
+        full = ["pytest unit", "vitest run unit", "playwright test e2e"]
+    else:
+        log = set_up(env, monkeypatch, test=ALL)
     env.gh.respond("api", "--method", "POST", stdout="{}")
     cases = [("Mac and Linux builder run", "posix", ["test"]),
              ("pull request check", "nt", ["test", "--change"]),
@@ -179,7 +196,7 @@ def test_4_every_other_run_keeps_the_browser_steps(env, monkeypatch):
         done = env.repo.forge(*command)
 
         assert done.returncode == 0, f"{name}: {done.stdout}{done.stderr}"
-        assert steps_run(log) == EVERYTHING, name
+        assert steps_run(log) == (full if "--full" in command else expected), name
         assert "On Windows this run skips" not in done.stdout, name
     monkeypatch.setenv("FORGE_OS", "nt")
     item, _ = env.start_fix()
@@ -188,4 +205,4 @@ def test_4_every_other_run_keeps_the_browser_steps(env, monkeypatch):
     closed = env.close(item)
 
     assert closed.returncode == 0, closed.stdout + closed.stderr
-    assert steps_run(log) == EVERYTHING, "close"
+    assert steps_run(log) == expected, "close"

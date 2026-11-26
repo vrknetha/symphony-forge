@@ -813,12 +813,13 @@ def run_logged(command: str, environment: dict, entry: dict | None) -> int:
 def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
     if os.environ.get("FORGE_WORKER_TESTS") == "1":
         command = skip_browser(Path.cwd(), command)
-    parts = quicktest.test_parts(Path.cwd(), command)
+    # The picker still drops npm checks in mixed commands and retains direct browser steps.
+    parts = quicktest.test_parts(Path.cwd(), command, classify_browser=False)
     mixed = any(kind in ("vitest", "jest") for kind, _, _ in parts)
     if mixed:
         command = " && ".join(part for kind, part, _ in parts
-                              if kind not in ("vitest", "jest", "node-install", "node-check", "browser"))
-        parts = quicktest.test_parts(Path.cwd(), command)
+                              if kind not in ("vitest", "jest", "node-install", "node-check"))
+        parts = quicktest.test_parts(Path.cwd(), command, classify_browser=False)
     environment = dict(os.environ)
     worker = environment.pop("FORGE_WORKER_TESTS", None) == "1"
     allocation = entry

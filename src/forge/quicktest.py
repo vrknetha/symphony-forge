@@ -47,7 +47,7 @@ def _scripts(top: Path) -> dict[str, str]:
 # Programs that only start another program, and the one word after Playwright or Cypress that runs tests.
 LAUNCHERS = {"npx", "npm", "pnpm", "yarn", "bun", "bunx", "corepack", "exec", "dlx", "cross-env"}
 BROWSER_RUNNERS = {"playwright": "test", "cypress": "run"}
-SHELL_OPERATORS = re.compile(r"""\\.|'[^']*'|"(?:\\.|[^"\\])*"|(?P<operator>[&;|]+)""")
+SHELL_OPERATORS = re.compile(r"""\\.|'[^']*'|"(?:\\.|[^"\\])*"|[<>]&(?:\d+|-)|(?P<operator>[&;|]+)""")
 
 
 def _operators(command: str):
@@ -101,7 +101,7 @@ def _browser_step(part: str, scripts: dict[str, str]) -> bool:
     return False
 
 
-def test_parts(top: Path, command: str) -> list[tuple[str, str, str]]:
+def test_parts(top: Path, command: str, *, classify_browser: bool = True) -> list[tuple[str, str, str]]:
     """Classify the same runner and setup parts for advice and Python-only execution."""
     scripts = _scripts(top)
     parts = []
@@ -134,7 +134,7 @@ def test_parts(top: Path, command: str) -> list[tuple[str, str, str]]:
             kind = "python"
         elif words and words[0] in ("npm", "pnpm", "yarn", "bun") and len(words) > 1 and words[1] in ("ci", "install"):
             kind = "node-install"
-        elif kind not in ("vitest", "jest") and _browser_step(part, scripts):
+        elif classify_browser and kind not in ("vitest", "jest") and _browser_step(part, scripts):
             kind = "browser"
         parts.append((kind, part, passthrough))
     return parts
