@@ -19,8 +19,8 @@
       "text": "Use the actual window for supported 200K Claude models",
       "from": "blocking",
       "item": "FORGE-CHATHANDOVER-1/HANDOVER",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     },
     {
       "key": "bug\tsrc/forge/templates/skill.md\tGate: keep the existing handover guide test passing\tFORGE-CHATHANDOVER-1/HANDOVER",
