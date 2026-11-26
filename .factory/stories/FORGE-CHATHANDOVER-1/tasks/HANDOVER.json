@@ -7,8 +7,182 @@
     "head": null,
     "start": "c79b60dd141dd3cfdde23213d1c91fba5ba3340e"
   },
+  "known": [
+    {
+      "area": "_counts() in src/forge/contextsize.py",
+      "file": "src/forge/contextsize.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 42,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Use the actual window for supported 200K Claude models",
+      "work": 2
+    },
+    {
+      "area": "warning() in src/forge/contextsize.py",
+      "file": "src/forge/contextsize.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 65,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Rearm the half-window warning after compaction",
+      "work": 2
+    },
+    {
+      "area": "test_3_context_hook_names_handoff_note() in tests/test_context_hook_names_handoff_note.py",
+      "file": "tests/test_context_hook_names_handoff_note.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 6,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: mark the new hook tests for the platform subset",
+      "work": 1
+    },
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 661,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: keep the existing handover guide test passing",
+      "work": 1
+    },
+    {
+      "area": "test_1_context_line_past_half_window.record() in tests/test_context_line_past_half_window.py",
+      "file": "tests/test_context_line_past_half_window.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 14,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: the half-window proof never checks multiple transcript records",
+      "work": 2
+    },
+    {
+      "area": "test_1_sync_ships_precompact_handoff_and_hook_preserves_decisions() in tests/test_fix_client_repos_lose_the_agent_s_state_the.py",
+      "file": "tests/test_fix_client_repos_lose_the_agent_s_state_the.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 69,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: the guide proof misses required handoff steps",
+      "work": 2
+    },
+    {
+      "area": "handoff_hook() in src/forge/nextstep.py",
+      "file": "src/forge/nextstep.py",
+      "gain": 2,
+      "harm": 3,
+      "line": 222,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: prove edits made during a handoff refresh survive",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "5e4fdfbb1375aef1654bd78df12398a0b9e93311afcc8f911a02fb78eb2f7505",
+    "changed": "512ff7478257bab9f34686543cb8aa98abdffae4789788af6694b4ae53ff6be4",
+    "commit": "9053e4c157fa4149c3a841816244dbb45f703ed1",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Functional.\nCase: normal use - a coordinator resumes or selects a still-supported Claude model with a 200K window. Claude\u2019s PreToolUse payload does not report a window size, so this fallback treats a 120K-token chat as 120K of 1M and emits no warning; the chat can compact before reaching the fallback\u2019s 500K threshold. [Haiku 4.5](https://platform.claude.com/docs/en/models/haiku-4-5/overview) remains active with a 200K window, and [Opus 4.5](https://platform.claude.com/docs/en/models/opus-4-5/overview) has the same window. The earlier plan read identified the Haiku 4.5 case; handling those legacy IDs separately would retain the intended 1M window for Haiku 5.5.",
+        "file": "src/forge/contextsize.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 42,
+        "priority": "P1",
+        "title": "Use the actual window for supported 200K Claude models",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Functional.\nCase: normal use - a coordinator must finish an in-flight native round before switching chats, and the host compacts during that round. The saved tenth remains keyed to the same session after compaction. If the chat was warned at 90%, it receives no warning when its new context later crosses 50%, or at any later tenth below 100%. Codex runs the post-compaction session hook in the continuing session, but the hook never resets this marker. The handover cue can therefore disappear in compaction and never recur while the coordinator continues working. Adds work: rearm the warning for the new context window; F 2 x H 2 = 4; 2 x C = 4.",
+        "file": "src/forge/contextsize.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 65,
+        "priority": "P1",
+        "title": "Rearm the half-window warning after compaction",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Gate.\nCase: normal use - the pull request runs Forge\u2019s required repository checks. This new hook test has no `pytest.mark.platform`, so `tests/test_platform_sensitive_selection.py:12` and `:31`-`:45` identify it by its filename and fail; `.forge/always-tests.txt` includes that guard in related-test runs. The new context-size hook test also exercises worktrees and platform-specific file locking without the marker, so it is omitted from the platform subset.",
+        "file": "tests/test_context_hook_names_handoff_note.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 6,
+        "priority": "P1",
+        "title": "Gate: mark the new hook tests for the platform subset",
+        "work": 1
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Gate.\nCase: normal use - Forge runs its full test suite. `tests/test_handover_guide.py:41`-`:67` compares the machine-handover sections in `docs/guide.md`, the template, and the synced guides. Its extraction includes the text after `## Hand over `: the unchanged documentation starts with `1.`, while the changed template starts with `to another machine or person 1.`. Both parameterized cases therefore fail. Align the documentation or adjust the comparison while retaining its check of the handover steps.",
+        "file": "src/forge/templates/skill.md",
+        "gain": 4,
+        "harm": 3,
+        "line": 661,
+        "priority": "P1",
+        "title": "Gate: keep the existing handover guide test passing",
+        "work": 1
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test.\nCase: normal use - a coordinator\u2019s transcript contains usage records from earlier requests before its latest request. Every call to `record` replaces the transcript with a single record, so an implementation that reads the oldest usage instead of the latest would pass every assertion while missing the warning after the context grows past half. The named proof needs a transcript with conflicting earlier and later counts.",
+        "file": "tests/test_context_line_past_half_window.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 14,
+        "priority": "P1",
+        "title": "Test: the half-window proof never checks multiple transcript records",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test.\nCase: normal use - the owner asks for a handover, or the coordinator prepares the note after a warning. These assertions would still pass if the synced guide omitted the owner-request trigger, the quiet moment, refreshing an existing note, and adding open decisions, lessons, and background-job log paths. The checked `forge hook handoff` phrase applies only when the note does not yet exist, and `when the job starts` does not assert what must be recorded. The named proof therefore does not protect the full second Done-when item.",
+        "file": "tests/test_fix_client_repos_lose_the_agent_s_state_the.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 69,
+        "priority": "P1",
+        "title": "Test: the guide proof misses required handoff steps",
+        "work": 2
+      },
+      {
+        "body": "Gain 2, Work 2, Harm 3\nRaise: Test.\nThe change rereads the note after building the report, addressing the plan\u2019s identified risk that a decision added while the report runs is overwritten. The existing test writes its notes before starting the second handoff (`tests/test_fix_client_repos_lose_the_agent_s_state_the.py:49`-`:62`), so it would also pass with the old early read and does not protect this repair. Adds work: exercise an edit while the report is being built; F 2 x H 2 = 4; 2 x C = 4.",
+        "file": "src/forge/nextstep.py",
+        "gain": 2,
+        "harm": 3,
+        "line": 222,
+        "priority": "P2",
+        "title": "Follow-up: prove edits made during a handoff refresh survive",
+        "work": 2
+      }
+    ],
+    "id": "5b6c05ce-5111-4d21-94c4-d9229ec36f38",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T09:18:41.988996+00:00",
@@ -18,6 +192,10 @@
       "at": "2026-11-26T09:18:59.364050+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T09:37:01.140894+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
