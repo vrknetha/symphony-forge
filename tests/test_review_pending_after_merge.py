@@ -25,6 +25,11 @@ def _pending_finding(title="After merge: Main's full CI run passes",
 
 
 def test_1_pending_after_merge_does_not_block_and_lists_check_and_owner(env):
+    story_doc = (env.repo.path / "plans" / "SHOP.md").read_text("utf-8").replace(
+        "| 1 | `app.py` |", "| 1, 2 | `app.py` |"
+    )
+    env.commit(env.repo.path, "plans/SHOP.md", story_doc, "Cover items 1 and 2 in T1")
+    env.repo.git("push", "-q", "origin", "main")
     item, where = env.start_task()
     env.commit(where, "tests/test_app.py", "def test_ok():\n    assert True\n", "Add app test")
     env.commit(
@@ -64,6 +69,8 @@ def test_1_pending_after_merge_does_not_block_and_lists_check_and_owner(env):
         "--branch", env.repo.git("branch", "--show-current", cwd=where),
     )
     assert gate.returncode == 0, gate.stdout + gate.stderr
+    assert "names no test" not in gate.stdout + gate.stderr
+    assert "is not on this branch" not in gate.stdout + gate.stderr
     assert "blocked by serious findings" not in gate.stderr
 
 
@@ -82,14 +89,18 @@ def test_2_pending_after_merge_carries_across_rounds_and_stays_out_of_stop_accep
     assert "After merge:" not in stop_section
 
     env.open_pr(body(env.gh_calls("pr", "edit")[-1]), draft=True)
-    # Choosing accept dismisses the blocker but leaves the pending check listed and not dismissed.
+    # Choosing accept dismisses only the blocker and leaves the pending check listed and undismissed.
     accepted = env.close(item, "--resolve", "accept", "--reason", "Ship with pending check")
     assert accepted.returncode == 0, accepted.stdout + accepted.stderr
     published = body(env.gh_calls("pr", "edit")[-1])
-    before_fold = published.split("<details>", 1)[0]
+    before_fold, _, rest = published.partition("<details>")
+    folded = rest.partition("</details>")[0]
+    assert "Review: clean, 1 dismissed, 0 advice." in before_fold
     assert "Pending after merge:" in before_fold
     assert "Run the full CI workflow on main" in before_fold
     assert "dismissed because" not in before_fold
+    assert "Greeting is missing" in folded and "dismissed because" in folded
+    assert "After merge:" not in folded
 
     # A close on an unchanged commit reuses the saved review and makes no second review call.
     reused = env.close(item)
