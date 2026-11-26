@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-CODEXAPPROVE-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-26T12:05:56.230851+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Approve a story from a Codex chat",
+  "touches": 0
+}
