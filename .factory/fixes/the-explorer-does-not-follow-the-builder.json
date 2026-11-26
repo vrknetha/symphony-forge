@@ -84,7 +84,7 @@
       "gain": 4,
       "harm": 3,
       "line": 203,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 2,
       "security": false,
@@ -94,27 +94,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "ded4012707c140aa23f16f31dff1784725f8b05fa5796b6cf7afefc1cbbaae3b",
-    "changed": "c40f6307f5abf555c3da7f1d17eba3968dee8f0aa0133e37c46de2f7c7576fb6",
-    "commit": "874fb3858743de05757a02a2b63726016af98c24",
+    "branch_diff": "3c427997bade1cb1748956be942af089089b65c1b129f50ff3a25b5ec76d3948",
+    "changed": "933ec8dd13451ce05df99cfe15cf328fc69d171bd695d6227157e294bb4ff9e8",
+    "commit": "d2103bd97e3179922aeb582705a8886fe13129fa",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Gate\nCase: normal use - The full pytest suite still contains a test that expects a native Codex explorer when the configured worker is Claude. This repair updates the analogous call here, but `tests/test_contracts.py:633` still parses `forge start` as a JSON handout and supplies the reply later through handback. Its fixture sets `workers = \"claude\"` (`tests/test_close.py:301`), so Forge instead runs the Claude SDK; the stub returns `No findings.`, and start refuses after two malformed replies. Consequently, `test_9_nothing_changes_outside_a_pull_request` still fails.",
-        "file": "tests/test_fix_routing.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 203,
-        "priority": "P1",
-        "title": "Gate: Update existing tests for the new explorer behavior",
-        "work": 2
-      }
-    ],
-    "id": "71dbeaf0-9ec5-4fc1-95f1-c250c6317ae5",
-    "status": "blocked"
+    "findings": [],
+    "id": "d7c5f948-9068-4ca1-a1ec-3bf03248f467",
+    "status": "clean"
   },
   "round": 3,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-26T12:08:51.549919+00:00",
@@ -154,6 +143,10 @@
       "at": "2026-11-26T13:18:17.933982+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T13:23:42.127213+00:00",
+      "step": "review"
     }
   ],
   "stop": {
