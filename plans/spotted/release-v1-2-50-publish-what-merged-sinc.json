@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/release-notes/v1.2.50.md\tGate: proof list omits release-notes test cases\trelease-v1-2-50-publish-what-merged-sinc",
+      "kind": "bug",
+      "path": "src/forge/release-notes/v1.2.50.md",
+      "line": 1,
+      "text": "Gate: proof list omits release-notes test cases",
+      "from": "blocking",
+      "item": "release-v1-2-50-publish-what-merged-sinc",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_release_version.py\tGate: pre-fix replay rejects the reused release-version proofs\trelease-v1-2-50-publish-what-merged-sinc",
+      "kind": "bug",
+      "path": "tests/test_release_version.py",
+      "line": 20,
+      "text": "Gate: pre-fix replay rejects the reused release-version proofs",
+      "from": "blocking",
+      "item": "release-v1-2-50-publish-what-merged-sinc",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
