@@ -53,7 +53,7 @@ def test_1_a_command_runs_the_pinned_release_through_uv(repo):
     assert ran.stdout == "the pinned release ran\n"
     assert ran.returncode == 3  # the pinned release's own exit code
     assert _calls(log) == [{"args": [
-        "tool", "run", "--from", f"git+https://github.com/knacklabs/symphony-forge@{OLD}",
+        "tool", "run", "--from", f"symphony-forge=={OLD.removeprefix('v')}",
         "forge", "fix", "start", "Tidy the readme", "--done", "It reads well"],
         "cwd": str(repo.path)}]
 
@@ -66,7 +66,7 @@ def test_2_it_refuses_inside_the_pinned_run_so_it_never_loops(repo):
     assert ran.returncode == 1
     assert ran.stderr.endswith(
         f"Forge {version} is installed, but this repo pins {OLD}.\n"
-        f"Next: uv tool install git+https://github.com/knacklabs/symphony-forge@{OLD}\n")
+        f"Next: uv tool install symphony-forge=={OLD.removeprefix('v')}\n")
     assert len(_calls(log)) == 1
 
 

@@ -1,0 +1,171 @@
+{
+  "base": "285e56632baf943e4c7524f2341a7bb52f3e7f0b",
+  "branch": "fix/standing-owner-policy",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a1f190-66c4-7891-a7d2-25d8d05efed0",
+    "head": null,
+    "start": "cdfd797c63ee9cb719fa78e5c0e3eb4a2cec79ca"
+  },
+  "done_when": "forge.toml can set a standing owner policy (for example auto_more_round = true) under which close gives one more round automatically for P0 or P1 functional findings, at most once per item, and reports that it applied the policy; every other choice still waits for the owner; off by default; new and existing repos get the setting on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "close() in src/forge/close.py",
+      "file": "src/forge/close.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 422,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: the policy can permit more than one repair round per item",
+      "work": 2
+    },
+    {
+      "area": "close() in src/forge/close.py",
+      "file": "src/forge/close.py",
+      "gain": 4,
+      "harm": 2,
+      "line": 418,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Do not spend the policy on a P0 that already continues",
+      "work": 1
+    },
+    {
+      "area": "close() in src/forge/close.py",
+      "file": "src/forge/close.py",
+      "gain": 4,
+      "harm": 2,
+      "line": 421,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Carry the granted round through forge land",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/brief.md",
+      "file": "src/forge/templates/brief.md",
+      "gain": 4,
+      "harm": 2,
+      "line": 36,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Tell resumed workers that the policy authorized the round",
+      "work": 1
+    },
+    {
+      "area": "close() in src/forge/close.py",
+      "file": "src/forge/close.py",
+      "gain": 4,
+      "harm": 2,
+      "line": 416,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Recognize indented Functional evidence",
+      "work": 1
+    },
+    {
+      "area": "tests/test_standing_review_policy.py",
+      "file": "tests/test_standing_review_policy.py",
+      "gain": 2,
+      "harm": 1,
+      "line": 10,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: Correct the CI proof for checks that do not run on pull requests",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "9b454baff18acc7232416040e4592e8d8a665d46d4a466dd1cace7a7c2ea0bea",
+    "changed": "4d3a8f317fd0bb0eea4cd36a01fa1cf086cf783d824f95c91b6fbb7c8d9c5b43",
+    "commit": "ddee6b72f4effdfce41fd02dc08655dd03c5eab3",
+    "dismissals": [],
+    "findings": [],
+    "id": "ad3ac1df-c943-490a-870d-bdb2e1905e48",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-19T01:59:18.821263+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-19T02:44:56.215506+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-19T03:12:12.288415+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T17:08:55.954549+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-25T17:28:49.342716+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:41:24.328487+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T18:28:16.759903+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T18:34:21.182474+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T01:16:40.448784+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T01:25:15.918626+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-19T03:12:12.288690+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "src/forge/close.py",
+    "reason": "Owner chose one more round for both findings",
+    "wait_id": "cf5c17fe-9451-4880-8903-ddeb4964b37b",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "fc73f022-3a98-4a64-b935-0dcd4325c0be",
+    "head": "fae102fd106690019097405efb8d8adf81db5581",
+    "keys": {},
+    "round": 4
+  },
+  "why": "Overnight at a client, round-limit, switch, narrow, split and size choices piled up (6 by midnight) while builders sat idle, because every such choice waits for the owner",
+  "worker": "codex"
+}

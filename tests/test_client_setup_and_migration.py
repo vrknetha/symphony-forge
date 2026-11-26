@@ -36,10 +36,10 @@ def test_1_init_and_sync_ship_setup_migration_and_advisory_pr_size(repo, gh, tmp
         skill = (folder / "SKILL.md").read_text(encoding="utf-8")
         setup = skill.split("## Laptop setup and after cloning\n", 1)[1].split("\n## ", 1)[0]
         assert "forge.toml" in setup and "pinned" in setup
-        assert "uv tool install git+https://github.com/knacklabs/symphony-forge@<release>" in setup
+        assert "uv tool install symphony-forge==<release>" in setup
         assert setup.index("forge sync") < setup.index("forge doctor --fix")
         for installer in ("install-mac.sh", "install-windows.ps1"):
-            assert f"https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/{installer}" in setup
+            assert f"https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/{installer}" in setup
         assert "before running `forge migrate" in skill
         assert "[migration playbook](migrate-skill.md)" in skill
         guide = (folder / "migrate-skill.md").read_text(encoding="utf-8")

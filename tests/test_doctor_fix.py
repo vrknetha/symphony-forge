@@ -24,7 +24,7 @@ pytestmark = pytest.mark.platform
 
 STORY = "FORGE-DOCTORFIX-1"
 NEWER = "9.0.0"
-INSTALL = f"uv tool install git+https://github.com/knacklabs/symphony-forge@v{NEWER}"
+INSTALL = f"uv tool install symphony-forge=={NEWER}"
 HOOKS_FIXED = "- Fixed: installed the git hooks that check each commit and push."
 HOOKS_ROW = "The git hooks that check each commit and push aren't installed."
 
@@ -127,7 +127,7 @@ def _an_older_pin_or_a_dev_build_is_left_alone(repo, gh, tmp_path, monkeypatch, 
     for args in (("doctor",), ("doctor", "--fix")):
         done = repo.forge(*args)
         assert (f"is installed, but this repo pins v{version}.\n  Fix: uv tool install "
-                f"git+https://github.com/knacklabs/symphony-forge@v{version}\n") in done.stdout
+                f"symphony-forge=={version.removeprefix('v')}\n") in done.stdout
     assert _uv_calls(log) == []
     assert HOOKS_FIXED in done.stdout  # the other repairs still run
 
@@ -248,9 +248,20 @@ def _work(repo, tmp_path, branch: str = "fix/done", commit: bool = True) -> tupl
     return folder, repo.git("rev-parse", "HEAD", cwd=folder)
 
 
-def _prs(gh, branch: str, *prs: tuple[str, str], stdout: str = "", exit: int = 0) -> None:
-    gh.respond("pr", "list", "--head", branch, exit=exit, stdout=stdout or json.dumps(
-        [{"headRefOid": head, "state": state, "a_new_field": 1} for head, state in prs]))
+FINISHED_PR_QUERY = ("api", "graphql", "-F", "query=@-")
+
+
+def _pr_page(*prs: tuple[str, str, str], more: str | None = None) -> str:
+    pages = {}
+    for branch, head, state in prs:
+        page = pages.setdefault("head_" + branch.encode().hex(), {"nodes": [], "pageInfo": {
+            "hasNextPage": more is not None, "endCursor": more}})
+        page["nodes"].append({"headRefOid": head, "state": state, "a_new_field": 1})
+    return json.dumps({"data": {"repository": pages}})
+
+
+def _prs(gh, *prs: tuple[str, str, str], stdout: str = "", exit: int = 0) -> None:
+    gh.respond(*FINISHED_PR_QUERY, exit=exit, stdout=stdout or _pr_page(*prs))
 
 
 def _gone(repo, folder: Path, branch: str) -> bool:
@@ -268,7 +279,9 @@ def _a_finished_folder_with_a_lockfile_change_goes(repo, gh, tmp_path, monkeypat
     repo.git("commit", "--allow-empty", "-q", "-m", "Lock")
     folder, head = _work(repo, tmp_path)
     (folder / "uv.lock").write_text("version = 2\n", encoding="utf-8")
-    _prs(gh, "fix/done", (head, state))
+    if state == "CLOSED":
+        repo.git("push", "-q", "origin", "fix/done")
+    _prs(gh, ("fix/done", head, state))
     # Without --fix: only the row, and nothing removed.
     listed = repo.forge("doctor")
     assert (f"- 1 folders hold finished work: {folder}.\n  Fix: forge doctor --fix\n"
@@ -278,8 +291,6 @@ def _a_finished_folder_with_a_lockfile_change_goes(repo, gh, tmp_path, monkeypat
     done = repo.forge("doctor", "--fix")
     assert f"- Fixed: removed {folder}, whose pull request is {state.lower()}.\n" in done.stdout
     assert _gone(repo, folder, "fix/done")
-    assert ["pr", "list", "--head", "fix/done", "--state", "all", "--limit", "100", "--json",
-            "headRefOid,state"] in gh.calls()
 
 
 def _clean_and_cache_only_folders_are_removed(repo, gh, tmp_path, monkeypatch, _):
@@ -295,8 +306,7 @@ def _clean_and_cache_only_folders_are_removed(repo, gh, tmp_path, monkeypatch, _
     for cache in (".venv/bin", "web/node_modules/x", "src/__pycache__"):
         (cached / cache).mkdir(parents=True)
         (cached / cache / "f").write_text("x\n", encoding="utf-8")
-    _prs(gh, "task/CLEAN", (clean_head, "MERGED"))
-    _prs(gh, "story/CACHED", (cached_head, "MERGED"))
+    _prs(gh, ("task/CLEAN", clean_head, "MERGED"), ("story/CACHED", cached_head, "MERGED"))
     done = repo.forge("doctor", "--fix")
     assert _gone(repo, clean, "task/CLEAN") and _gone(repo, cached, "story/CACHED"), done.stdout
 
@@ -334,7 +344,7 @@ def _a_folder_holding_anything_else_is_kept(repo, gh, tmp_path, monkeypatch, lef
         repo.git("commit", "-q", "--allow-empty", "-m", "Later", cwd=folder)
     else:
         prs.append(("0" * 40, "OPEN"))
-    _prs(gh, "fix/done", *prs)
+    _prs(gh, *(("fix/done", tip, state) for tip, state in prs))
     done = repo.forge("doctor", "--fix")
     assert _kept(repo, folder, "fix/done") and "folders hold finished work" not in done.stdout
 
@@ -343,11 +353,15 @@ def _an_unusable_github_answer_removes_nothing(repo, gh, tmp_path, monkeypatch, 
     _client(repo)
     folder, head = _work(repo, tmp_path)
     if answer == "fails":
-        _prs(gh, "fix/done", (head, "MERGED"), exit=1)
+        _prs(gh, ("fix/done", head, "MERGED"), exit=1)
     elif answer == "not a list":
-        _prs(gh, "fix/done", stdout=json.dumps({"headRefOid": head, "state": "MERGED"}))
+        response = json.loads(_pr_page(("fix/done", head, "MERGED")))
+        next(iter(response["data"]["repository"].values()))["nodes"] = {}
+        _prs(gh, stdout=json.dumps(response))
+    elif answer == "bad row":
+        _prs(gh, ("fix/done", head, "MERGED"), ("fix/done", head, "UNKNOWN"))
     else:
-        _prs(gh, "fix/done", *[(head, "MERGED")] * 100)
+        _prs(gh, stdout=_pr_page(("fix/done", head, "MERGED"), more="repeated-cursor"))
     for args in (("doctor",), ("doctor", "--fix")):
         assert "folders hold finished work" not in repo.forge(*args).stdout
     assert _kept(repo, folder, "fix/done")
@@ -356,13 +370,13 @@ def _an_unusable_github_answer_removes_nothing(repo, gh, tmp_path, monkeypatch, 
 def _the_folder_doctor_runs_in_and_the_main_checkout_are_kept(repo, gh, tmp_path, monkeypatch, _):
     _client(repo)
     folder, head = _work(repo, tmp_path)
-    _prs(gh, "fix/done", (head, "MERGED"))
+    _prs(gh, ("fix/done", head, "MERGED"))
     repo.forge("doctor", "--fix", cwd=folder)
     assert _kept(repo, folder, "fix/done")
 
     # The main checkout on a finished branch, with doctor run from another folder.
     repo.git("checkout", "-q", "-b", "fix/main-here")
-    _prs(gh, "fix/main-here", (repo.git("rev-parse", "HEAD"), "MERGED"))
+    _prs(gh, ("fix/done", head, "MERGED"), ("fix/main-here", repo.git("rev-parse", "HEAD"), "MERGED"))
     done = repo.forge("doctor", "--fix", cwd=folder)
     assert repo.path.exists() and repo.git("branch", "--show-current") == "fix/main-here"
     assert "whose pull request is merged" not in done.stdout
@@ -376,9 +390,8 @@ def _failed_removals_are_rows_and_the_other_repairs_go_on(repo, gh, tmp_path, mo
     repo.git("worktree", "lock", str(locked))
     # A leftover ref lock makes git refuse to delete that branch.
     (repo.path / ".git" / "refs" / "heads" / "fix" / "b-stuck-branch.lock").write_text("")
-    for branch, head in (("fix/a-locked", locked_head), ("fix/b-stuck-branch", stuck_head),
-                         ("fix/c-free", free_head)):
-        _prs(gh, branch, (head, "MERGED"))
+    _prs(gh, ("fix/a-locked", locked_head, "MERGED"), ("fix/b-stuck-branch", stuck_head, "MERGED"),
+         ("fix/c-free", free_head, "MERGED"))
     done = repo.forge("doctor", "--fix")
     assert f"- Forge couldn't remove {locked}: " in done.stdout
     assert "  Fix: unlock it or close programs using it, then forge doctor --fix\n" in done.stdout
@@ -426,7 +439,7 @@ def test_2_doctor_puts_back_the_git_hooks_and_the_codex_sdk(repo, gh, tmp_path, 
     (_a_finished_folder_with_a_lockfile_change_goes, ["MERGED", "CLOSED"], ()),
     (_clean_and_cache_only_folders_are_removed, [None], ()),
     (_a_folder_holding_anything_else_is_kept, LEFTOVERS, ()),
-    (_an_unusable_github_answer_removes_nothing, ["fails", "not a list", "100 entries"], ()),
+    (_an_unusable_github_answer_removes_nothing, ["fails", "not a list", "bad row", "missing page"], ()),
     (_the_folder_doctor_runs_in_and_the_main_checkout_are_kept, [None], ()),
     (_failed_removals_are_rows_and_the_other_repairs_go_on, [None], ())))
 def test_3_doctor_removes_only_the_folders_of_finished_work(repo, gh, tmp_path, monkeypatch, case,

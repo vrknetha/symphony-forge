@@ -17,7 +17,7 @@ reader while available. A native read uses a separate `reader` subagent.
 Install the release a repo pins (uv brings Python 3.11 or later if you don't have it):
 
 ```
-uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.48
+uv tool install symphony-forge==1.2.49
 ```
 
 `forge --version` prints the installed version. Each repo pins its release in `forge.toml`, and
@@ -572,8 +572,7 @@ and retries it once after a failure. The command runs the configured test comman
 shell as a local close on Windows. Use `pwsh -File "<path>"` to run a PowerShell script. A second
 failure fails the check; Linux and Mac run it once, and the trusted `forge-pr-check` gate keeps
 its command. New clients get this at init; existing clients get it after upgrading Forge and
-running `forge sync`. Forge's own Windows full-suite job instead reruns each failed pytest test
-once and gives the known slow tests longer timeouts on Windows.
+running `forge sync`.
 Close runs the full related-test selection, even when it covers more than a third of the Python
 test files. Shared test inputs select every test. Bare
 `forge test` keeps worker runs bounded: when the pytest selection would cover more than a third
@@ -681,15 +680,47 @@ fix. Close's last line says who merges, as described in Merging a ready item. Wh
 refuses, follow its `Next:` line; running it again picks up where it stopped.
 If the machine's lanes still have runs, the command names them and asks you to wait.
 
-A repo pinned to a release older than the command upgrades once with
-`uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge upgrade vX.Y.Z`.
+If your installed Forge is too old to run `forge upgrade`, use the install and upgrade
+commands in [Recovering upgrades from the retired GitHub repository](#recovering-upgrades-from-the-retired-github-repository).
+
+### Recovering upgrades from the retired GitHub repository
+
+If the default branch's `.github/workflows/forge.yml` still installs Forge from the retired
+GitHub repository, the review check fails before it can review an upgrade pull request.
+GitHub runs this check using the workflow it already trusts on the default branch.
+
+1. Choose a published Forge release newer than the repo's pin that includes the switch to PyPI.
+   Install it first, then run the upgrade. Use the same version in both commands.
+
+   ```bash
+   uv tool install --force symphony-forge==X.Y.Z
+   forge upgrade vX.Y.Z
+   ```
+
+   The upgrade opens a pull request even if the old pin has no PyPI package. The installed Forge
+   stays on PATH after the upgrade command exits.
+2. The repository owner reviews the exact pull request commit. Check that only the pin,
+   Forge-generated files and Forge records changed, that the new workflow installs from
+   PyPI, and that all other required checks pass. Confirm the Forge review check failed
+   because the retired install source is unavailable. If the pull request is a draft,
+   mark it ready after review.
+3. Pause other merges. In GitHub, open **Settings → Branches** and edit the protection rule
+   for the default branch. Record the source configured for `forge-pr-check`, then temporarily
+   remove only that check from the required list. If it is the sole required status check,
+   turn off the status check requirement for this merge. Keep the pull request requirement,
+   approvals, any other required checks and administrator protection in place. Merge only
+   the reviewed upgrade pull request. Immediately restore `forge-pr-check` with its original
+   source and settings, even if the merge fails.
+4. Check that the next pull request gets a green `forge-pr-check` from the upgraded default
+   branch. If another work branch still pins an unpublished release, merge the upgraded
+   default branch into it.
 
 ## Releasing Forge
 
 For Forge's maintainers:
 
-Cut one release a day at 05:00 UTC from the newest main commit whose Linux full run
-and Windows run passed. Freeze the contents at the cut. Only a fix without which the
+Cut one release a day at 05:00 UTC from the newest main commit whose Linux full run passed.
+Freeze the contents at the cut. Only a fix without which the
 release is unsafe or its checks cannot pass may join; later work waits for the next day.
 Publish within 30 minutes of the cut, without a separate owner yes.
 Skip the day when nothing merged since the last release or main is red.
@@ -699,22 +730,22 @@ Hold merges from the cut until you push the tag and check the installed version.
    and add `src/forge/release-notes/v<version>.md` for everything merged since the previous
    release. Merge it last: the cut commit is this fix's merge commit. A fix that must join the
    release after it (a fix without which the release is unsafe) also updates that notes file.
-2. Before the cut, reuse passed nightly runs on the bump's merge commit (or the last joining fix's).
-   If a run is missing, start it with `gh workflow run forge.yml --ref main` (Linux) or
-   `gh workflow run forge-next.yml --ref main` (Windows). Both must pass before the cut.
+2. Before the cut, reuse the passed nightly run on the bump's merge commit (or the last joining fix's).
+   If the Linux full run is missing, start it with `gh workflow run forge.yml --ref main`.
+   The Linux full run must pass before the cut.
    At 05:00 UTC, select the bump's merge commit (or the last joining fix's), once its Linux full
-   run and Windows run passed. Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
+   run passes. Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
    If current main is ahead of that commit, skip the day: the release gate requires current main.
-   Reuse the passed nightly runs on that exact commit. Do not start them again.
+   Reuse the passed nightly run on that exact commit. Do not start it again.
    The Linux workflow posts the full-run status that sign-off and release read.
-   If an essential fix must join, repeat both runs and record its tested commit before the tag.
+   If an essential fix must join, repeat the Linux full run and record its tested commit before the tag.
 3. Before you create the tag, run `uv run --frozen --python 3.11 python
    .github/release-notes-check.py vX.Y.Z <full cut SHA>`. When it fails, do not tag: add the
    missing change to the notes in a fix, merge it, and use its merge commit as the cut.
    Tag the exact cut commit with `git tag vX.Y.Z <full cut SHA>`, then `git push origin vX.Y.Z`.
    Use the recorded full SHA, never `origin/main`. Check the tag's tree against the cut with
    `git diff --quiet vX.Y.Z <full cut SHA>`.
-   The tag push runs the Windows checks again or reuses passed proof for the same tree.
+   The tag push runs the plugin checks or reuses passed proof for the same tree.
    Confirm that run is green too.
 4. Install from the tag and check that `forge --version` prints `vX.Y.Z`. Then allow merges again.
    Publish the GitHub release from the cut commit's notes file, not the local one:
@@ -726,7 +757,7 @@ Hold merges from the cut until you push the tag and check the installed version.
      remote, so in the scratch folder make the app as `app` and a local bare repo as its remote:
      `git init -b main app`, `git init --bare -b main origin.git`, `git -C app remote add origin ../origin.git`.
      Run `forge init` in `app` from the tag:
-     `uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge init --starter react --actions no`.
+     `uvx --from symphony-forge==X.Y.Z forge init --starter react --actions no`.
      Init sets up the app and pushes its first commit to that remote, then stops with "Forge cannot identify
      a GitHub repository from origin". That is expected for this folder; the app is ready.
    - Start a `general-purpose` subagent, not the `worker` role. Set its model to the one in

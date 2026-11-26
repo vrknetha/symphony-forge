@@ -20,6 +20,16 @@
         ]
       }
     ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh -c '. \"$(git -C \"${CLAUDE_PROJECT_DIR:-.}\" rev-parse --show-toplevel)/.forge/hooks.sh\" && forge hook context || exit 2' || exit 2"
+          }
+        ]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Bash",

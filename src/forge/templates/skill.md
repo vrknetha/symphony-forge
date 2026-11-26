@@ -19,7 +19,8 @@ Start with the largest measured cost:
 1. Upgrade to the record-commit rerun fix to remove repeated runs caused only by Forge records.
    Keep runs that test changed code or a changed base.
 2. Run the desktop Playwright project on pull requests and all projects nightly through the full
-   command, including each screen's rendered check. Keep browser tests outside `fast_test`.
+   command, including each screen's rendered check. Keep browser tests outside `fast_test`
+   when the pull request already has a separate browser job.
 3. Keep test setup and helpers from importing the app entry or the whole app. Preserve real
    import dependencies: never drop changed files from related selection or replace them with
    area names. Keep a table of slow tests and their input paths; run them for changed inputs on
@@ -78,6 +79,13 @@ own fix that changes only `checks`, `test_place` and the generated workflow from
 that the branch and default branch share. Added checks keep their usual checks.
 
 Start with `forge next`. It says where things stand and gives the exact next command.
+If it names another coordinator session, use one chat to coordinate the repo.
+
+`forge next`, `forge start` and `forge land` also remove finished folders and
+say how many they removed. Forge keeps the current folder and folders with
+local work that GitHub does not have. For a closed pull request, GitHub must
+still have the matching branch. New repos get this at setup. Existing repos
+get it on upgrade.
 
 ## Guide a person with little technical experience
 
@@ -513,7 +521,7 @@ other), file a bug on Forge's GitHub. No client code, names, paths or secrets: d
 Read the template text from GitHub and drop its front matter:
 
 ```
-gh api repos/knacklabs/symphony-forge/contents/.github/ISSUE_TEMPLATE/forge-bug.md -H "Accept: application/vnd.github.raw"
+gh api repos/vrknetha/symphony-forge/contents/.github/ISSUE_TEMPLATE/forge-bug.md -H "Accept: application/vnd.github.raw"
 ```
 
 Fill every section, then save the filled body with your own file-writing tool as UTF-8.
@@ -532,7 +540,7 @@ The template's sections, which the body file keeps exactly:
 File it with no prompt:
 
 ```
-gh issue create --repo knacklabs/symphony-forge --title "<short plain title>" --body-file <that file>
+gh issue create --repo vrknetha/symphony-forge --title "<short plain title>" --body-file <that file>
 ```
 
 ## Laptop setup and after cloning
@@ -549,13 +557,13 @@ If neither tool is signed in, it asks you to sign in. Existing repos keep their 
 If you use Claude, open Claude Code in the repo once and accept the trust question before running headless Claude commands.
 
 The repeatable laptop installers are published for
-[Mac](https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-mac.sh)
-and [Windows](https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-windows.ps1).
+[Mac](https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-mac.sh)
+and [Windows](https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-windows.ps1).
 They install the tools Forge needs; follow their prompts to sign in to GitHub and your agent.
 
 After every clone, read the pinned `version` in `forge.toml` and install that release,
 even if the laptop installer installed a different one:
-`uv tool install git+https://github.com/knacklabs/symphony-forge@<release>`
+`uv tool install symphony-forge==<release>`
 (replace `<release>` with the pin, such as `v1.2.4`). Then run `forge sync` to install
 the local git hooks and refresh the generated files, followed by `forge doctor --fix`.
 In Husky repos, sync preserves the team's hooks and adds Forge's checks to the committed
@@ -1519,6 +1527,7 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    beside changed-test selection in TypeScript `fast_test`, through the normal settings fix after
    the human agrees. Keep `test` as the full suite. New repos get this review at setup; existing
    adopted repos get this guidance on upgrade and sync, with settings changed only through that fix.
+   When the pull request has a separate browser job, use this setup.
    Keep browser tests and each screen's rendered check in the full test command and nightly
    full run, outside `fast_test`, including shared-settings changes.
    Pull request CI runs the desktop Playwright project. Nightly runs all projects.
@@ -1575,8 +1584,8 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    tests need, in the order the script runs them, including any step that runs after the
    tests. Limit only the unit-test steps to the changed code with the runner's own option and
    `{base}`, for example `vitest run --changed {base}` or `jest --changedSince {base}`; npm
-   passes `--` options only to the last command of a script. Keep browser-test steps in the
-   nightly full command, outside `fast_test`. Keep the setup a script runs before or
+   passes `--` options only to the last command of a script. Keep the browser-test steps because
+   the pull request check also runs `fast_test`. Keep the setup a script runs before or
    after itself (`pre` and `post` scripts). Run the command once with `{base}` set to the
    default branch. Tell the owner that changed-only selection follows imports, so API tests
    that reach the code only through a URL run only in the full test run. Then ask the owner,
@@ -1626,7 +1635,7 @@ After an upgrade, forge upgrade and then forge next (once on each computer) list
 release and the open known Forge issues. Tell the owner the changes that affect them in plain
 words, follow each line's instruction, and read the "Known Forge issues" part at the end of
 this guide.
-`forge next` gives `Next: forge upgrade <release>` when its release check finds a newer release
+`forge next` gives `Next: forge upgrade <release>` when PyPI has a newer release
 than the repo pins. If upgrade refuses outside the default branch, move to the main checkout.
 Drop the current fix only if Forge started it and the owner agrees. Then switch to the default
 branch and run `forge upgrade <release>`. The refusal gives these steps in plain words.
@@ -1680,8 +1689,12 @@ without old check-run requests. Retries keep the same batch and never take anoth
 Older items keep their text or show unmeasured time. New and existing repos get this
 behavior on upgrade.
 
-A repo pinned to a release without `forge upgrade` runs it once through uv:
-`uvx --from git+https://github.com/knacklabs/symphony-forge@<release> forge upgrade <release>`.
+A repo pinned to a release unavailable from PyPI can install a newer release and then upgrade.
+Use a published release that includes the switch to PyPI. Run
+`uv tool install --force symphony-forge==X.Y.Z`, then `forge upgrade vX.Y.Z`.
+If the default branch's workflow still installs from the
+retired GitHub repository, Forge opens the upgrade pull request and the owner follows the
+[upgrade recovery steps](https://github.com/vrknetha/symphony-forge/blob/main/docs/guide.md#recovering-upgrades-from-the-retired-github-repository).
 Until the upgrade merges, the default branch keeps working with the new release installed.
 After it merges, older branches keep their pinned release and its rules. When Forge says the
 default branch already pins the installed release, merge `origin/<default>` into your branch to
@@ -2053,8 +2066,9 @@ Codex build, fix and lite default to `gpt-6.2-sol` at low effort; design uses it
 New repos pin Codex reviews, including working-prototype reviews, and cold reads to
 `gpt-6.1-terra` at max effort. Upgrade and sync keep existing model settings unchanged.
 Claude build, fix and lite accept a `subagents` and `subagent_effort` pair, or use
-`claude-haiku-5-5` at high when neither is set. The SDK's `general-purpose` helper
-gets the same pair. These options affect only the Claude builder's turn, not other
+`claude-haiku-5-5` at high when neither is set. With that stock pair, SDK debugger, security
+and performance helpers use `claude-sonnet-5-5` at high. A different pair applies to every
+SDK helper, including `general-purpose`. These options affect only the Claude builder's turn, not other
 Claude sessions or settings. Codex helpers keep their configured pair, defaulting
 to `gpt-6-luna` at max. Neither tool's helpers change effort after a failure.
 
@@ -2065,8 +2079,8 @@ build has none. With neither pair, sync leaves the defaults unset. Hands-on Code
 that same pair when set, so their worker model does not override the subagent budget.
 
 Claude build, fix and lite default to `claude-sonnet-5-5` at `low` effort.
-Claude design, including frontend, keeps `xhigh` effort. Claude plan reads with no entry use
-`claude-opus-5-5` at `high` effort, including when Claude is the only installed tool.
+Claude design, including frontend, keeps `xhigh` effort. Claude plan reads with no Claude grill
+entry use `claude-sonnet-5-5` at `high` effort, including when Claude is the only installed tool.
 `forge init` writes Sonnet at high for Claude plan reads and reviews.
 Existing model and effort entries stay unchanged after upgrade and sync.
 After a red close test, a blocking review finding or a failed required check named
@@ -2082,7 +2096,7 @@ retain its first effort. Each run records its round number and effort. The board
 and story history show `built at <effort>` in the round line, and omit it for old
 records without effort.
 Claude planner and architect roles use the plan-read entry; debugger, security
-and performance roles use Opus 5.5 at high effort. Reviews, including prototype sign-off,
+and performance roles use Sonnet 5.5 at high effort. Reviews, including prototype sign-off,
 use the selected tool's `models.review` entry, or Autoreview's defaults when unset.
 
 Existing model entries stay unchanged on upgrade. To opt in, set each of
@@ -2150,11 +2164,11 @@ For a side job inside your own session, hand it to one of Forge's subagent roles
 `performance` to diagnose; `worker`, `coder`, `frontend`, `tester` and `refactorer` to build.
 The diagnosing and planning roles change no files. Building an item still goes through
 `forge work`. To change a building or planning role's model or effort, change `forge.toml`
-and run `forge sync`; Claude diagnostic roles keep Opus at high effort.
+and run `forge sync`.
 Codex roles use their host's entry when the kind has per-tool entries. With a single entry, a model
 from the other tool is omitted so the Codex role uses the session's model. Claude building
-roles use their implementation entry or Sonnet low; Claude planning uses grill or Opus high,
-and Claude diagnosing always uses Opus high.
+roles use their implementation entry or Sonnet at low effort. Claude planning uses the grill
+entry or Sonnet at high effort. Claude diagnostic roles use Sonnet at high effort.
 
 Set a model explicitly on every ad-hoc subagent you start outside Forge's roles,
 including the built-in general-purpose agent. In Claude Code, use Sonnet for analysis and
@@ -2214,12 +2228,20 @@ restore after they fetch.
 
 In `forge.toml`, `cold_read_rounds` sets the cold-read limit and `task_review_rounds` sets the task and fix review limit. Each accepts 1 or 2 and defaults to 2. For a fix, only blocked reviews count toward this limit.
 
+The owner can set `auto_more_round = true` in `forge.toml` to permit one more review round per item.
+At the review limit, close applies this policy only when all open blocking findings are P0 or P1
+with `Raise: Functional`. Close reports the policy when it applies it. The setting is off by default.
+P0 findings already return to the worker and do not use this permission. The next worker turn
+uses the permission even if it changes no reviewed file. Land starts the authorized round even
+if local tests also fail, so the worker can address both problems.
+All other choices still wait for the owner. New and existing repos can use this setting after upgrade.
+
 For a fix, close also runs its new or changed pytest Done-when tests on the code before the fix, in a temporary copy of the repo, and refuses a test that passes there; when the test cannot start there, close warns and the review judges it.
 
 A person can ask you to skip the model review for a task or fix. Run `forge close <item> --no-review --by "<name>" --reason "<why>"` only when a person asks. Close adds the name and reason to the pull request. Close refuses if an earlier review blocked the item. Tests, CI, design checks and merge still run.
 
 At the round limit (the repo's setting, two by default), open findings below P0
-stop the item only when no P0 remains open.
+stop the item only when no P0 remains open and close does not apply the policy above.
 Forge asks the owner: one more round, split or accept.
 Accept makes the open findings follow-ups in Known issues with the owner's reason.
 An open P0 returns to the worker. When the same P0 stays open in two worker rounds in a row,
@@ -2395,7 +2417,7 @@ An app repair on the sign-off branch can use the default branch's green run.
 A failed latest full run still blocks.
 Earlier clients need no migration, and accepted sign-off records stay valid. Everyday merges do
 not wait for a full run.
-In Forge's own repository, releases follow the "Releasing Forge" section of `docs/guide.md` for the daily cut, Windows run and merge freeze.
+In Forge's own repository, follow the "Releasing Forge" section of `docs/guide.md` for the daily cut, Linux full run and merge freeze.
 A failed scheduled or manual full run appears in `forge next` with its failed test names.
 The required `forge-pr-check` fails a pull request from a branch Forge did not start.
 Before the first committed review, this check stays pending. A stale or blocked review still
@@ -2465,10 +2487,13 @@ upgrade. Upgrade never rewrites their `test` or `fast_test` settings. Doctor rep
 in the project: it loads a temporary pytest hook to exclude unrelated files, including on pytest
 before 8.2. Test launchers must preserve `PYTHONPATH`, forward pytest arguments and expose xdist
 options in the command or pytest configuration.
-On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep all browser projects in the nightly full command and outside `fast_test`. Pull request CI runs the desktop Playwright project; this Windows shortcut does not change selection elsewhere.
 Workers run tests only through bare `forge test`. It runs `fast_test`, or `test` when none is
 set (using pytest selection when supported), with `{base}` as the merge base with
 `origin/<default branch>`, in the same fair machine-wide test lane as close.
+On Windows, this run skips separate Playwright or Cypress steps, directly or through one package
+script. A combined script, a script with a pre or post script, and a step that reaches the
+browser runner through another file still run. Pull request checks, close and full runs keep
+their configured browser steps.
 It prints the report close keeps and always runs, including docs-only and
 uncommitted changes. If the remote default branch is missing it says to fetch it; if forge.toml
 names no test command it says so and exits successfully. In a sample-data prototype, it says
