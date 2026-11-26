@@ -201,7 +201,7 @@ def test_1_worker_keeps_its_chat_across_rounds(repo, monkeypatch, sdk_data, tmp_
         assert _sent(log, "thread/resume")[-1]["threadId"] == first
         if change == "model-and-effort":
             config = _sent(log, "thread/resume")[-1]["config"]
-            assert (config["model"], config["model_reasoning_effort"]) == ("gpt-6-nova", "low")
+            assert (config["model"], _sent(log, "turn/start")[-1]["effort"]) == ("gpt-6-nova", "low")
     else:
         legacy_rounds = (len(calls(repo.bin / "claude-calls.jsonl"))
                          if adopted == "previous-release-round" else 0)
@@ -285,7 +285,8 @@ def test_2_plan_reader_keeps_its_chat_across_rounds(repo, monkeypatch, tmp_path,
     if change == "model-and-effort":
         if app == "codex":
             settings = _sent(reader.log, "thread/resume")[-1]["config"]
-            assert (settings["model"], settings["model_reasoning_effort"]) == ("gpt-6-nova", "low")
+            assert (settings["model"], _sent(reader.log, "turn/start")[-1]["effort"]) == (
+                "gpt-6-nova", "low")
         else:
             options = calls(reader.log)[-1]["options"]
             assert (options["model"], options["effort"]) == ("sonnet", "low")
