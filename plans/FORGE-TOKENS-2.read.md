@@ -98,6 +98,7 @@ Only a genuine trade-off goes to the human, as a question with options.
    [Forge’s default settings](/src/forge/init.py:77) contain no `models.ask` entry, and [forge ask](/src/forge/ask.py:16) supplies no effort override. The plan says the request already contains one, while the [existing ask test](/tests/test_ask_command.py:32) explicitly configures it. The default path has no specified value to send or record.  
    Adds work: handle and cover a turn without configured effort; F 2 x H 2 = 4; 2 x C = 4.  
    Gain 3, Work 2, Harm 3
+   Disposition: cut a run with no effort setting sends none, as today; tested with forge ask in a new repo (detail 2).
 
 9. Advisory: Plan gap: the after-release comparison cannot prove shortening occurred.
    
