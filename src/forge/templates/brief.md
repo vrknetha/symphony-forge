@@ -335,6 +335,9 @@ their settings until that fix changes them. Keep `test` as the full suite.
 For a pytest repo, the shipped picker is `forge test --pytest <base>`; it runs the repo's own
 test command without installing Forge in the project. This picker belongs in `fast_test`;
 workers run bare `forge test` to enter the lane.
+On Windows, a builder's own bare run skips separate Playwright or Cypress steps, directly or
+through one package script. A step that reaches the browser runner through another file still runs.
+Pull request checks, close and full runs keep their configured browser steps.
 Codex full-access worker turns send permission requests to Forge, which accepts them,
 including requests to run `forge test`. Read-only turns decline permission requests.
 Root dependency files select the full test command. A nested project's dependency files
@@ -596,9 +599,15 @@ part of that address only when the listed address has one. Set `phone: true` whe
 other answer, leave it out. When the browser tests run, the check opens each listed screen in light and
 dark and fails on sideways overflow, cut text, low contrast or a page that is not the listed screen.
 To set one kind of problem aside for a screen, add `waive: { '<kind>': '<the reason>' }` to its entry.
-On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep all browser projects in the nightly full command and outside `fast_test`. Pull request CI runs the desktop Playwright project; this Windows shortcut does not change selection elsewhere.
+On Windows, a builder's own bare `forge test` run skips separate Playwright or Cypress steps.
+A step that reaches Playwright through another file still runs. Pull request checks and close
+keep their configured browser steps.
 The rendered check runs with browser tests in the full test command and nightly full run.
-Keep browser tests outside `fast_test`, even when shared settings select all other tests.
+For Forge's separate browser job, follow this default.
+Keep all browser projects in the nightly full command and outside `fast_test`.
+Pull request CI runs the desktop Playwright project. Nightly runs all projects.
+When splitting an adopted app's combined test script, keep its existing browser steps in the
+quick command for the pull request check.
 Pull request CI runs the desktop Playwright project. Nightly runs all projects.
 When you add a sample-data prototype's first
 tests, list every screen the prototype has. A new app asks the phone-view question before its build

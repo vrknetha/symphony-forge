@@ -1,0 +1,138 @@
+{
+  "branch": "task/FORGE-SLOWTEST-1-QUICK",
+  "chat": {
+    "approval": "1d2523ee5c1101e40a204e7784d0455562f2110bb7cf3cbe44ed938e3dc615f3",
+    "claude": null,
+    "conversation": "01a2158a-f9d1-7ab1-8b58-3517813dec98",
+    "head": null,
+    "start": "e9a7c3637d491d054e8c4caa3b68b7fb3946e017"
+  },
+  "known": [
+    {
+      "area": "pytest_tests() in src/forge/fasttest.py",
+      "file": "src/forge/fasttest.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 820,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: the pull request check, the final check and the full test run still run them.",
+      "work": 2
+    },
+    {
+      "area": "skip_browser() in src/forge/fasttest.py",
+      "file": "src/forge/fasttest.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 286,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: On Windows, a builder's own test run skips each separate browser-test step",
+      "work": 2
+    },
+    {
+      "area": "tests/test_windows_worker_skips_browser_tests.py",
+      "file": "tests/test_windows_worker_skips_browser_tests.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 113,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: On Windows, a builder's own test run skips each separate browser-test step",
+      "work": 2
+    },
+    {
+      "area": "tests/test_combined_script_quick_test.py",
+      "file": "tests/test_combined_script_quick_test.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 39,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The guide tells the agent how to write, check and propose the quicker command",
+      "work": 1
+    },
+    {
+      "area": "tests/test_combined_script_quick_test.py",
+      "file": "tests/test_combined_script_quick_test.py",
+      "gain": 1,
+      "harm": 1,
+      "line": 114,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Simpler: the added earlier-adopted guide case \u2192 cut",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "8df1bba126fa88b45ae055bb33b90e950d8191927f1d34083910586d44d3dd4c",
+    "changed": "e53468cac2584f18c98c496a5ecd6cee3fd49054e5a1043ef292b74194f1abcb",
+    "commit": "058f434537691a8e672216db578d4420dbded07b",
+    "dismissals": [],
+    "findings": [],
+    "id": "cf23d4db-3bf0-4c4c-9e32-4ba784de3ad2",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T17:54:06.524362+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T01:49:16.306127+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T02:05:14.099266+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T02:05:34.041994+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T02:11:34.905322+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T03:09:11.490288+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T03:16:20.009982+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T08:43:25.173630+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T08:50:20.147091+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "886038fd-439a-46f6-8f1d-a4bc94bbad1f",
+    "head": "045fa146fff69c4ad5f3ea2bdb0a35ae9b6466c0",
+    "keys": {},
+    "round": 3
+  },
+  "worker": "codex"
+}

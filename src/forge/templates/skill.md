@@ -19,7 +19,8 @@ Start with the largest measured cost:
 1. Upgrade to the record-commit rerun fix to remove repeated runs caused only by Forge records.
    Keep runs that test changed code or a changed base.
 2. Run the desktop Playwright project on pull requests and all projects nightly through the full
-   command, including each screen's rendered check. Keep browser tests outside `fast_test`.
+   command, including each screen's rendered check. Keep browser tests outside `fast_test`
+   when the pull request already has a separate browser job.
 3. Keep test setup and helpers from importing the app entry or the whole app. Preserve real
    import dependencies: never drop changed files from related selection or replace them with
    area names. Keep a table of slow tests and their input paths; run them for changed inputs on
@@ -1526,6 +1527,7 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    beside changed-test selection in TypeScript `fast_test`, through the normal settings fix after
    the human agrees. Keep `test` as the full suite. New repos get this review at setup; existing
    adopted repos get this guidance on upgrade and sync, with settings changed only through that fix.
+   When the pull request has a separate browser job, use this setup.
    Keep browser tests and each screen's rendered check in the full test command and nightly
    full run, outside `fast_test`, including shared-settings changes.
    Pull request CI runs the desktop Playwright project. Nightly runs all projects.
@@ -1582,8 +1584,8 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    tests need, in the order the script runs them, including any step that runs after the
    tests. Limit only the unit-test steps to the changed code with the runner's own option and
    `{base}`, for example `vitest run --changed {base}` or `jest --changedSince {base}`; npm
-   passes `--` options only to the last command of a script. Keep browser-test steps in the
-   nightly full command, outside `fast_test`. Keep the setup a script runs before or
+   passes `--` options only to the last command of a script. Keep the browser-test steps because
+   the pull request check also runs `fast_test`. Keep the setup a script runs before or
    after itself (`pre` and `post` scripts). Run the command once with `{base}` set to the
    default branch. Tell the owner that changed-only selection follows imports, so API tests
    that reach the code only through a URL run only in the full test run. Then ask the owner,
@@ -2485,10 +2487,13 @@ upgrade. Upgrade never rewrites their `test` or `fast_test` settings. Doctor rep
 in the project: it loads a temporary pytest hook to exclude unrelated files, including on pytest
 before 8.2. Test launchers must preserve `PYTHONPATH`, forward pytest arguments and expose xdist
 options in the command or pytest configuration.
-On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep all browser projects in the nightly full command and outside `fast_test`. Pull request CI runs the desktop Playwright project; this Windows shortcut does not change selection elsewhere.
 Workers run tests only through bare `forge test`. It runs `fast_test`, or `test` when none is
 set (using pytest selection when supported), with `{base}` as the merge base with
 `origin/<default branch>`, in the same fair machine-wide test lane as close.
+On Windows, this run skips separate Playwright or Cypress steps, directly or through one package
+script. A combined script, a script with a pre or post script, and a step that reaches the
+browser runner through another file still run. Pull request checks, close and full runs keep
+their configured browser steps.
 It prints the report close keeps and always runs, including docs-only and
 uncommitted changes. If the remote default branch is missing it says to fetch it; if forge.toml
 names no test command it says so and exits successfully. In a sample-data prototype, it says
