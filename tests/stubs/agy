@@ -85,6 +85,18 @@ for line in sys.stdin:
     elif method == "session/prompt":
         if os.environ.get("STUB_AGY_HOLD"):
             continue
+        if os.environ.get("STUB_AGY_REVIEW_PERMISSION"):
+            send(id="review-tool", method="session/request_permission", params={
+                "toolCall": {"kind": "execute", "title": "Inspect the patch with Git"},
+                "options": [{"kind": "allow_once", "optionId": "yes"},
+                            {"kind": "reject_once", "optionId": "no"}],
+            })
+            decision = json.loads(next(sys.stdin))
+            if decision["result"]["outcome"].get("optionId") != "no":
+                raise RuntimeError("The read-only review must refuse the command")
+            if not os.environ.get("STUB_AGY_REVIEW"):
+                send(id=identifier, result={"stopReason": "end_turn"})
+                continue
         if names := os.environ.get("STUB_AGY_SHOW"):
             settings = json.loads((profile / "antigravity-cli/settings.json").read_text("utf-8"))
             permissions = settings.get("permissions", {})

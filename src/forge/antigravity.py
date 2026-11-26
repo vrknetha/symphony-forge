@@ -349,6 +349,7 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
     log = cwd / "agy.log" if probe else repo.work_log(top, item)
     questions, chunks = [], []
     kind = ran.pop("model_kind", "build")
+    refused_tool = ""
     unfinished = (("{detail}", "") if probe else
                   ("Antigravity ended its turn without finishing ({detail}); see {log}.", "{again}"))
     try:
@@ -373,7 +374,7 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                 process.stdin.flush()
 
             def call(method: str, params: dict) -> dict:
-                nonlocal serial
+                nonlocal serial, refused_tool
                 serial += 1
                 send({"id": serial, "method": method, "params": params})
                 for line in process.stdout:
@@ -383,7 +384,14 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                     if name and "id" in message:
                         answer: dict[str, Any]
                         if name == "session/request_permission":
-                            answer = {"result": {"outcome": _permission(data, cwd.resolve(), mode, questions)}}
+                            outcome = _permission(data, cwd, mode, questions)
+                            if kind == "review" and (outcome["outcome"] == "cancelled" or any(
+                                option["kind"] == "reject_once" and option["optionId"] == outcome.get("optionId")
+                                for option in data["options"]
+                            )):
+                                tool = data["toolCall"]
+                                refused_tool = " ".join((tool.get("title") or tool.get("kind") or "unknown tool").split())
+                            answer = {"result": {"outcome": outcome}}
                         else:
                             answer = {"error": {"code": -32601, "message": "Method not found"}}
                         send({"id": message["id"], **answer})
@@ -475,10 +483,13 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                           reasoning_output_tokens=usage.get("thoughtTokens"))
             ran.update(tokens)
             stop = result.get("stopReason")
+            text = "".join(chunks + questions)
+            if refused_tool and (stop != "end_turn" or not "".join(chunks).strip()):
+                repo.refuse(unfinished, detail=f'Forge refused the tool "{refused_tool}"', log=log, again=again)
             if stop != "end_turn":
                 repo.refuse(unfinished, detail=stop or "no answer", log=log, again=again)
             process.stdin.close()
-            return {"session": chat, "text": "".join(chunks + questions), "stop": stop,
+            return {"session": chat, "text": text, "stop": stop,
                     "model": current, "tokens": tokens}
     except (OSError, ValueError, KeyError, TypeError) as error:
         repo.refuse(unfinished, detail=str(error), log=log, again=again)
