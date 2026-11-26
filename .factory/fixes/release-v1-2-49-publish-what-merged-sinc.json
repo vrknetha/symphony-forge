@@ -1,4 +1,5 @@
 {
+  "allow_large": "Owner allowed (26 Nov): a release version bump touches every pinned version file, like the v1.2.48 release",
   "amendments": [
     {
       "at": "2026-11-26T04:04:04.432058+00:00",
