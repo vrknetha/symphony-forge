@@ -87,7 +87,7 @@
     "status": "blocked"
   },
   "round": 4,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-25T16:08:14.765442+00:00",
@@ -129,13 +129,24 @@
       "at": "2026-11-25T17:05:09.794412+00:00",
       "round": 4,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-26T01:18:16.097192+00:00",
+      "by": "owner",
+      "choice": "narrow",
+      "round": 4,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-25T17:05:09.794412+00:00",
+    "by": "owner",
+    "choice": "narrow",
     "question": "A review check that failed before a CI fix stays failed until someone is stuck. It should deliver: When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it.\nTwo rounds in a row left the open P0 functional: the repair rejects stale reviews whose runs report the base sha in src/forge/checks.py.\nThe worker tried: Read the reviewed commit from its status.\nChoose one: switch this item to Claude; keep Codex for one more round; or narrow or split it.",
+    "reason": "Owner chose narrow: when the required review check failed on a commit older than the branch head, close starts it again, without looking up which commit the review run reports",
     "tool": "codex",
-    "wait_id": "2f124097-afd4-4567-9f12-3b6275fd57cc"
+    "wait_id": "2f124097-afd4-4567-9f12-3b6275fd57cc",
+    "worker_round": 4
   },
   "stuck": {
     "close": "58d5662f-2656-4be2-b4a7-b6151de6de9e",
