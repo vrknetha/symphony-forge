@@ -143,7 +143,7 @@ def signoff(top: Path, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
 @repo.command_cache(snapshot=True)
 def next_step(args: Any) -> int:
     top = repo.root()
-    from forge import fullrun
+    from forge import doctor, fullrun
 
     if (top / "forge.toml").is_file():
         try:
@@ -151,6 +151,7 @@ def next_step(args: Any) -> int:
         except repo.Refused as refusal:
             if refusal.entry == repo.REFUSALS["added_work_min_gain"]:
                 raise
+    removed = doctor.tidy_finished(top)
     shown, version = release_notes.once(top)
     notice = native.coordinator_warnings(top) + upgrade.release_notice(top) + fullrun.notices(top) + shown
     # Populate shared facts before concurrent readers can race on their first lookup.
@@ -181,6 +182,8 @@ def next_step(args: Any) -> int:
     step = ([journey.step_line(top, _report_config(top, {}), history, idle=_idle(top)[0] in lines)]
             if (top / "forge.toml").is_file() else [])
     print("\n".join(owner_choices.first(top, step + notice + lines, (facts["github"] or {}).get("open", []))))
+    if removed:
+        print(f"Removed {removed} finished folders.")
     if version:
         release_notes.mark(top, version)
     return 0

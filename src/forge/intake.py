@@ -26,7 +26,13 @@ REFUSALS = {
 
 
 def start(args: Any) -> int:
+    import sys
+
+    from forge import doctor
+
     top = repo.root()
+    if removed := doctor.tidy_finished(top):
+        print(f"Removed {removed} finished folders.", file=sys.stderr)
     family = native.session()["id"].split(":", 1)[0]
     cfg = repo.config(top)
     prompt = _prompt(top, args.idea, repo.is_prototype(top, cfg))
