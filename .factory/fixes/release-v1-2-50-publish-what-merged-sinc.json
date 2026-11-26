@@ -1,0 +1,16 @@
+{
+  "base": "daab32e63aff9e517369d10f8df5e640e710fe0e",
+  "branch": "fix/release-v1-2-50-publish-what-merged-sinc",
+  "done_when": "Every version reference that names the current release says v1.2.50, including the forge.toml version pin and uv.lock (as the v1.2.49 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.50.md exists, the release version tests and the release notes tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-26T13:09:22.519882+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Release v1.2.50: publish what merged since v1.2.49 (handover past half the context window and a fresh-chat pointer to the handoff note, combined test scripts named with guide steps and Windows browser steps skipped in builder runs, failed full runs under Needs you, Antigravity review no longer ends in empty output)"
+}
