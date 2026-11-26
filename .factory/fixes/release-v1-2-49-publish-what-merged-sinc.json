@@ -1,6 +1,13 @@
 {
   "base": "3077f74617385ef306abbc14db51fe269b440b89",
   "branch": "fix/release-v1-2-49-publish-what-merged-sinc",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21602-661a-7f63-a9ed-881a3f56e959",
+    "head": null,
+    "start": "99fdfd169b7786e5f7e2a657af57ae821f154dd2"
+  },
   "done_when": "Every version reference that names the current release says v1.2.49 (as the v1.2.48 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.49.md exists, the release version tests and the release notes tests pass, and nothing else changes",
   "fix_kind": "mechanical",
   "kind": "fix",
