@@ -13,8 +13,67 @@
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
+  "known": [
+    {
+      "area": "test_1_forge_version_is_1_2_27_everywhere_it_is_recorded() in tests/test_release_version.py",
+      "file": "tests/test_release_version.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 20,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: pre-fix replay rejects the reused release-version proofs",
+      "work": 1
+    },
+    {
+      "area": "src/forge/release-notes/v1.2.50.md",
+      "file": "src/forge/release-notes/v1.2.50.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 1,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: proof list omits release-notes test cases",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "e2539d9975dd639d37eced0183eed79ae55a418a27d9b252a49ddd90970e26f6",
+    "changed": "faea031a5b298b0aab93cc672be23b7f1bb2883bb0c1804aabed7ee912da13db",
+    "commit": "d2901843e02e02ca3483144a48fb2e5c7bd1f7f7",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Gate: proof list\nCase: normal use - the pull-request change test validates the release proof.\nThe proof list names test_2 and test_3 from this modified test file. `src/forge/proof.py:316\u2013330` treats both as changed regression tests and replays them on the v1.2.49 base. In particular, `tests/test_release_version.py:81\u201384` derives the notes filename from the old executable, so test_3 finds the existing v1.2.49 notes and passes before the fix. The replay rejects a named test that passes on the base (`src/forge/proof.py:352\u2013370`), causing the required change-test job to fail even if the release tests pass on this branch.",
+        "file": "tests/test_release_version.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 20,
+        "priority": "P1",
+        "title": "Gate: pre-fix replay rejects the reused release-version proofs",
+        "work": 1
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Gate: proof list\nCase: normal use - close checks whether the v1.2.50 release is ready.\nThe Done-when requires the release-notes tests to pass, but the proof list names only `test_1_the_release_tag_push_needs_notes_that_cover_the_shipped_files`. `tests/test_release_notes.py:58`, `:138`, and `:185` also contain the guide, upgrade, and `forge next` release-notes tests. The change-test picker can retain only the named case when the unchanged file is not otherwise selected (`src/forge/fasttest.py:519\u2013538`), and the proof checker verifies only mapped names (`src/forge/proof.py:203\u2013235`). Thus the proof does not require those remaining tests to run or pass.",
+        "file": "src/forge/release-notes/v1.2.50.md",
+        "gain": 4,
+        "harm": 3,
+        "line": 1,
+        "priority": "P1",
+        "title": "Gate: proof list omits release-notes test cases",
+        "work": 1
+      }
+    ],
+    "id": "50b8a58a-0ad7-444b-9897-4337270f90dd",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T13:09:22.519882+00:00",
@@ -24,6 +83,10 @@
       "at": "2026-11-26T13:10:13.124021+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T14:46:34.434396+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
