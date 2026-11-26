@@ -70,9 +70,9 @@ QUIET = {"model_verbosity": "low", "model_reasoning_summary": "none",
 EARLIER_COMMANDS = ("sh -c 'forge hook {hook} || exit 2' || exit 2",  # v1.0.0 to v1.2.1
                     "sh -c '. \"$(git rev-parse --show-toplevel)/.forge/hooks.sh\" && "
                     "forge hook {hook} || exit 2' || exit 2")  # v1.2.2 to v1.2.8
-FORGE_HOOKS = [{"eventName": event[0].lower() + event[1:], "matcher": matcher,
-                "handlerType": "command", "command": command, "async": False,
-                "timeoutSec": 600, "statusMessage": None, "additionalContextLimit": None}
+FORGE_HOOKS = [{"eventName": event[0].lower() + event[1:], "matcher": matcher, "handlerType": "command",
+                "command": command, "async": False, "statusMessage": None, "additionalContextLimit": None,
+                "timeoutSec": sync.CODEX_SESSION_END_TIMEOUT if event == "SessionEnd" else 600}
                for event, (matcher, hook) in sync.HOSTS[".codex/hooks.json"].items()
                for command in (sync.command(hook), *(old.format(hook=hook) for old in EARLIER_COMMANDS))]
 

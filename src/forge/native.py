@@ -1,4 +1,5 @@
 """Session-owned reads use the existing item record, lock and machine lane."""
+import hashlib
 import json
 import os
 import re
@@ -11,6 +12,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from forge import codex, machine, repo
 
@@ -67,6 +69,143 @@ def session() -> dict[str, Any]:
         app = "Claude Code" if tool == "claude" else "Codex"
         raise repo.Refused(f"Forge cannot find the coordinating {app} session; nothing ran.", "")
     return {"id": f"{tool}:{owner['pid']}:{owner['started']}", "process": owner}
+
+
+def _coordinator_directory(chat: str) -> Path:
+    return machine._repos_file().parent / "coordinators" / hashlib.sha256(chat.encode()).hexdigest()
+
+
+def coordinator_hook() -> bool:
+    """Keep main-chat admission and exit separate from a shared host's lifetime."""
+    if sys.stdin.isatty():
+        return False
+    try:
+        payload = json.load(sys.stdin)
+    except ValueError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    event, chat = payload.get("hook_event_name"), payload.get("session_id")
+    if isinstance(chat, str) and chat and not os.environ.get("FORGE_WORKER"):
+        directory = _coordinator_directory(chat)
+        try:
+            if event == "SessionStart":
+                directory.mkdir(parents=True, exist_ok=True)
+                (directory / "started").touch()
+            elif event == "SessionEnd":
+                # shortcut: Codex retains detached chats until SessionEnd, use client presence if the host exposes it.
+                (directory / "started").unlink(missing_ok=True)
+                for path in directory.glob("*.json"):
+                    path.unlink(missing_ok=True)
+                if directory.is_dir():
+                    directory.rmdir()
+        except OSError:
+            pass  # A local warning must not break the host hook.
+    return event == "SessionEnd"
+
+
+def _coordinator_repo(top: Path) -> str:
+    origin = repo.run("git", "remote", "get-url", "origin", cwd=top).stdout.strip()
+    if not origin:
+        return str(repo._common_path(top))
+    if Path(origin).is_absolute():
+        return str(Path(origin).resolve())
+    if "://" not in origin:
+        host, colon, path = origin.partition(":")
+        if not colon:
+            return str((machine.main_checkout(top) / origin).resolve())
+        origin = f"ssh://{host}/{path}"
+    remote = urlsplit(origin)
+    if remote.scheme == "file":
+        from urllib.request import url2pathname
+
+        return str(Path(url2pathname(remote.path)).resolve())
+    port = remote.port
+    if port == {"ssh": 22, "https": 443, "http": 80, "git": 9418}.get(remote.scheme):
+        port = None
+    host = remote.hostname or ""
+    path = remote.path.strip("/").removesuffix(".git")
+    return f"{host}:{port or ''}/{path.lower() if host == 'github.com' else path}"
+
+
+def _saved_codex_coordinator(chat: str) -> bool:
+    """Recognize an open Codex chat whose start hook ran before this Forge release."""
+    try:
+        thread = uuid.UUID(chat)
+    except ValueError:
+        return False
+    home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+    # shortcut: read Codex's local metadata header until the host exposes the thread role to tools.
+    for path in (home / "sessions").glob(f"*/*/*/rollout-*-{thread}*.jsonl"):
+        try:
+            with path.open(encoding="utf-8") as transcript:
+                record = json.loads(transcript.readline())
+        except (OSError, ValueError):
+            continue
+        if not isinstance(record, dict) or record.get("type") != "session_meta":
+            continue
+        meta = record.get("payload")
+        if not isinstance(meta, dict) or meta.get("id") != chat:
+            continue
+        if meta.get("parent_thread_id") or meta.get("session_id", chat) != chat:
+            continue
+        source = meta.get("source")
+        if source in ("cli", "vscode") or (isinstance(source, dict) and isinstance(source.get("custom"), str)):
+            return True
+    return False
+
+
+def coordinator_warnings(top: Path) -> list[str]:
+    """Name other local chats that ran next for this repository and are still live."""
+    tool = repo.coordinator()
+    if tool is None or os.environ.get("FORGE_WORKER"):
+        return []
+    chat = os.environ.get("CODEX_THREAD_ID" if tool == "codex" else "CLAUDE_CODE_SESSION_ID")
+    if not chat:
+        return []
+    directory = _coordinator_directory(chat)
+    started = directory / "started"
+    # When the start hook predates this feature, check the saved role before enrolling a chat.
+    recover_start = tool == "codex" and not started.is_file()
+    try:
+        if recover_start and not _saved_codex_coordinator(chat):
+            return []
+        owner = session()["process"]
+        key = hashlib.sha256(_coordinator_repo(top).encode()).hexdigest() + ".json"
+    except (repo.Refused, OSError, ValueError, subprocess.CalledProcessError):
+        return []
+    app = "Codex" if tool == "codex" else "Claude Code"
+    name = f"{app} session {' '.join(chat.split())}"
+    process = {field: owner[field] for field in ("pid", "started")}
+    current = directory / key
+    warnings = []
+    try:
+        if tool == "claude" or recover_start:
+            directory.mkdir(parents=True, exist_ok=True)
+        if recover_start:
+            started.touch()
+        pending = tempfile.NamedTemporaryFile(dir=directory, delete=False)
+        path = Path(pending.name)
+        try:
+            with pending:
+                pending.write(json.dumps({"name": name, "process": process}).encode())
+            os.replace(path, current)
+        finally:
+            path.unlink(missing_ok=True)
+        for path in sorted(directory.parent.glob(f"*/{key}")):
+            if path == current:
+                continue
+            peer = codex._json(path)
+            if not isinstance(peer.get("process"), dict) or not isinstance(peer.get("name"), str):
+                continue
+            alive = codex._alive(peer["process"])
+            if alive is False:
+                path.unlink(missing_ok=True)
+            elif alive:
+                warnings.append(f"Warning: {peer['name']} also coordinates this repo.")
+    except OSError:
+        pass  # An unavailable local warning must not stop the next-step report.
+    return warnings
 
 
 @contextmanager

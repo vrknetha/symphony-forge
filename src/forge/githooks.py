@@ -20,9 +20,11 @@ ANTIGRAVITY_SKILLS = ".agents/skills.json"
 # Each host's hook file: event -> (the tools it matches, or None for all; the forge hook it runs).
 HOSTS = {
     ".claude/settings.json": {"SessionStart": (None, "context"), "PreCompact": (None, "handoff"),
+                              "SessionEnd": (None, "context"),
                               "PreToolUse": ("Bash", "deny"),
                               "PostToolUse": ("ExitPlanMode|AskUserQuestion", "approval")},
     ".codex/hooks.json": {"SessionStart": (None, "context"), "PreCompact": (None, "handoff"),
+                          "SessionEnd": (None, "context"),
                           "PreToolUse": ("Bash", "deny"),
                           "PostToolUse": ("request_user_input", "approval")},
 }
