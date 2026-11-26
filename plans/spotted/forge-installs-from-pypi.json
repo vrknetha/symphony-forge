@@ -122,6 +122,17 @@
       "closed_by": null
     },
     {
+      "key": "edge\tsrc/forge/upgrade.py\tFollow-up: Bound the PyPI release lookup end to end",
+      "kind": "edge",
+      "path": "src/forge/upgrade.py",
+      "line": 421,
+      "text": "Follow-up: Bound the PyPI release lookup end to end",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "edge\tsrc/forge/upgrade.py\tHandle incomplete PyPI responses as lookup failures",
       "kind": "edge",
       "path": "src/forge/upgrade.py",

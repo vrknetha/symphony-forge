@@ -155,58 +155,44 @@
       "security": false,
       "title": "Wait for active Forge runs before the recovery install",
       "work": null
+    },
+    {
+      "area": "_newest() in src/forge/upgrade.py",
+      "file": "src/forge/upgrade.py",
+      "gain": 2,
+      "harm": 2,
+      "line": 421,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 6,
+      "security": false,
+      "title": "Follow-up: Bound the PyPI release lookup end to end",
+      "work": 2
     }
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "3e164c3ac53011c743419a49f56d86e8f219ea58a72673722f2d388d0451f13e",
-    "changed": "8e3f39b137bab12fa3a0ddb23d29cd9f7c330a3405d2a9fdfc81bf533471e8f7",
-    "commit": "ab4d18f51cb001027cd3c5ec58d85552b451884a",
-    "dismissals": [
-      {
-        "accepted": true,
-        "because": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
-        "finding": 1
-      },
-      {
-        "accepted": true,
-        "because": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
-        "finding": 2
-      },
-      {
-        "accepted": true,
-        "because": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
-        "finding": 3
-      }
-    ],
+    "branch_diff": "aff3b71f89143de583021d97a1eff4bb7ee2c829ef4f5fcbfa3af14886b5b3bb",
+    "changed": "e8ef2e3eeddd3611c837fcf085b6c611b3c3a262952bde1c26acc47dcd68fac1",
+    "commit": "619f06e9d6fda69a5cb8d12ac9aee40cfecc7d5f",
+    "dismissals": [],
     "findings": [
       {
-        "body": "The documented install and both platform installers still pin 1.2.48. [PyPI reports](https://pypi.org/pypi/symphony-forge/json) that this version was uploaded before this patch, and the v1.2.48 source still generates installs from the disabled GitHub repository. A new user following these instructions therefore receives the old Forge, which generates broken client CI and hook fallbacks. Publishing a fixed release alone will not change these hard-coded pins; update them to that release as part of the rollout.",
-        "file": "README.md",
-        "line": 235,
-        "priority": "P1",
-        "title": "Point bootstrap installs at a release containing the fix"
-      },
-      {
-        "body": "An existing work branch can still pin the published v1.2.48 after its default branch upgrades. This runner starts v1.2.48 from PyPI, but that release's `close` can merge the upgraded default and then its own `repo.resume_pin` invokes the new pin through the disabled GitHub URL. Closing consequently fails during the handoff, even though both versions are available from PyPI; a retry is needed after the branch pin has changed. The earlier-release test fixture copies the current source and only changes its version, so it does not exercise the historical runner.",
-        "file": "src/forge/repo.py",
-        "line": 1028,
+        "body": "Gain 2, Work 2, Harm 2\nCase: normal use - a VPN or unreliable network silently drops connections to PyPI. `forge next` passes a three-second timeout to `_newest`, but [CPython resolves DNS before applying the socket timeout and applies that timeout separately to each resolved address](https://github.com/python/cpython/blob/3.11/Lib/socket.py#L771-L805). The first `forge next` of the day can therefore stall well beyond three seconds before showing status; unversioned `forge upgrade` has the same problem. The previous subprocess had an overall timeout, while the replacement test only injects an immediate timeout. Bound the full lookup, including DNS and connection attempts.\nAdds work: restore a wall-clock lookup deadline; F 2 x H 2 = 4; 2 x C = 4.",
+        "file": "src/forge/upgrade.py",
+        "gain": 2,
+        "harm": 2,
+        "line": 421,
         "priority": "P2",
-        "title": "Handle handoff from a published legacy release"
-      },
-      {
-        "body": "The recovery instructions force-reinstall the shared Forge tool before checking for active work. If another build, review or CI wait is running on the machine, this can replace modules under that process and cause it to fail or mix releases. The subsequent `forge upgrade` does not provide the advertised safeguard: `upgrade.py:101\u2013103` checks active runs only when the requested version is not already on PATH, and this command has just installed it. Have users end active runs before the forced install.",
-        "file": "docs/guide.md",
-        "line": 697,
-        "priority": "P2",
-        "title": "Wait for active Forge runs before the recovery install"
+        "title": "Follow-up: Bound the PyPI release lookup end to end",
+        "work": 2
       }
     ],
-    "id": "763f6968-7c22-49e0-94ae-5ad944c4ead2",
+    "id": "51d0f078-2025-41f0-94e0-8f7fc713d580",
     "status": "clean"
   },
   "round": 7,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T15:18:45.279830+00:00",
@@ -278,6 +264,10 @@
       "at": "2026-11-26T02:56:25.747148+00:00",
       "round": 7,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T03:07:52.457673+00:00",
+      "step": "review"
     }
   ],
   "stop": {
