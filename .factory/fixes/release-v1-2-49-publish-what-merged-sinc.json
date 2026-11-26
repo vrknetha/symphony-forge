@@ -26,7 +26,7 @@
       "gain": 4,
       "harm": 4,
       "line": 11,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -49,23 +49,13 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "d6dc2680fbefd7a7fc0b45f4bac9f1c24682a5e8c740b92ec1e40219403a56ec",
-    "changed": "c556e80a75f1e24f237237fab68899b1f3868ba89ada7d5d924563a92d91f393",
-    "commit": "23fbcb996bc7faab83f9e11d655874e007fa24ef",
+    "branch_diff": "09eedb18097c0a1ffdb954c6f226031690ae316599312bc9988212ed3791b080",
+    "changed": "86ac42812abb4e411f7e5ba775b2dfecabadd80081d063673929c6934593fe07",
+    "commit": "c7be205957260bcb4131cc3306bb2c7aa9ae7bf0",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 4, Work 1, Harm 4\nRaise: Data loss\nCase: normal use - A developer runs `forge doctor --fix` while a finished worktree has an unstaged `uv.lock` change. The release note says the folder will never be removed, but `src/forge/task.py:962` excludes that lockfile from the preservation check, and `src/forge/doctor.py:191` restores it before removing the folder. The existing test at `tests/test_doctor_fix.py:275` confirms this behavior. The owner accepted the lockfile exception in `plans/FORGE-TIDYUP-1.read.md:129`; the new safety promise conceals that exception. State it in the release note so users know to save lockfile changes first.",
-        "file": "src/forge/release-notes/v1.2.49.md",
-        "gain": 4,
-        "harm": 4,
-        "line": 11,
-        "priority": "P1",
-        "title": "Data loss: Correct the promise that cleanup preserves every uncommitted file",
-        "work": 1
-      },
-      {
-        "body": "Gain 4, Work 1, Harm 2\nRaise: Functional\nCase: normal use - A user follows the release note to use Gemini 4 Neon by setting `workers = \"antigravity\"`, but their Antigravity account defaults to another model. `src/forge/repo.py:597` sets Antigravity's model to `default`, and `src/forge/antigravity.py:454` selects a model only when one is explicitly configured. The existing test at `tests/test_antigravity_build.py:114` demonstrates a Plus account running Gemini 4 Argon instead. The note should state that the account default is used and explain how to select Neon, including its plan requirement.",
+        "body": "Gain 4, Work 1, Harm 2\nRaise: Functional\nCase: normal use - A user follows the release note to select Neon in a newly initialized repo by adding `[models.build.antigravity]` with the stated model. The generated settings have no such table (`src/forge/init.py:77`), and validation also requires an `effort` entry (`src/forge/repo.py:893`), so Forge rejects the configuration before starting work. Repos with a flat `[models.build]` must also convert it to per-family tables before adding the Antigravity table (`src/forge/repo.py:877`). Even with a valid build entry, user-facing builds select the design entry instead (`src/forge/worker.py:192`, `src/forge/repo.py:809`) and can still use the account default. The previous finding's guidance for selecting Neon remains incomplete.",
         "file": "src/forge/release-notes/v1.2.49.md",
         "gain": 4,
         "harm": 2,
@@ -75,11 +65,11 @@
         "work": 1
       }
     ],
-    "id": "67146a89-437c-44de-b2a5-8d94d62150cd",
+    "id": "68ff1d42-ebc7-4cfd-9e56-9aaafdad9434",
     "status": "blocked"
   },
   "round": 3,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-26T03:59:13.723626+00:00",
@@ -103,8 +93,22 @@
       "at": "2026-11-26T04:22:11.740317+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T04:28:37.026844+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T04:28:37.049321+00:00",
+      "round": 3,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-26T04:28:37.049321+00:00",
+    "file": "src/forge/release-notes/v1.2.49.md",
+    "wait_id": "fd7fde92-09c9-4579-9d71-3306258b0f24"
+  },
   "stuck": {
     "close": "ed33bc8f-c3cc-42e8-8f26-b13516a59b9d",
     "head": "d50f120788e51e179e2699c101d018c97b0bf856",
