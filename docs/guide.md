@@ -647,7 +647,7 @@ run. The board and `forge next` read the outcome from git. Existing done records
 To correct an outcome later, run `forge story done <KEY> "<outcome>"` on an existing work branch;
 the correction ships with that branch's pull request, and the command opens no separate one.
 
-## Hand over
+## Hand over to another machine or person
 
 1. **Push everything.** In each worktree, commit and push. Through an ordinary fix, copy
    new decisions and lessons from `.git/forge/handoff.md` into `docs/handover.md`, and merge it.

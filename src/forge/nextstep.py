@@ -17,7 +17,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from forge import (__version__, approval, board, board_facts, close, codex, gaps, githooks, machine, migration_warnings,
+from forge import (__version__, approval, board, board_facts, close, codex, contextsize, gaps, githooks, machine, migration_warnings,
                    intake, journey, land, native, owner_choices, records, release_notes, repo, review, routing, spotted, story, score, task, time_records, upgrade)
 from forge.task import _merged, _started, can_start, developer, github_login, owner, sections, start_base, unbuilt_fix, waits_for
 from forge.task import rows as task_rows
@@ -201,7 +201,7 @@ def context_hook(args: Any) -> int:
     top = repo.root()
     # Short and offline: no GitHub, story history or per-worktree settings. The step line needs
     # every story's record, so it stays in forge next.
-    print("\n".join(_hotspots(top, {}, 3) + ["Run forge next for the full picture."]))
+    print("\n".join(_hotspots(top, {}, 3) + [contextsize.handoff_hint(top) or "Run forge next for the full picture."]))
     _, heading, notes = (story.show(top, story.landed_ref(top), "docs/handover.md") or "").partition("## Decisions and lessons\n")
     if heading:
         print(heading + notes.split("\n## ", 1)[0].rstrip())
@@ -211,9 +211,6 @@ def context_hook(args: Any) -> int:
 def handoff_hook(args: Any) -> int:
     top = repo.root()
     path = repo.forge_dir(top) / "handoff.md"
-    old = path.read_text(encoding="utf-8") if path.is_file() else ""
-    heading = "## Decisions and lessons\n"
-    notes = old[old.index(heading):] if heading in old else heading
     lines = _report(top)
     step = ([journey.step_line(top, _report_config(top, {}), idle=_idle(top)[0] in lines)]
             if (top / "forge.toml").is_file() else [])
@@ -222,6 +219,9 @@ def handoff_hook(args: Any) -> int:
                                        prefix="handoff-", suffix=".tmp", delete=False)
     try:
         with temp:
+            old = path.read_text(encoding="utf-8") if path.is_file() else ""
+            heading = "## Decisions and lessons\n"
+            notes = old[old.index(heading):] if heading in old else heading
             temp.write(f"# Forge handoff\n\n## Current state ({repo.now()[:10]})\n\n"
                        f"{current}\n\n{notes}")
         os.replace(temp.name, path)

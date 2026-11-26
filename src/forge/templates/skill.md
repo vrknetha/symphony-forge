@@ -582,9 +582,8 @@ preservation review, merge, cleanup and rollback. Follow it in order.
 
 ## Waiting or stopped runs
 
-Keep one coordinator chat active for the same work. Hand over to a fresh chat at
-20 to 30% of the context window, at a quiet moment after a merge or while CI runs.
-Never go past 40%. Before starting a round that needs `forge handback`, leave enough
+Keep one coordinator chat active for the same work. When the hook reports more than half of the context window, hand over at a quiet moment after a merge or while CI runs.
+Before starting a round that needs `forge handback`, leave enough
 context to finish it. Before you switch chats, finish any such rounds, including
 native plan reads and builds, and run their printed `forge handback` commands in
 the original chat. Give the next chat the current item, any work still running and
@@ -649,10 +648,17 @@ still load it yourself whenever you need it.
 a compaction. Before each compaction Forge rewrites its current-state part from `forge next` and
 keeps everything under `## Decisions and lessons`. Add one line there at each milestone: a story
 approved, a task merged, a decision the owner made, a lesson learned or a mistake you won't
-repeat. After a compaction or in a new session, read it first. The scratch file stays local and is
-never committed. At hand over, copy its settled notes to `docs/handover.md` through a fix.
+repeat. After a compaction or in a new session, read it first, then run `forge next`.
+The scratch file stays local and is never committed.
 
-## Hand over
+At the next quiet moment after the context warning, or when the owner asks, run
+`forge hook handoff` to refresh the note. Under `## Decisions and lessons`, add one
+line per open decision, lesson and log path for your own background jobs. Add a log
+path when the job starts. If the note does not exist, run `forge hook handoff` first.
+Then tell the owner to clear the chat in one plain line. In Claude, use `/clear`.
+In Codex, start a new chat.
+
+## Hand over to another machine or person
 
 1. **Push everything.** In each worktree, commit and push. Through an ordinary fix, copy
    new decisions and lessons from `.git/forge/handoff.md` into `docs/handover.md`, and merge it.
