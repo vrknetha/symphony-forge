@@ -69,7 +69,7 @@
     "status": "blocked"
   },
   "round": 3,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T03:59:13.723626+00:00",
@@ -102,12 +102,23 @@
       "at": "2026-11-26T04:28:37.049321+00:00",
       "round": 3,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-26T04:29:49.195797+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-26T04:28:37.049321+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "src/forge/release-notes/v1.2.49.md",
-    "wait_id": "fd7fde92-09c9-4579-9d71-3306258b0f24"
+    "reason": "Owner chose one more round: the Antigravity note must show both model and effort",
+    "wait_id": "fd7fde92-09c9-4579-9d71-3306258b0f24",
+    "worker_round": 3
   },
   "stuck": {
     "close": "ed33bc8f-c3cc-42e8-8f26-b13516a59b9d",
