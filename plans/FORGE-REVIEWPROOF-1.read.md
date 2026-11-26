@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-26T15:38:42.625433+00:00
-seconds: 661.199
-read_hash: 3a0b019979e221989408f75e168ecdce5f17832c
-round: 1
+read_at: 2026-11-26T16:35:41.262055+00:00
+seconds: 443.924
+read_hash: f3d3f06d2aa2416396a9cf26f29037b30b9af157
+round: 2
 passed: no
-doc_seen: 3a0b019979e221989408f75e168ecdce5f17832c
+doc_seen: f3d3f06d2aa2416396a9cf26f29037b30b9af157
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 25ae3dc86fbac8b21a560cb906786b781c8132f6
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21878-4138-7c42-bf9f-92eb0c339e78
 session:
-loop_choice:
-loop_reason:
+loop_choice: accept
+loop_reason: Owner accepted; the builder gets the rule in its first note: 'After merge:' is recognised after any repair prefix that score.identity strips (for example 'Not fixed:'), so a pending check never blocks again
 ---
 # Cold read notes
 
@@ -88,3 +88,37 @@ Only a genuine trade-off goes to the human, as a question with options.
    Disposition: keep `review-light.md` asks only for demo breakage, security and data loss, tells the reviewer not to audit completeness, and never raises `Not done`; the light review also blocks only on P0 (`blocking_level`). So a prototype fix has no post-merge `Not done` finding to convert. A note in the plan records this.
 
 Skipped `forge next` because it can remove finished worktrees.
+
+## Round 2
+
+10. Blocking: A supported repair prefix can make a pending check block again.
+    Raise: Functional
+    Case: normal use - A reviewer repeats `After merge: ...` as `Not fixed: After merge: ...`, a prefix supported by [score.identity](/src/forge/score.py:155). The identities match, so the planned carry does not restore the previous pending finding, but the new title does not start with `After merge:`. A P0 or Harm 5 result remains blocking.
+    Gain 3, Work 2, Harm 4
+   Disposition: keep - Owner accepted; the builder gets the rule in its first note: 'After merge:' is recognised after any repair prefix that score.identity strips (for example 'Not fixed:'), so a pending check never blocks again
+
+11. Advisory: Skipping a later review can erase the pending check.
+    Raise: Functional
+    Case: normal use - After a clean review with a pending check, a person changes the branch and uses the supported `--no-review` option. [close.py](/src/forge/close.py:363) creates a result with no findings without calling the planned carry in `noise.drop`. The pull request then loses the check and owner before merge.
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+12. Advisory: The second score pass removes security and data-loss floor labels.
+    Raise: Functional
+    [score.normalise](/src/forge/score.py:46) adds a floor label only while raising Harm. Running it again on the already-raised finding removes the label, although Harm stays at 4. The assertions in [test_score_notes.py](/tests/test_score_notes.py:107) would fail when the planned second pass runs.
+    Gain 2, Work 1, Harm 1
+   Disposition: keep - below the bar (live with)
+
+13. Advisory: The planned spotted-record test names only the old file.
+    Raise: Test
+    [The plan](/plans/FORGE-REVIEWPROOF-1.md:45) checks `plans/spotted.json`, but [spotted.py](/src/forge/spotted.py:39) writes each change's record under `plans/spotted/`. Checking only the named old file can pass while a pending check is recorded in the new location.
+    Gain 3, Work 1, Harm 1
+   Disposition: keep - below the bar (follow-up)
+
+14. Advisory: The finding parser does not have the stated sign-off flag.
+    Raise: Plan gap
+    [The plan](/plans/FORGE-REVIEWPROOF-1.md:47) says `_finding` already has `strict`. In [autoreview.py](/src/forge/autoreview.py:230), that flag belongs to its caller; `_finding` receives only the raw finding. The flag must reach the parser for the stated sign-off behavior.
+    Gain 3, Work 1, Harm 1
+
+Skipped `forge next` because it can remove finished worktrees.
+   Disposition: keep - below the bar (follow-up)
