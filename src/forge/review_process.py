@@ -137,7 +137,7 @@ def main() -> None:
                 roots.append(copy)
                 return antigravity.review_engine(
                     top, item, checkout, copy, prompt, implementation["tracked_sensitive_paths"],
-                    context["model"], context["effort"], Path(context["spent"]))
+                    context["model"], context["effort"], Path(context["spent"]), implementation["extract_json"])
 
         implementation["run_engine"] = run_engine
     if mode == "serial":

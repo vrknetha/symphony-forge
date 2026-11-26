@@ -1003,7 +1003,8 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                     ran.update(selected, **autoreview.spent(tmp / SPENT))
                 if not reason:
                     break
-                if re.search(r"\b429\b|rate limit|too many requests|usage limit|usage_limit_reached", reason, re.I):
+                if (not (engine == "antigravity" and reason.startswith(antigravity.REVIEW_TOOL_REFUSED))
+                        and re.search(r"\b429\b|rate limit|too many requests|usage limit|usage_limit_reached", reason, re.I)):
                     print(f"Review service rate limit. Waiting {delay} seconds before trying again.",
                           file=sys.stderr)
                     time.sleep(delay)
