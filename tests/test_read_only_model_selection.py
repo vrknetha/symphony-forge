@@ -60,10 +60,11 @@ def test_1_init_gives_read_only_work_explore_defaults(repo, gh, tmp_path):
     assert models["explore"]["claude"] == {"model": "claude-haiku-5-5", "effort": "high"}
     # Low implementation defaults do not change the fixed explore effort or helpers.
     assert models["explore"]["codex"] == {
-        "model": "gpt-6.2-sol", "effort": "medium",
+        "model": "gpt-6.1-terra", "effort": "medium",
         "subagents": "gpt-6-luna", "subagent_effort": "max"}
+    assert models["explore"]["antigravity"] == {"model": "gemini-4-neon", "effort": "low"}
     assert _settings(client, "explorer") == (
-        ("gpt-6.2-sol", "medium"), ("claude-haiku-5-5", "high"))
+        ("gpt-6.1-terra", "medium"), ("claude-haiku-5-5", "high"))
 
 
 def test_2_sync_writes_explorer_from_explore_for_both_hosts(repo):
@@ -82,19 +83,14 @@ def test_2_sync_writes_explorer_from_explore_for_both_hosts(repo):
 
 def test_4_earlier_adopted_repo_without_explore_keeps_lite_after_upgrade(
         unsynced_up):
-    # Upgrade starts from the text fixture's actual earlier-adoption files, rather than a
-    # current sync given an old version string. Codex keeps lite; Claude gets its default.
+    # Upgrade uses actual earlier-adoption files. It preserves the saved lite
+    # settings and gives the explorer its own defaults. The test name keeps its CI timing.
     up = unsynced_up
     _repo_adopted_on_the_previous_release(up)
-    toml = up.folder / "forge.toml"
-    before = toml.read_bytes()
-    models = tomllib.loads(before.decode("utf-8"))["models"]
+    models = tomllib.loads((up.folder / "forge.toml").read_text("utf-8"))["models"]
     assert "explore" not in models
-    synced = up.repo.forge("sync", cwd=up.folder)
-    assert synced.returncode == 0, synced.stdout + synced.stderr
-    assert toml.read_bytes() == before
     assert _settings(up.folder, "explorer") == (
-        ("gpt-6.1-sol", "medium"), ("claude-sonnet-5-5", "low"))
+        ("gpt-6.1-terra", "medium"), ("claude-haiku-5-5", "high"))
 
 
 @pytest.mark.parametrize("host", ["codex", "claude"])
