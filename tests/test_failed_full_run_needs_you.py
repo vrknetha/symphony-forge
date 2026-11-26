@@ -131,6 +131,25 @@ def test_2_next_marks_only_the_full_test_run(client, gh, monkeypatch):
     assert "The latest scheduled forge (forge.yml) run on main failed in: full suite." in lines
     assert not [line for line in lines if line.startswith("Needs you:")] and entries == []
 
+    # Rerunning a later pass must not bring back the old failure.
+    clock.tick()
+    answer(gh, shared=[run(46, conclusion=None, attempt=2), run(43)])
+    gh.respond("api", "repos/{owner}/{repo}/actions/runs/46/attempts/1",
+               stdout=json.dumps({"conclusion": "success"}))
+    lines, entries, _ = read(client)
+    assert not [line for line in lines if "(forge.yml)" in line] and entries == []
+
+    # A cancelled retry leaves the earlier failure of that same run visible.
+    clock.tick()
+    answer(gh, shared=[run(47, conclusion="cancelled", attempt=2), run(46, conclusion="success")])
+    gh.respond("api", "repos/{owner}/{repo}/actions/runs/47/attempts/1",
+               stdout=json.dumps({"conclusion": "failure"}))
+    log(gh, 47, "full suite", "tests/test_a.py::test_retry", "--attempt", "1")
+    lines, entries, _ = read(client)
+    assert "The latest scheduled forge (forge.yml) run on main failed in: full suite." in lines
+    assert "Failing tests: tests/test_a.py::test_retry." in lines
+    assert not [line for line in lines if line.startswith("Needs you:")] and entries == []
+
     # A repo that names its full workflow marks a failed manual run of it.
     configure(client, config, 'full_suite_workflow = "nightly.yml"')
     answer(gh, manual=[run(71, "nightly.yml", event="workflow_dispatch", name="Nightly tests")], file=NIGHTLY)

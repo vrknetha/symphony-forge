@@ -411,7 +411,7 @@ def full_workflow(cfg: Item) -> str | None:
 
 
 def finished_full_run(top: Path, run: Item) -> Item | None:
-    """The run, or for a rerun in progress or cancelled the latest attempt that finished."""
+    """The latest successful or failed attempt of a workflow run, including a full test run."""
     if run.get("conclusion") in ("success", "failure"):
         return run
     for attempt in range(run["run_attempt"] - 1 if type(run.get("run_attempt")) is int else 0, 0, -1):
@@ -473,9 +473,9 @@ def failed_schedules(top: Path) -> list[Item]:
         for run in runs:  # newest first
             if run.get("workflow_id") in latest:  # a newer run decided it: read no attempts for this one
                 continue
-            if full and file_of(run) == full:  # only scheduled and manual runs count, and only finished ones
-                run = finished_full_run(top, run) if run.get("event", "schedule") in ways else None
-            if run is None or run.get("conclusion") not in ("success", "failure"):
+            if full and file_of(run) == full and run.get("event", "schedule") not in ways:
+                continue
+            if (run := finished_full_run(top, run)) is None:
                 continue
             latest.setdefault(run.get("workflow_id"), run)
         def failure(run: Item) -> Item:
