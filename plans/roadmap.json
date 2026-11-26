@@ -732,6 +732,12 @@
       "title": "Approve a story from a Codex chat",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-CHATHANDOVER-1",
+      "title": "Hand a long coordinator chat over to a fresh chat",
+      "status": "pending",
+      "order": 130
     }
   ],
   "epics": [
