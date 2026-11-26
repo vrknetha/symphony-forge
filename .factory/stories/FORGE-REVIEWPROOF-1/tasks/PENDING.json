@@ -59,7 +59,7 @@
     "id": "60b9e6cf-9bea-48e9-9001-38e78e1ffb0f",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -74,13 +74,18 @@
     {
       "at": "2026-11-26T19:55:06.472123+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-26T19:55:26.040775+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "860ff132c1df6a676901e2a1b8f7e64717de35b3",
+    "close": "5cdba80d-ea2b-4dcb-b318-59e9193cdd21",
+    "head": "382e631cfc65e3a8f386b6775e1fd9db17553e22",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "worker": "antigravity"
 }
