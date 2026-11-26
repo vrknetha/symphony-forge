@@ -9,6 +9,8 @@ Forge ignores a dropped fix whose checkout no longer exists. A worker follows
 this brief even when there are no failed checks or open review findings.
 
 Close and the pull request show each finding's reviewer-assigned severity and say if it blocks the merge.
+An `After merge:` finding is a post-merge check: it does not block the merge, stays listed under
+`Pending after merge:` with its check and owner across review rounds, and is run by its owner after merge.
 The migration Harm floor applies when the change adds or edits a migration across its commits.
 Close asks the reviewer to score an open finding again if an old review applied that floor
 to a change without a migration addition or edit.
@@ -706,7 +708,7 @@ lines that name its ID in the same change.
 
 ## When you finish
 
-Before close, put a `Proof list:` paragraph in your last commit message (close reads commit messages only, not your report; `forge handback` copies a Proof list from your report into a commit only when you wrote none): each covered item has a numbered line `- <n>: <test> (<decision>)` (a fix uses `- Done when:`, and `- 1, 3:` covers two items), naming a pytest node ID or file, or a Vitest or Playwright file with an optional title in backticks, such as `path.test.ts::title` or `path.spec.ts::suite > title`; the decision is `reuse`, `extend <closest test>`, or `new; closest <test or none>; proves <outcome>`, and `check:` replaces the test only for an item that changes only settings, docs or tests.
+Before close, put a `Proof list:` paragraph in your last commit message (close reads commit messages only, not your report; `forge handback` copies a Proof list from your report into a commit only when you wrote none): each covered item has a numbered line `- <n>: <test> (<decision>)` (a fix uses `- Done when:`, and `- 1, 3:` covers two items), naming a pytest node ID or file, or a Vitest or Playwright file with an optional title in backticks, such as `path.test.ts::title` or `path.spec.ts::suite > title`; the decision is `reuse`, `extend <closest test>`, or `new; closest <test or none>; proves <outcome>`, and `check:` replaces the test only for an item that changes only settings, docs or tests, or whose proof can exist only after the merge (naming the check).
 Write no test results: close refuses an item with no test, a named test that is not on the branch, and a named pytest test that did not run, failed or was skipped. Name any other check with its result. Every commit's `Proof list:` carries
 the previous one forward and adds to it, even in a small repair commit; never list only the latest
 change. Forge copies it into the pull request and gives it to

@@ -20,6 +20,7 @@ ADDS_WORK = re.compile(r"^[ \t]*Adds work:[ \t]*\S", re.I | re.M)
 MUST = re.compile(r"^Must:[ \t]*([^:]+):[ \t]*\S", re.I)
 ADDED_WORK_REASON = "Adds work below this repo's minimum Gain "
 DECLINED = "Declined as not worth the code: "
+PENDING = "Pending after merge"
 HOLD = ("block", "fix now")
 Scores = tuple[int, int, int]
 
@@ -163,9 +164,14 @@ def identity(file: Any, title: Any) -> tuple[str, str]:
     return " ".join(str(file).split()).casefold(), re.sub(r"^(?:(?:\[p[0-3]\]|not fixed:)\s*)+", "", title)
 
 
+def pending(finding: dict[str, Any]) -> bool:
+    """Whether a finding is a post-merge check that never blocks."""
+    return finding.get("follow_up") == PENDING
+
+
 def open_findings(result: dict[str, Any]) -> list[dict[str, Any]]:
     dismissed = {d.get("finding") for d in result.get("dismissals", []) if isinstance(d, dict)}
-    return [f for n, f in enumerate(result.get("findings", []), 1) if n not in dismissed]
+    return [f for n, f in enumerate(result.get("findings", []), 1) if n not in dismissed and not pending(f)]
 
 
 def remember(known: list[dict[str, Any]], result: dict[str, Any], round_number: int,
@@ -176,6 +182,8 @@ def remember(known: list[dict[str, Any]], result: dict[str, Any], round_number: 
     by = {identity(e["file"], e["title"]): e for e in known}
     raised = set()
     for n, f in enumerate(result.get("findings", []), 1):
+        if pending(f):
+            continue
         raised.add(key := identity(f["file"], f["title"]))
         reason = because.get(n, f.get("follow_up", ""))
         outcome = ("follow-up" if n in accepted else

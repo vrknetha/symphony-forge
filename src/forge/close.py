@@ -145,7 +145,8 @@ def _close(args: argparse.Namespace, top: Path) -> int:
                 result["dismissals"].extend(
                     {"finding": number, "because": f"Human accepted the remaining finding: {reason}",
                      "accepted": True}
-                    for number, _ in enumerate(result["findings"], 1) if number not in dismissed)
+                    for number, finding in enumerate(result["findings"], 1)
+                    if number not in dismissed and not score.pending(finding))
                 result["status"] = "clean"
                 score.remember(_known(top, item, state, f"origin/{repo.default_branch(top)}", result),
                                result, sum(step["step"] == "review" for step in state.get("steps", [])), {})
@@ -449,8 +450,11 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     for number, finding in serious:
         print(f"{number}. {score.severity(finding)}, blocks the merge. {finding['title']} "
               f"({finding['file']}:{finding['line']})\n{finding['body']}\n")
+    if pending := pr_block.pending_lines(result["findings"]):
+        print("Pending after merge:\n" + "\n".join(pending) + "\n")
     advice = [(n, f) for n, f in enumerate(result["findings"], 1)
-              if not f.get("required_done_when") and not score.holds(f, result.get("blocking_level"))]
+              if not score.pending(f) and not f.get("required_done_when")
+              and not score.holds(f, result.get("blocking_level"))]
     if advice:
         print("Advice that does not block the merge:" if serious else
               "Follow-ups that do not block the merge (recorded in the pull request):")

@@ -1058,7 +1058,7 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                 score.identity(finding["file"], finding["title"]), "").startswith("fixed:")]
             if not signoff_prompt:
                 autoreview.repair_findings(findings, previous, history)
-                findings = noise.drop(top, item, findings)
+                findings = noise.drop(top, item, findings, previous)
             result.update(findings=findings, dismissals=[
                 {"finding": number, "because": settlement.removeprefix("dismissed because "), "carried": True}
                 for number, finding in enumerate(findings, 1)
@@ -1112,7 +1112,7 @@ def bound_review(top: Path, item: str, state: dict[str, Any], result: dict[str, 
             if finding.pop("follow_up", None):
                 changed = True
             continue
-        if finding.get("follow_up") == autoreview.REPAIR_FOLLOWUP:
+        if finding.get("follow_up") in (autoreview.REPAIR_FOLLOWUP, score.PENDING):
             continue
         title = re.sub(r"^\[P[0-3]\]\s*", "", finding["title"].strip())
         missed = re.match(r"Not done\s*:\s*(.*)", title, re.I)

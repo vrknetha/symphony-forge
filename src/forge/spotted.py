@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from forge import repo
+from forge import repo, score
 
 PATH = "plans/spotted.json"
 DIRECTORY = "plans/spotted"
@@ -250,6 +250,8 @@ def record(top: Path, item: str, state: dict[str, Any], base: str,
                 path = found[2].replace("\\", "/").removeprefix("./")
                 add(found[1], path, int(found[3]), found[4], "worker")
     for finding in result.get("findings", []):
+        if score.pending(finding):
+            continue
         title = finding["title"]
         if (finding.get("follow_up") or finding["priority"] in ("P2", "P3")) and not title.startswith("Later:"):
             kind = ("simplify" if title.startswith("Simpler")

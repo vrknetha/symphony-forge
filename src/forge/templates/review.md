@@ -120,7 +120,8 @@ line to its run, so judge it by reading it:
 $proof_checked For each line, read the
 named test: report a test whose assertions would still pass if the line were false as a P1
 `Test: <the line>`, and a `check:` entry for an item that changes runtime behaviour the same
-way. A new test's line names the closest existing test, or none, and the outcome no existing
+way — except when the item's proof can exist only after the merge, which you report as
+`After merge: <the Done-when item>` instead of `Test:` or `Not done`. A new test's line names the closest existing test, or none, and the outcome no existing
 test proves; a missing choice is part of `Gate: proof list`, and a new test whose outcome the
 closest test already proves is a P2 `Follow-up: duplicate test`.
 
@@ -283,6 +284,12 @@ When a Done-when item's named proof is a pull request check that has not finishe
 report it as `Not done` if the check is configured to run on the pull request. Close's checks
 gate holds the merge until that check passes. A failed check or a proof with no check behind
 it is still P1 `Not done`.
+
+When a Done-when item's proof can exist only after the merge (for example the full CI run on the
+default branch, or a nightly report), do not report it as `Not done`. Title the finding
+`After merge: <the Done-when item>` and include `Check: <what to run or read>` and
+`Owner: <who>` in its body. Forge lists it under `Pending after merge:` in close output and the
+pull request, carries it across review rounds, and does not block the merge for it.
 
 ## Test audit
 A Test or Gate finding based only on a future change to a test fake or GitHub call order is
