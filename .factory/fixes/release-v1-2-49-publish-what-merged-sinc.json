@@ -19,8 +19,67 @@
   "done_when": "Every version reference that names the current release says v1.2.49, including the forge.toml version pin and uv.lock (as the v1.2.48 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.49.md exists, the release version tests and the release notes tests pass, and nothing else changes",
   "fix_kind": "mechanical",
   "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/release-notes/v1.2.49.md",
+      "file": "src/forge/release-notes/v1.2.49.md",
+      "gain": 4,
+      "harm": 4,
+      "line": 11,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Data loss: Correct the promise that cleanup preserves every uncommitted file",
+      "work": 1
+    },
+    {
+      "area": "src/forge/release-notes/v1.2.49.md",
+      "file": "src/forge/release-notes/v1.2.49.md",
+      "gain": 4,
+      "harm": 2,
+      "line": 6,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Explain which model Antigravity uses",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "d6dc2680fbefd7a7fc0b45f4bac9f1c24682a5e8c740b92ec1e40219403a56ec",
+    "changed": "c556e80a75f1e24f237237fab68899b1f3868ba89ada7d5d924563a92d91f393",
+    "commit": "23fbcb996bc7faab83f9e11d655874e007fa24ef",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 1, Harm 4\nRaise: Data loss\nCase: normal use - A developer runs `forge doctor --fix` while a finished worktree has an unstaged `uv.lock` change. The release note says the folder will never be removed, but `src/forge/task.py:962` excludes that lockfile from the preservation check, and `src/forge/doctor.py:191` restores it before removing the folder. The existing test at `tests/test_doctor_fix.py:275` confirms this behavior. The owner accepted the lockfile exception in `plans/FORGE-TIDYUP-1.read.md:129`; the new safety promise conceals that exception. State it in the release note so users know to save lockfile changes first.",
+        "file": "src/forge/release-notes/v1.2.49.md",
+        "gain": 4,
+        "harm": 4,
+        "line": 11,
+        "priority": "P1",
+        "title": "Data loss: Correct the promise that cleanup preserves every uncommitted file",
+        "work": 1
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 2\nRaise: Functional\nCase: normal use - A user follows the release note to use Gemini 4 Neon by setting `workers = \"antigravity\"`, but their Antigravity account defaults to another model. `src/forge/repo.py:597` sets Antigravity's model to `default`, and `src/forge/antigravity.py:454` selects a model only when one is explicitly configured. The existing test at `tests/test_antigravity_build.py:114` demonstrates a Plus account running Gemini 4 Argon instead. The note should state that the account default is used and explain how to select Neon, including its plan requirement.",
+        "file": "src/forge/release-notes/v1.2.49.md",
+        "gain": 4,
+        "harm": 2,
+        "line": 6,
+        "priority": "P1",
+        "title": "Functional: Explain which model Antigravity uses",
+        "work": 1
+      }
+    ],
+    "id": "67146a89-437c-44de-b2a5-8d94d62150cd",
+    "status": "blocked"
+  },
   "round": 2,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T03:59:13.723626+00:00",
@@ -35,6 +94,10 @@
       "at": "2026-11-26T04:08:44.731311+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T04:21:49.807729+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
