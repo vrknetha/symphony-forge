@@ -30,7 +30,7 @@ def parse(text: str) -> Scores | None:
     return (int(found[2]), int(found[3]), int(found[4])) if found else None
 
 
-def normalise(title: str, body: str) -> tuple[Scores | None, str]:
+def normalise(title: str, body: str, *, migration: bool = True) -> tuple[Scores | None, str]:
     """Apply the Harm, constitution, shadcn, module tables, database and agents floors, except to work marked Later."""
     scores = parse(body)
     if not scores or title.startswith("Later:"):
@@ -43,7 +43,8 @@ def normalise(title: str, body: str) -> tuple[Scores | None, str]:
     agents = re.match(r"^(?:\d+\.[ \t]*)?(?:(?:Blocking|Advisory):[ \t]*)?Agents: ", title.strip())
     if constitution or shadcn or module_tables or database or agents:
         gain, work = max(gain, 4), min(work, 2)
-    why = next((name for pattern, name in FLOORS
+    floors = FLOORS if migration else FLOORS[:-1]
+    why = next((name for pattern, name in floors
                 if pattern.search(body if name != "migration" else f"{title}\n{body}")), "")
     line = f"Gain {gain}, Work {work}, Harm {harm}"
     if why and harm < 4:
@@ -97,7 +98,7 @@ def bar(scores: Scores | None) -> str | None:
 
 def below_added_work_minimum(finding: dict[str, Any], minimum: int) -> bool:
     """Only an unfloored fix-now finding marked as added work can use the repo's minimum."""
-    scores, body = normalise(finding["title"], finding["body"])
+    scores, body = normalise(finding["title"], finding["body"], migration=False)
     line = LINE.search(body)
     return bool(scores and scores[0] < minimum and bar(scores) == "fix now"
                 and ADDS_WORK.search(body) and line and "(floor:" not in line[0])
@@ -140,8 +141,13 @@ def holds(finding: dict[str, Any], level: str | None = "P1") -> bool:
 
 
 def priority(finding: dict[str, Any]) -> str:
-    """Show P0 when the score keeps this finding blocking past the round limit."""
+    """Treat score-based blockers as P0 for review history and stop rules."""
     return "P0" if holds(finding, "P0") else finding["priority"]
+
+
+def severity(finding: dict[str, Any]) -> str:
+    """The severity reported by the reviewer."""
+    return finding["priority"]
 
 
 def note_holds(note: str) -> bool:

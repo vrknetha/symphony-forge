@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from forge.close_remote import push_replay, reconcile, replay_baseline, save_replay, squash_replay
-from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
+from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, pr_block, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
 
 SWITCH_WORKER = {"claude": "codex", "codex": "claude", "antigravity": "claude"}
 REFUSALS = {
@@ -74,7 +74,7 @@ REFUSALS = {
                      "the repo owner removes the extra change, then forge close {item}"),
 }
 REFUSALS.update(review_skip.REFUSALS)
-BEGIN, END = "<!-- forge:begin -->", "<!-- forge:end -->"
+BEGIN, END = pr_block.BEGIN, pr_block.END
 # forge merge enable's fix is known by these; only the repo owner merges it.
 WHY, DONE = "Let the agent merge this repo's ready pull requests.", 'The default branch\'s forge.toml sets merge = "agent".'
 
@@ -445,7 +445,7 @@ def _close(args: argparse.Namespace, top: Path) -> int:
 
     print(f"Review: {review_skip.label(result)}.", flush=True)
     for number, finding in serious:
-        print(f"{number}. {score.priority(finding)} {finding['title']} "
+        print(f"{number}. {score.severity(finding)}, blocks the merge. {finding['title']} "
               f"({finding['file']}:{finding['line']})\n{finding['body']}\n")
     advice = [(n, f) for n, f in enumerate(result["findings"], 1)
               if not f.get("required_done_when") and not score.holds(f, result.get("blocking_level"))]
@@ -453,12 +453,11 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         print("Advice that does not block the merge:" if serious else
               "Follow-ups that do not block the merge (recorded in the pull request):")
         for number, finding in advice:
-            priority = f"{score.priority(finding)} " if serious else ""
             reason = finding.get("follow_up") or (
                 "Rare case outside normal use" if score.RARE.search(finding["body"]) else
                 "Light review holds only P0 findings" if result.get("blocking_level") == "P0"
                 and score.holds(finding) else "Below the review bar")
-            print(f"{number}. {priority}{finding['title']} "
+            print(f"{number}. {score.severity(finding)} {finding['title']} "
                   f"({finding['file']}:{finding['line']})\n"
                   f"Does not block: {reason.rstrip('.')}.\n{finding['body']}\n")
     if failed:
@@ -971,7 +970,7 @@ def _publish(top: Path, item: str, state: dict[str, Any], branch: str, default: 
     if rebuilding and rebuilt is None:
         # Keep rendered local observations, but no record that would retire the missing-history retry.
         history = re.sub(r"\n<!-- forge:time-record \{.*?\} -->", "", history, flags=re.S)
-    block = _block(result, "\n\n".join(part for part in (history, proof, check) if part))
+    block = pr_block.render(result, "\n\n".join(part for part in (history, proof, check) if part))
     draft = pr is None or result["status"] == "blocked" or bool(state.get("tests"))
     # The body goes through a file under .git/forge/: in argv it meets length limits, and a
     # multi-line argument can't pass through a Windows .cmd shim.
@@ -1096,46 +1095,6 @@ def _bounded_body(body: str, *, suffix: str = "") -> str:
     lines = body.splitlines(keepends=True)
     body = prose(0)
     return body.rstrip() + "\n\n" + note + "\n" + suffix
-
-
-def _block(result: dict[str, Any], check: str) -> str:
-    """Forge's block in the pull request body: the open blocking findings plainly first, or one
-    `Review: clean` line, then the dismissed and advisory findings folded away, then the worker's
-    functional check from its commit message. Each finding is a bullet naming its --dismiss number
-    in text, since GitHub renumbers an ordered list."""
-    because = {d["finding"]: d for d in result["dismissals"]}
-    blocking, rest, below = [], [], {"follow-up": [], "live with": []}
-    for n, finding in enumerate(result["findings"], 1):
-        outcome = "follow-up" if finding.get("follow_up") else score.bar(score.of(finding))
-        scores = score.of(finding)
-        line = "Gain {}, Work {}, Harm {}".format(*scores) if scores else ""
-        is_blocking = n not in because and (
-            finding.get("required_done_when") or score.holds(finding, result.get("blocking_level")))
-        note = (f"dismissed because {because[n]['because']}"
-                + (" (evidence from the base)" if because[n].get("from_base") else "")
-                if n in because
-                else "blocks the merge" if is_blocking
-                else finding.get("follow_up") or line if outcome in below
-                else "advisory: " + " ".join(score.strip(finding.get("body", "")).split()))
-        note += f"; {line}" if line and note != line else ""
-        (blocking if is_blocking else below[outcome] if n not in because and outcome in below
-         else rest).append(f"- Finding {n} ({score.priority(finding)}): {finding['title']} "
-                           f"({finding['file']}:{finding['line']}): {note}")
-    if result.get("skipped"):
-        lines = [BEGIN, f"Review: {review_skip.label(result, reason=True)}."]
-    elif result["status"] == "reviewing":
-        lines = [BEGIN, "Review: running; CI is running alongside it."]
-    elif result["status"] == "blocked":
-        lines = [BEGIN, "The review found serious problems.", "", *blocking]
-    else:
-        lines = [BEGIN, f"Review: clean, {len(because)} dismissed, {len(rest) - len(because) + sum(map(len, below.values()))} advice."]
-    folded = [*rest, *[line for name, title in (("follow-up", "Follow-ups:"), ("live with", "Lived with:"))
-                       if below[name] for line in ("", title, *below[name])]]
-    folded = folded[1:] if folded[:1] == [""] else folded
-    if folded:
-        lines += ["", "<details>", "<summary>Dismissed and advisory findings</summary>", "", *folded,
-                  "", "</details>"]
-    return "\n".join([*lines, *(["", check] if check else []), END])
 
 
 def _title(top: Path, item: str, state: dict[str, Any]) -> tuple[str, str, str]:
