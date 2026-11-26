@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-SLOWTEST-1-QUICK",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-25T17:54:06.524362+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T01:49:16.306127+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "011498e58114f617b02cf989f62118f56620b85d",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
