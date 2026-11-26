@@ -98,6 +98,7 @@ def main() -> None:
         return
     implementation = entry.__globals__
     validate = implementation["validate_report"]
+    review_pass = threading.local()  # Parallel sign-off passes validate on their own threads.
     if os.name != "nt":
         def terminate_engine(proc: subprocess.Popen[Any], *args: Any, **kwargs: Any) -> None:
             # Engines share close's group, so a per-engine timeout must stop
@@ -118,7 +119,12 @@ def main() -> None:
                         if file.replace("\\", "/").startswith(prefix):
                             location["file_path"] = file.replace("\\", "/")[len(prefix):]
                             break
-        validate(report, repo, *args)
+        try:
+            validate(report, repo, *args)
+        except (SystemExit, ValueError, RecursionError) as error:
+            if refusal := getattr(review_pass, "tool_refusal", ""):
+                raise SystemExit(f"{refusal}. {' '.join(str(error).split())}") from None
+            raise
 
     implementation["validate_report"] = validate_paths
     if os.environ.get("FORGE_REVIEW_ENGINE") == "antigravity":
@@ -135,9 +141,10 @@ def main() -> None:
             with contextlib.chdir(Path(tree).parent):
                 copy = antigravity.home(top) / "review" / item / str(pass_number)
                 roots.append(copy)
-                return antigravity.review_engine(
+                text, review_pass.tool_refusal = antigravity.review_engine(
                     top, item, checkout, copy, prompt, implementation["tracked_sensitive_paths"],
                     context["model"], context["effort"], Path(context["spent"]), implementation["extract_json"])
+                return text
 
         implementation["run_engine"] = run_engine
     if mode == "serial":

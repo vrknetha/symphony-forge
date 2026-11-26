@@ -91,8 +91,9 @@ for line in sys.stdin:
             })
             tool = {"toolCallId": "review-tool", "kind": "execute", "name": "run_command",
                     "title": "Inspect rate limit configuration"}
-            update(sessionUpdate="tool_call", status="pending", **tool)
-            if refusal == "request":
+            if refusal != "id-only":
+                update(sessionUpdate="tool_call", status="pending", **tool)
+            if refusal in ("request", "id-only"):
                 send(id="review-tool", method="session/request_permission", params={
                     "toolCall": {"toolCallId": tool["toolCallId"]},
                     "options": [{"kind": "allow_once", "optionId": "yes"},

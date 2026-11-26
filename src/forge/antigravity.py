@@ -217,7 +217,7 @@ def review_design_context(top: Path, cfg: dict, changes: str, user_facing: bool)
 
 def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
                   sensitive: Callable[[list[str]], set[str]], model: str, effort: str,
-                  spent: Path, extract_json: Callable[[str], dict]) -> str:
+                  spent: Path, extract_json: Callable[[str], dict]) -> tuple[str, str]:
     paths = list(filter(None, repo.git("ls-files", "-z", cwd=checkout).split("\0")))
     copy_for_reading(checkout, copy, paths, sensitive(paths))
     ran = {"model_kind": "review"}
@@ -245,6 +245,7 @@ def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
                 "type": "result", "session_id": chat, "usage": usage,
             }) + "\n", encoding="utf-8")
     if tool := result.get("refused_tool"):
+        refusal = f'{REVIEW_TOOL_REFUSED} "{tool}"'
         if result["stop"] in ("end_turn", "cancelled"):
             # Tool calls can interrupt the text stream. Let Autoreview recognize the
             # report and validate its completion and findings as it normally does.
@@ -254,9 +255,9 @@ def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
                 except (SystemExit, ValueError, RecursionError):
                     continue
                 if completion in ("complete", "incomplete"):
-                    return text
-        raise SystemExit(f'{REVIEW_TOOL_REFUSED} "{tool}".')
-    return result["text"]
+                    return text, refusal
+        raise SystemExit(f"{refusal}.")
+    return result["text"], ""
 
 
 def require_unfiltered(top: Path, paths: list[str]) -> None:
@@ -408,7 +409,8 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                                 for option in data["options"]
                             )):
                                 tool = data["toolCall"]
-                                refused_tool = (tool.get("title") or tool_names.get(tool.get("toolCallId"))
+                                tool_id = tool.get("toolCallId")
+                                refused_tool = (tool.get("title") or tool_names.get(tool_id) or tool_id
                                                 or tool.get("name") or tool.get("kind") or "unknown tool")
                                 message_starts.append(len(chunks))
                             answer = {"result": {"outcome": outcome}}

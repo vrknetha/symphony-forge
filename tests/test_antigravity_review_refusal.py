@@ -28,10 +28,15 @@ def test_1_antigravity_review_names_a_refused_tool_when_no_answer(env, repo, mon
         return [row for row in records(repo, "events.jsonl") if row["item"] == item
                 and row["event"] == "run end" and row["kind"] == "review" and row["outcome"] == "failed"]
 
-    for index, (refusal, reply) in enumerate((
-        ("request", ""),
-        ("update", ""),
-        ("request", json.dumps({"findings": []})),
+    title = "Inspect rate limit configuration"
+    for index, (refusal, reply, step) in enumerate((
+        ("request", "", title),
+        ("update", "", title),
+        ("request", json.dumps({"findings": []}), title),
+        ("id-only", json.dumps({
+            "review_completion": "complete", "overall_correctness": "patch is correct",
+            "overall_explanation": "The greeting still works.", "findings": [],
+        }), "review-tool"),
     ), 1):
         monkeypatch.setenv("STUB_AGY_REVIEW_PERMISSION", refusal)
         monkeypatch.setenv("STUB_AGY_REVIEW", reply)
@@ -39,7 +44,7 @@ def test_1_antigravity_review_names_a_refused_tool_when_no_answer(env, repo, mon
         output = closed.stdout + closed.stderr
         assert closed.returncode == 1, output
         assert "Review service rate limit. Waiting" not in output, output
-        assert 'after this tool was refused "Inspect rate limit configuration"' in output, output
+        assert f'after this tool was refused "{step}"' in output, output
         assert "empty output" not in output and "non-JSON output" not in output, output
         runs = failed_reviews()
         assert len(runs) == index * 2
@@ -51,6 +56,7 @@ def test_1_antigravity_review_names_a_refused_tool_when_no_answer(env, repo, mon
     serious = finding("P1", "The greeting omits the reader")
     serious["code_location"].pop("column")
     serious["source_attribution"] = None
+    monkeypatch.setenv("STUB_AGY_REVIEW_PERMISSION", "request")
     monkeypatch.setenv("STUB_AGY_REVIEW", json.dumps({
         "review_completion": "complete", "overall_correctness": "patch is incorrect",
         "overall_explanation": serious["title"], "overall_confidence": 1,
