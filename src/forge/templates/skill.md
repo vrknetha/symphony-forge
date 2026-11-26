@@ -232,10 +232,14 @@ the owner agrees. `forge doctor --fix` does not drop these fixes. New and upgrad
 client repos get this check from the installed Forge command.
 
 Send every new idea through `forge start "<their words>"`. Never ask the human whether it is a
-story or a fix. If the explorer prompt is lost, run the same `forge start "<idea>"` again, or read `forge next`: both print
-the prompt and handback command again (only the session that holds it can hand back). When the answer is a fix, run its `forge land <fix>` in the background and watch it.
+story or a fix. Forge uses the same tool as a non-design build. If that tool matches this
+session, run the explorer and hand back its reply as instructed. Otherwise, Forge runs the
+explorer and acts on its reply directly. If a prompt for this session is lost, run the same
+`forge start "<idea>"` again or read `forge next` to see the prompt and handback command.
+Only the session that holds the prompt can hand back. When the answer is a fix, run its
+`forge land <fix>` in the background and watch it.
 For an idea that extends an existing story, the explorer can return that story's key with
-`Lane: plan`. Handback reuses its branch and worktree and adds to its plan. Read the revised plan
+`Lane: plan`. Forge reuses its branch and worktree and adds to its plan. Read the revised plan
 before approval.
 
 The human approves stories and chooses between options. In a client repo before the default
@@ -2190,11 +2194,12 @@ Set a model explicitly on every ad-hoc subagent you start outside Forge's roles,
 including the built-in general-purpose agent. In Claude Code, use Sonnet for analysis and
 research, and Haiku for sorting and search.
 
-The explorer role uses the read-only `explore` kind; `lite` keeps a fix's first
-build round. New repos get `[models.explore.claude]` with `claude-haiku-5-5` at high effort and
-`[models.explore.codex]` with `gpt-6.2-sol` at medium effort. Existing repos
-without explore keep using lite for read-only work after upgrading and syncing. To choose
-separate read-only settings there, add the explore entries in a fix and run `forge sync`.
+The explorer uses the read-only `explore` kind. A fix's first build round uses `lite`.
+The explorer defaults are `gpt-6.1-terra` at medium effort for Codex,
+`claude-haiku-5-5` at high effort for Claude, and `gemini-4-neon` at low effort
+for Antigravity. New repos get these entries at setup. Upgraded repos use the defaults
+for missing entries and keep their configured entries. Run `forge sync` after changing
+explore settings to update the native explorer roles.
 
 ## Build simple
 

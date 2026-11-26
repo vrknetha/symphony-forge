@@ -32,9 +32,9 @@ def test_1_commands_remove_finished_folders(repo, gh, tmp_path, monkeypatch, com
         assert _kept(repo, clean, "fix/clean")
         return
     if command == "start":
-        monkeypatch.delenv("CLAUDECODE", raising=False)
-        monkeypatch.setenv("CODEX_THREAD_ID", "tidy-coordinator")
-        owner = Session(repo, tmp_path / "tidy-host", "codex-tidy")
+        monkeypatch.delenv("CODEX_THREAD_ID", raising=False)
+        monkeypatch.setenv("CLAUDECODE", "1")
+        owner = Session(repo, tmp_path / "tidy-host", "claude-tidy")
         try:
             done = owner.forge("start", "Make the greeting shorter", cwd=current)
         finally:

@@ -200,16 +200,13 @@ def test_23_prototype_next_fix_commands_run_as_printed(repo, gh, tmp_path, monke
                    if line.startswith(prefix) and match in line)
     words = shlex.split(command.removeprefix("Next: forge "))
     if words[0] == "start":
+        monkeypatch.setenv("STUB_CLAUDE_RESULT",
+                           "Lane: fix\nReason: The repair is small.\n"
+                           "Why: Prepare the next change\nDone: The change is ready.\n"
+                           "Kind: mechanical")
         owner = Session(repo, tmp_path / "intake-host", "codex-next-guidance")
         try:
-            offered = owner.forge(*words)
-            assert offered.returncode == 0, offered.stdout + offered.stderr
-            pending = json.loads(offered.stdout)
-            assert pending["role"] == "explorer" and words[1] in pending["prompt"]
-            started = owner.forge("handback", pending["target"], "--round", str(pending["round"]),
-                                  "--subagent", "idea-explorer", "--text",
-                                  "Lane: fix\nReason: The change is small and clear.\n"
-                                  "Why: Prepare the next change\nDone: The change is ready.\nKind: mechanical")
+            started = owner.forge(*words)
             assert started.returncode == 0, started.stdout + started.stderr
             checkout = worktree(repo, "fix/prepare-the-next-change")
             state = json.loads((checkout / ".factory/fixes/prepare-the-next-change.json").read_text("utf-8"))
