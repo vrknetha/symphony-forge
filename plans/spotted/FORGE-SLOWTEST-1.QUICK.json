@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_combined_script_quick_test.py\tTest: The guide tells the agent how to write, check and propose the quicker command\tFORGE-SLOWTEST-1/QUICK",
+      "kind": "bug",
+      "path": "tests/test_combined_script_quick_test.py",
+      "line": 39,
+      "text": "Test: The guide tells the agent how to write, check and propose the quicker command",
+      "from": "blocking",
+      "item": "FORGE-SLOWTEST-1/QUICK",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_windows_worker_skips_browser_tests.py\tTest: On Windows, a builder's own test run skips each separate browser-test step\tFORGE-SLOWTEST-1/QUICK",
+      "kind": "bug",
+      "path": "tests/test_windows_worker_skips_browser_tests.py",
+      "line": 113,
+      "text": "Test: On Windows, a builder's own test run skips each separate browser-test step",
+      "from": "blocking",
+      "item": "FORGE-SLOWTEST-1/QUICK",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/fasttest.py\tNot done: On Windows, a builder's own test run skips each separate browser-test step",
+      "kind": "edge",
+      "path": "src/forge/fasttest.py",
+      "line": 286,
+      "text": "Not done: On Windows, a builder's own test run skips each separate browser-test step",
+      "from": "review",
+      "item": "FORGE-SLOWTEST-1/QUICK",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/fasttest.py\tNot done: the pull request check, the final check and the full test run still run them.",
+      "kind": "edge",
+      "path": "src/forge/fasttest.py",
+      "line": 820,
+      "text": "Not done: the pull request check, the final check and the full test run still run them.",
+      "from": "review",
+      "item": "FORGE-SLOWTEST-1/QUICK",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "simplify\ttests/test_combined_script_quick_test.py\tSimpler: the added earlier-adopted guide case \u2192 cut",
+      "kind": "simplify",
+      "path": "tests/test_combined_script_quick_test.py",
+      "line": 114,
+      "text": "Simpler: the added earlier-adopted guide case \u2192 cut",
+      "from": "review",
+      "item": "FORGE-SLOWTEST-1/QUICK",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
