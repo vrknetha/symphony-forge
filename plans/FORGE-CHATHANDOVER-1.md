@@ -28,7 +28,7 @@ A long coordinator chat reads the whole conversation again on every tool call. T
 Risks: none one-way. The part reverts with its pull request.
 
 Accepted limits:
-- The note is built offline from what `forge next` reports, without GitHub's scheduled-run alerts. The fresh chat runs `forge next`, which shows them.
+- The note is built from what `forge next` reports, without GitHub's scheduled-run alerts. The fresh chat runs `forge next`, which shows them.
 - A host that gives no token count to its hooks gets no context line; the guide rule and the owner's request still work there.
 
 ## For the builders

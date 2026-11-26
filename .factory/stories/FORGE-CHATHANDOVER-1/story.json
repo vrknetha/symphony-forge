@@ -1,10 +1,22 @@
 {
   "doc": "plans/FORGE-CHATHANDOVER-1.md",
-  "status": "planning",
+  "status": "read",
   "steps": [
     {
       "at": "2026-11-25T16:56:05.701436+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-25T17:06:51.326584+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T17:24:30.866023+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T17:40:00.082338+00:00",
+      "step": "read"
     }
   ],
   "title": "Hand a long coordinator chat over to a fresh chat",
