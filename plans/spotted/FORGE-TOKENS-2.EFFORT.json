@@ -19,8 +19,8 @@
       "text": "Test: Uncached input per repair round is measured before and after the change on the same kind of item",
       "from": "blocking",
       "item": "FORGE-TOKENS-2/EFFORT",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     }
   ]
 }
