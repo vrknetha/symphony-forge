@@ -313,7 +313,7 @@ def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progres
                 else:
                     review_state = QUEUED if run.get("status") == "queued" else PENDING
             elif retry_review and not train and pr.get("headRefOid") == sha:
-                review_retry = _retry_old_review(top, item, sha, names, seen, statuses)
+                review_retry = _retry_failed_review(top, item, names, seen, statuses)
                 if review_retry:
                     review_state = PENDING
             if train:
@@ -512,8 +512,8 @@ def _review_workflow(top: Path, item: str, run_id: str) -> dict[str, Any]:
     return runs[0] if runs else {}
 
 
-def _retry_old_review(top: Path, item: str, sha: str, names: list[str],
-                      seen: list[tuple[str, str]], statuses: list[dict[str, Any]]) -> str | None:
+def _retry_failed_review(top: Path, item: str, names: list[str],
+                         seen: list[tuple[str, str]], statuses: list[dict[str, Any]]) -> str | None:
     failed = [i for i, (name, state) in enumerate(seen)
               if state in (RED, SKIPPED) and any(
                   name == want or name.startswith(want + " (") for want in names)]
@@ -525,11 +525,7 @@ def _retry_old_review(top: Path, item: str, sha: str, names: list[str],
         return None
     status = statuses[index - first_status]
     run_link = re.search(r"/actions/runs/(\d+)/job/\d+(?:\?|$)", str(status.get("target_url", "")))
-    # The status URL names the commit the review checked. The run can name the base.
-    reviewed = re.search(r"/statuses/([a-f0-9]{40})$", str(status.get("url", "")))
-    if not run_link or not reviewed or reviewed[1] == sha:
-        return None
-    if repo.run("git", "merge-base", "--is-ancestor", reviewed[1], sha, cwd=top).returncode:
+    if not run_link:
         return None
     run_id = run_link[1]
     workflow = _review_workflow(top, item, run_id)
