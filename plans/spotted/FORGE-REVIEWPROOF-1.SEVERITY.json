@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "key": "bug\tsrc/forge/autoreview.py\tNot done: A new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion.\tFORGE-REVIEWPROOF-1/SEVERITY",
+      "kind": "bug",
+      "path": "src/forge/autoreview.py",
+      "line": 248,
+      "text": "Not done: A new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion.",
+      "from": "blocking",
+      "item": "FORGE-REVIEWPROOF-1/SEVERITY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "bug\tsrc/forge/review.py\tNot done: A new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion.\tFORGE-REVIEWPROOF-1/SEVERITY",
       "kind": "bug",
       "path": "src/forge/review.py",
