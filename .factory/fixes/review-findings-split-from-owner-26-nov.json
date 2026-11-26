@@ -12,9 +12,45 @@
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
+  "known": [
+    {
+      "area": "test_4_own_repo_selects_smoke_areas_and_runs_related_tests_once() in tests/test_affected_own.py",
+      "file": "tests/test_affected_own.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 164,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: the local close test misses real repository conditions",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "b36803b3f8ad2df0ac1d244dac9fe01f097839e6c15bbcb64440a913f00291e2",
+    "changed": "fd449240cab482e39e1a6081027012271120d28c6c3aedc72978e04007d2a94d",
+    "commit": "5124df528db7895a9345c1f2e5131bf879fccab1",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Gate\nCase: normal use - close a pushed Forge pull request in local mode while a GitHub test job is queued.\nThe new local-mode assertion supplies a queued `tests` check, but the fixture starts an unpushed branch and reports no open pull request (`tests/test_close.py:223` and `:310`). Consequently, the pre-push wait in `src/forge/checks.py:252` returns before examining that check, even though it waits on active jobs for an existing PR. The fixture also omits `.forge/always-tests.txt`, whose entries `src/forge/fasttest.py:835` adds to the real repository's selection. The test can therefore pass while local close both waits for a GitHub test job and runs unrelated required tests. Exercise the existing-PR path and the repository's required-test list so the proof detects those failures.",
+        "file": "tests/test_affected_own.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 164,
+        "priority": "P1",
+        "title": "Gate: the local close test misses real repository conditions",
+        "work": 2
+      }
+    ],
+    "id": "87bbc294-c0b5-41c9-9784-22ce09cc7fe7",
+    "status": "blocked"
+  },
   "round": 2,
   "stacked_on": "owner-26-nov-2026-stop-using-github-runn",
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T17:51:10.815765+00:00",
@@ -29,6 +65,10 @@
       "at": "2026-11-26T17:52:34.727239+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T18:19:50.359655+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
