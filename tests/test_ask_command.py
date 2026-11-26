@@ -11,7 +11,7 @@ import sys
 import time
 
 from conftest import machine_cores
-from test_codex_worker import QUIET, _codex_repo, _sent
+from test_codex_worker import QUIET, _codex_repo, _sent, _stub
 from test_codex_worker import sdk_data  # noqa: F401  (a fixture)
 
 import pytest
@@ -41,6 +41,7 @@ def test_1_ask_runs_one_read_only_codex_turn(repo, monkeypatch, sdk_data):
     asked = repo.forge("ask", "Why is the sky blue?")
     assert asked.returncode == 0, asked.stdout + asked.stderr
     assert "stub codex: built it with" in asked.stdout
+    assert [call["forge_worker"] for call in _stub(stub) if "pid" in call] == ["1"]
     starts, turns = _sent(stub, "thread/start"), _sent(stub, "turn/start")
     assert len(starts) == len(turns) == 1
     assert (starts[0]["sandbox"], starts[0]["approvalPolicy"]) == ("read-only", "never")
