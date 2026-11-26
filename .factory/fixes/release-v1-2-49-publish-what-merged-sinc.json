@@ -57,8 +57,8 @@
     "id": "c3dee896-2edd-4ae1-b9cf-43492f689393",
     "status": "clean"
   },
-  "round": 5,
-  "status": "waiting for checks",
+  "round": 6,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T03:59:13.723626+00:00",
@@ -116,6 +116,11 @@
     {
       "at": "2026-11-26T04:41:12.197115+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-26T04:47:35.699068+00:00",
+      "round": 6,
+      "step": "resume"
     }
   ],
   "stop": {
@@ -128,10 +133,10 @@
     "worker_round": 3
   },
   "stuck": {
-    "close": "535e2ac4-e1c8-419e-8eb5-fa7d062df2a8",
-    "head": "67230f14f3fa642d1497932daac2b4395e44dbe1",
+    "close": "eaf72f77-27b8-4ca3-9fe2-0df8643c72eb",
+    "head": "f55908057dd7f7e7a4405f17d0b8a264598074c0",
     "keys": {},
-    "round": 4
+    "round": 5
   },
   "why": "Release v1.2.49: publish what merged since v1.2.48 (installs from PyPI, Antigravity as a third agent, smaller builder briefs, coordinator context rules and second-coordinator warning, Sonnet for diagnostic roles, finished-work cleanup, proof failure message, review check re-run, standing owner policy, no Windows jobs in Forge's own checks, full-run failures under Needs you)",
   "worker": "codex"
