@@ -521,7 +521,7 @@ other), file a bug on Forge's GitHub. No client code, names, paths or secrets: d
 Read the template text from GitHub and drop its front matter:
 
 ```
-gh api repos/knacklabs/symphony-forge/contents/.github/ISSUE_TEMPLATE/forge-bug.md -H "Accept: application/vnd.github.raw"
+gh api repos/vrknetha/symphony-forge/contents/.github/ISSUE_TEMPLATE/forge-bug.md -H "Accept: application/vnd.github.raw"
 ```
 
 Fill every section, then save the filled body with your own file-writing tool as UTF-8.
@@ -540,7 +540,7 @@ The template's sections, which the body file keeps exactly:
 File it with no prompt:
 
 ```
-gh issue create --repo knacklabs/symphony-forge --title "<short plain title>" --body-file <that file>
+gh issue create --repo vrknetha/symphony-forge --title "<short plain title>" --body-file <that file>
 ```
 
 ## Laptop setup and after cloning
@@ -557,13 +557,13 @@ If neither tool is signed in, it asks you to sign in. Existing repos keep their 
 If you use Claude, open Claude Code in the repo once and accept the trust question before running headless Claude commands.
 
 The repeatable laptop installers are published for
-[Mac](https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-mac.sh)
-and [Windows](https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-windows.ps1).
+[Mac](https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-mac.sh)
+and [Windows](https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-windows.ps1).
 They install the tools Forge needs; follow their prompts to sign in to GitHub and your agent.
 
 After every clone, read the pinned `version` in `forge.toml` and install that release,
 even if the laptop installer installed a different one:
-`uv tool install git+https://github.com/knacklabs/symphony-forge@<release>`
+`uv tool install symphony-forge==<release>`
 (replace `<release>` with the pin, such as `v1.2.4`). Then run `forge sync` to install
 the local git hooks and refresh the generated files, followed by `forge doctor --fix`.
 In Husky repos, sync preserves the team's hooks and adds Forge's checks to the committed
@@ -1635,7 +1635,7 @@ After an upgrade, forge upgrade and then forge next (once on each computer) list
 release and the open known Forge issues. Tell the owner the changes that affect them in plain
 words, follow each line's instruction, and read the "Known Forge issues" part at the end of
 this guide.
-`forge next` gives `Next: forge upgrade <release>` when its release check finds a newer release
+`forge next` gives `Next: forge upgrade <release>` when PyPI has a newer release
 than the repo pins. If upgrade refuses outside the default branch, move to the main checkout.
 Drop the current fix only if Forge started it and the owner agrees. Then switch to the default
 branch and run `forge upgrade <release>`. The refusal gives these steps in plain words.
@@ -1689,8 +1689,12 @@ without old check-run requests. Retries keep the same batch and never take anoth
 Older items keep their text or show unmeasured time. New and existing repos get this
 behavior on upgrade.
 
-A repo pinned to a release without `forge upgrade` runs it once through uv:
-`uvx --from git+https://github.com/knacklabs/symphony-forge@<release> forge upgrade <release>`.
+A repo pinned to a release unavailable from PyPI can install a newer release and then upgrade.
+Use a published release that includes the switch to PyPI. Run
+`uv tool install --force symphony-forge==X.Y.Z`, then `forge upgrade vX.Y.Z`.
+If the default branch's workflow still installs from the
+retired GitHub repository, Forge opens the upgrade pull request and the owner follows the
+[upgrade recovery steps](https://github.com/vrknetha/symphony-forge/blob/main/docs/guide.md#recovering-upgrades-from-the-retired-github-repository).
 Until the upgrade merges, the default branch keeps working with the new release installed.
 After it merges, older branches keep their pinned release and its rules. When Forge says the
 default branch already pins the installed release, merge `origin/<default>` into your branch to
@@ -2910,3 +2914,5 @@ Open known issues in this Forge release, from its release notes. When one affect
 - **Upgrade drops hand edits in generated files.** The release's `forge sync` writes the CI workflow and other generated files again from forge.toml, so a hand edit there, such as a self-hosted runner or extra install steps, is lost (#1781). Workaround: before the upgrade, move each such edit into its forge.toml setting (runner, test, groups), then upgrade. (Since v1.2.47.)
 - **A handback with the wrong round number says the round was stopped.** `forge handback` gives the same message for a wrong round number as for a stopped round, and no next step (#1791). Workaround: hand back with the round number from the last `forge work` output, or run `forge next`, which names the pending handback; run the handback again with that round. (Since v1.2.48.)
 - **The design checks read text, not the rendered page.** A word such as `uppercase` in a class name, a long spinner animation, or a `#abc` value that is not a colour can be reported. `<strong>` and `<b>` tags and motion times set in seconds by animation libraries are not checked. Workaround: put `forge-ui-ignore <rule>: <reason>` in the file; it covers that rule for the whole file, and the review still reads the rest. (Since v1.2.48.)
+- **The recovery install can break a running Forge run.** The recovery step reinstalls Forge with `uv tool install --force`; a build, review or CI wait running on that machine at the same time can fail or mix releases. Workaround: let running Forge work finish, or stop it, before the recovery install. (Since v1.2.49.)
+- **A work branch started on v1.2.48 can still use the old GitHub address.** After the default branch upgrades, an existing work branch that pins v1.2.48 can try the disabled GitHub source when close merges the default branch. Workaround: merge the default branch into that work branch with v1.2.49 installed, or start the item again. (Since v1.2.49.)

@@ -63,7 +63,7 @@ REFUSALS = {
                  "for it.", "forge sync in {path}, commit what it wrote, then forge close {item}"),
     "unsynced_forge": ("This {kind} pins Forge {pinned}, but Forge {installed} is running close, "
                        "so it can't tell whether the {kind}'s files are what {pinned} writes.",
-                       "uv tool install git+https://github.com/knacklabs/symphony-forge@{pinned}, "
+                       "uv tool install symphony-forge=={package_version}, "
                        "then forge close {item}"),
     "tests_failed": ("`{command}` failed on this machine; the "
                      "next worker round gets its output.", "forge work {item}"),
@@ -790,7 +790,7 @@ def _merge_default(top: Path, item: str, branch: str, default: str,
             if release != cfg["version"] and repo.VERSION.fullmatch(release):
                 # Isolate Python imports too: the old checkout may have set PYTHONPATH.
                 done = repo.run("uv", "run", "--isolated", "--no-project", "--with",
-                                f"git+https://github.com/knacklabs/symphony-forge@{release}",
+                                f"symphony-forge=={release.removeprefix('v')}",
                                 "--python", sys.executable, "python", "-I", "-c", script, cwd=top,
                                 env=repo.uv_env())
             else:
@@ -822,7 +822,7 @@ def _synced(top: Path, item: str, changed_files: list[str]) -> None:
         return sync.check_guides(top, changed_files)
     kind = "task" if "/" in item else "fix"
     if (behind := repo._older(pinned, release)) or pinned != __version__:  # pyright: ignore[reportPrivateUsage]
-        repo.refuse(("This {kind} pins Forge {pinned}, but the default branch pins Forge {release}.", "forge work {item} to merge the default branch, then forge close {item}") if behind else REFUSALS["unsynced_forge"], kind=kind, pinned=f"v{pinned}",
+        repo.refuse(("This {kind} pins Forge {pinned}, but the default branch pins Forge {release}.", "forge work {item} to merge the default branch, then forge close {item}") if behind else REFUSALS["unsynced_forge"], kind=kind, pinned=f"v{pinned}", package_version=pinned,
                     installed=f"v{__version__}", item=item, release=f"v{release}")
     # forge sync refuses a detached HEAD, so the throwaway checkout gets a throwaway branch.
     check, branch = Path(tempfile.mkdtemp()) / "sync", f"forge-synced-{os.getpid()}"

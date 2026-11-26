@@ -358,6 +358,13 @@ class Repo:
         path.write_text(text, encoding="utf-8")
         return path
 
+    def pypi(self, *answers: str | int) -> None:
+        (self.bin / "pypi-responses.json").write_text(json.dumps(answers), encoding="utf-8")
+
+    def pypi_calls(self) -> list[float]:
+        log = self.bin / "pypi-calls.jsonl"
+        return [json.loads(line) for line in log.read_text("utf-8").splitlines()] if log.exists() else []
+
 
 class StubGh:
     """Tell the stub gh what to answer, and read back the calls it got."""
@@ -597,7 +604,11 @@ def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, seed_repo: Path,
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     shutil.copyfile(ROOT / "tests/stubs/json_log.py", bin_dir / "json_log.py")
-    _install(bin_dir, "forge", FORGE_SHIM.format(python=sys.executable, src=str(ROOT / "src")))
+    forge = FORGE_SHIM.format(python=sys.executable, src=str(ROOT / "src"))
+    _install(bin_dir, "forge", forge.replace("from forge.cli import main",
+             "if sys.argv[1:2] in (['next'], ['upgrade']):\n    import forge_test_pypi\n"
+             "from forge.cli import main"))
+    shutil.copyfile(ROOT / "tests/stubs/pypi.py", bin_dir / "forge_test_pypi.py")
     _install(bin_dir, "gh", GH_STUB.format(python=sys.executable))
     # Sync manages Claude's user-scope plugins. Never let a command test touch
     # the developer's real plugin install or contact its marketplace.

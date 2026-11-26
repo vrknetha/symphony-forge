@@ -6,7 +6,7 @@ Fill in the company and developer details in the text below.
 
 Give the person this text to paste into Claude Code:
 
-> Follow https://github.com/knacklabs/symphony-forge/blob/main/docs/start.md.
+> Follow https://github.com/vrknetha/symphony-forge/blob/main/docs/start.md.
 > My company GitHub is https://github.com/COMPANY.
 > My developer is NAME, GitHub LOGIN, contact CONTACT.
 > Help me set up this computer, then ask for my idea or client notes.

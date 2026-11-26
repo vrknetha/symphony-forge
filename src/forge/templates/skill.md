@@ -521,7 +521,7 @@ other), file a bug on Forge's GitHub. No client code, names, paths or secrets: d
 Read the template text from GitHub and drop its front matter:
 
 ```
-gh api repos/knacklabs/symphony-forge/contents/.github/ISSUE_TEMPLATE/forge-bug.md -H "Accept: application/vnd.github.raw"
+gh api repos/vrknetha/symphony-forge/contents/.github/ISSUE_TEMPLATE/forge-bug.md -H "Accept: application/vnd.github.raw"
 ```
 
 Fill every section, then save the filled body with your own file-writing tool as UTF-8.
@@ -540,7 +540,7 @@ The template's sections, which the body file keeps exactly:
 File it with no prompt:
 
 ```
-gh issue create --repo knacklabs/symphony-forge --title "<short plain title>" --body-file <that file>
+gh issue create --repo vrknetha/symphony-forge --title "<short plain title>" --body-file <that file>
 ```
 
 ## Laptop setup and after cloning
@@ -557,13 +557,13 @@ If neither tool is signed in, it asks you to sign in. Existing repos keep their 
 If you use Claude, open Claude Code in the repo once and accept the trust question before running headless Claude commands.
 
 The repeatable laptop installers are published for
-[Mac](https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-mac.sh)
-and [Windows](https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-windows.ps1).
+[Mac](https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-mac.sh)
+and [Windows](https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-windows.ps1).
 They install the tools Forge needs; follow their prompts to sign in to GitHub and your agent.
 
 After every clone, read the pinned `version` in `forge.toml` and install that release,
 even if the laptop installer installed a different one:
-`uv tool install git+https://github.com/knacklabs/symphony-forge@<release>`
+`uv tool install symphony-forge==<release>`
 (replace `<release>` with the pin, such as `v1.2.4`). Then run `forge sync` to install
 the local git hooks and refresh the generated files, followed by `forge doctor --fix`.
 In Husky repos, sync preserves the team's hooks and adds Forge's checks to the committed
@@ -1635,7 +1635,7 @@ After an upgrade, forge upgrade and then forge next (once on each computer) list
 release and the open known Forge issues. Tell the owner the changes that affect them in plain
 words, follow each line's instruction, and read the "Known Forge issues" part at the end of
 this guide.
-`forge next` gives `Next: forge upgrade <release>` when its release check finds a newer release
+`forge next` gives `Next: forge upgrade <release>` when PyPI has a newer release
 than the repo pins. If upgrade refuses outside the default branch, move to the main checkout.
 Drop the current fix only if Forge started it and the owner agrees. Then switch to the default
 branch and run `forge upgrade <release>`. The refusal gives these steps in plain words.
@@ -1689,8 +1689,12 @@ without old check-run requests. Retries keep the same batch and never take anoth
 Older items keep their text or show unmeasured time. New and existing repos get this
 behavior on upgrade.
 
-A repo pinned to a release without `forge upgrade` runs it once through uv:
-`uvx --from git+https://github.com/knacklabs/symphony-forge@<release> forge upgrade <release>`.
+A repo pinned to a release unavailable from PyPI can install a newer release and then upgrade.
+Use a published release that includes the switch to PyPI. Run
+`uv tool install --force symphony-forge==X.Y.Z`, then `forge upgrade vX.Y.Z`.
+If the default branch's workflow still installs from the
+retired GitHub repository, Forge opens the upgrade pull request and the owner follows the
+[upgrade recovery steps](https://github.com/vrknetha/symphony-forge/blob/main/docs/guide.md#recovering-upgrades-from-the-retired-github-repository).
 Until the upgrade merges, the default branch keeps working with the new release installed.
 After it merges, older branches keep their pinned release and its rules. When Forge says the
 default branch already pins the installed release, merge `origin/<default>` into your branch to
