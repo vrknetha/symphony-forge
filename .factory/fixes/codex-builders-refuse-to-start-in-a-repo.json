@@ -5,12 +5,25 @@
   "fix_kind": "backend",
   "fix_kind_explicit": true,
   "kind": "fix",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-26T17:30:20.297308+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T17:31:10.954332+00:00",
+      "round": 1,
+      "step": "resume"
     }
   ],
-  "why": "Codex builders refuse to start in a repo with the new Codex typed-approval hook: Forge's driver says Codex doesn't trust the project's userPromptSubmit hook (the 'forge hook approval' command in .codex/hooks.json) and it isn't Forge's, so Forge starts no Codex turn. The hook is Forge's own; its definition as Codex's hooks/list reports it does not equal any entry in codex.FORGE_HOOKS (likely a field Codex reports differently for userPromptSubmit, such as a missing matcher key or another default)."
+  "stuck": {
+    "close": null,
+    "head": "be72553df14e273cedf376d1409abb1826310e2d",
+    "keys": {},
+    "round": null
+  },
+  "why": "Codex builders refuse to start in a repo with the new Codex typed-approval hook: Forge's driver says Codex doesn't trust the project's userPromptSubmit hook (the 'forge hook approval' command in .codex/hooks.json) and it isn't Forge's, so Forge starts no Codex turn. The hook is Forge's own; its definition as Codex's hooks/list reports it does not equal any entry in codex.FORGE_HOOKS (likely a field Codex reports differently for userPromptSubmit, such as a missing matcher key or another default).",
+  "worker": "antigravity"
 }
