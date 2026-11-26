@@ -66,7 +66,7 @@
       "gain": 4,
       "harm": 4,
       "line": 248,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 2,
       "security": false,
@@ -78,25 +78,14 @@
     "blocking_level": "P1",
     "branch_diff": "e19748cff363e156c101565ced3b5f304ccb88648e930abd559ab5b845c017cc",
     "changed": "e330f5cb8dfa273c60cfa1dbb5b57c228453efaced39c325b867baadb91ca4ab",
-    "commit": "adc39c90e6a7858a9bb1695b1c6c9bc80cad734c",
+    "commit": "e39ce4b4d9e296fbb2f99e0a36c06409d34f26da",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 3, Harm 4 (floor: migration)\nRaise: Not done\nCase: normal use - An old review that floored a finding about an unchanged migration can still block after upgrade. The v1.2.49 review prompt (`src/forge/templates/review.md:460`) instructed reviewers to score such findings Harm 4, and its `score.normalise` (`src/forge/score.py:48`) removed any floor marker when Harm was already 4. This check misses that saved finding, so `close.py:322` reuses it without a recheck. The new upgrade test supplies Harm 1 to the old reviewer and covers only the marker-present case. Even when the marker is present, an item already stopped by that finding is refused at `close.py:180` before the new check runs. The history repair also misses reviews made before a fix was promoted: `time_records.py:219` reads the task's state history, while `story.py:1154` transfers only the latest fix review. Earlier P1 findings can therefore remain P0 in the pull request history.",
-        "file": "src/forge/autoreview.py",
-        "gain": 4,
-        "harm": 4,
-        "line": 248,
-        "priority": "P1",
-        "title": "Not done: A new repo and an existing repo on upgrade get the same behavior, and no saved review needs conversion.",
-        "work": 3
-      }
-    ],
-    "id": "a64e899d-b0d7-40aa-9075-c8ce7cb5f406",
-    "status": "blocked"
+    "findings": [],
+    "id": "7720bccf-cbee-49f5-903a-cc4474a6e04c",
+    "status": "clean"
   },
   "round": 3,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-26T17:28:07.107327+00:00",
@@ -123,6 +112,10 @@
     },
     {
       "at": "2026-11-26T18:09:53.840443+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T18:12:15.189309+00:00",
       "step": "review"
     }
   ],
