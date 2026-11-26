@@ -282,17 +282,18 @@ def own_version_only(path: Path, base: str) -> bool:
 def skip_browser(top: Path, command: str) -> str:
     """On Windows a builder's own run leaves out separate browser-test steps and says so once."""
     # FORGE_OS lets a test pick the platform; ponytail: no user-facing setting.
-    if os.environ.get("FORGE_OS", os.name) != "nt":
+    if (os.environ.get("FORGE_OS", os.name) != "nt" or command == init.NODE_TEST
+            or any(match["operator"] != "&&" for match in quicktest._operators(command))):
         return command
     parts = quicktest.test_parts(top, command)
-    skipped = [part for _, part, _ in parts if quicktest.browser_step(top, part)]
+    skipped = [part for kind, part, _ in parts if kind == "browser"]
     if not skipped:
         return command
     if not os.environ.get("FORGE_BROWSER_SKIPPED"):
         os.environ["FORGE_BROWSER_SKIPPED"] = "1"
         print(f"On Windows this run skips the browser tests ({', '.join(skipped)}). The pull request check, "
               "the final check and the full test run still run them.", flush=True)
-    return " && ".join(part for _, part, _ in parts if part not in skipped) or "exit 0"
+    return " && ".join(part for kind, part, _ in parts if kind != "browser") or "exit 0"
 
 
 def close_tests(base: str) -> int:
@@ -816,7 +817,7 @@ def pytest_tests(base: str, command: str, entry: dict | None = None) -> int:
     mixed = any(kind in ("vitest", "jest") for kind, _, _ in parts)
     if mixed:
         command = " && ".join(part for kind, part, _ in parts
-                              if kind not in ("vitest", "jest", "node-install", "node-check"))
+                              if kind not in ("vitest", "jest", "node-install", "node-check", "browser"))
         parts = quicktest.test_parts(Path.cwd(), command)
     environment = dict(os.environ)
     worker = environment.pop("FORGE_WORKER_TESTS", None) == "1"

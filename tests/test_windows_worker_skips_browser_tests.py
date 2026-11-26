@@ -62,7 +62,7 @@ PROGRAMS = ("npm", "npx", "corepack", "playwright", "cypress", "vitest", "unit-t
             "npm-run-all", "full-suite")
 SCRIPTS = {
     "test": "playwright test default",
-    "test:browser": "playwright test script",
+    "test:browser": 'playwright test script --grep "login|signup"',
     "test:e2e": "cypress run script",
     "lint:playwright": "lint-tests playwright",
     "all": "npm-run-all test:unit test:playwright",
@@ -71,7 +71,7 @@ SCRIPTS = {
 # (step in the test setting, lines it logs when it runs, does a Windows builder run skip it?)
 STEPS = [
     ("unit-tests one", ["unit-tests one"], False),
-    ("playwright test direct", ["playwright test direct"], True),
+    ('playwright test direct --grep "a&&b"', ["playwright test direct"], True),
     ("cypress run direct", ["cypress run direct"], True),
     ("npx playwright test npx", ["playwright test npx"], True),
     # npm launcher options that take a value are not programs.
@@ -110,7 +110,7 @@ CASES = {
         ran=["npm ci", "unit-tests pre", "playwright test default", "lint-tests post"], said=""),
     # fast_test is the command a builder's run uses; test would run full-suite.
     "adopted-repo": dict(adopted=True, test="full-suite", fast_test=ALL, ran=KEPT, said=SKIPPED),
-    "default-node-setting": dict(test=NODE_SETTING, ran=["npm ci"], said=said("npm test")),
+    "default-node-setting": dict(test=NODE_SETTING, ran=["npm ci", "playwright test default"], said=""),
     "only-browser-steps": dict(test="playwright test one && cypress run two", ran=[],
                                said=said("playwright test one", "cypress run two")),
     # pytest runs through Forge's picker or its wrapper; its own marker comes from tests/test_unit.py.
