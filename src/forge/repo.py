@@ -771,16 +771,16 @@ def ready_path(item: str, top: Path) -> Path:
 
 
 def models(cfg: dict[str, Any], kind: str, family: str) -> dict[str, str]:
-    """One kind's entry for a family ("codex" or "claude") from forge.toml's [models] table: its
-    own entry, or a single entry whose model is that family's; Claude plan reads default to
-    Sonnet at high effort, and other missing entries return {}."""
+    """One kind's entry for a family from forge.toml's [models] table: its own entry or a single
+    entry for that family. Explore and Claude plan reads have their own defaults."""
     chosen = cfg.get("models", {}).get(kind) or {}
+    fallback = EXPLORE_DEFAULTS[family] if kind == "explore" else {}
     if "model" not in chosen:
         return chosen.get(family) or (CLAUDE_GRILL_DEFAULT
-                                     if kind == "grill" and family == "claude" else {})
+                                     if kind == "grill" and family == "claude" else fallback)
     model = chosen["model"]
     owner = "codex" if model.startswith("gpt") else "antigravity" if model.startswith("gemini") else "claude"
-    return chosen if owner == family else {}
+    return chosen if owner == family else fallback
 
 
 def user_facing(cfg: dict[str, Any], row: dict[str, str]) -> bool:
@@ -791,7 +791,7 @@ def user_facing(cfg: dict[str, Any], row: dict[str, str]) -> bool:
 
 def worker_models(cfg: dict[str, Any], kind: str, family: str) -> dict[str, str]:
     """A worker's models for this kind: forge.toml's entry for the family, else Forge's default."""
-    return models(cfg, kind, family) or (EXPLORE_DEFAULTS if kind == "explore" else WORKER_DEFAULTS)[family]
+    return models(cfg, kind, family) or WORKER_DEFAULTS[family]
 
 
 def subagent_budget(cfg: dict[str, Any], kind: str) -> dict[str, str]:
@@ -842,7 +842,8 @@ def setting_sources(cfg: dict[str, Any], kind: str, design: bool) -> str:
 def model_source(cfg: dict[str, Any], kind: str, family: str) -> str:
     """Where a worker's models for this kind come from. A local [models.<kind>] replaces the whole
     kind, so without an entry for this worker Forge's built-in default applies, as forge work does."""
-    if not models(cfg, kind, family):
+    entry = models(cfg, kind, family)
+    if not entry or (kind == "explore" and entry is EXPLORE_DEFAULTS[family]):
         return "built-in default"
     return LOCAL if kind in cfg.get("local", {}).get("models", {}) else "forge.toml"
 

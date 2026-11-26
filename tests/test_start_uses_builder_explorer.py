@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import ROOT
+from conftest import ROOT, Repo
 from test_antigravity_build import install_agy
 from test_codex_worker import _sent
 from test_tools_session_hold import Session
@@ -15,11 +15,11 @@ REPLY = "Lane: discovery\nReason: The problem is unclear.\nQuestion: What should
 IDEA = "Improve the welcome"
 
 
-def _settings(repo, config, remote="origin"):
+def _settings(repo, config):
     repo.write("forge.toml", config)
     repo.git("add", "forge.toml")
     repo.git("commit", "-qm", "Choose who builds")
-    repo.git("push", "-q", remote, "main")
+    repo.git("push", "-q", "origin", "main")
 
 
 @pytest.fixture
@@ -67,14 +67,16 @@ def start(repo, monkeypatch, tmp_path, family):
     ("antigravity", "gemini-3.8-flash", "high", True),
 ])
 def test_1_start_uses_the_builder_family_and_explore_models(
-        repo, config, provider_log, start, family, model, effort, custom):
+        repo, tmp_path, config, provider_log, start, family, model, effort, custom):
     # Leave a checkout and its remote-tracking ref behind a teammate's published settings.
     # The old Claude choice would match the session and incorrectly return a native offer.
     if family == "codex":
         _settings(repo, config.replace('workers = "codex"', 'workers = "claude"'))
         repo.git("branch", "fix/stale-settings")
         origin = repo.git("remote", "get-url", "origin")
-        _settings(repo, config, remote=origin)
+        teammate = tmp_path / "teammate"
+        repo.git("clone", "-q", origin, str(teammate))
+        _settings(Repo(teammate, repo.bin), config)
         repo.git("switch", "-q", "fix/stale-settings")
         assert 'workers = "claude"' in repo.git("show", "origin/main:forge.toml")
     else:

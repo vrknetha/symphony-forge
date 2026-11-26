@@ -81,10 +81,10 @@ def test_2_sync_writes_explorer_from_explore_for_both_hosts(repo):
     assert _settings(repo.path, "explorer") == (("gpt-6.1-sol", "high"), ("haiku", "high"))
 
 
-def test_4_earlier_adopted_repo_without_explore_gets_defaults_on_upgrade(
+def test_4_earlier_adopted_repo_without_explore_keeps_lite_after_upgrade(
         unsynced_up):
-    # Upgrade starts from the text fixture's actual earlier-adoption files, rather than a
-    # current sync given an old version string. The new defaults leave lite settings intact.
+    # Upgrade uses actual earlier-adoption files. It preserves the saved lite
+    # settings and gives the explorer its own defaults. The test name keeps its CI timing.
     up = unsynced_up
     _repo_adopted_on_the_previous_release(up)
     models = tomllib.loads((up.folder / "forge.toml").read_text("utf-8"))["models"]
