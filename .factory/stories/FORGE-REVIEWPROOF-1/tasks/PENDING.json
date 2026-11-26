@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-REVIEWPROOF-1-PENDING",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-26T19:42:30.850695+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T19:42:43.792719+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "860ff132c1df6a676901e2a1b8f7e64717de35b3",
+    "keys": {},
+    "round": null
+  },
+  "worker": "antigravity"
 }
