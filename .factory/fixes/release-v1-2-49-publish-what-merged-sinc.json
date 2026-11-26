@@ -1,4 +1,11 @@
 {
+  "amendments": [
+    {
+      "at": "2026-11-26T04:04:04.432058+00:00",
+      "because": "The builder needs the forge.toml version pin named; the v1.2.48 release fix changed it the same way",
+      "done_when": "Every version reference that names the current release says v1.2.49 (as the v1.2.48 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.49.md exists, the release version tests and the release notes tests pass, and nothing else changes"
+    }
+  ],
   "base": "3077f74617385ef306abbc14db51fe269b440b89",
   "branch": "fix/release-v1-2-49-publish-what-merged-sinc",
   "chat": {
@@ -8,7 +15,7 @@
     "head": null,
     "start": "99fdfd169b7786e5f7e2a657af57ae821f154dd2"
   },
-  "done_when": "Every version reference that names the current release says v1.2.49 (as the v1.2.48 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.49.md exists, the release version tests and the release notes tests pass, and nothing else changes",
+  "done_when": "Every version reference that names the current release says v1.2.49, including the forge.toml version pin and uv.lock (as the v1.2.48 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.49.md exists, the release version tests and the release notes tests pass, and nothing else changes",
   "fix_kind": "mechanical",
   "kind": "fix",
   "round": 1,
