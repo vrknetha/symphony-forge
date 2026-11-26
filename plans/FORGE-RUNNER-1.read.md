@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-26T12:45:40.880120+00:00
-seconds: 1080.682
-read_hash: 4ee48ba9c9eb02e9ac11744283dfd1b58ba11e5d
-round: 1
+read_at: 2026-11-26T13:21:04.995277+00:00
+seconds: 805.12
+read_hash: 96110c348603236d850a6ecf6bba7e5f0b117c33
+round: 2
 passed: no
-doc_seen: 4ee48ba9c9eb02e9ac11744283dfd1b58ba11e5d
+doc_seen: 96110c348603236d850a6ecf6bba7e5f0b117c33
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: a921304a2472b6d87a85165e85f339b1bce18c50
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a217d3-720e-7080-9989-1f8128bcbc7e
 session:
-loop_choice:
-loop_reason:
+loop_choice: more
+loop_reason: Owner chose one more round for notes 16, 17, 18, 21
 ---
 # Cold read notes
 
@@ -141,3 +141,45 @@ Only a genuine trade-off goes to the human, as a question with options.
     Disposition: cut The plan pins a seam: RUNNER's first commit adds `stops.py` stubs and all call sites in `runner.py` and `land.py`, plus one crossing test; RUNNER owns every guide file; STOPS edits only `stops.py`, `machine.py` and `brief.md`, and waits through After.
 
 Not checked: runtime tests. `forge next` could not finish because the read-only sandbox blocked its lock.
+
+## Round 2
+
+16. Blocking: An owner’s stop can be cleared or bypassed by other merge commands.  
+    Raise: Security  
+    Case: normal use - the owner stops one item, then the coordinator runs `forge land --all` for the remaining work.  
+    The queue checks the item’s existing state, not the new stop file, and its children lack `FORGE_RUNNER` ([land.py](/src/forge/land.py:516), [land.py](/src/forge/land.py:958)). Under the new rule, a child therefore lifts the stop as if the owner had continued that item. `forge merge` also has no specified stop check.  
+    Gain 5, Work 2, Harm 4
+
+17. Advisory: A stopped item cannot be continued while its old check wait holds the land lock.  
+    Raise: Plan gap  
+    Case: normal use - the owner stops an item during a long check wait, then asks to continue it.  
+    The plan leaves the old land process alive and holding the lock until checks finish. It also says a second land must refuse without changing anything, although a hand-run land is the way to lift the stop ([plan](/plans/FORGE-RUNNER-1.md:54)). Checks can remain queued indefinitely ([checks.py](/src/forge/checks.py:353)).  
+    Gain 3, Work 2, Harm 3
+
+18. Advisory: A short GitHub outage bypasses the new retry rule.  
+    Raise: Functional  
+    Case: normal use - GitHub remains unavailable through its built-in read retries, then recovers.  
+    The read becomes a refusal ([github.py](/src/forge/github.py:233)). Land prints `needs you` for that refusal ([land.py](/src/forge/land.py:196)), so the plan parks it immediately instead of applying its promised 10- and 30-second retries.  
+    Gain 4, Work 2, Harm 2
+
+19. Advisory: Unproven: item 4: a human-merge pull request sends its link in a notice.  
+    Raise: Test  
+    Case: normal use - the repo uses the default human-merge setting.  
+    The human-merge test advances the stubbed merge without checking a notice, while the notifier test checks only a builder question ([plan](/plans/FORGE-RUNNER-1.md:59)). Both can pass if no pull-request notice is sent.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+20. Advisory: The machine-wide runner identity has no specified writer.  
+    Raise: Plan gap  
+    Case: normal use - Forge is used again while a runner is already active.  
+    Wake reads a machine-wide `runner.json` to identify that runner, but the plan assigns no task to write its process identity. The only specified record is a different, repo-local file for stops ([plan](/plans/FORGE-RUNNER-1.md:52)). Without the identity, wake cannot signal the active runner.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+21. Advisory: A settings fix cannot complete unattended under the stated worker rule.  
+    Raise: Functional  
+    Case: normal use - a settings fix is started with `forge.toml` in its Done-when and no chat remains open.  
+    Naming the file protects the edit, but the worker brief still tells builders never to edit it ([worker.py](/src/forge/worker.py:42)). The planned settings flow still needs the coordinator to make the change, contrary to the unattended fix path.  
+    Gain 3, Work 2, Harm 3
+
+Not checked: runtime tests. `forge next` could not acquire its lock in the read-only sandbox.
