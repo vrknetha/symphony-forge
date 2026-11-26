@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "key": "bug\ttests/test_board_item_keyboard_refresh.py\tThe Linux pull request check saw the board test's Git fetch exit with status 1 and the exact cause still needs evidence.",
+      "kind": "bug",
+      "path": "tests/test_board_item_keyboard_refresh.py",
+      "line": 49,
+      "text": "The Linux pull request check saw the board test's Git fetch exit with status 1 and the exact cause still needs evidence.",
+      "from": "worker",
+      "item": "FORGE-SLOWTEST-1/QUICK",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "bug\ttests/test_combined_script_quick_test.py\tTest: The guide tells the agent how to write, check and propose the quicker command\tFORGE-SLOWTEST-1/QUICK",
       "kind": "bug",
       "path": "tests/test_combined_script_quick_test.py",
