@@ -28,8 +28,13 @@ def test_1_antigravity_review_names_a_refused_tool_when_no_answer(env, repo, mon
         return [row for row in records(repo, "events.jsonl") if row["item"] == item
                 and row["event"] == "run end" and row["kind"] == "review" and row["outcome"] == "failed"]
 
-    for index, refusal in enumerate(("request", "update"), 1):
+    for index, (refusal, reply) in enumerate((
+        ("request", ""),
+        ("update", ""),
+        ("request", json.dumps({"findings": []})),
+    ), 1):
         monkeypatch.setenv("STUB_AGY_REVIEW_PERMISSION", refusal)
+        monkeypatch.setenv("STUB_AGY_REVIEW", reply)
         closed = env.close(item)
         output = closed.stdout + closed.stderr
         assert closed.returncode == 1, output

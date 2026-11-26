@@ -250,10 +250,11 @@ def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
             # report and validate its completion and findings as it normally does.
             for text in (*reversed(result["messages"]), result["text"]):
                 try:
-                    extract_json(text)
+                    completion = extract_json(text).get("review_completion")
                 except (SystemExit, ValueError, RecursionError):
                     continue
-                return text
+                if completion in ("complete", "incomplete"):
+                    return text
         raise SystemExit(f'{REVIEW_TOOL_REFUSED} "{tool}".')
     return result["text"]
 
@@ -407,8 +408,8 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                                 for option in data["options"]
                             )):
                                 tool = data["toolCall"]
-                                refused_tool = (tool.get("title") or tool.get("name") or tool.get("kind")
-                                                or "unknown tool")
+                                refused_tool = (tool.get("title") or tool_names.get(tool.get("toolCallId"))
+                                                or tool.get("name") or tool.get("kind") or "unknown tool")
                                 message_starts.append(len(chunks))
                             answer = {"result": {"outcome": outcome}}
                         else:
