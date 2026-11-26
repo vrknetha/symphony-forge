@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -26,7 +27,8 @@ def bash(*args, **kwargs):
 
 
 def jobs(workflow):
-    return dict(re.findall(r"^  ([\w-]+):\n(.*?)(?=^  [\w-]+:\n|\Z)", workflow, re.M | re.S))
+    job_section = workflow.split("\njobs:\n", 1)[1]
+    return dict(re.findall(r"^  ([\w-]+):\n(.*?)(?=^  [\w-]+:\n|\Z)", job_section, re.M | re.S))
 
 
 def gate_passes(gate, result):
@@ -87,6 +89,16 @@ def test_1_one_tests_check_passes_only_when_every_group_passes(repo, gh, tmp_pat
     assert synced.returncode == 0, synced.stderr
     workflow = (client / ".github/workflows/forge.yml").read_text(encoding="utf-8")
     found = jobs(workflow)
+    if kind == "source":
+        settings = tomllib.loads((client / "forge.toml").read_text(encoding="utf-8"))
+        checks = settings.get("checks", [])
+        place = settings.get("test_place", "ci" if any(
+            check != "forge-pr-check" for check in checks) else "local")
+        if place == "local":
+            assert set(found) == {"forge-pr-check"}
+            committed = jobs((ROOT / ".github/workflows/forge.yml").read_text(encoding="utf-8"))
+            assert found == committed
+            return
     groups = found["tests"]
     count = 1 if kind == "new" else 6
     if count == 1:
@@ -126,8 +138,11 @@ def test_2_small_split_suite_passes_without_hiding_errors(repo):
     repo.git("switch", "-q", "-c", "fix/small-split-suite")
     repo.write("requirements.txt", "pytest-split==0.11.0\n")
     repo.write("tests/test_small.py", "def test_small():\n    assert True\n")
-    repo.write("forge.toml", re.sub(r'^test = .*$', 'test = "pytest tests -q"',
-                                  (ROOT / "forge.toml").read_text(encoding="utf-8"), flags=re.M))
+    settings = (ROOT / "forge.toml").read_text(encoding="utf-8")
+    settings = re.sub(r'^test = .*$', 'test = "pytest tests -q"', settings, flags=re.M)
+    settings = re.sub(r'^checks = .*$', 'checks = ["tests", "forge-pr-check"]', settings, flags=re.M)
+    settings = re.sub(r'^test_place = .*$', 'test_place = "ci"', settings, flags=re.M)
+    repo.write("forge.toml", settings)
     repo.git("add", "-A")
     repo.git("commit", "-qm", "Add a small split test suite")
     synced = repo.forge("sync")
@@ -169,10 +184,13 @@ def test_2_small_split_suite_passes_without_hiding_errors(repo):
 @pytest.mark.parametrize("command", ["make pytest", "uv run make pytest", "tox -e pytest"])
 def test_4_a_command_that_wraps_pytest_uses_change_tests_without_splitting(repo, command):
     # The wrapper is run by Forge's picker and is not assigned pytest-split options.
-    repo.write("forge.toml", (ROOT / "forge.toml").read_text(encoding="utf-8").replace(
+    settings = (ROOT / "forge.toml").read_text(encoding="utf-8").replace(
         'repo = "forge-source"\n', "").replace(
         re.search(r"^test = .*$", (ROOT / "forge.toml").read_text(encoding="utf-8"), re.M)[0],
-        f'test = "{command}"'))
+        f'test = "{command}"')
+    settings = re.sub(r'^checks = .*$', 'checks = ["tests", "forge-pr-check"]', settings, flags=re.M)
+    settings = re.sub(r'^test_place = .*$', 'test_place = "ci"', settings, flags=re.M)
+    repo.write("forge.toml", settings)
     shutil.copy(ROOT / "pyproject.toml", repo.path / "pyproject.toml")
     repo.git("add", "-A")
     repo.git("commit", "-q", "-m", "A wrapped pytest command")
