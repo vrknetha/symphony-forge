@@ -1,0 +1,41 @@
+{
+  "approval": {
+    "at": "2026-11-25T17:24:35.891942+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01Hc61ANNbUyFvNMyzhGk1sK",
+    "hash": "1d2523ee5c1101e40a204e7784d0455562f2110bb7cf3cbe44ed938e3dc615f3",
+    "round": 4,
+    "runtime": "claude",
+    "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
+  },
+  "doc": "plans/FORGE-SLOWTEST-1.md",
+  "status": "approved",
+  "steps": [
+    {
+      "at": "2026-11-11T09:47:00.828714+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-11T10:33:21.850966+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-11T10:46:16.939487+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-11T10:59:24.584700+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T17:21:49.617900+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T17:24:35.892136+00:00",
+      "step": "approved"
+    }
+  ],
+  "title": "Faster tests for repos with one combined test command",
+  "touches": 1
+}
