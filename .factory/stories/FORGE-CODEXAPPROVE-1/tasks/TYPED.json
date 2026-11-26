@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-CODEXAPPROVE-1-TYPED",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-26T13:08:52.641978+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T13:09:10.385830+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "b572a3a2ba4934f3f06694d3771896bbe3964f27",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
