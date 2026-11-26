@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-25T17:40:00.067319+00:00
-seconds: 803.176
-read_hash: 74fbad5bbf971458cd3bfc41467dbab26ee6a5a8
-round: 3
+read_at: 2026-11-26T01:29:06.092483+00:00
+seconds: 384.887
+read_hash: 7bd05c04abceb50b56ce9964a0682fdd45b5ab96
+round: 4
 passed: no
-doc_seen: 74fbad5bbf971458cd3bfc41467dbab26ee6a5a8
+doc_seen: 7bd05c04abceb50b56ce9964a0682fdd45b5ab96
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 0d28fcca7ff6b7d573b7e06c17fdd23147db3533
+notes_seen: 9c3df890107385b5163e25987b766d37f2467d4a
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a213a4-5b89-7bf0-8374-457a800a9e24
 session:
 loop_choice: accept
-loop_reason: Owner accepted round 3; the coordinator writes the 5 fixes into the builder details
+loop_reason: Same owner choice as round 3: accept; the two small fixes (create the note first with forge hook handoff; no startup line when FORGE_WORKER=1) go to the builder as its first note, so the doc does not change again
 ---
 # Cold read notes
 
@@ -198,3 +198,19 @@ Automatic approval review rejected `forge next` because it requires approval and
     The live hook was not run during this read.
     Gain 3, Work 3, Harm 3
    Disposition: keep - below the bar (follow-up)
+
+## Round 4
+
+25. Advisory: The first background job can leave a handoff note with no date.
+    Raise: Plan gap.
+    In a new repo before the first compaction, the [plan](/plans/FORGE-CHATHANDOVER-1.md:46) tells the coordinator to add the job’s log path to the note, but gives no step to create the note if it does not exist. The [handoff hook](/src/forge/nextstep.py:208) creates the dated heading; a note created with only a decisions section has no date for the next chat’s startup line. The planned startup test creates the note with that hook first.
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Same owner choice as round 3: accept; the two small fixes (create the note first with forge hook handoff; no startup line when FORGE_WORKER=1) go to the builder as its first note, so the doc does not change again
+
+26. Advisory: The startup instruction also directs workers to the coordinator’s handoff.
+    Raise: Plan gap.
+    [SessionStart](/src/forge/githooks.py:20) runs the context hook for worker sessions too. The [plan](/plans/FORGE-CHATHANDOVER-1.md:47) tells every session with a note to read it first, including its unrelated items and next commands, while the [worker brief](/src/forge/worker.py:60) tells workers to start from their assigned files and not choose work from `forge next`.
+    Adds work: exclude worker sessions from the coordinator’s startup instruction; F 3 x H 2 = 6; 2 x C = 2.
+    Live worker hook delivery was not tested.
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Same owner choice as round 3: accept; the two small fixes (create the note first with forge hook handoff; no startup line when FORGE_WORKER=1) go to the builder as its first note, so the doc does not change again
