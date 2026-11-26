@@ -422,11 +422,10 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     if serious and "/" not in item:
         blocked_rounds = sum(bool(review.blocking(old)) for old in
                              review._history(top, item, review_ref, result, state=state))  # pyright: ignore[reportPrivateUsage]
-    if (serious and blocked_rounds >= cfg["task_review_rounds"] and
-            not any(score.holds(f, "P0") for _, f in serious) and (not fresh or not state.get("stop"))):
-        stopped = {"file": serious[0][1]["file"], "at": repo.now(),
-                   "wait_id": repo.record_event(top, item, "owner wait start", reason="review loop")}
-        state["stop"] = stopped
+    if serious and blocked_rounds >= cfg["task_review_rounds"]:
+        stopped, granted = owner_choices.review_limit(top, item, state, result, serious,
+                                                     fresh=fresh, auto_more=cfg["auto_more_round"])
+        refreshed = refreshed or granted
     noted = (spotted.own_path(item),) if not switch and spotted.record(
         top, item, state, review_ref, result) else ()
     if not fresh or dismissals or refreshed or stopped:
