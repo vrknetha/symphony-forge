@@ -14,7 +14,7 @@
       "gain": 4,
       "harm": 2,
       "line": 207,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -37,23 +37,13 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "a82c2ac48147a8cb7eb01091dc2c7890cbc5d1b14d37b82c91e39ee3f5d8c3e1",
-    "changed": "20114d3fd6de3cf275dd16707c97216980cfb18b8b2829d77a6734a870f4b18f",
-    "commit": "6e0a6f7ce03f8f570f5e2179fe01c335ec4442d9",
+    "branch_diff": "63c7a6418d7c0b2d8a90f840de6c1da26751f972b45263b6cc7d5a5b2fa3487d",
+    "changed": "85314b9d52c547b7f87fb1d0dc8adabebf6ccced63ac6061551e0426c01127bd",
+    "commit": "d165716b1371d986eac5a913b6582458cfcfcd6f",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 4, Work 1, Harm 2\nRaise: Gate\nCase: normal use - the full test suite checks a resumed Codex cold read.\nRemoving the effort from the resume config breaks the existing assertion in tests/test_codex_reader.py:127-130. That test resumes after failed and discarded reads, then expects the stub's answer to include model_reasoning_effort. The stub at tests/stubs/codex-app-server:50-52 and 177-191 echoes the resume config, which now lacks that field, so the test fails. Update the test to check the effort on the turn while retaining its cold-read assertions.",
-        "file": "src/forge/codex_turn.py",
-        "gain": 4,
-        "harm": 2,
-        "line": 207,
-        "priority": "P1",
-        "title": "Gate: test_10_the_cold_read_runs_on_the_other_family",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - the coordinator reports the post-release comparison.\nThe proof list maps the measurement criterion to this test, but it checks only the recorded efforts; its stand-in provides no token usage, and the assertions do not check a before-and-after comparison by item kind or a report. The test therefore passes even if the promised measurement and report never happen. Add separate proof for the scheduled comparison and report.",
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - the coordinator compares repair rounds after release.\nThe item 1 proof still checks only the recorded effort. Its resuming stand-in emits no token-usage notifications (tests/test_codex_resume.py:127\u2013152), and the test checks neither a before-and-after comparison by item kind nor a report. The new proof-list note schedules the coordinator's work but provides no separate proof that the comparison and report happen. This test therefore passes even if the promised measurement and report never happen.",
         "file": "tests/test_effort_change_keeps_conversation.py",
         "gain": 3,
         "harm": 3,
@@ -63,11 +53,11 @@
         "work": 2
       }
     ],
-    "id": "fa5a5cab-cdd9-48f1-8356-53d18eaf0e08",
+    "id": "9b08a8f2-3cb1-43b6-882b-ea3937074132",
     "status": "blocked"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-26T14:34:42.642987+00:00",
@@ -86,8 +76,22 @@
       "at": "2026-11-26T14:48:28.860223+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T14:55:16.193544+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T14:55:16.193687+00:00",
+      "round": 2,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-26T14:55:16.193687+00:00",
+    "file": "tests/test_effort_change_keeps_conversation.py",
+    "wait_id": "bba02368-3116-4648-8e7f-61ff80d9a901"
+  },
   "stuck": {
     "close": "6d576201-2102-4dc1-9ad3-7b4451f54a7d",
     "head": "3ae1d8922634ad9ab862d5496f497883e6861e60",
