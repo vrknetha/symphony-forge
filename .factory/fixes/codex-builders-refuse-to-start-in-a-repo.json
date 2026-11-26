@@ -2,11 +2,17 @@
   "base": "b453557e7a8ceeb1dd36fe63dbe02e435b8b44ad",
   "branch": "fix/codex-builders-refuse-to-start-in-a-repo",
   "done_when": "A Codex builder starts in a repo whose .codex/hooks.json has Forge's userPromptSubmit approval hook, with no refusal and no owner step, and a project hook that is not Forge's still stops the turn",
+  "drop": {
+    "at": "2026-11-26T17:33:25.702309+00:00",
+    "because": "Not a code bug: the current code matches Forge's userPromptSubmit hook; the refusal came from the older installed v1.2.49",
+    "by": "vrknetha <vrknetha@gmail.com> 1795714405 +0530",
+    "status": "working"
+  },
   "fix_kind": "backend",
   "fix_kind_explicit": true,
   "kind": "fix",
   "round": 1,
-  "status": "working",
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-26T17:30:20.297308+00:00",
@@ -16,6 +22,10 @@
       "at": "2026-11-26T17:31:10.954332+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T17:33:25.702658+00:00",
+      "step": "drop"
     }
   ],
   "stuck": {
