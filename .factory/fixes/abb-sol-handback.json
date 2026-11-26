@@ -1,4 +1,11 @@
 {
+  "amendments": [
+    {
+      "at": "2026-11-26T11:43:47.558668+00:00",
+      "because": "Owner asked for a Neon review test on this Terra-reviewed branch (26 Nov)",
+      "done_when": "A handback whose round number is not the open round names the open round and prints the exact handback command; with no open round it prints the next step."
+    }
+  ],
   "base": "7ff2f6f535b07d9f05ee9d0bd2e90999b627b93b",
   "branch": "fix/abb-sol-handback",
   "chat": {
@@ -8,7 +15,7 @@
     "head": null,
     "start": "64db7e355cf0c1810763a3cbdfaf6104e1c9a9f1"
   },
-  "done_when": "A handback whose round number is not the open round names the open round and prints the exact handback command; with no open round it prints the next step.",
+  "done_when": "A handback whose round number is not the open round names the open round and prints the exact handback command; with no open round it prints the next step. (Trial only: forge.toml sets reviews = \"antigravity\" for one review and is restored before merge.)",
   "fix_kind": "backend",
   "kind": "fix",
   "known": [
