@@ -475,8 +475,8 @@ def failed_schedules(top: Path) -> list[Item]:
                 continue
             if full and file_of(run) == full:  # only scheduled and manual runs count, and only finished ones
                 run = finished_full_run(top, run) if run.get("event", "schedule") in ways else None
-                if run is None:
-                    continue
+            if run is None or run.get("conclusion") not in ("success", "failure"):
+                continue
             latest.setdefault(run.get("workflow_id"), run)
         def failure(run: Item) -> Item:
             def read(_now: datetime) -> Item | None:
