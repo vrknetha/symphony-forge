@@ -1,0 +1,33 @@
+{
+  "approval": {
+    "at": "2026-11-25T07:18:28.073814+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01Y9hRcYkHuVP2TocnosjDWH",
+    "hash": "3103f31bc91f1cbcbdb4673804ce7346fb0d8c0d8e91eb4c48399a4ac8566d32",
+    "round": 2,
+    "runtime": "claude",
+    "session": "defc2e85-5a69-4ec7-8d30-1a66f4aa5ff6"
+  },
+  "doc": "plans/FORGE-TIDYUP-1.md",
+  "status": "approved",
+  "steps": [
+    {
+      "at": "2026-11-25T06:56:23.146716+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T07:10:00.980272+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T07:15:24.785666+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T07:18:28.073984+00:00",
+      "step": "approved"
+    }
+  ],
+  "title": "Finished work is cleaned up every time, and leftover work is listed with one next step",
+  "touches": 1
+}

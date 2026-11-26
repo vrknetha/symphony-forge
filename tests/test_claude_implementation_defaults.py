@@ -67,7 +67,7 @@ def test_2_new_repo_keeps_model_pins_on_sync_and_gets_opt_in_notes(repo, gh, tmp
         assert "Existing model entries stay unchanged" in notes
 
 
-def test_3_plan_read_with_no_claude_entry_uses_builtin_opus_high(repo, tmp_path, monkeypatch):
+def test_3_plan_read_with_no_claude_entry_uses_builtin_sonnet_high(repo, tmp_path, monkeypatch):
     setup(repo)
     shop = new_story(repo, "SHOP")
     toml = shop / "forge.toml"
@@ -85,13 +85,13 @@ def test_3_plan_read_with_no_claude_entry_uses_builtin_opus_high(repo, tmp_path,
         # The same-tool fallback uses a real session reader, with the same built-in defaults.
         offered = json.loads(result.stdout)
         assert (offered["role"], offered["tool"], offered["model"], offered["effort"]) == (
-            "reader", "claude", "claude-opus-5-5", "high")
+            "reader", "claude", "claude-sonnet-5-5", "high")
         assert Path(offered["checkout"]).resolve() == shop.resolve()
         assert calls(log) == []
         finished = owner.forge("handback", "SHOP", "--round", str(offered["round"]),
                                "--subagent", "default-reader", "--text", "No findings.")
         assert finished.returncode == 0, finished.stdout + finished.stderr
-        assert "reader: claude (claude-opus-5-5), a subagent of this Claude Code session" in (
+        assert "reader: claude (claude-sonnet-5-5), a subagent of this Claude Code session" in (
             (shop / "plans/SHOP.read.md").read_text("utf-8"))
     finally:
         owner.close()
