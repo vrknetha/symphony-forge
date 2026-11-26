@@ -12,8 +12,19 @@
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
+  "known": [],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "7bb5a238c0f45e4a8636080e6aa09d02996a152dc53c9e0c52ddfe6d7b1a3a8a",
+    "changed": "4535717a55ce75d54e5c5dba549d2804a2fa248540cbee524b7c2a5822db0bc0",
+    "commit": "a989814a27092e067f081d47b49548c16bdf3f77",
+    "dismissals": [],
+    "findings": [],
+    "id": "5b5eb3b0-9aab-49b3-af9f-68fb006c143a",
+    "status": "clean"
+  },
   "round": 1,
-  "status": "working",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-26T16:10:21.796957+00:00",
@@ -23,6 +34,10 @@
       "at": "2026-11-26T16:10:48.276183+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T16:16:52.509575+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
