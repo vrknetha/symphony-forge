@@ -24,9 +24,11 @@ STARTERS = {"starter_smoke", "python_starter_smoke"}
 
 @pytest.mark.platform
 def test_4_own_repo_selects_smoke_areas_and_runs_related_tests_once(env, monkeypatch):
-    # Contract: smoke selection keeps its rows and close runs only selected tests.
-    # A queued GitHub test check must not block local mode when it is not configured.
-    # The existing suite owns app behavior and dispatch, not these selection rules.
+    # Boundary contracts: wrong area rows waste CI or miss smoke coverage, skipped
+    # dependencies lose nightly proof, and close runs this fixture's changed test
+    # once via the route forge.toml picks (CI wait without local pytest, or local
+    # pytest without sibling tests). Existing tests own live app behavior,
+    # dispatch, .forge/always-tests.txt, and pre-push check waits. No new seam.
     monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
     repo = env.repo
     areas = env.tmp / "areas"
@@ -159,12 +161,9 @@ def record_run(request):
         name != "forge-pr-check" for name in settings["checks"]) else "local")
     local_tests = test_place == "local"
     ci_tests = not local_tests and "tests" in settings["checks"]
-    checks = [run(name, None, "queued") if name == "tests" and ci_tests else run(name)
-              for name in settings["checks"]]
-    if "tests" not in settings["checks"]:
-        checks.append(run("tests", None, "queued"))
-    env.checks(checks)
     if ci_tests:
+        env.checks([run(name, None, "queued") if name == "tests" else run(name)
+                    for name in settings["checks"]])
         waiting = env.close(item)
         assert waiting.returncode != 0, waiting.stdout + waiting.stderr
         assert "tests is still queued" in waiting.stderr, waiting.stdout + waiting.stderr
@@ -175,7 +174,7 @@ def record_run(request):
         ci = repo.forge("test", "--change", cwd=where, timeout=120)
         assert ci.returncode == 0, ci.stdout + ci.stderr
         assert log.read_text("utf-8").splitlines() == ["test_related"]
-        env.checks([run(name) for name in settings["checks"]])
+    env.checks([run(name) for name in settings["checks"]])
     closed = env.close(item)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     assert log.read_text("utf-8").splitlines() == ["test_related"]
