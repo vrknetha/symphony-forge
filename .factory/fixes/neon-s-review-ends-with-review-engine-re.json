@@ -88,7 +88,7 @@
     "id": "c03c32e2-fcd9-4563-a375-9e95018d7fdb",
     "status": "blocked"
   },
-  "round": 3,
+  "round": 4,
   "status": "fixing",
   "steps": [
     {
@@ -145,6 +145,11 @@
       "choice": "more",
       "round": 3,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-26T12:43:02.091820+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
   "stop": {
@@ -157,10 +162,10 @@
     "worker_round": 3
   },
   "stuck": {
-    "close": "2ff9a5f5-6059-4460-94ab-51c7b32fceb2",
-    "head": "5651db1135012a2932fc591b95fa665528a0383b",
+    "close": "3ec74efe-6fa0-4e99-a9e1-efa739368cbe",
+    "head": "ca90c27525d22eb65866340f541f575557d2fff6",
     "keys": {},
-    "round": 2
+    "round": 3
   },
   "why": "Neon's review ends with \"review engine returned empty output\" because a refused tool call cancels the turn, and the empty answer is accepted as a completed review, so close stops after two tries.",
   "worker": "codex"
