@@ -379,9 +379,9 @@ def test(args) -> int:
 
     top = Path.cwd().resolve()
     command = repo.grouped(top, tomllib.loads(Path("forge.toml").read_text("utf-8"))["test"])
-    # A picker launched by close or bare forge test keeps that command's one place.
+    # The picker can start before its parent records the spawned process.
     parent = os.environ.get("FORGE_TEST_LANE")
-    if parent and any(run["id"] == parent and run["kind"] == "test" and run.get("started_at")
+    if parent and any(run["id"] == parent and run["kind"] == "test" and machine._admitted(run)
                       and run.get("checkout_root") == top.as_posix() for run in machine.entries()):
         return pytest_tests(args.base, command)
     item = review.branch_item(repo.current_branch(top), top)
