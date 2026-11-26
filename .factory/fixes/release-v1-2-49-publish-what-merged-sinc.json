@@ -1,0 +1,15 @@
+{
+  "base": "3077f74617385ef306abbc14db51fe269b440b89",
+  "branch": "fix/release-v1-2-49-publish-what-merged-sinc",
+  "done_when": "Every version reference that names the current release says v1.2.49 (as the v1.2.48 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.49.md exists, the release version tests and the release notes tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-26T03:59:13.723626+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Release v1.2.49: publish what merged since v1.2.48 (installs from PyPI, Antigravity as a third agent, smaller builder briefs, coordinator context rules and second-coordinator warning, Sonnet for diagnostic roles, finished-work cleanup, proof failure message, review check re-run, standing owner policy, no Windows jobs in Forge's own checks, full-run failures under Needs you)"
+}
