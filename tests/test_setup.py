@@ -392,13 +392,15 @@ def test_29_doctor(repo, gh, tmp_path, monkeypatch, case, rows, doctor_sdks):
 
         assert done.returncode == 0, done.stdout + done.stderr
         assert done.stdout.startswith("Everything checks out"), done.stdout
-        # Identical hook commands and payloads shared by the hosts need one probe, not two.
+        # Shared event and command pairs need one probe; the new prompt event adds one pair.
         calls = log.read_text(encoding="utf-8")
-        for hook in ("handoff", "deny", "approval"):
-            assert calls.count(f"hook {hook}\n") == 1, calls
+        for hook, count in (("handoff", 1), ("deny", 1), ("approval", 2)):
+            assert calls.count(f"hook {hook}\n") == count, calls
         assert calls.count("hook context\n") == 2, calls
-        assert calls.count('"SessionStart"') == calls.count('"SessionEnd"') == 1, calls
-        assert calls.count('"hook_event_name"') == 5
+        for event in ("SessionStart", "PreCompact", "SessionEnd", "PreToolUse",
+                      "PostToolUse", "UserPromptSubmit"):
+            assert calls.count(f'"hook_event_name": "{event}"') == 1, calls
+        assert calls.count('"hook_event_name"') == 6
     elif case == "missing tool":
         assert done.returncode == 0, done.stdout + done.stderr
         assert "Warning: Claude Code is missing or older than v2.1.287" in done.stdout
