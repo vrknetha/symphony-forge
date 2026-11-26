@@ -572,8 +572,7 @@ and retries it once after a failure. The command runs the configured test comman
 shell as a local close on Windows. Use `pwsh -File "<path>"` to run a PowerShell script. A second
 failure fails the check; Linux and Mac run it once, and the trusted `forge-pr-check` gate keeps
 its command. New clients get this at init; existing clients get it after upgrading Forge and
-running `forge sync`. Forge's own Windows full-suite job instead reruns each failed pytest test
-once and gives the known slow tests longer timeouts on Windows.
+running `forge sync`.
 Close runs the full related-test selection, even when it covers more than a third of the Python
 test files. Shared test inputs select every test. Bare
 `forge test` keeps worker runs bounded: when the pytest selection would cover more than a third
@@ -688,8 +687,8 @@ A repo pinned to a release older than the command upgrades once with
 
 For Forge's maintainers:
 
-Cut one release a day at 05:00 UTC from the newest main commit whose Linux full run
-and Windows run passed. Freeze the contents at the cut. Only a fix without which the
+Cut one release a day at 05:00 UTC from the newest main commit whose Linux full run passed.
+Freeze the contents at the cut. Only a fix without which the
 release is unsafe or its checks cannot pass may join; later work waits for the next day.
 Publish within 30 minutes of the cut, without a separate owner yes.
 Skip the day when nothing merged since the last release or main is red.
@@ -699,22 +698,22 @@ Hold merges from the cut until you push the tag and check the installed version.
    and add `src/forge/release-notes/v<version>.md` for everything merged since the previous
    release. Merge it last: the cut commit is this fix's merge commit. A fix that must join the
    release after it (a fix without which the release is unsafe) also updates that notes file.
-2. Before the cut, reuse passed nightly runs on the bump's merge commit (or the last joining fix's).
-   If a run is missing, start it with `gh workflow run forge.yml --ref main` (Linux) or
-   `gh workflow run forge-next.yml --ref main` (Windows). Both must pass before the cut.
+2. Before the cut, reuse the passed nightly run on the bump's merge commit (or the last joining fix's).
+   If the Linux full run is missing, start it with `gh workflow run forge.yml --ref main`.
+   The Linux full run must pass before the cut.
    At 05:00 UTC, select the bump's merge commit (or the last joining fix's), once its Linux full
-   run and Windows run passed. Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
+   run passes. Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
    If current main is ahead of that commit, skip the day: the release gate requires current main.
-   Reuse the passed nightly runs on that exact commit. Do not start them again.
+   Reuse the passed nightly run on that exact commit. Do not start it again.
    The Linux workflow posts the full-run status that sign-off and release read.
-   If an essential fix must join, repeat both runs and record its tested commit before the tag.
+   If an essential fix must join, repeat the Linux full run and record its tested commit before the tag.
 3. Before you create the tag, run `uv run --frozen --python 3.11 python
    .github/release-notes-check.py vX.Y.Z <full cut SHA>`. When it fails, do not tag: add the
    missing change to the notes in a fix, merge it, and use its merge commit as the cut.
    Tag the exact cut commit with `git tag vX.Y.Z <full cut SHA>`, then `git push origin vX.Y.Z`.
    Use the recorded full SHA, never `origin/main`. Check the tag's tree against the cut with
    `git diff --quiet vX.Y.Z <full cut SHA>`.
-   The tag push runs the Windows checks again or reuses passed proof for the same tree.
+   The tag push runs the plugin checks or reuses passed proof for the same tree.
    Confirm that run is green too.
 4. Install from the tag and check that `forge --version` prints `vX.Y.Z`. Then allow merges again.
    Publish the GitHub release from the cut commit's notes file, not the local one:
