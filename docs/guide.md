@@ -17,7 +17,7 @@ reader while available. A native read uses a separate `reader` subagent.
 Install the release a repo pins (uv brings Python 3.11 or later if you don't have it):
 
 ```
-uv tool install symphony-forge==1.2.49
+uv tool install symphony-forge==1.2.50
 ```
 
 `forge --version` prints the installed version. Each repo pins its release in `forge.toml`, and
@@ -647,7 +647,7 @@ run. The board and `forge next` read the outcome from git. Existing done records
 To correct an outcome later, run `forge story done <KEY> "<outcome>"` on an existing work branch;
 the correction ships with that branch's pull request, and the command opens no separate one.
 
-## Hand over
+## Hand over to another machine or person
 
 1. **Push everything.** In each worktree, commit and push. Through an ordinary fix, copy
    new decisions and lessons from `.git/forge/handoff.md` into `docs/handover.md`, and merge it.

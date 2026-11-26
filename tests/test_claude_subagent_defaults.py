@@ -71,10 +71,8 @@ def test_5_init_and_sync_write_claude_role_defaults_and_preserve_codex_settings(
         # An omitted entry uses low effort. Explicit pins and design keep xhigh.
         effort = "xhigh" if name == "frontend" else implementation_effort
         assert _settings(top, name)[1] == ("claude-sonnet-5-5", effort), name
-    # Fresh init separates read-only explore; configs without explore retain lite.
-    assert _settings(top, "explorer")[1] == (
-        ("claude-haiku-5-5", "high") if models is None else
-        ("claude-sonnet-5-5", implementation_effort))
+    # Missing explore entries use the read-only defaults, regardless of lite settings.
+    assert _settings(top, "explorer")[1] == ("claude-haiku-5-5", "high")
     for name in ("planner", "architect"):
         assert _settings(top, name)[1] == planning, name
     for name in ("debugger", "security", "performance"):
@@ -88,7 +86,7 @@ def test_5_init_and_sync_write_claude_role_defaults_and_preserve_codex_settings(
     if models is not None:
         for name in ("worker", "coder", "tester", "refactorer"):
             assert _settings(repo.path, name)[0] == ("gpt-6.1-sol", "medium"), name
-        assert _settings(repo.path, "explorer")[0] == ("gpt-6-luna", "max")
+        assert _settings(repo.path, "explorer")[0] == ("gpt-6.1-terra", "medium")
         # The frontend role builds on the design entry, as planning does here.
         for name in ("frontend", "planner", "architect"):
             assert _settings(repo.path, name)[0] == ("gpt-6-sol", "xhigh"), name

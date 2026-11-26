@@ -289,8 +289,9 @@ def test_3_models_per_kind(repo, monkeypatch, sdk_data, claude_session):
     toml.write_text(_toml(version, "codex", {"build": nova, "fix": nova}), encoding="utf-8")
     again = repo.forge("work", "BOARD/PAGE")
     assert again.returncode == 0, again.stdout + again.stderr
-    config = {**QUIET, "features.multi_agent": True, "model": "gpt-6-nova", "model_reasoning_effort": "high"}
+    config = {**QUIET, "features.multi_agent": True, "model": "gpt-6-nova"}
     assert _sent(calls, "thread/resume")[-1]["config"] == config
+    assert _sent(calls, "turn/start")[-1]["effort"] == "high"
     assert f"stub codex: built it with {json.dumps(config, sort_keys=True)}" in again.stdout
     assert "gpt-6-nova" not in (repo.path / "forge.toml").read_text(encoding="utf-8")
 

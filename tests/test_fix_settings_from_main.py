@@ -42,4 +42,4 @@ def test_2_forge_work_runs_with_main_s_models_and_the_local_override(repo, monke
     (repo.path / "forge.local.toml").write_text('[models.fix]\nmodel = "gpt-6-luna"\neffort = "low"\n', "utf-8")
     assert repo.forge("work", "BOARD/PAGE").returncode == 0
     config = _sent(calls, "thread/resume")[-1]["config"]
-    assert (config["model"], config["model_reasoning_effort"]) == ("gpt-6-luna", "low")
+    assert (config["model"], _sent(calls, "turn/start")[-1]["effort"]) == ("gpt-6-luna", "low")
