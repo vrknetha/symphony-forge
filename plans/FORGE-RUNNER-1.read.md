@@ -149,18 +149,21 @@ Not checked: runtime tests. `forge next` could not finish because the read-only 
     Case: normal use - the owner stops one item, then the coordinator runs `forge land --all` for the remaining work.  
     The queue checks the item’s existing state, not the new stop file, and its children lack `FORGE_RUNNER` ([land.py](/src/forge/land.py:516), [land.py](/src/forge/land.py:958)). Under the new rule, a child therefore lifts the stop as if the owner had continued that item. `forge merge` also has no specified stop check.  
     Gain 5, Work 2, Harm 4
+   Disposition: cut One check in `task.require_active`, which every path that builds or merges an item already passes (`forge land <item>`, `forge land --all` and its queue children, a train member's merge, `forge merge`), refuses a stopped item; only a person's single-item `forge land <item>` lifts the stop, never a queue child or `--all` (Done-when detail 5).
 
 17. Advisory: A stopped item cannot be continued while its old check wait holds the land lock.  
     Raise: Plan gap  
     Case: normal use - the owner stops an item during a long check wait, then asks to continue it.  
     The plan leaves the old land process alive and holding the lock until checks finish. It also says a second land must refuse without changing anything, although a hand-run land is the way to lift the stop ([plan](/plans/FORGE-RUNNER-1.md:54)). Checks can remain queued indefinitely ([checks.py](/src/forge/checks.py:353)).  
     Gain 3, Work 2, Harm 3
+   Disposition: cut `forge stop <item>` now ends the process of the item's live check wait (the land process), which frees the land lock, and a land run between steps exits at its next `task.require_active`; a hand-run `forge land <item>` then continues it (Done-when detail 5, with a test).
 
 18. Advisory: A short GitHub outage bypasses the new retry rule.  
     Raise: Functional  
     Case: normal use - GitHub remains unavailable through its built-in read retries, then recovers.  
     The read becomes a refusal ([github.py](/src/forge/github.py:233)). Land prints `needs you` for that refusal ([land.py](/src/forge/land.py:196)), so the plan parks it immediately instead of applying its promised 10- and 30-second retries.  
     Gain 4, Work 2, Harm 2
+   Disposition: cut The runner checks first whether a non-zero exit shows a network problem or the GitHub-read refusal (the test `land._queue` uses), and then retries it twice, 10 s and 30 s later, even though `land` printed "needs you" (Done-when detail 1, with a test).
 
 19. Advisory: Unproven: item 4: a human-merge pull request sends its link in a notice.  
     Raise: Test  
@@ -181,5 +184,6 @@ Not checked: runtime tests. `forge next` could not finish because the read-only 
     Case: normal use - a settings fix is started with `forge.toml` in its Done-when and no chat remains open.  
     Naming the file protects the edit, but the worker brief still tells builders never to edit it ([worker.py](/src/forge/worker.py:42)). The planned settings flow still needs the coordinator to make the change, contrary to the unattended fix path.  
     Gain 3, Work 2, Harm 3
+   Disposition: cut A fix whose Done-when names `forge.toml` now gives its builder an exception to "Workers never edit `forge.toml`" (`worker.SETTINGS` and `src/forge/templates/brief.md`, both in RUNNER's scope), so it completes with no chat (Done-when detail 1 Settings and 2, with a test).
 
 Not checked: runtime tests. `forge next` could not acquire its lock in the read-only sandbox.
