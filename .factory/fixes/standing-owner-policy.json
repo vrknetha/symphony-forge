@@ -101,8 +101,8 @@
     "id": "f7c0bd8e-0559-411b-874d-6cd1327cd776",
     "status": "clean"
   },
-  "round": 4,
-  "status": "waiting for checks",
+  "round": 5,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-19T01:59:18.821263+00:00",
@@ -140,6 +140,11 @@
     {
       "at": "2026-11-25T18:34:21.182474+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-26T01:16:40.448784+00:00",
+      "round": 5,
+      "step": "resume"
     }
   ],
   "stop": {
@@ -152,10 +157,10 @@
     "worker_round": 2
   },
   "stuck": {
-    "close": "fce76cd9-5873-4ad7-9ae2-a486e5a17173",
-    "head": "d566387c7acfa21a0b6a8786c4fa602fdb801834",
+    "close": "fc73f022-3a98-4a64-b935-0dcd4325c0be",
+    "head": "fae102fd106690019097405efb8d8adf81db5581",
     "keys": {},
-    "round": 3
+    "round": 4
   },
   "why": "Overnight at a client, round-limit, switch, narrow, split and size choices piled up (6 by midnight) while builders sat idle, because every such choice waits for the owner",
   "worker": "codex"
