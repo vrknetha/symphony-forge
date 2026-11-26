@@ -9,6 +9,14 @@
     {
       "at": "2026-11-26T12:40:09.469253+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-26T12:51:11.228497+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T13:09:33.737411+00:00",
+      "step": "read"
     }
   ],
   "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
