@@ -14,7 +14,7 @@
       "gain": 4,
       "harm": 3,
       "line": 478,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -24,27 +24,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "db0ff0d427b9f84ada682ea0621e3d89d7cd89260f2ac0b1908f854c4a844f9b",
-    "changed": "4743e0e962003313f3ecfc4eb584a9793669b822b827073fad28814819557a18",
-    "commit": "439f168e15312e467e6c1620184b3949d839f213",
+    "branch_diff": "c67bc85720488893fb8d5570ec74a2004604e587f5b3eb4c462f7c2395e6a229",
+    "changed": "24ab8c15fdd0ca6390d35b08b9715034859c9630f4bbd801f426bce267355aad",
+    "commit": "fb5fa2676cd016b4fe643055ad8aa163f8e60914",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - A scheduled workflow fails, a later run passes, and someone re-runs that passing run.\nGitHub keeps the same run ID for the re-run and retains the earlier attempt. While the re-run is in progress or cancelled, this filter skips the entire run and selects the older failure. After the cache refreshes, `forge next` therefore suggests a fix for a failure already followed by a pass. Conversely, re-running a failed job can hide its last failure. `finished_full_run` at lines 413\u2013425 reads previous attempts, but lines 476\u2013477 call it only for the full workflow. The new test uses separate runs, so it misses this case. The prior attempt is evidence beyond the ruling about newer unfinished runs. [GitHub documents re-running workflows and reviewing earlier attempts](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs).\nAdds work: inspect earlier attempts for other scheduled workflows; F 2 x H 2 = 4; 2 x C = 2.",
-        "file": "src/forge/board_facts.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 478,
-        "priority": "P1",
-        "title": "Functional: Re-running a scheduled workflow can revive a cleared failure",
-        "work": 2
-      }
-    ],
-    "id": "dfc6a923-9d60-44e9-a62b-ea938474f861",
-    "status": "blocked"
+    "findings": [],
+    "id": "8c2798e4-4ff0-4975-ad27-ad278e3349d3",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T17:54:12.442869+00:00",
@@ -63,6 +52,10 @@
       "at": "2026-11-26T02:00:09.504584+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T02:04:59.075478+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
