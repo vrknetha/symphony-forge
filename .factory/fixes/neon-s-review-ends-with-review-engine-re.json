@@ -89,7 +89,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T11:57:56.704795+00:00",
@@ -117,12 +117,23 @@
       "at": "2026-11-26T12:20:10.525240+00:00",
       "round": 2,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-26T12:21:14.991630+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-26T12:20:10.525240+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "src/forge/antigravity.py",
-    "wait_id": "7468d690-89ec-49a9-a0ba-ec90a09e56eb"
+    "reason": "Owner chose one more round: the refused-permission case must name the refused step or read Neon's answer",
+    "wait_id": "7468d690-89ec-49a9-a0ba-ec90a09e56eb",
+    "worker_round": 2
   },
   "stuck": {
     "close": "3a40165d-1a69-44df-a66e-314cb1a03a55",
