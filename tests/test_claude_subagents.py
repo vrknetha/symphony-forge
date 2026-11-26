@@ -59,6 +59,13 @@ def _expected_agents(model: str, effort: str) -> dict[str, dict[str, str]]:
     return {name: {"model": model, "effort": effort} for name in HELPER_ROLES}
 
 
+DEFAULT_AGENTS = {
+    **_expected_agents("claude-haiku-5-5", "high"),
+    **{name: {"model": "claude-sonnet-5-5", "effort": "high"}
+       for name in ("debugger", "security", "performance")},
+}
+
+
 def _agent_budgets(agents: dict[str, dict[str, str]]) -> dict[str, dict[str, str]]:
     return {name: {key: definition[key] for key in ("model", "effort")}
             for name, definition in agents.items()}
@@ -72,8 +79,7 @@ def test_6_claude_builder_gets_haiku_helpers(repo, gh, tmp_path, monkeypatch, sd
         built = repo.forge("work", "BOARD/PAGE")
         assert built.returncode == 0, built.stdout + built.stderr
         [sent] = calls(log)
-        assert _agent_budgets(sent["options"]["agents"]) == _expected_agents(
-            "claude-haiku-5-5", "high")
+        assert _agent_budgets(sent["options"]["agents"]) == DEFAULT_AGENTS
 
         initialized_models = tomllib.loads((client / "forge.toml").read_text("utf-8"))["models"]
         for kind in ("build", "fix", "lite"):
@@ -159,7 +165,7 @@ def test_10_no_process_wide_setting(repo, gh, tmp_path, monkeypatch, sdk_data):
     worked = repo.forge("work", "BOARD/HELP")
     assert worked.returncode == 0, worked.stdout + worked.stderr
     [sent] = calls(log)
-    assert _agent_budgets(sent["options"]["agents"]) == _expected_agents("claude-haiku-5-5", "high")
+    assert _agent_budgets(sent["options"]["agents"]) == DEFAULT_AGENTS
     assert {path: path.read_bytes() if path.exists() else None for path in settings} == before
     assert "CLAUDE_CODE_SUBAGENT_MODEL" not in sent["options"].get("env", {})
     assert sent["process_env"]["CLAUDE_CODE_SUBAGENT_MODEL"] is None

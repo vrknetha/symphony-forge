@@ -103,7 +103,8 @@ Close then reviews only conflict repairs and later edits when an earlier clean r
 $delegation
 - Claude SDK workers get their helper roles and `general-purpose` through turn options only.
   Each worker kind uses its `subagents` and `subagent_effort` pair, or `claude-haiku-5-5` at
-  high when it has no pair. Design turns use the build pair. Helper settings stay the same
+  high when it has no pair. With that stock pair, debugger, security and performance use
+  `claude-sonnet-5-5` at high. Design turns use the build pair. Helper settings stay the same
   after a failed round and set no process-wide value or `settings.json` value.
 - Edit files only inside this checkout.
 - $file_ownership
