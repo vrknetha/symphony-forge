@@ -19,7 +19,7 @@
   "done_when": "Every version reference that names the current release says v1.2.49, including the forge.toml version pin and uv.lock (as the v1.2.48 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.49.md exists, the release version tests and the release notes tests pass, and nothing else changes",
   "fix_kind": "mechanical",
   "kind": "fix",
-  "round": 1,
+  "round": 2,
   "status": "working",
   "steps": [
     {
@@ -29,6 +29,11 @@
     {
       "at": "2026-11-26T03:59:43.568731+00:00",
       "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T04:08:44.731311+00:00",
+      "round": 2,
       "step": "resume"
     }
   ],
