@@ -85,6 +85,26 @@ for line in sys.stdin:
     elif method == "session/prompt":
         if os.environ.get("STUB_AGY_HOLD"):
             continue
+        if refusal := os.environ.get("STUB_AGY_REVIEW_PERMISSION"):
+            update(sessionUpdate="agent_message_chunk", content={
+                "type": "text", "text": "I will inspect the patch.",
+            })
+            tool = {"toolCallId": "review-tool", "kind": "execute", "name": "run_command",
+                    "title": "Inspect rate limit configuration"}
+            if refusal != "id-only":
+                update(sessionUpdate="tool_call", status="pending", **tool)
+            if refusal in ("request", "id-only"):
+                send(id="review-tool", method="session/request_permission", params={
+                    "toolCall": {"toolCallId": tool["toolCallId"]},
+                    "options": [{"kind": "allow_once", "optionId": "yes"},
+                                {"kind": "reject_once", "optionId": "no"}],
+                })
+                decision = json.loads(next(sys.stdin))
+                if decision["result"]["outcome"].get("optionId") != "no":
+                    raise RuntimeError("The read-only review must refuse the command")
+            else:
+                update(sessionUpdate="tool_call_update", toolCallId=tool["toolCallId"],
+                       status="failed", rawOutput="permission check failed")
         if names := os.environ.get("STUB_AGY_SHOW"):
             settings = json.loads((profile / "antigravity-cli/settings.json").read_text("utf-8"))
             permissions = settings.get("permissions", {})
@@ -133,9 +153,9 @@ for line in sys.stdin:
             Path("antigravity.txt").write_text(f"{session} {effort}\n", encoding="utf-8")
             subprocess.run(["git", "add", "antigravity.txt"], check=True)
             subprocess.run(["git", "commit", "--allow-empty", "-qm", "Build with Antigravity"], check=True)
-        update(sessionUpdate="agent_message_chunk", content={
-            "type": "text", "text": os.environ.get("STUB_AGY_REVIEW", "Built it."),
-        })
+        text = os.environ.get("STUB_AGY_REVIEW", "" if refusal else "Built it.")
+        if text:
+            update(sessionUpdate="agent_message_chunk", content={"type": "text", "text": text})
         usage = {"inputTokens": 200, "outputTokens": 300, "thoughtTokens": 120}
         if not os.environ.get("STUB_AGY_NO_CACHE"):
             usage["cachedReadTokens"] = 1000

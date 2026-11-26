@@ -22,6 +22,7 @@ PROGRAM = os.environ.get("AGY_BIN") or "agy"
 INSTALL = "install Antigravity CLI 1.5.12 or newer (https://antigravity.google/docs/getting-started), then run agy and sign in"
 OLD = "Antigravity {version} is installed, and Forge needs 1.5.12 or newer."
 SIGNED_OUT = "Antigravity is not signed in."
+REVIEW_TOOL_REFUSED = "Antigravity could not finish the review after this tool was refused"
 # Keep evidence preparation on the pinned review helper's Git settings.
 SAFE_GIT_CONFIG_ARGS = (
     "core.fsmonitor=false", "core.pager=cat", "diff.external=", "diff.renames=false",
@@ -216,7 +217,7 @@ def review_design_context(top: Path, cfg: dict, changes: str, user_facing: bool)
 
 def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
                   sensitive: Callable[[list[str]], set[str]], model: str, effort: str,
-                  spent: Path) -> str:
+                  spent: Path, extract_json: Callable[[str], dict]) -> tuple[str, str]:
     paths = list(filter(None, repo.git("ls-files", "-z", cwd=checkout).split("\0")))
     copy_for_reading(checkout, copy, paths, sensitive(paths))
     ran = {"model_kind": "review"}
@@ -228,19 +229,35 @@ def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
         if next_step:
             print(next_step, file=sys.stderr, flush=True)
         raise SystemExit(problem) from None
-    print(f"model: {ran['model']}", flush=True)
-    if ran["effort"]:
-        print(f"thinking: {ran['effort']}", flush=True)
-    tokens = result["tokens"]
-    if tokens["input_tokens"] is not None:
-        cached = tokens["cached_input_tokens"] or 0
-        spent.mkdir(exist_ok=True)
-        (spent / f"{copy.name}.jsonl").write_text(json.dumps({
-            "type": "result", "session_id": result["session"],
-            "usage": {"input_tokens": tokens["input_tokens"] - cached,
-                      "cache_read_input_tokens": cached, "output_tokens": tokens["output_tokens"]},
-        }) + "\n", encoding="utf-8")
-    return result["text"]
+    finally:
+        if ran.get("model"):
+            print(f"model: {ran['model']}", flush=True)
+            if ran["effort"]:
+                print(f"thinking: {ran['effort']}", flush=True)
+        if chat := ran.get("chat"):
+            usage = {}
+            if (total := ran.get("input_tokens")) is not None:
+                cached = ran["cached_input_tokens"] or 0
+                usage = {"input_tokens": total - cached, "cache_read_input_tokens": cached,
+                         "output_tokens": ran["output_tokens"]}
+            spent.mkdir(exist_ok=True)
+            (spent / f"{copy.name}.jsonl").write_text(json.dumps({
+                "type": "result", "session_id": chat, "usage": usage,
+            }) + "\n", encoding="utf-8")
+    if tool := result.get("refused_tool"):
+        refusal = f'{REVIEW_TOOL_REFUSED} "{tool}"'
+        if result["stop"] in ("end_turn", "cancelled"):
+            # Tool calls can interrupt the text stream. Let Autoreview recognize the
+            # report and validate its completion and findings as it normally does.
+            for text in (*reversed(result["messages"]), result["text"]):
+                try:
+                    completion = extract_json(text).get("review_completion")
+                except (SystemExit, ValueError, RecursionError):
+                    continue
+                if completion in ("complete", "incomplete"):
+                    return text, refusal
+        raise SystemExit(f"{refusal}.")
+    return result["text"], ""
 
 
 def require_unfiltered(top: Path, paths: list[str]) -> None:
@@ -352,6 +369,9 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
     log = cwd / "agy.log" if probe else repo.work_log(top, item)
     questions, chunks = [], []
     kind = ran.pop("model_kind", "build")
+    refused_tool, message_id = "", None
+    message_starts = [0]
+    tool_names: dict[str, str] = {}
     unfinished = (("{detail}", "") if probe else
                   ("Antigravity ended its turn without finishing ({detail}); see {log}.", "{again}"))
     try:
@@ -376,7 +396,7 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                 process.stdin.flush()
 
             def call(method: str, params: dict) -> dict:
-                nonlocal serial
+                nonlocal serial, refused_tool, message_id
                 serial += 1
                 send({"id": serial, "method": method, "params": params})
                 for line in process.stdout:
@@ -386,15 +406,41 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                     if name and "id" in message:
                         answer: dict[str, Any]
                         if name == "session/request_permission":
-                            answer = {"result": {"outcome": _permission(data, cwd.resolve(), mode, questions)}}
+                            outcome = _permission(data, cwd, mode, questions)
+                            if kind == "review" and (outcome["outcome"] == "cancelled" or any(
+                                option["kind"] == "reject_once" and option["optionId"] == outcome.get("optionId")
+                                for option in data["options"]
+                            )):
+                                tool = data["toolCall"]
+                                tool_id = tool.get("toolCallId")
+                                refused_tool = (tool.get("title") or tool_names.get(tool_id) or tool_id
+                                                or tool.get("name") or tool.get("kind") or "unknown tool")
+                                message_starts.append(len(chunks))
+                            answer = {"result": {"outcome": outcome}}
                         else:
                             answer = {"error": {"code": -32601, "message": "Method not found"}}
                         send({"id": message["id"], **answer})
                     elif name == "session/update":
                         update = data.get("update", {})
-                        if update.get("sessionUpdate") == "agent_message_chunk":
+                        event = update.get("sessionUpdate")
+                        if event == "agent_message_chunk":
+                            if kind == "review" and (current_id := update.get("messageId")) != message_id:
+                                message_starts.append(len(chunks))
+                                message_id = current_id
                             chunks.append(update.get("content", {}).get("text", ""))
-                        if update.get("sessionUpdate") == "tool_call":
+                        if kind == "review" and event in ("tool_call", "tool_call_update"):
+                            tool_id = update.get("toolCallId")
+                            if event == "tool_call":
+                                message_starts.append(len(chunks))
+                                if tool_id and (title := update.get("title") or update.get("name")):
+                                    tool_names[tool_id] = title
+                            raw_output = update.get("rawOutput")
+                            if (update.get("status") == "failed" and isinstance(raw_output, str)
+                                    and "permission check failed" in raw_output.lower()):
+                                refused_tool = (update.get("title") or tool_names.get(tool_id)
+                                                or update.get("name") or update.get("kind") or "unknown tool")
+                                message_starts.append(len(chunks))
+                        if event == "tool_call":
                             raw = update.get("rawInput") or {}
                             action = update.get("kind")
                             if not probe and (run_id := ran.get("run_id")) and action in ("execute", "edit", "read"):
@@ -478,11 +524,16 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                           reasoning_output_tokens=usage.get("thoughtTokens"))
             ran.update(tokens)
             stop = result.get("stopReason")
-            if stop != "end_turn":
+            if stop != "end_turn" and not refused_tool:
                 repo.refuse(unfinished, detail=stop or "no answer", log=log, again=again)
             process.stdin.close()
-            return {"session": chat, "text": "".join(chunks + questions), "stop": stop,
-                    "model": current, "tokens": tokens}
+            response = {"session": chat, "text": "".join(chunks + questions), "stop": stop,
+                        "model": current, "tokens": tokens}
+            if refused_tool:
+                response["refused_tool"] = " ".join(refused_tool.split()) or "unknown tool"
+                response["messages"] = ["".join(chunks[start:end]) for start, end in
+                                        zip(message_starts, message_starts[1:] + [len(chunks)]) if start < end]
+            return response
     except (OSError, ValueError, KeyError, TypeError) as error:
         repo.refuse(unfinished, detail=str(error), log=log, again=again)
 
