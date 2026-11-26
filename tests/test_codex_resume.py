@@ -29,7 +29,7 @@ from test_task import DOC, story
 STORY = "FORGE-WARM-1"
 FIX = {**SOL, "effort": "high"}
 MODELS = {"build": SOL, "fix": FIX, "lite": {"model": "gpt-6-sol", "effort": "low"}}
-# What [models.fix] becomes on the continued conversation: Codex's own names for those settings.
+# Start settings for a fresh conversation on the fix model.
 FIX_CONFIG = {**QUIET, "features.multi_agent": True, "model": "gpt-6-sol", "model_reasoning_effort": "high",
               "agents.default_subagent_model": "gpt-6-luna",
               "agents.default_subagent_reasoning_effort": "max"}
@@ -248,8 +248,12 @@ def _continued_context(repo, monkeypatch, sdk_data):
     # The round leaves the edits above uncommitted, so a second turn on the same conversation
     # asks the worker to commit them.
     resume, nudge = _sent(calls, "thread/resume")
-    assert (resume["threadId"], resume["config"]) == ("thr-stub-1", FIX_CONFIG)
+    resume_config = {key: value for key, value in FIX_CONFIG.items()
+                     if key != "model_reasoning_effort"}
+    assert (resume["threadId"], resume["config"]) == ("thr-stub-1", resume_config)
     assert nudge["threadId"] == "thr-stub-1"
+    assert "model_reasoning_effort" not in nudge["config"]
+    assert [turn["effort"] for turn in _sent(calls, "turn/start")[-2:]] == ["high", "high"]
     assert (resume["sandbox"], resume["approvalPolicy"]) == ("danger-full-access", "on-request")
     assert Path(resume["cwd"]).resolve() == folder.resolve()
     # The chat is named on start and keeps that name when this fix round resumes it.
