@@ -598,7 +598,7 @@ WORKER_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "low"},
 DESIGN_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "xhigh"},
                    "codex": {"model": "gpt-6.2-sol", "effort": "high"},
                    "antigravity": {"model": "default", "effort": "high"}}
-CLAUDE_GRILL_DEFAULT = {"model": "claude-opus-5-5", "effort": "high"}
+CLAUDE_GRILL_DEFAULT = {"model": "claude-sonnet-5-5", "effort": "high"}
 TOP_EFFORT = {"codex": "high", "claude": "xhigh", "antigravity": "high"}
 SUBAGENT_DEFAULT = {"model": "claude-haiku-5-5", "effort": "high"}
 
@@ -770,7 +770,7 @@ def ready_path(item: str, top: Path) -> Path:
 def models(cfg: dict[str, Any], kind: str, family: str) -> dict[str, str]:
     """One kind's entry for a family ("codex" or "claude") from forge.toml's [models] table: its
     own entry, or a single entry whose model is that family's; Claude plan reads default to
-    Opus at high effort, and other missing entries return {}."""
+    Sonnet at high effort, and other missing entries return {}."""
     if kind == "explore" and kind not in cfg.get("models", {}):
         kind = "lite"
     chosen = cfg.get("models", {}).get(kind) or {}

@@ -111,11 +111,11 @@ def test_1_sync_writes_roles_for_both_hosts_from_forge_toml(repo, adopted):
             assert rule in instructions, (name, rule)
     # Every role's (model, effort) on each host, from its kind; None means left out, so the
     # session's own applies on Codex. Claude implementations default to Sonnet, planning uses
-    # grill, and diagnostics use Opus independently of legacy review settings.
+    # grill, and diagnostics use Sonnet independently of legacy review settings.
     by_kind = {"build": ((None, "medium"), ("claude-opus-5-5", "medium")),
                "lite": (("gpt-6-luna", "ultra"), ("claude-sonnet-5-5", "low")),
                "design": (("gpt-6.1-sol", "xhigh"), ("opus", "high")),
-               "review": (("gpt-6-sol", None), ("claude-opus-5-5", "high")),
+               "review": (("gpt-6-sol", None), ("claude-sonnet-5-5", "high")),
                "grill": (("gpt-6.1-sol", "high"), ("opus", "high"))}
     # The Codex worker runs forge work's own built-in model when no entry names a Codex one.
     expected = {**{name: by_kind[kind] for name, kind in ROLES.items()},
