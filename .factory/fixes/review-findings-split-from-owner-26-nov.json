@@ -29,28 +29,28 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "b36803b3f8ad2df0ac1d244dac9fe01f097839e6c15bbcb64440a913f00291e2",
-    "changed": "fd449240cab482e39e1a6081027012271120d28c6c3aedc72978e04007d2a94d",
-    "commit": "5124df528db7895a9345c1f2e5131bf879fccab1",
+    "branch_diff": "0c365377a4a18ce3613d29649507c5566b3d34515d4c540d630a5598f0778489",
+    "changed": "1538017214facbbe574ab79b6f1d4b750887a50ea810ae62038762e3f219e799",
+    "commit": "5b6b6ad7b38a323adfc7d49ed98c71a1a90e257f",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Gate\nCase: normal use - close a pushed Forge pull request in local mode while a GitHub test job is queued.\nThe new local-mode assertion supplies a queued `tests` check, but the fixture starts an unpushed branch and reports no open pull request (`tests/test_close.py:223` and `:310`). Consequently, the pre-push wait in `src/forge/checks.py:252` returns before examining that check, even though it waits on active jobs for an existing PR. The fixture also omits `.forge/always-tests.txt`, whose entries `src/forge/fasttest.py:835` adds to the real repository's selection. The test can therefore pass while local close both waits for a GitHub test job and runs unrelated required tests. Exercise the existing-PR path and the repository's required-test list so the proof detects those failures.",
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Gate\nCase: normal use - close a pushed Forge pull request in local mode while a GitHub test job is queued.\nThe repair removes the queued check from the local-mode fixture, but still does not exercise an existing pull request or copy `.forge/always-tests.txt`. The fixture starts an unpushed branch and reports no open PR (`tests/test_close.py:229` and `:310`), so it bypasses the pre-push wait in `src/forge/checks.py:252`. The real picker also includes the repository's required tests (`src/forge/fasttest.py:835`), which the fixture cannot observe. Consequently, the test still passes while local close waits for a GitHub job and runs unrelated required tests. The existing pre-push test uses CI mode, and the required-rules test verifies that those tests run; neither proves the local behavior requested by the previous finding.",
         "file": "tests/test_affected_own.py",
         "gain": 4,
         "harm": 3,
-        "line": 164,
+        "line": 177,
         "priority": "P1",
         "title": "Gate: the local close test misses real repository conditions",
         "work": 2
       }
     ],
-    "id": "87bbc294-c0b5-41c9-9784-22ce09cc7fe7",
+    "id": "bf677f27-a57a-49b8-a07f-aecf866c445a",
     "status": "blocked"
   },
   "round": 3,
   "stacked_on": "owner-26-nov-2026-stop-using-github-runn",
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-26T17:51:10.815765+00:00",
@@ -74,8 +74,22 @@
       "at": "2026-11-26T18:20:11.996205+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T18:30:32.821658+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T18:30:32.844663+00:00",
+      "round": 3,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-26T18:30:32.844663+00:00",
+    "file": "tests/test_affected_own.py",
+    "wait_id": "fce320fb-6b54-45db-96a8-3502378d8eac"
+  },
   "stuck": {
     "close": "14bd0184-c6ff-4ca5-ad48-1091c8694b65",
     "head": "8ca44a1b00208653021fe6d2bef68916a5fb7a5b",
