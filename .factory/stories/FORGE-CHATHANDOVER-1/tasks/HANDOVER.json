@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-CHATHANDOVER-1-HANDOVER",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-26T09:18:41.988996+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T09:18:59.364050+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "446d1d694de3247db158b5a2a9126837fb52c6d2",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
