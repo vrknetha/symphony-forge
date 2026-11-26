@@ -185,6 +185,11 @@ def main() -> int:
         # Forge's accepting handler at the protocol boundary below instead.
         settings = {"approval_mode": ApprovalMode.deny_all, "sandbox": sandbox,
                     "cwd": request["cwd"], "config": request["config"] or None}
+        if request.get("kind") in ("Build", "Fix", "Lite"):
+            # Count the full context even when the user's Codex settings exclude the prefix.
+            settings["config"] = {**(settings["config"] or {}),
+                                  "model_auto_compact_token_limit": 120_000,
+                                  "model_auto_compact_token_limit_scope": "total"}
         # Codex skips a project hook it doesn't trust, and any change to one un-trusts it. Forge
         # trusts its own hooks for this thread by their current hash (decision 0102) and starts
         # nothing while any other project hook waits for the user's review.
