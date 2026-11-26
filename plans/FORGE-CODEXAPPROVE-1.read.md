@@ -122,6 +122,7 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - A coordinator runs `forge ask "approve <KEY> <code>"`. [Forge passes the question unchanged](/src/forge/ask.py:27) to a new Codex thread and [trusts its project hooks](/src/forge/codex_turn.py:187). That root thread has no [subagent marker](https://github.com/openai/codex/blob/rust-v0.171.0/codex-rs/core/src/hook_runtime.rs), so the planned helper check misses it. The real host hook can then record the agent-authored line, despite the question being read-only. This follows the code path; it was not checked live.  
     Not done: item 2 requires a line from anything other than the owner’s message to record nothing.  
     Gain 5, Work 3, Harm 4
+   Disposition: cut messages in Codex chats that Forge started (FORGE_WORKER=1, including forge ask) never approve; tested; direct Codex outside Forge is an accepted limit.
 
 14. Advisory: Adding the hook breaks two existing tests omitted from the task.
     Raise: Plan gap  
