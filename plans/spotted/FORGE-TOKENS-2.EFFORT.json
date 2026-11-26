@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/codex_turn.py\tGate: test_10_the_cold_read_runs_on_the_other_family\tFORGE-TOKENS-2/EFFORT",
+      "kind": "bug",
+      "path": "src/forge/codex_turn.py",
+      "line": 207,
+      "text": "Gate: test_10_the_cold_read_runs_on_the_other_family",
+      "from": "blocking",
+      "item": "FORGE-TOKENS-2/EFFORT",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_effort_change_keeps_conversation.py\tTest: Uncached input per repair round is measured before and after the change on the same kind of item\tFORGE-TOKENS-2/EFFORT",
+      "kind": "bug",
+      "path": "tests/test_effort_change_keeps_conversation.py",
+      "line": 32,
+      "text": "Test: Uncached input per repair round is measured before and after the change on the same kind of item",
+      "from": "blocking",
+      "item": "FORGE-TOKENS-2/EFFORT",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
