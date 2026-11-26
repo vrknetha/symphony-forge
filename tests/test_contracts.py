@@ -612,7 +612,8 @@ def test_9_nothing_changes_outside_a_pull_request(env, claude_payload, monkeypat
             # Valid command arguments must reach the branch guard, not a usage refusal.
             assert done.returncode == 1, done.stdout + done.stderr
             assert "Forge changes nothing on main" in done.stderr
-    # Intake holds its place outside the checkout; handback writes each draft on its own branch.
+    # The Codex coordinator runs intake through the configured Claude builder.
+    # Forge writes each draft on its own branch.
     with monkeypatch.context() as host:
         host.delenv("CLAUDECODE", raising=False)
         host.setenv("CODEX_THREAD_ID", "intake-contract-session")
@@ -630,11 +631,8 @@ def test_9_nothing_changes_outside_a_pull_request(env, claude_payload, monkeypat
                  "Problem: Shoppers lose baskets.\nDone: A saved basket returns.",
                  "story/IDEA"),
             ):
-                offered = repo.forge("start", idea)
-                assert offered.returncode == 0, offered.stdout + offered.stderr
-                pending = json.loads(offered.stdout)
-                done = repo.forge("handback", pending["target"], "--round", str(pending["round"]),
-                                  "--subagent", "idea-explorer", "--text", reply)
+                host.setenv("STUB_CLAUDE_RESULT", reply)
+                done = repo.forge("start", idea)
                 assert done.returncode == 0, done.stdout + done.stderr
                 assert repo.git("branch", "--list", branch)
             # Dropping the intake plan publishes its state without changing main.
