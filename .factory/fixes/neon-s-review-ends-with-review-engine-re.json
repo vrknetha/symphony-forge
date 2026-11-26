@@ -32,7 +32,7 @@
       "gain": 4,
       "harm": 3,
       "line": 488,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -45,7 +45,7 @@
       "gain": 4,
       "harm": 3,
       "line": 488,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -58,7 +58,7 @@
       "gain": 3,
       "harm": 3,
       "line": 39,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -68,58 +68,28 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "d5334122e683190f15bb9ec17577b564761217fa504c6992da137c9afb110736",
-    "changed": "176f5b6c759408f3309aecf88a18c7ad4109458e002a8972047d37f9f7cdf2ec",
-    "commit": "f432a2a9378642f9ca57e303089128ff798c07bf",
+    "branch_diff": "8fc61f239431ce524202718f1af905e35c1c95c1115de6707deb67fde38b0783",
+    "changed": "aecb9efccc60574bb7c82b75e196af3002127e9ac9da8a585403d15c6806e4c6",
+    "commit": "ed60744ad595c1523f388089ca92ae0ab8e58d61",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done\nCase: normal use - Neon streams a progress message before requesting a tool, and the refused call ends the turn without a review.\nDone when: An Antigravity review whose tool call is refused either returns Neon's written review or stops with a message that names the refused step, never \"empty output\".\nThe handler collects all agent message chunks at src/forge/antigravity.py:400, so progress text makes this condition treat the turn as answered. Autoreview then reports non-JSON output without naming the refused step; its parser is at tests/fixtures/autoreview-ce14dcca/scripts/autoreview:6550. The ACP documentation explicitly illustrates a text message before a tool call: [Prompt Turn](https://agentclientprotocol.com/protocol/v1/prompt-turn). A written JSON review following that progress text can also be rejected as non-JSON. Separately, the live contract test at tests/test_antigravity_live.py:156 accepts a server-side permission failure reported as a tool update instead of a permission request. That path never sets refused_tool, so an empty turn after it still reaches Autoreview as empty output.",
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done\nCase: normal use - Neon reports a tool title, requests permission using its call ID, and ends without a review.\nDone when: An Antigravity review whose tool call is refused either returns Neon's written review or stops with a message that names the refused step, never \"empty output\".\nThe [ACP permission-request example](https://agentclientprotocol.com/protocol/v1/tool-calls) includes only `toolCallId`. Although the preceding `tool_call` can supply a title that Forge stores at src/forge/antigravity.py:429, this handler does not look it up, so the refusal says \"unknown tool\". The same finding remains when Neon returns parseable but incomplete JSON after a refusal: src/forge/antigravity.py:253 accepts an object with `findings`, but Autoreview rejects a missing `review_completion` at tests/fixtures/autoreview-ce14dcca/scripts/autoreview:7472 without naming the refused step. The existing test at tests/test_antigravity_review.py:233 already exercises that incomplete-report shape.",
         "file": "src/forge/antigravity.py",
         "gain": 4,
         "harm": 3,
-        "line": 487,
+        "line": 410,
         "priority": "P1",
         "required_done_when": true,
         "title": "Not done: A refused Antigravity review can finish without identifying the refused step",
         "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - A review of authentication code refuses a command titled \"Inspect rate limit configuration\".\nThe new refusal includes the model-authored tool title in the error. The retry loop at src/forge/review.py:1006 searches the entire error for \"rate limit\", and at :1010 retries without incrementing its attempt counter. It therefore waits and starts another paid review even though the provider was not rate-limited; repeated similar refusals keep close retrying instead of stopping with the refused step.",
-        "file": "src/forge/antigravity.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 488,
-        "priority": "P1",
-        "title": "Stop treating refused tool titles as provider rate limits",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - Antigravity returns usage with an empty review after a tool is refused.\nThe new refusal raises after the usage has been read but before review_engine can save it. Its exception path at src/forge/antigravity.py:226 exits before the session and token record at :235; src/forge/review.py:1003 consequently records no conversation or usage for either failed attempt. Before this change, the empty end-turn reached that record-writing code. Forge loses the information needed to attribute the review's cost and find its conversation for investigation.\nAdds work: preserve returned usage and conversation metadata on refused reviews; F 2 x H 2 = 4; 2 x C = 2.",
-        "file": "src/forge/antigravity.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 488,
-        "priority": "P1",
-        "title": "Preserve failed review usage and conversation records",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - Neon writes a review containing a blocking finding after a refused tool call.\nDone when: An Antigravity review whose tool call is refused either returns Neon's written review or stops with a message that names the refused step, never \"empty output\".\nThe positive case supplies a clean report with an empty findings list and asserts only a successful exit. An implementation that drops every finding after a refusal would still pass. The stub at tests/stubs/agy:88 also sends no progress text before the refusal, so the test passes with the non-JSON failure described above. Exercise the written finding and the progress-before-refusal case through close and assert their observable outcomes.",
-        "file": "tests/test_antigravity_review_refusal.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 39,
-        "priority": "P1",
-        "title": "Test: Refused Antigravity reviews preserve Neon's written findings",
-        "work": 1
       }
     ],
-    "id": "031ee70b-a15f-42fb-a06e-2cf878491583",
+    "id": "1437448b-f398-4780-9e9d-6be62c191215",
     "status": "blocked"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-26T11:57:56.704795+00:00",
@@ -138,8 +108,22 @@
       "at": "2026-11-26T12:10:43.938365+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T12:20:10.509907+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T12:20:10.525240+00:00",
+      "round": 2,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-26T12:20:10.525240+00:00",
+    "file": "src/forge/antigravity.py",
+    "wait_id": "7468d690-89ec-49a9-a0ba-ec90a09e56eb"
+  },
   "stuck": {
     "close": "3a40165d-1a69-44df-a66e-314cb1a03a55",
     "head": "908faf10f788a47f41f0f70df7abbba3bfd50672",
