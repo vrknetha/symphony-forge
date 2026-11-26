@@ -32,8 +32,9 @@ def review_limit(top: Path, item: str, state: dict, result: dict, serious: list[
             return None, False
     if fresh and state.get("stop"):
         return None, False
-    stopped = {"file": serious[0][1]["file"], "at": repo.now(),
-               "wait_id": repo.record_event(top, item, "owner wait start", reason="review loop")}
+    at = repo.now()
+    stopped = {"file": serious[0][1]["file"], "at": at,
+               "wait_id": repo.record_event(top, item, "owner wait start", reason="review loop", at=at)}
     state["stop"] = stopped
     return stopped, False
 
