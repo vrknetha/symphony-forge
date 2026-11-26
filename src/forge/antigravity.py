@@ -263,8 +263,9 @@ def require_unfiltered(top: Path, paths: list[str]) -> None:
                          "use a plan and read records that Git can store as written"), path=name)
 
 
-def read(top: Path, target: str, models: dict, prompt: str, fresh: str) -> subprocess.CompletedProcess[str]:
-    """Run inside the cold read's clean Git context."""
+def read(top: Path, target: str, models: dict, prompt: str, fresh: str, *,
+         kind: str = "grill", again: str | None = None) -> subprocess.CompletedProcess[str]:
+    """Run a read-only turn against a filtered copy of the checkout."""
     from forge import review, story
     helper = Path(__file__).with_name("review_process.py")
     pinned = review.helper().resolve()
@@ -279,18 +280,18 @@ def read(top: Path, target: str, models: dict, prompt: str, fresh: str) -> subpr
     rules = story.agents_section(top, "Review rules")
     suffix = "\n\nThis repo's Review rules, from its AGENTS.md on the default branch:\n" + rules
     path = codex._item_file(top, target, ".json", "Grill")
-    saved = codex.record(top, target, "Grill").get("antigravity") or {}
-    resume = saved.get("id")
+    saved = codex.record(top, target, "Grill") if kind == "grill" else {}
+    resume = (saved.get("antigravity") or {}).get("id")
     with repo.record_run(top, target, "read", family="antigravity", **models) as ran:
-        ran["model_kind"] = "grill"
+        ran["model_kind"] = kind
         kwargs = dict(cwd=cwd, mode="read", model=models["model"], effort=models["effort"],
-                      again=f"forge read {target}", ran=ran)
+                      again=again or f"forge read {target}", ran=ran)
         try:
             result = turn(top, target, (prompt if resume else fresh) + suffix, resume=resume, **kwargs)
         except NoSession:
             result = turn(top, target, fresh + suffix, **kwargs)
         finally:
-            if ran.get("chat"):
+            if kind == "grill" and ran.get("chat"):
                 codex._record(path, antigravity={"id": ran["chat"]})
         ran["outcome"] = "completed"
     said = result["text"].replace(str(cwd), str(top)).replace(cwd.as_posix(), top.as_posix())

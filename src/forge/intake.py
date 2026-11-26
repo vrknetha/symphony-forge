@@ -1,4 +1,4 @@
-"""One session-owned exploration chooses how an idea starts."""
+"""One read-only exploration chooses how an idea starts."""
 import argparse
 import hashlib
 import io
@@ -23,6 +23,7 @@ REFUSALS = {
     "bad_reply": ("Forge cannot read the explorer's reply after two tries. Nothing started.",
                   "forge start {idea}"),
 }
+RETRY = "Your reply does not match the requested lines. Send the full reply in that format."
 
 
 def start(args: Any) -> int:
@@ -33,13 +34,44 @@ def start(args: Any) -> int:
     top = repo.root()
     if removed := doctor.tidy_finished(top):
         print(f"Removed {removed} finished folders.", file=sys.stderr)
-    family = native.session()["id"].split(":", 1)[0]
+    here = native.session()["id"].split(":", 1)[0]
     cfg = repo.config(top)
-    prompt = _prompt(top, args.idea, repo.is_prototype(top, cfg))
+    family = repo.worker_family(cfg, design=False)
+    models = repo.worker_models(cfg, "explore", family)
+    prototype = repo.is_prototype(top, cfg)
+    prompt = _prompt(top, args.idea, prototype)
     target = "intake-" + hashlib.sha256(args.idea.encode("utf-8")).hexdigest()
-    return native.offer(top, target, {"intake": args.idea, "prototype": repo.is_prototype(top, cfg),
-                                     "reader": family, "round": 1}, prompt, prompt,
-                        "sort this idea", repo.worker_models(cfg, "explore", family))
+    if family == here or native.pending_offer(top, args.idea):
+        return native.offer(top, target, {"intake": args.idea, "prototype": prototype,
+                                         "reader": family, "round": 1}, prompt, prompt,
+                            "sort this idea", models)
+
+    from forge import antigravity, story, worker
+
+    again = f"forge start {repo.quote(args.idea)}"
+    if family == "antigravity":
+        antigravity.ready(cfg, "explore", False)
+    else:
+        flags = worker.ready(top, cfg, "Explore", family == "codex")
+    with codex.hold(top, target, "Grill"), machine.agent_slot(
+            top, "read", target, models["model"], models["effort"]):
+        for attempt in (1, 2):
+            if family == "codex":
+                turn = codex.run(top, target, "Grill", "Sort this idea", prompt, "read-only",
+                                 model=models["model"], effort=models["effort"], echo=False)
+                said = turn["text"] if turn["status"] == "completed" else None
+            elif family == "claude":
+                done = story._sdk_read(top, target, flags, prompt, prompt, None, "", attempt,
+                                       lambda _: None)
+                said = done.stdout if done.returncode == 0 else None
+            else:
+                said = antigravity.read(top, target, models, prompt, prompt,
+                                        kind="explore", again=again).stdout
+            if fields := _reply(said or "", prototype):
+                act(top, fields, args.idea)
+                return 0
+            prompt += "\n\n" + RETRY
+        repo.refuse(REFUSALS["bad_reply"], idea=repo.quote(args.idea))
 
 
 def _prompt(top: Path, idea: str, prototype: bool) -> str:
@@ -117,8 +149,7 @@ def result(path: Path, pending: dict[str, Any], said: str, subagent: str) -> boo
         if pending.get("retried"):
             repo.refuse(REFUSALS["bad_reply"], idea=json.dumps(request["intake"], ensure_ascii=False))
         codex._record(path, pending={**pending, "retried": True})
-        print(f"Send this to subagent {subagent}, then hand back again:\n"
-              "Your reply does not match the requested lines. Send the full reply in that format.")
+        print(f"Send this to subagent {subagent}, then hand back again:\n{RETRY}")
         return True
     with chdir(pending["checkout"]):
         act(Path(pending["checkout"]), fields, request["intake"])
