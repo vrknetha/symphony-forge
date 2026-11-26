@@ -1,0 +1,16 @@
+{
+  "base": "dba263236b9a869fde8dbc5f7369ebe8f0a4393c",
+  "branch": "fix/the-explorer-does-not-follow-the-builder",
+  "done_when": "An idea is sorted by the family that workers picks, and new and upgraded repos get the new explore defaults, with repos that have their own explore entries keeping them.",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-26T12:08:51.549919+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The explorer does not follow the builder choice: intake.py takes the family from the session, and the explore defaults are gpt-6.2-sol for Codex and none for Antigravity."
+}
