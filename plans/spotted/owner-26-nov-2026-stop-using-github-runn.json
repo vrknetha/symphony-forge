@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "key": "bug\t.github/workflows/forge.yml\tFunctional: Existing tests fail against the local workflow\towner-26-nov-2026-stop-using-github-runn",
+      "kind": "bug",
+      "path": ".github/workflows/forge.yml",
+      "line": 17,
+      "text": "Functional: Existing tests fail against the local workflow",
+      "from": "blocking",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tforge.toml\tFunctional: Local close skips selected container deployment tests\towner-26-nov-2026-stop-using-github-runn",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 9,
+      "text": "Functional: Local close skips selected container deployment tests",
+      "from": "blocking",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tforge.toml\tFunctional: Local mode does not wait for the remaining required review check\towner-26-nov-2026-stop-using-github-runn",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 9,
+      "text": "Functional: Local mode does not wait for the remaining required review check",
+      "from": "blocking",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tforge.toml\tGate: proof list\towner-26-nov-2026-stop-using-github-runn",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 8,
+      "text": "Gate: proof list",
+      "from": "blocking",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tforge.toml\tNot done: Local close runs unrelated tests and can wait for GitHub test jobs\towner-26-nov-2026-stop-using-github-runn",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 9,
+      "text": "Not done: Local close runs unrelated tests and can wait for GitHub test jobs",
+      "from": "blocking",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "simplify\tforge.toml\tSimpler: Leave the approach implicit \u2192 record the before-coding rationale",
+      "kind": "simplify",
+      "path": "forge.toml",
+      "line": 9,
+      "text": "Simpler: Leave the approach implicit \u2192 record the before-coding rationale",
+      "from": "review",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
