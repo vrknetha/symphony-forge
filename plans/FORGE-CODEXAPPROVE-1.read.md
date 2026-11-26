@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-26T12:29:52.869001+00:00
-seconds: 449.615
-read_hash: 6107633f9473560f4eec3bf2ee46007e55306c43
-round: 2
-passed: no
-doc_seen: 6107633f9473560f4eec3bf2ee46007e55306c43
+read_at: 2026-11-26T12:41:54.377087+00:00
+seconds: 575.035
+read_hash: 8679d85f39e4348fabc4a180ea340bf8d7c4994f
+round: 3
+passed: yes
+doc_seen: 8679d85f39e4348fabc4a180ea340bf8d7c4994f
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: d3d0096b8e17c37e689fa70394434b451f156ee9
+notes_seen: 51fb7480b256b1782b351b8b87998df8aeaf4a7e
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a217c0-ad7c-7862-9823-dc64613a3803
 session:
-loop_choice: more
-loop_reason: Owner chose: fix the forge ask gap (messages in Forge-started chats never approve), then one more read
+loop_choice:
+loop_reason:
 ---
 # Cold read notes
 
@@ -139,5 +139,13 @@ Only a genuine trade-off goes to the human, as a question with options.
 16. Advisory: An earlier refusal can hide the reason the new hook did not run.
     Raise: Functional  
     Case: normal use - An earlier approval was refused, then the owner tries the new line while its hook is untrusted. [Forge stores one shared last refusal](/src/forge/approval.py:100), and [forge next shows it for a waiting story](/src/forge/nextstep.py:797). The new guidance checks for a wait *without* a reason, so the old reason can prevent it from identifying the skipped hook.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+## Round 3
+
+17. Advisory: Not done: item 2 requires a reason for an approval line from a non-owner, but Forge-started chats are silent.
+    Raise: Not done  
+    Case: normal use - A coordinator sends `forge ask "approve <KEY> <code>"`. [Forge passes the question to Codex](/src/forge/ask.py:27), but [the amended plan](/plans/FORGE-CODEXAPPROVE-1.md:40) requires the hook to print nothing. Its test also requires silence, so it does not prove the explanation promised by item 2.  
     Gain 3, Work 2, Harm 2
    Disposition: keep - below the bar (follow-up)
