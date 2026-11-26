@@ -48,7 +48,7 @@
     "id": "87bbc294-c0b5-41c9-9784-22ce09cc7fe7",
     "status": "blocked"
   },
-  "round": 2,
+  "round": 3,
   "stacked_on": "owner-26-nov-2026-stop-using-github-runn",
   "status": "fixing",
   "steps": [
@@ -69,14 +69,19 @@
     {
       "at": "2026-11-26T18:19:50.359655+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-26T18:20:11.996205+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "ea78b2be0478e138959b9ef8f9e2b19942905945",
+    "close": "14bd0184-c6ff-4ca5-ad48-1091c8694b65",
+    "head": "8ca44a1b00208653021fe6d2bef68916a5fb7a5b",
     "keys": {},
-    "round": null
+    "round": 2
   },
   "why": "Review findings split from owner-26-nov-2026-stop-using-github-runn: Functional: Existing tests fail against the local workflow (.github/workflows/forge.yml:17); Functional: Local mode does not wait for the remaining required review check (forge.toml:9); Functional: Local close skips selected container deployment tests (forge.toml:9); Not done: Local close runs unrelated tests and can wait for GitHub test jobs (forge.toml:9); Gate: proof list (forge.toml:8)",
-  "worker": "codex"
+  "worker": "antigravity"
 }
