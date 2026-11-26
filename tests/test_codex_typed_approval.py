@@ -24,7 +24,7 @@ HELPER = {
 
 def test_1_2_typed_approval_checks_the_story_sender_and_turn(repo, monkeypatch):
     setup(repo, keys=("SHOP", "WISH"))
-    ready(repo, "SHOP")
+    shop_folder = ready(repo, "SHOP")
     ready(repo, "WISH", DOC.replace("save a basket", "keep a wish list"))
     config = repo.path / "forge.toml"
     config.write_text('tools = "codex"\n' + config.read_text(encoding="utf-8"), encoding="utf-8")
@@ -32,6 +32,14 @@ def test_1_2_typed_approval_checks_the_story_sender_and_turn(repo, monkeypatch):
     codes = dict(re.findall(r"show plans/(\w+)\.md[^\n]+approve_plan_([0-9a-f]{6})", shown))
     shop, wish = codes["SHOP"], codes["WISH"]
     assert f"then ask the owner to type approve SHOP {shop}." in shown
+    old_shop = shop
+    (shop_folder / "plans" / "SHOP.md").write_text(
+        DOC.replace("can save a basket", "can save two baskets"), encoding="utf-8")
+    read = repo.forge("read", "SHOP")
+    assert read.returncode == 0, read.stdout + read.stderr
+    shown = repo.forge("next").stdout
+    shop = re.search(r"approve SHOP ([0-9a-f]{6})", shown)[1]
+    assert shop != old_shop
     payload = {"cwd": repo.path.as_posix(), "hook_event_name": "UserPromptSubmit",
                "session_id": "owner-session", "turn_id": "owner-turn"}
 
@@ -42,6 +50,7 @@ def test_1_2_typed_approval_checks_the_story_sender_and_turn(repo, monkeypatch):
 
     heads = [repo.git("rev-parse", f"story/{key}") for key in ("SHOP", "WISH")]
     no_match = "The approved plan matches no story doc waiting for approval"
+    assert no_match in send(f"approve SHOP {old_shop}")
     assert no_match in send(f"approve SHOP {wish}")
     assert no_match in send(f"approve UNKNOWN-1 {shop}")
     for code in (shop[:5], "xyzxyz", shop + "0", shop + " please"):

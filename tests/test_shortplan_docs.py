@@ -25,6 +25,7 @@ def test_1_new_plans_put_one_sentence_per_result_on_top_and_details_below(repo):
     skill = flat(synced_skills(repo))
     assert "no code names, file paths or test names" in skill
     assert "### Done-when details" in skill
+    assert "In Codex, ask the owner to type the `approve <KEY> <code>` line from `forge next`." in skill
 
     doc = (new_story(repo, "SHOP") / "plans" / "SHOP.md").read_text(encoding="utf-8")
     top, builders, below = doc.partition("\n## For the builders\n")
