@@ -1,5 +1,12 @@
 {
   "branch": "task/FORGE-SLOWTEST-1-NIGHTLY",
+  "chat": {
+    "approval": "1d2523ee5c1101e40a204e7784d0455562f2110bb7cf3cbe44ed938e3dc615f3",
+    "claude": null,
+    "conversation": "01a2158a-f9d1-7862-820c-65698a19b3d5",
+    "head": null,
+    "start": "d3d6039be9ad575bd58c30af2b039cfa8fa9ad5f"
+  },
   "round": 1,
   "status": "working",
   "steps": [
