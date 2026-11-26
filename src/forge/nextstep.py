@@ -802,9 +802,7 @@ def _approval(top: Path, key: str, path: Path, title: str, digest: str,
     return [f"{title} is waiting for approval" + (f" (the last answer was not recorded: {why})." if why
                                                   else "."),
             f"Next: in Claude Code, show {shown} in Plan Mode and exit Plan Mode with it as the plan",
-            f"Next: in Codex, show {shown}, then ask request_user_input with id approve_plan_{digest}, "
-            'question "Approve this plan?", header "Approve plan" and choices "Approve plan", '
-            '"Request changes", "Stop"']
+            *approval.codex_guidance(shown, key, digest)]
 
 
 def _next_round(key: str, text: str, doc_hash: str, title: str, required: bool, doc: str, top: Path) -> list[str]:

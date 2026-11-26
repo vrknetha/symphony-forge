@@ -61,9 +61,11 @@ def test_1_new_and_previously_adopted_repos_receive_the_mod_guide_sections(guide
     # answering notes. Both delivery paths must carry the questions before approval.
     planning = " ".join(section(template, "Planning a story").split())
     for contract in ("Handle cold-read rounds yourself", "amend the plan and write dispositions",
-                     "Once a read is clean, before Plan Mode approval",
+                     "Once a read is clean, before approval",
                      "all rounds", "behaviour, a limit, a refusal or a scope cut",
                      "Grill the human one question at a time", "your recommendation first",
                      "Record each answer in the plan, then ask for approval",
-                     "Plain factual corrections need no question"):
+                     "Plain factual corrections need no question",
+                     "In Claude Code, exit Plan Mode with that text as the plan.",
+                     "In Codex, ask the owner to type the"):
         assert contract in planning, contract

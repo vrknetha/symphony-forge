@@ -1,0 +1,37 @@
+{
+  "approval": {
+    "at": "2026-11-26T13:08:10.140144+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01Gsp29xjmjD67tvXroSXnF1",
+    "hash": "806b53ab9cf847d658b5567d9ae85ea277f69d10a7082d906ca76aa2e59c247a",
+    "round": 3,
+    "runtime": "claude",
+    "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
+  },
+  "doc": "plans/FORGE-CODEXAPPROVE-1.md",
+  "status": "approved",
+  "steps": [
+    {
+      "at": "2026-11-26T12:05:56.230851+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T12:18:18.775974+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T12:29:52.883872+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T12:41:54.394472+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T13:08:10.140355+00:00",
+      "step": "approved"
+    }
+  ],
+  "title": "Approve a story from a Codex chat",
+  "touches": 1
+}
