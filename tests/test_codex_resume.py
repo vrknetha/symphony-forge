@@ -22,7 +22,7 @@ import pytest
 
 from conftest import _install
 from test_codex_record import _crash, _down, _saved
-from test_codex_worker import (NOW, QUIET, SOL, _codex_repo, _lines, _sent, _stub, _toml,  # noqa: F401
+from test_codex_worker import (BUILDER_CONFIG, NOW, SOL, _codex_repo, _lines, _sent, _stub, _toml,  # noqa: F401
                                sdk_data)
 from test_task import DOC, story
 
@@ -30,7 +30,7 @@ STORY = "FORGE-WARM-1"
 FIX = {**SOL, "effort": "high"}
 MODELS = {"build": SOL, "fix": FIX, "lite": {"model": "gpt-6-sol", "effort": "low"}}
 # Start settings for a fresh conversation on the fix model.
-FIX_CONFIG = {**QUIET, "features.multi_agent": True, "model": "gpt-6-sol", "model_reasoning_effort": "high",
+FIX_CONFIG = {**BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6-sol", "model_reasoning_effort": "high",
               "agents.default_subagent_model": "gpt-6-luna",
               "agents.default_subagent_reasoning_effort": "max"}
 

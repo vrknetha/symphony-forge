@@ -36,7 +36,9 @@ QUIET = {"model_verbosity": "low", "model_reasoning_summary": "none",
          "developer_instructions": "Write no progress commentary. Write only the final handoff and any question."}
 # What [models.build] becomes on the new conversation: Codex's own names for those settings.
 # Workers now explicitly enable delegation as well as selecting their models.
-BUILD = {**QUIET, "features.multi_agent": True, "model": "gpt-6-sol", "model_reasoning_effort": "medium",
+BUILDER_CONFIG = {**QUIET, "model_auto_compact_token_limit": 120_000,
+                  "model_auto_compact_token_limit_scope": "total"}
+BUILD = {**BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6-sol", "model_reasoning_effort": "medium",
          "agents.default_subagent_model": "gpt-6-luna",
          "agents.default_subagent_reasoning_effort": "max"}
 MODELS_REFUSAL = ("forge.toml's [models] table is not usable: {}.\n"
@@ -289,7 +291,7 @@ def test_3_models_per_kind(repo, monkeypatch, sdk_data, claude_session):
     toml.write_text(_toml(version, "codex", {"build": nova, "fix": nova}), encoding="utf-8")
     again = repo.forge("work", "BOARD/PAGE")
     assert again.returncode == 0, again.stdout + again.stderr
-    config = {**QUIET, "features.multi_agent": True, "model": "gpt-6-nova"}
+    config = {**BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6-nova"}
     assert _sent(calls, "thread/resume")[-1]["config"] == config
     assert _sent(calls, "turn/start")[-1]["effort"] == "high"
     assert f"stub codex: built it with {json.dumps(config, sort_keys=True)}" in again.stdout
@@ -298,7 +300,7 @@ def test_3_models_per_kind(repo, monkeypatch, sdk_data, claude_session):
     # A fix uses the lite kind.
     assert repo.forge("fix", "start", "Fix the login typo", "--done", "It says Log in").returncode == 0
     assert repo.forge("work", "fix-the-login-typo").returncode == 0
-    assert _sent(calls, "thread/start")[-1]["config"] == {**QUIET, "features.multi_agent": True,
+    assert _sent(calls, "thread/start")[-1]["config"] == {**BUILDER_CONFIG, "features.multi_agent": True,
                                                           "model": "gpt-6-sol",
                                                           "model_reasoning_effort": "low"}
 

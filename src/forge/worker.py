@@ -571,7 +571,15 @@ def _failing(branch: str) -> list[tuple[str, str]]:
     for check in checks if isinstance(checks, list) else []:
         if check.get("bucket") == "fail":
             job = re.search(r"/job/(\d+)", check.get("link") or "")
-            log = repo.run("gh", "run", "view", "--job", job[1], "--log-failed").stdout if job else ""
+            log = ""
+            if job:
+                view = repo.run("gh", "run", "view", "--job", job[1], "--log-failed")
+                log = view.stdout
+                if view.returncode:
+                    # gh run view needs the whole workflow to finish, even for a completed job.
+                    download = repo.run("gh", "api", f"repos/{{owner}}/{{repo}}/actions/jobs/{job[1]}/logs")
+                    if download.returncode == 0:
+                        log = download.stdout
             lines = log.splitlines()
             start = next((n for n in range(len(lines) - 1, -1, -1)
                           if "Failed tests:" in lines[n]), len(lines))
