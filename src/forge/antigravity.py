@@ -1,7 +1,7 @@
 """Antigravity's newline-delimited Agent Client Protocol."""
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import hashlib
 import json
 import os
@@ -275,14 +275,16 @@ def read(top: Path, target: str, models: dict, prompt: str, fresh: str, *,
     sensitive = subprocess.run([sys.executable, str(helper), "sensitive", str(pinned)],
                                input=json.dumps(paths), encoding="utf-8",
                                capture_output=True, check=True)
-    cwd = home(top) / "read" / target
-    copy_for_reading(top, cwd, paths, set(json.loads(sensitive.stdout)))
+    folder = home(top)
     rules = story.agents_section(top, "Review rules")
     suffix = "\n\nThis repo's Review rules, from its AGENTS.md on the default branch:\n" + rules
     path = codex._item_file(top, target, ".json", "Grill")
     saved = codex.record(top, target, "Grill") if kind == "grill" else {}
     resume = (saved.get("antigravity") or {}).get("id")
-    with repo.record_run(top, target, "read", family="antigravity", **models) as ran:
+    with (TemporaryDirectory(dir=folder, prefix="explore-") if kind == "explore" else nullcontext()) as scratch, \
+            repo.record_run(top, target, "read", family="antigravity", **models) as ran:
+        cwd = Path(scratch) / "checkout" if scratch else folder / "read" / target
+        copy_for_reading(top, cwd, paths, set(json.loads(sensitive.stdout)))
         ran["model_kind"] = kind
         kwargs = dict(cwd=cwd, mode="read", model=models["model"], effort=models["effort"],
                       again=again or f"forge read {target}", ran=ran)

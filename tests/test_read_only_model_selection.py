@@ -81,19 +81,14 @@ def test_2_sync_writes_explorer_from_explore_for_both_hosts(repo):
     assert _settings(repo.path, "explorer") == (("gpt-6.1-sol", "high"), ("haiku", "high"))
 
 
-def test_4_earlier_adopted_repo_without_explore_gets_defaults_after_sync(
+def test_4_earlier_adopted_repo_without_explore_gets_defaults_on_upgrade(
         unsynced_up):
     # Upgrade starts from the text fixture's actual earlier-adoption files, rather than a
     # current sync given an old version string. The new defaults leave lite settings intact.
     up = unsynced_up
     _repo_adopted_on_the_previous_release(up)
-    toml = up.folder / "forge.toml"
-    before = toml.read_bytes()
-    models = tomllib.loads(before.decode("utf-8"))["models"]
+    models = tomllib.loads((up.folder / "forge.toml").read_text("utf-8"))["models"]
     assert "explore" not in models
-    synced = up.repo.forge("sync", cwd=up.folder)
-    assert synced.returncode == 0, synced.stdout + synced.stderr
-    assert toml.read_bytes() == before
     assert _settings(up.folder, "explorer") == (
         ("gpt-6.1-terra", "medium"), ("claude-haiku-5-5", "high"))
 

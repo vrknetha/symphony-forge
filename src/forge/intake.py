@@ -29,13 +29,13 @@ RETRY = "Your reply does not match the requested lines. Send the full reply in t
 def start(args: Any) -> int:
     import sys
 
-    from forge import doctor
+    from forge import doctor, routing
 
     top = repo.root()
     if removed := doctor.tidy_finished(top):
         print(f"Removed {removed} finished folders.", file=sys.stderr)
     here = native.session()["id"].split(":", 1)[0]
-    cfg = repo.config(top)
+    cfg = routing.routed(top, repo.config(top))
     family = repo.worker_family(cfg, design=False)
     models = repo.worker_models(cfg, "explore", family)
     prototype = repo.is_prototype(top, cfg)
@@ -59,11 +59,21 @@ def start(args: Any) -> int:
             if family == "codex":
                 turn = codex.run(top, target, "Grill", "Sort this idea", prompt, "read-only",
                                  model=models["model"], effort=models["effort"], echo=False)
-                said = turn["text"] if turn["status"] == "completed" else None
+                if turn["status"] != "completed":
+                    log = repo.work_log(top, target)
+                    ended = ([line for line in log.read_text("utf-8", errors="replace").splitlines()
+                              if line.startswith("Codex ended the turn:")] if turn["status"] else [])
+                    detail = ended[-1] if ended else "Codex did not report the end of the turn."
+                    repo.refuse(("{detail} See {log} for details.", "{again}"),
+                                detail=detail, log=log, again=again)
+                said = turn["text"]
             elif family == "claude":
                 done = story._sdk_read(top, target, flags, prompt, prompt, None, "", attempt,
                                        lambda _: None)
-                said = done.stdout if done.returncode == 0 else None
+                if done.returncode:
+                    repo.refuse(("Claude could not sort the idea. {detail}", "{again}"),
+                                detail=doctor._last(done), again=again)
+                said = done.stdout
             else:
                 said = antigravity.read(top, target, models, prompt, prompt,
                                         kind="explore", again=again).stdout
