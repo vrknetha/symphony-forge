@@ -123,8 +123,8 @@
       "gain": null,
       "harm": null,
       "line": 235,
-      "outcome": "open",
-      "reason": "",
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
       "round": 5,
       "security": false,
       "title": "Point bootstrap installs at a release containing the fix",
@@ -136,8 +136,8 @@
       "gain": null,
       "harm": null,
       "line": 1028,
-      "outcome": "lived with",
-      "reason": "",
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
       "round": 5,
       "security": false,
       "title": "Handle handoff from a published legacy release",
@@ -149,8 +149,8 @@
       "gain": null,
       "harm": null,
       "line": 697,
-      "outcome": "lived with",
-      "reason": "",
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
       "round": 5,
       "security": false,
       "title": "Wait for active Forge runs before the recovery install",
@@ -162,7 +162,23 @@
     "branch_diff": "3e164c3ac53011c743419a49f56d86e8f219ea58a72673722f2d388d0451f13e",
     "changed": "8e3f39b137bab12fa3a0ddb23d29cd9f7c330a3405d2a9fdfc81bf533471e8f7",
     "commit": "ab4d18f51cb001027cd3c5ec58d85552b451884a",
-    "dismissals": [],
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
+        "finding": 1
+      },
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
+        "finding": 2
+      },
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
+        "finding": 3
+      }
+    ],
     "findings": [
       {
         "body": "The documented install and both platform installers still pin 1.2.48. [PyPI reports](https://pypi.org/pypi/symphony-forge/json) that this version was uploaded before this patch, and the v1.2.48 source still generates installs from the disabled GitHub repository. A new user following these instructions therefore receives the old Forge, which generates broken client CI and hook fallbacks. Publishing a fixed release alone will not change these hard-coded pins; update them to that release as part of the rollout.",
@@ -187,10 +203,10 @@
       }
     ],
     "id": "763f6968-7c22-49e0-94ae-5ad944c4ead2",
-    "status": "blocked"
+    "status": "clean"
   },
   "round": 6,
-  "status": "hotspot",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-25T15:18:45.279830+00:00",
@@ -250,12 +266,23 @@
       "at": "2026-11-26T01:33:22.794589+00:00",
       "round": 6,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-26T01:35:47.263800+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 6,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-26T01:33:22.794589+00:00",
+    "by": "owner",
+    "choice": "accept",
     "file": "README.md",
-    "wait_id": "1b4f71a4-0130-4739-b9e3-da0d4bf45c1f"
+    "reason": "Owner accepted: (1) the release cut changes the install pins to 1.2.49; (2) and (3) are v1.2.49 known issues with workarounds (stop Forge work before the recovery install; merge main into older work branches)",
+    "wait_id": "1b4f71a4-0130-4739-b9e3-da0d4bf45c1f",
+    "worker_round": 6
   },
   "stuck": {
     "close": "a1df8ced-408e-4eb7-82f6-35525d2e2a48",
