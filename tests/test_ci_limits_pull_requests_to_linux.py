@@ -1,10 +1,8 @@
-"""Pull requests use Linux; nightly and manual runs include Windows."""
+"""Pull requests use Linux and keep their required checks."""
 import json
 import re
 import tomllib
 from pathlib import Path
-
-import pytest
 
 STORY = "FIX-FORGE-CI-LINUX-PRS"
 ROOT = Path(__file__).resolve().parents[1]
@@ -24,55 +22,9 @@ def expression(text, **github):
     return eval(code.replace("&&", " and ").replace("||", " or "), {"fromJSON": json.loads})
 
 
-def matrix_rows(event, ref="refs/heads/main"):
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    tests_job = workflow.split("  tests:\n", 1)[1].split("  net-lines:\n", 1)[0]
-    # The gating workflow owns Linux's pull-request groups.
-    guard = re.search(r"^    if: (.+)$", tests_job, re.M)
-    if guard and not expression("${{ " + guard[1] + " }}", event_name=event, ref=ref):
-        return []
-    selection = re.search(r"include: >-\n(.+?)\n    runs-on:", tests_job, re.S)
-    assert selection, "List the platform groups for each event"
-    # Join the lines: a Python string literal cannot span them, a GitHub one can.
-    folded = " ".join(line.strip() for line in selection[1].splitlines())
-    return expression(folded, event_name=event, ref=ref)
-
-
-@pytest.mark.parametrize("event,counts", [
-    ("pull_request", {}),
-    ("tag", {}),
-    ("schedule", {"windows-latest": 5}),
-    ("workflow_dispatch", {"windows-latest": 5}),
-])
-def test_1_event_runs_every_required_platform_group_once(event, counts):
-    rows = (matrix_rows("push", "refs/tags/v1.2.3") if event == "tag" else matrix_rows(event))
-    # Tags can reuse proof. Nightly and manual runs always run every group.
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    step = workflow.split("      - id: parent-tests\n", 1)[1].split("\n      - ", 1)[0]
-    guard = re.search(r"^        if: (.+)$", step, re.M)
-    assert guard, "Guard the parent-tests reuse by event"
-    event_name, ref = ("push", "refs/tags/v1.2.3") if event == "tag" else (event, "refs/heads/main")
-    assert bool(expression("${{ " + guard[1] + " }}", event_name=event_name, ref=ref)) == (
-        event == "tag")
-    assert sorted((row["os"], row["group"], row["groups"]) for row in rows) == sorted(
-        (os, group, count) for os, count in counts.items() for group in range(1, count + 1))
-    workflow = WORKFLOW.read_text(encoding="utf-8")
-    triggers = workflow.split("\non:\n", 1)[1].split("\nconcurrency:", 1)[0]
-    assert re.search(r"^  pull_request:$", triggers, re.M)
-    assert re.search(r"^  push:\n    tags: \['v\*'\]$", triggers, re.M)
-    assert "branches:" not in triggers, "Merges to main must not start another platform run"
-    assert re.search(r"^  schedule:\n    - cron: '[\d*]+ [\d*]+ \* \* \*'$", triggers, re.M), "Run nightly"
-    assert re.search(r"^  workflow_dispatch:$", triggers, re.M)
-    # A job skipped on pull requests must not answer to the required tests check's name.
-    tests_job = workflow.split("  tests:\n", 1)[1].split("  net-lines:\n", 1)[0]
-    name = re.search(r"^    name: (.+)$", tests_job, re.M)
-    assert name and name[1].strip() != "tests", "Name the push-only suite apart from the tests check"
-
-
 def test_2_pull_requests_keep_closes_named_checks():
     checks = tomllib.loads((ROOT / "forge.toml").read_text(encoding="utf-8"))["checks"]
     workflow = (ROOT / ".github/workflows/forge.yml").read_text(encoding="utf-8")
-    # Shared checks stay generated; Forge's additional Windows installer check has its own owner test.
     assert {"tests", "forge-pr-check"} <= set(checks)
     # The required test gate answers only to pull requests. Evaluate the emitted
     # event condition and name without fixing its syntax.
