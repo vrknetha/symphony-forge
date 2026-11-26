@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-REVIEWPROOF-1-SEVERITY",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-26T17:28:07.107327+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-26T17:28:20.436291+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "d65b6813424ad2da85b7106aa6124ff974288726",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
