@@ -192,7 +192,7 @@ def test_6_new_repo_says_antigravity_is_installed_and_other_repos_are_unchanged(
     config = tomllib.loads((client / "forge.toml").read_text(encoding="utf-8"))
     assert config["workers"] == "claude"
     assert "reviews" not in config
-    assert "antigravity" not in json.dumps(config)
+    assert {kind for kind, entries in config["models"].items() if "antigravity" in entries} == {"explore"}
     assert not log.exists()
 
     synced = repo.forge("sync", cwd=client)
