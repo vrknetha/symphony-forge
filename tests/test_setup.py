@@ -445,7 +445,9 @@ def test_38_host_hooks_fail_closed(repo, claude_payload, codex_payload, tmp_path
 
     commands = _hook_commands(repo.path)
     # Both new PreCompact commands must fail closed when Forge cannot launch.
-    assert len(commands) == 10
+    assert len(commands) == 11
+    assert [(rel, event) for rel, event, _ in commands if event == "UserPromptSubmit"] == [
+        (".codex/hooks.json", "UserPromptSubmit")]
     for lifecycle in ("PreCompact", "SessionEnd"):
         assert sum(event == lifecycle for _, event, _ in commands) == 2
     for rel, event, command in commands:

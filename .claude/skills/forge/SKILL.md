@@ -1799,18 +1799,28 @@ there are no findings, ignoring other note lines. A numbered or bulleted blockin
 needs a disposition and another round.
 
 Handle cold-read rounds yourself: amend the plan and write dispositions.
-Once a read is clean, before Plan Mode approval, list the choices you made alone answering
+Once a read is clean, before approval, list the choices you made alone answering
 notes in all rounds: each amendment that picked a behaviour, a limit, a refusal or a scope cut.
 Grill the human one question at a time, with your recommendation first.
 Record each answer in the plan, then ask for approval. Plain factual corrections need no question.
 
-Use one framing line before showing a story in Plan Mode:
+Use one framing line before you show the story:
 `Approving: <title>, <n> parts, <risks>`.
 
 The owner approves only the top of the story doc. Show it from its title down to
-`## For the builders`, unchanged, in Plan Mode and exit Plan Mode with that part as the plan; in
-Codex, show the same part, then ask the approval question `forge next` gives. A doc with no
-`## For the builders` heading is shown whole. The approval binds "What changes for you" and
+`## For the builders`, unchanged. Show the whole doc if it has no such heading. In Claude Code,
+exit Plan Mode with that text as the plan. In Codex, ask the owner to type the
+`approve <KEY> <code>` line from `forge next`. Only the owner's own reply counts. If Codex is
+already in Plan Mode, you can ask the question from `forge next` instead.
+
+After the owner types the line, run `forge next`. If the code no longer matches, show the current
+text and give the owner its new line. If the story still waits and Forge gives no reason, ask the
+owner to review and trust the new hook with `/hooks` in Codex. Codex skips a new hook until the
+owner trusts it. Forge trusts hooks only in the threads it starts. Check that the installed Forge
+version matches the version the repo pins. New repos get this hook at setup. Existing repos get it
+on upgrade, with no settings change.
+
+The approval binds "What changes for you" and
 "Done when", so tightening anything below `## For the builders` needs no new approval, while
 changing a result or "What changes for you" does. Once a round of cold read has passed, an edit only
 below `## For the builders` needs no new round either, and `forge read` refuses to run one; an

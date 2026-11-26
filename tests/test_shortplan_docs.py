@@ -71,8 +71,11 @@ def test_2_you_approve_only_the_top_part(repo, claude_payload, codex_payload):
     # Codex: forge next says to show the same top part before asking, and the answer approves.
     ready(repo, "WISH", NEW.replace("save a basket", "keep a wish list"))
     shown = flat(repo.forge("next").stdout)
-    assert f"in Codex, show plans/WISH.md {TOP_PART}, then ask request_user_input" in shown
-    recorded = hook(repo, codex_question(codex_payload, _digest(repo)))
+    digest = _digest(repo)
+    assert f"in Codex, show plans/WISH.md {TOP_PART}, then ask the owner to type approve WISH {digest[:6]}." in shown
+    assert f"In Plan Mode, you can instead ask request_user_input with id approve_plan_{digest}" in shown
+    assert "review and trust the new hook with /hooks in Codex" in shown
+    recorded = hook(repo, codex_question(codex_payload, digest))
     assert recorded.returncode == 0, recorded.stderr
 
     # A doc written the old way, with no For the builders heading, is shown and approved whole.
