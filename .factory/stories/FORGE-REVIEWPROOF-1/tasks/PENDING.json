@@ -7,7 +7,7 @@
       "gain": 3,
       "harm": 3,
       "line": 33,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -20,7 +20,7 @@
       "gain": 3,
       "harm": 3,
       "line": 92,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -30,37 +30,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "514a274ad26cad64bc58f05a3846009e665bd6435bdf40dfb1a053eda1e640ed",
-    "changed": "70f7f2b44d6b1fe6826d5f14a09040d9ecd4ffd9650048113bcdfd0a3ca712dd",
-    "commit": "6ae70cfc24b3fd45187cc3f3bb594fa0286b6427",
+    "branch_diff": "7506c76b847b50643bb5db5618e4c7bbf704f759641918bcb4893a4ef0ae29ee",
+    "changed": "1eeff2b8f7089febf2f6c7ffb3fe04b212afde5630fed34c61ec5c4bb8fb4b09",
+    "commit": "323d94c7be48b9b458acaf734825e09b18d40221",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - The proof line claims this test verifies that a post-merge `check:` entry is accepted. The fixture starts SHOP/T1, which covers only item 1 (`tests/test_close.py:53`), but the `check:` entry is for item 2. `proof.py:200-204` checks only covered items, so neither close nor the later PR check tests this entry. The assertions would still pass if a covered `check:` entry were rejected as having no test.",
-        "file": "tests/test_review_pending_after_merge.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 33,
-        "priority": "P1",
-        "title": "Test: 1: tests/test_review_pending_after_merge.py::test_1_pending_after_merge_does_not_block_and_lists_check_and_owner",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - The proof line says accepting the blocker leaves the pending check undismissed, but this assertion checks only for `dismissed because` before the fold. `pr_block.py:34-36` omits pending findings from the dismissal detail regardless of whether they were dismissed, and `pr_block.py:60` lists them regardless. If accept also dismissed the pending check, these assertions would still pass; the test does not check the published dismissal count.",
-        "file": "tests/test_review_pending_after_merge.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 92,
-        "priority": "P1",
-        "title": "Test: 2: tests/test_review_pending_after_merge.py::test_2_pending_after_merge_carries_across_rounds_and_stays_out_of_stop_accept_and_spotted",
-        "work": 1
-      }
-    ],
-    "id": "60b9e6cf-9bea-48e9-9001-38e78e1ffb0f",
-    "status": "blocked"
+    "findings": [],
+    "id": "efbe7e75-07b8-411e-99bd-568cbf96f54e",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-26T19:42:30.850695+00:00",
@@ -79,6 +58,10 @@
       "at": "2026-11-26T19:55:26.040775+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T19:59:38.407952+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
