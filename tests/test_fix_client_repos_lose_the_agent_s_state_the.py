@@ -66,5 +66,7 @@ def test_1_sync_ships_precompact_handoff_and_hook_preserves_decisions(repo, monk
     for path in (".claude/skills/forge/SKILL.md", ".codex/skills/forge/SKILL.md"):
         skill = " ".join((repo.path / path).read_text(encoding="utf-8").split())
         for phrase in ("`.git/forge/handoff.md`", "at each milestone", "read it first",
-                       "never committed"):
+                       "never committed", "more than half of the context window",
+                       "tell the owner to clear the chat", "when the job starts",
+                       "If the note does not exist, run `forge hook handoff` first"):
             assert phrase in skill
