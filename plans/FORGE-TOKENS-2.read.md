@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-26T12:40:09.455064+00:00
-seconds: 677.803
-read_hash: 58d90cf9b159d4f3221bc347fbc85e4e9870e71e
-round: 1
+read_at: 2026-11-26T12:51:11.214347+00:00
+seconds: 253.32
+read_hash: 62b169895ca4d6b6e9a8d22d06cac655f90a5a54
+round: 2
 passed: no
-doc_seen: 58d90cf9b159d4f3221bc347fbc85e4e9870e71e
+doc_seen: 62b169895ca4d6b6e9a8d22d06cac655f90a5a54
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: f2398b3579c83805d3238789234aa70da3be4557
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a217d4-87d7-74f0-b969-c62a1425eb07
 session:
-loop_choice:
-loop_reason:
+loop_choice: more
+loop_reason: Owner chose one more round: runs with no effort setting send none
 ---
 # Cold read notes
 
@@ -88,3 +88,21 @@ Only a genuine trade-off goes to the human, as a question with options.
    [The plan](/plans/FORGE-TOKENS-2.md:42) lists four fields, then defines uncached input as the second minus the third: effort minus input tokens. It also groups by effort change and family, but not item kind; [Forge uses different work kinds](/src/forge/worker.py:210) for tasks and fixes. A change in their mix can therefore appear as a change caused by the release.  
    Gain 4, Work 1, Harm 2
    Disposition: cut Item 1 now says uncached input is input_tokens minus cached_input_tokens, groups by item kind (task or fix) as well as family, and leaves out native rounds that have no token counts.
+
+## Round 2
+
+8. Advisory: Unproven: item 2 assumes every Codex request has an effort to move.
+   
+   Raise: Plan gap  
+   Case: normal use - a new repo runs `forge ask` without adding model settings.  
+   [Forge’s default settings](/src/forge/init.py:77) contain no `models.ask` entry, and [forge ask](/src/forge/ask.py:16) supplies no effort override. The plan says the request already contains one, while the [existing ask test](/tests/test_ask_command.py:32) explicitly configures it. The default path has no specified value to send or record.  
+   Adds work: handle and cover a turn without configured effort; F 2 x H 2 = 4; 2 x C = 4.  
+   Gain 3, Work 2, Harm 3
+
+9. Advisory: Plan gap: the after-release comparison cannot prove shortening occurred.
+   
+   Raise: Plan gap  
+   Case: normal use - uncached input falls after the effort change.  
+   [The amended plan](/plans/FORGE-TOKENS-2.md:34) calls the after-release measurement proof that Codex shortens chats, but that measurement compares uncached input per repair round. [Forge records turn totals](/src/forge/codex_turn.py:302), so those numbers can fall because of the effort change even if no conversation is shortened.  
+   Gain 3, Work 1, Harm 2
+   Disposition: keep - below the bar (follow-up)
