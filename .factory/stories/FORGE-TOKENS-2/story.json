@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-TOKENS-2.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-26T12:25:21.485546+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
+  "touches": 0
+}

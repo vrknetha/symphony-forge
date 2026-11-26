@@ -726,6 +726,12 @@
       "title": "Builder rounds send fewer input tokens",
       "status": "pending",
       "order": 129
+    },
+    {
+      "key": "FORGE-TOKENS-2",
+      "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
+      "status": "pending",
+      "order": 130
     }
   ],
   "epics": [
