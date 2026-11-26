@@ -116,37 +116,81 @@
       "security": false,
       "title": "Handle incomplete PyPI responses as lookup failures",
       "work": null
+    },
+    {
+      "area": "README.md",
+      "file": "README.md",
+      "gain": null,
+      "harm": null,
+      "line": 235,
+      "outcome": "open",
+      "reason": "",
+      "round": 5,
+      "security": false,
+      "title": "Point bootstrap installs at a release containing the fix",
+      "work": null
+    },
+    {
+      "area": "run_release() in src/forge/repo.py",
+      "file": "src/forge/repo.py",
+      "gain": null,
+      "harm": null,
+      "line": 1028,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 5,
+      "security": false,
+      "title": "Handle handoff from a published legacy release",
+      "work": null
+    },
+    {
+      "area": "docs/guide.md",
+      "file": "docs/guide.md",
+      "gain": null,
+      "harm": null,
+      "line": 697,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 5,
+      "security": false,
+      "title": "Wait for active Forge runs before the recovery install",
+      "work": null
     }
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "19c9a28b4d01cde87e787c969ef918fc05ab08bd3fa96bccaefa36bb02225d14",
-    "changed": "2d000e20750ab0420a72d65282eb84a79ec9e169e0b5218be204dc8a51a41ac7",
-    "commit": "77be8cce9f55d6760f89c20b263d502af557167a",
+    "branch_diff": "3e164c3ac53011c743419a49f56d86e8f219ea58a72673722f2d388d0451f13e",
+    "changed": "8e3f39b137bab12fa3a0ddb23d29cd9f7c330a3405d2a9fdfc81bf533471e8f7",
+    "commit": "ab4d18f51cb001027cd3c5ec58d85552b451884a",
     "dismissals": [],
     "findings": [
       {
-        "body": "The documented release procedure tags the cut commit and creates a GitHub release, but it does not publish the new version to PyPI. Following those steps on a clean machine leaves this command unable to resolve the just-cut version. Generated client installs have the same problem, and the PyPI-based release lookup continues to report the previous version. Add a PyPI publication and verification step before the release is used.",
-        "file": "docs/guide.md",
-        "follow_up": "Follow-up: new finding below P0 in a repair review",
-        "line": 761,
+        "body": "The documented install and both platform installers still pin 1.2.48. [PyPI reports](https://pypi.org/pypi/symphony-forge/json) that this version was uploaded before this patch, and the v1.2.48 source still generates installs from the disabled GitHub repository. A new user following these instructions therefore receives the old Forge, which generates broken client CI and hook fallbacks. Publishing a fixed release alone will not change these hard-coded pins; update them to that release as part of the rollout.",
+        "file": "README.md",
+        "line": 235,
         "priority": "P1",
-        "title": "Publish each new release to PyPI before using its pin"
+        "title": "Point bootstrap installs at a release containing the fix"
       },
       {
-        "body": "If a proxy or network interruption truncates a PyPI response, reading it can raise `http.client.IncompleteRead`. That exception is an `HTTPException`, not one of the types caught here or by `release_notice`. Consequently, the first `forge next` release check of the day exits with a traceback instead of treating the notice as optional; unversioned `forge upgrade` also exits without its normal refusal. The exception is documented in the [Python HTTP client reference](https://docs.python.org/3/library/http.client.html#http.client.IncompleteRead).",
-        "file": "src/forge/upgrade.py",
-        "follow_up": "Follow-up: new finding below P0 in a repair review",
-        "line": 432,
+        "body": "An existing work branch can still pin the published v1.2.48 after its default branch upgrades. This runner starts v1.2.48 from PyPI, but that release's `close` can merge the upgraded default and then its own `repo.resume_pin` invokes the new pin through the disabled GitHub URL. Closing consequently fails during the handoff, even though both versions are available from PyPI; a retry is needed after the branch pin has changed. The earlier-release test fixture copies the current source and only changes its version, so it does not exercise the historical runner.",
+        "file": "src/forge/repo.py",
+        "line": 1028,
         "priority": "P2",
-        "title": "Handle incomplete PyPI responses as lookup failures"
+        "title": "Handle handoff from a published legacy release"
+      },
+      {
+        "body": "The recovery instructions force-reinstall the shared Forge tool before checking for active work. If another build, review or CI wait is running on the machine, this can replace modules under that process and cause it to fail or mix releases. The subsequent `forge upgrade` does not provide the advertised safeguard: `upgrade.py:101\u2013103` checks active runs only when the requested version is not already on PATH, and this command has just installed it. Have users end active runs before the forced install.",
+        "file": "docs/guide.md",
+        "line": 697,
+        "priority": "P2",
+        "title": "Wait for active Forge runs before the recovery install"
       }
     ],
-    "id": "bf032e81-dde1-40b8-98e5-a425ab107fa6",
-    "status": "clean"
+    "id": "763f6968-7c22-49e0-94ae-5ad944c4ead2",
+    "status": "blocked"
   },
   "round": 6,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-25T15:18:45.279830+00:00",
@@ -197,8 +241,22 @@
       "at": "2026-11-26T01:16:43.719661+00:00",
       "round": 6,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-26T01:33:22.770270+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T01:33:22.794589+00:00",
+      "round": 6,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-26T01:33:22.794589+00:00",
+    "file": "README.md",
+    "wait_id": "1b4f71a4-0130-4739-b9e3-da0d4bf45c1f"
+  },
   "stuck": {
     "close": "a1df8ced-408e-4eb7-82f6-35525d2e2a48",
     "head": "1447dc96c7f271c97fd15703ca7df8a3fc668d35",

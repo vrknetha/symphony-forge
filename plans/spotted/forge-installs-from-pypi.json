@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "key": "bug\tREADME.md\tPoint bootstrap installs at a release containing the fix\tforge-installs-from-pypi",
+      "kind": "bug",
+      "path": "README.md",
+      "line": 235,
+      "text": "Point bootstrap installs at a release containing the fix",
+      "from": "blocking",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "bug\tdocs/guide.md\tPersist the recovery release before merging the upgrade\tforge-installs-from-pypi",
       "kind": "bug",
       "path": "docs/guide.md",
@@ -67,11 +78,33 @@
       "closed_by": null
     },
     {
+      "key": "edge\tdocs/guide.md\tWait for active Forge runs before the recovery install",
+      "kind": "edge",
+      "path": "docs/guide.md",
+      "line": 697,
+      "text": "Wait for active Forge runs before the recovery install",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "edge\tpyproject.toml\tMake README documentation links work on the PyPI page",
       "kind": "edge",
       "path": "pyproject.toml",
       "line": 9,
       "text": "Make README documentation links work on the PyPI page",
+      "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/repo.py\tHandle handoff from a published legacy release",
+      "kind": "edge",
+      "path": "src/forge/repo.py",
+      "line": 1028,
+      "text": "Handle handoff from a published legacy release",
       "from": "review",
       "item": "forge-installs-from-pypi",
       "status": "open",
@@ -95,6 +128,17 @@
       "line": 432,
       "text": "Handle incomplete PyPI responses as lookup failures",
       "from": "review",
+      "item": "forge-installs-from-pypi",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\ttests/test_train_land_all.py\tGitHub Actions reported that Git could not find a repository while closing the third change after the train switched to individual merges. The test passed in isolation.",
+      "kind": "edge",
+      "path": "tests/test_train_land_all.py",
+      "line": 306,
+      "text": "GitHub Actions reported that Git could not find a repository while closing the third change after the train switched to individual merges. The test passed in isolation.",
+      "from": "worker",
       "item": "forge-installs-from-pypi",
       "status": "open",
       "closed_by": null
