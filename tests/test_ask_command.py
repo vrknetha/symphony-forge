@@ -11,7 +11,7 @@ import sys
 import time
 
 from conftest import machine_cores
-from test_codex_worker import QUIET, _codex_repo, _sent
+from test_codex_worker import QUIET, _codex_repo, _sent, _stub
 from test_codex_worker import sdk_data  # noqa: F401  (a fixture)
 
 import pytest
@@ -32,6 +32,7 @@ def _forge(repo, *args, stall=False):
 @pytest.mark.platform
 def test_1_ask_runs_one_read_only_codex_turn(repo, monkeypatch, sdk_data):
     _, stub = _codex_repo(repo, monkeypatch, sdk_data, start_task=False)
+    default_config = (repo.path / "forge.toml").read_text(encoding="utf-8")
     version = repo.forge("--version").stdout.split()[-1]
     repo.write("forge.toml", f'version = "{version}"\nrepo = "forge-source"\nworkers = "codex"\n'
                '\n[models.ask]\nmodel = "gpt-6.2-sol"\neffort = "high"\n')
@@ -40,6 +41,7 @@ def test_1_ask_runs_one_read_only_codex_turn(repo, monkeypatch, sdk_data):
     asked = repo.forge("ask", "Why is the sky blue?")
     assert asked.returncode == 0, asked.stdout + asked.stderr
     assert "stub codex: built it with" in asked.stdout
+    assert [call["forge_worker"] for call in _stub(stub) if "pid" in call] == ["1"]
     starts, turns = _sent(stub, "thread/start"), _sent(stub, "turn/start")
     assert len(starts) == len(turns) == 1
     assert (starts[0]["sandbox"], starts[0]["approvalPolicy"]) == ("read-only", "never")
@@ -81,6 +83,12 @@ def test_1_ask_runs_one_read_only_codex_turn(repo, monkeypatch, sdk_data):
         finally:
             for process in (first, second):
                 process.kill()
+
+    repo.write("forge.toml", default_config)
+    asked = repo.forge("ask", "What changed?")
+    assert asked.returncode == 0, asked.stdout + asked.stderr
+    assert "model_reasoning_effort" not in _sent(stub, "thread/start")[-1]["config"]
+    assert "effort" not in _sent(stub, "turn/start")[-1]
 
 
 @pytest.mark.platform

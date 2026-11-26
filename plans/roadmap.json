@@ -738,6 +738,18 @@
       "title": "Separate review severity from merge decisions",
       "status": "pending",
       "order": 131
+    },
+    {
+      "key": "FORGE-CODEXAPPROVE-1",
+      "title": "Approve a story from a Codex chat",
+      "status": "pending",
+      "order": 130
+    },
+    {
+      "key": "FORGE-TOKENS-2",
+      "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
+      "status": "pending",
+      "order": 130
     }
   ],
   "epics": [

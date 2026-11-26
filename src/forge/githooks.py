@@ -25,6 +25,7 @@ HOSTS = {
                               "PostToolUse": ("ExitPlanMode|AskUserQuestion", "approval")},
     ".codex/hooks.json": {"SessionStart": (None, "context"), "PreCompact": (None, "handoff"),
                           "SessionEnd": (None, "context"),
+                          "UserPromptSubmit": (None, "approval"),
                           "PreToolUse": ("Bash", "deny"),
                           "PostToolUse": ("request_user_input", "approval")},
 }

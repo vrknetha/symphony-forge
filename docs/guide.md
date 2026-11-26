@@ -346,8 +346,9 @@ A prototype without the sample-data mark also needs its strict whole-product rev
    and this repeats until a round finds nothing.
 4. The human approves once, and sees only the top of the story doc: from its title down to
    `## For the builders`, or the whole doc when it has no such heading. In Claude Code, exit
-   Plan Mode with that part as the plan; in Codex, show it, then ask the approval question
-   `forge next` gives. The approval binds "What changes for you" and "Done when", so tightening
+   Plan Mode with that part as the plan. In Codex, show it and ask the owner to type the
+   `approve <KEY> <code>` line from `forge next`. In Codex Plan Mode, you can use the question
+   from `forge next`. The approval binds "What changes for you" and "Done when", so tightening
    the details, tasks or notes below needs no new approval. Do this from one main chat for
    stories in every Forge repo this machine has used, including its worktrees. Forge remembers
    those repos automatically. `forge hook approval` records the approval in the story's repo.
