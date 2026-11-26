@@ -89,7 +89,7 @@
     "status": "blocked"
   },
   "round": 3,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-26T11:57:56.704795+00:00",
@@ -138,12 +138,23 @@
       "at": "2026-11-26T12:34:03.370055+00:00",
       "round": 3,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-26T12:35:29.060702+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-26T12:34:03.370055+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "src/forge/antigravity.py",
-    "wait_id": "21189308-258d-4161-a726-445920a02a69"
+    "reason": "Owner chose one more round: also cover broken output after an ID-only refused request",
+    "wait_id": "21189308-258d-4161-a726-445920a02a69",
+    "worker_round": 3
   },
   "stuck": {
     "close": "2ff9a5f5-6059-4460-94ab-51c7b32fceb2",
