@@ -1,6 +1,13 @@
 {
   "base": "dba263236b9a869fde8dbc5f7369ebe8f0a4393c",
   "branch": "fix/neon-s-review-ends-with-review-engine-re",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a217b8-8c65-7ce3-b522-592812b3f95b",
+    "head": null,
+    "start": "ed142db74d22025a34e3e6fd4b8db04e266b03ba"
+  },
   "done_when": "An Antigravity review whose tool call is refused either returns Neon's written review or stops with a message that names the refused step, never \"empty output\".",
   "fix_kind": "backend",
   "fix_kind_explicit": true,
