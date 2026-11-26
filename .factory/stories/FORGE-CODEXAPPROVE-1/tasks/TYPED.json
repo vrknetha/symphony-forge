@@ -136,7 +136,7 @@
     "id": "1a8771df-2a06-4fca-bc7d-d27a0db511e1",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -151,13 +151,20 @@
     {
       "at": "2026-11-26T13:34:57.020324+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-26T13:35:18.513658+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "b572a3a2ba4934f3f06694d3771896bbe3964f27",
-    "keys": {},
-    "round": null
+    "close": "89492502-4f1c-4b11-8be2-bf2254ed70c2",
+    "head": "ac6539e148a84041b3e2f1c6a2d430facb461e6b",
+    "keys": {
+      "the open P0 not done: a typed line records nothing ... when it comes from anything other than the owner's own message in src/forge/approval.py": 1
+    },
+    "round": 1
   },
   "worker": "codex"
 }
