@@ -56,6 +56,39 @@
       "closed_by": null
     },
     {
+      "key": "bug\tsrc/forge/checks.py\tThe wait before pushing review records can still wait for other GitHub test jobs in local mode.",
+      "kind": "bug",
+      "path": "src/forge/checks.py",
+      "line": 252,
+      "text": "The wait before pushing review records can still wait for other GitHub test jobs in local mode.",
+      "from": "worker",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/close.py\tLocal test mode can report ready before the named review check passes on later pull requests.",
+      "kind": "bug",
+      "path": "src/forge/close.py",
+      "line": 476,
+      "text": "Local test mode can report ready before the named review check passes on later pull requests.",
+      "from": "worker",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\ttests/test_proto_deploy.py\tSelected container deployment tests need an explicit local opt-in after the generated test jobs go away.",
+      "kind": "edge",
+      "path": "tests/test_proto_deploy.py",
+      "line": 57,
+      "text": "Selected container deployment tests need an explicit local opt-in after the generated test jobs go away.",
+      "from": "worker",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "simplify\tforge.toml\tSimpler: Leave the approach implicit \u2192 record the before-coding rationale",
       "kind": "simplify",
       "path": "forge.toml",
