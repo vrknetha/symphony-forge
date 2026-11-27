@@ -30,8 +30,8 @@
       "text": "Test: v1.2.50 release notes list every client-visible change",
       "from": "blocking",
       "item": "the-v1-2-50-release-notes-miss-what-merg",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     }
   ]
 }
