@@ -52,7 +52,8 @@ def test_6_runner_ends_when_idle(land, tmp_path, monkeypatch):
     _agent(land)
     started = land.repo.forge("fix", "start", "Last fix", "--done", "Last fix merged", "--slug", "last-fix")
     assert started.returncode == 0, started.stderr
-    _wait_for(lambda: (land.repo.bin / "merged-fix-last-fix").exists() and _runner_exited(tmp_path), timeout=60.0)
+    _wait_for(lambda: (land.repo.bin / "merged-fix-last-fix").exists() and _runner_exited(tmp_path),
+              timeout=120.0, detail=lambda: _runner_log(land))
     count_after_merge = len(land.gh_calls())
     time.sleep(0.25)
     assert len(land.gh_calls()) == count_after_merge

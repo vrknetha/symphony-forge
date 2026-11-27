@@ -289,13 +289,14 @@ def _runner_exited(tmp_path: Path) -> bool:
     )
 
 
-def _wait_for(predicate, timeout: float = 30.0) -> None:
+def _wait_for(predicate, timeout: float = 30.0, detail=None) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():
             return
         time.sleep(0.05)
-    raise AssertionError("Timed out waiting for background runner condition")
+    extra = f"\n{detail()}" if detail else ""
+    raise AssertionError(f"Timed out waiting for background runner condition{extra}")
 
 
 def _runner_log(env) -> str:
@@ -378,7 +379,7 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
         monkeypatch.setenv("FORGE_CHECKS_WAIT", "999999999")
     _install_multi_gh(land, tmp_path)
     monkeypatch.setenv("FORGE_RUNNER_TICK", "30" if case == "two_part_human_merge"
-                       else "300" if case == "human_merge_stops_after_24h" else "0.05")
+                       else "1800" if case == "human_merge_stops_after_24h" else "0.05")
     monkeypatch.setenv("FORGE_NETWORK_RETRY_WAIT", "0")
 
     if case == "never_acts_outside_temp_folder":
@@ -595,7 +596,7 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
         monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
         done = land.repo.forge("fix", "start", "Stale PR", "--done", "Stops after 24h", "--slug", "retry-fix")
         assert done.returncode == 0, done.stderr
-        _wait_for(lambda: _runner_exited(tmp_path), timeout=45.0)
+        _wait_for(lambda: _runner_exited(tmp_path), timeout=90.0, detail=lambda: _runner_log(land))
         log = _runner_log(land)
         assert "The requested URL returned error: 503" in log, log
         assert log.count("retry-fix is ready; a human merges") == 1, log

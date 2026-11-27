@@ -38,8 +38,8 @@ def test_1_adoption_review_keeps_shared_input_checks(repo, gh, tmp_path, previou
                 "checks: changed-only selection can miss them.") in guide
         assert ("checks: changed-only selection can miss them. Include their pytest files or "
                 "node IDs in Python `always_test`, or their commands "
-                "beside changed-test selection in TypeScript `fast_test`, through the normal "
-                "settings fix after the human agrees.") in guide
+                "beside changed-test selection in TypeScript `fast_test`, through a settings fix "
+                "whose `--done` names `forge.toml` after the human agrees.") in guide
 
     if not previous:
         repo.git("switch", "-q", "-c", "fix/adoption-guidance")
