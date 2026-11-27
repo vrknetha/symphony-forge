@@ -229,7 +229,7 @@
     "id": "1c7edce9-10a2-4882-b29a-470b185c61ac",
     "status": "blocked"
   },
-  "round": 2,
+  "round": 3,
   "status": "fixing",
   "steps": [
     {
@@ -265,25 +265,20 @@
       "choice": "same",
       "round": 2,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T03:46:23.229133+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
-  "stop": {
-    "at": "2026-11-27T03:14:30.866823+00:00",
-    "by": "owner",
-    "choice": "same",
-    "question": "Approved work keeps moving to merge without reminders: A background runner moves approved work to merge is stuck. It should deliver: Wake and start of the runner, automatic part and fix starts, builds through `forge land` with no chat, the land lock, polling of human merges, cleanup, the end of the runner, the stub seam for STOPS, all guide text\nTwo rounds in a row left the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md.\nThe worker tried: Fix runner review findings: retries, polling, stop seam, docs, and tests.\nChoose one: switch this item to Claude; keep Antigravity for one more round; or narrow or split it.",
-    "reason": "Owner chose one more Neon round with exact notes",
-    "tool": "antigravity",
-    "wait_id": "ae40457d-9ce8-4936-b979-fc67292d2af2",
-    "worker_round": 2
-  },
   "stuck": {
-    "close": "100a6282-c023-43f5-afac-01cb345dea31",
-    "head": "98ada8b294aa106843098f19c8781dbb84280587",
+    "close": "669ace25-063f-44ec-bf79-66a06c54f7fe",
+    "head": "49e44828b5edbc1a8da187fee0b3a5c48fa8c6e7",
     "keys": {
-      "the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md": 1
+      "the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md": 2
     },
-    "round": 1
+    "round": 2
   },
   "worker": "antigravity"
 }
