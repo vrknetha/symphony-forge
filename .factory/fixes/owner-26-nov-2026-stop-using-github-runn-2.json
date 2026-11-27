@@ -41,7 +41,7 @@
     "id": "9243b886-bd0e-401d-a96d-dea8a5eab3e0",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -56,13 +56,18 @@
     {
       "at": "2026-11-27T03:01:02.507715+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-27T03:01:20.224520+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "96a3b5ecbbd90415cfa006931455bce7564c9c0b",
+    "close": "2da00a70-8206-4aa8-8f6c-1e15412aa342",
+    "head": "31d52de844e60ec6aa37683f334bbe0c4fd45949",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "Owner, 26 Nov 2026: stop using GitHub runners for tests (avoid another ban); tests run on this machine, related tests only.",
   "worker": "antigravity"
