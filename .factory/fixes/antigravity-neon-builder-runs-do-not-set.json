@@ -1,0 +1,16 @@
+{
+  "base": "af8c74d5d3b4966cbdbf145289b846d1563f6d60",
+  "branch": "fix/antigravity-neon-builder-runs-do-not-set",
+  "done_when": "Every Antigravity worker, read and review turn that Forge starts runs with FORGE_WORKER=1, as Codex and Claude turns do, and a test proves a Forge command run from inside an Antigravity turn sees it",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T06:30:40.331541+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Antigravity (Neon) builder runs do not set FORGE_WORKER=1, unlike Codex and Claude runs (codex.py, claude_turn.py, repo.py), so a Neon builder's Forge commands are treated as the coordinator's: on 27 Nov an unmerged branch's background runner woke from a Neon builder's commands and acted on the repo for two hours, and the merged rules that Forge-started chats never approve and that the half-window line is for the coordinator only rely on the same marker."
+}
