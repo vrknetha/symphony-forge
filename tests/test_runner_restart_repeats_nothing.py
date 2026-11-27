@@ -274,11 +274,16 @@ def test_5_runner_restart_repeats_nothing(case, land, tmp_path, monkeypatch, req
 
     started = land.repo.forge("fix", "start", "Slow fix", "--done", "Slow fix done", "--slug", "slow-fix")
     assert started.returncode == 0, started.stderr
-    started_keeper = land.repo.forge("fix", "start", "Keeper fix", "--done", "Keeper fix done", "--slug", "keeper-fix")
-    assert started_keeper.returncode == 0, started_keeper.stderr
     _wait_for(lambda: slow_marker.exists() and _runner_pid(tmp_path) is not None, timeout=30.0)
     runner_pid = _runner_pid(tmp_path)
     assert runner_pid is not None
+
+    # Start keeper-fix after slow-fix is already building so slow-fix holds the slot even on 2-core CI,
+    # and wait until this runner has spawned keeper-fix's land run before stopping slow-fix.
+    keeper_lock = land.repo.path / ".git" / "forge" / "land-keeper-fix.lock"
+    started_keeper = land.repo.forge("fix", "start", "Keeper fix", "--done", "Keeper fix done", "--slug", "keeper-fix")
+    assert started_keeper.returncode == 0, started_keeper.stderr
+    _wait_for(lambda: not _lock_is_free(keeper_lock), timeout=30.0)
 
     # 1. Set the owner's stop on slow-fix while the live runner is running.
     stopped = land.repo.forge("stop", "slow-fix")
@@ -294,7 +299,6 @@ def test_5_runner_restart_repeats_nothing(case, land, tmp_path, monkeypatch, req
     assert killed_pid == runner_pid
 
     # Allow both builds to finish if anything tries to run them; keeper-fix's surviving land finishes on its own.
-    keeper_lock = land.repo.path / ".git" / "forge" / "land-keeper-fix.lock"
     slow_release.write_text("go", encoding="utf-8")
     keeper_release.write_text("go", encoding="utf-8")
     _wait_for(lambda: (land.repo.bin / "merged-fix-keeper-fix").exists() and _lock_is_free(keeper_lock), timeout=60.0)
