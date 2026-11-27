@@ -333,6 +333,7 @@ def _approve(env, folder: Path, plan: str, claude_payload, monkeypatch) -> None:
     assert approved.returncode == 0, approved.stderr
 
 
+@pytest.mark.platform
 @pytest.mark.parametrize("case", [
     "two_part_agent_merge",
     "two_part_human_merge",
