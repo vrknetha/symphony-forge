@@ -2,11 +2,17 @@
   "base": "af8c74d5d3b4966cbdbf145289b846d1563f6d60",
   "branch": "fix/antigravity-neon-builder-runs-do-not-set",
   "done_when": "Every Antigravity worker, read and review turn that Forge starts runs with FORGE_WORKER=1, as Codex and Claude turns do, and a test proves a Forge command run from inside an Antigravity turn sees it",
+  "drop": {
+    "at": "2026-11-27T06:33:01.902436+00:00",
+    "because": "Not needed: antigravity.turn already sets FORGE_WORKER=1 through machine.worker_env(); the leak came from the runner branch's earlier code that did not yet skip FORGE_WORKER",
+    "by": "vrknetha <vrknetha@gmail.com> 1795761181 +0530",
+    "status": "working"
+  },
   "fix_kind": "backend",
   "fix_kind_explicit": true,
   "kind": "fix",
   "round": 1,
-  "status": "working",
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-27T06:30:40.331541+00:00",
@@ -16,6 +22,10 @@
       "at": "2026-11-27T06:31:13.584550+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T06:33:01.902648+00:00",
+      "step": "drop"
     }
   ],
   "stuck": {
