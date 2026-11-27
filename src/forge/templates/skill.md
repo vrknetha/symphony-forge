@@ -1987,6 +1987,8 @@ No command retires a started part: to replace one, close its pull request and de
 ## Cold read findings
 
 Close and the pull request show each finding's reviewer-assigned severity and say if it blocks the merge.
+An `After merge:` finding is a post-merge check: it does not block the merge, stays listed under
+`Pending after merge:` with its check and owner across review rounds, and is run by its owner after merge.
 The migration Harm floor applies when the change adds or edits a migration across its commits.
 Close asks the reviewer to score an open finding again if an old review applied that floor
 to a change without a migration addition or edit.

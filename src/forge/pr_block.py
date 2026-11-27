@@ -1,6 +1,7 @@
 """The review block in a pull request body."""
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from forge import review_skip, score
@@ -8,14 +9,31 @@ from forge import review_skip, score
 BEGIN, END = "<!-- forge:begin -->", "<!-- forge:end -->"
 
 
+def pending_lines(findings: list[dict[str, Any]]) -> list[str]:
+    """Formatted lines for pending-after-merge checks, with Check and Owner."""
+    lines = []
+    for finding in findings:
+        if not score.pending(finding):
+            continue
+        body = finding.get("body", "")
+        check = re.search(r"^[ \t]*Check:[ \t]*(.+)$", body, re.I | re.M)
+        owner = re.search(r"^[ \t]*Owner:[ \t]*(.+)$", body, re.I | re.M)
+        what = check[1].strip() if check else finding["title"]
+        who = owner[1].strip() if owner else "owner not named"
+        lines.append(f"- {finding['title']} — Check: {what}; Owner: {who}")
+    return lines
+
+
 def render(result: dict[str, Any], check: str) -> str:
     """Forge's block in the pull request body: the open blocking findings plainly first, or one
-    `Review: clean` line, then the dismissed and advisory findings folded away, then the worker's
-    functional check from its commit message. Each finding is a bullet naming its --dismiss number
-    in text, since GitHub renumbers an ordered list."""
+    `Review: clean` line, then any pending-after-merge checks, then the dismissed and advisory
+    findings folded away, then the worker's functional check from its commit message. Each finding
+    is a bullet naming its --dismiss number in text, since GitHub renumbers an ordered list."""
     because = {d["finding"]: d for d in result["dismissals"]}
     blocking, rest, below = [], [], {"follow-up": [], "live with": []}
     for n, finding in enumerate(result["findings"], 1):
+        if score.pending(finding):
+            continue
         outcome = "follow-up" if finding.get("follow_up") else score.bar(score.of(finding))
         scores = score.of(finding)
         line = "Gain {}, Work {}, Harm {}".format(*scores) if scores else ""
@@ -39,6 +57,8 @@ def render(result: dict[str, Any], check: str) -> str:
         lines = [BEGIN, "The review found serious problems.", "", *blocking]
     else:
         lines = [BEGIN, f"Review: clean, {len(because)} dismissed, {len(rest) - len(because) + sum(map(len, below.values()))} advice."]
+    if pending := pending_lines(result["findings"]):
+        lines += ["", "Pending after merge:", "", *pending]
     folded = [*rest, *[line for name, title in (("follow-up", "Follow-ups:"), ("live with", "Lived with:"))
                        if below[name] for line in ("", title, *below[name])]]
     folded = folded[1:] if folded[:1] == [""] else folded
