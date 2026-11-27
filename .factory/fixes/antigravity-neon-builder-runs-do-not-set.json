@@ -5,12 +5,25 @@
   "fix_kind": "backend",
   "fix_kind_explicit": true,
   "kind": "fix",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-27T06:30:40.331541+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-27T06:31:13.584550+00:00",
+      "round": 1,
+      "step": "resume"
     }
   ],
-  "why": "Antigravity (Neon) builder runs do not set FORGE_WORKER=1, unlike Codex and Claude runs (codex.py, claude_turn.py, repo.py), so a Neon builder's Forge commands are treated as the coordinator's: on 27 Nov an unmerged branch's background runner woke from a Neon builder's commands and acted on the repo for two hours, and the merged rules that Forge-started chats never approve and that the half-window line is for the coordinator only rely on the same marker."
+  "stuck": {
+    "close": null,
+    "head": "b65b3b0071732e795d127f13f5e102534fedde9f",
+    "keys": {},
+    "round": null
+  },
+  "why": "Antigravity (Neon) builder runs do not set FORGE_WORKER=1, unlike Codex and Claude runs (codex.py, claude_turn.py, repo.py), so a Neon builder's Forge commands are treated as the coordinator's: on 27 Nov an unmerged branch's background runner woke from a Neon builder's commands and acted on the repo for two hours, and the merged rules that Forge-started chats never approve and that the half-window line is for the coordinator only rely on the same marker.",
+  "worker": "antigravity"
 }
