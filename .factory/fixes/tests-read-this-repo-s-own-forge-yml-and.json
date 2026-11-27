@@ -1,0 +1,16 @@
+{
+  "base": "dad7a78e2dec402ad593a5c429ee8dca0fca0084",
+  "branch": "fix/tests-read-this-repo-s-own-forge-yml-and",
+  "done_when": "The tests that read this repo's workflow pass both with today's settings and with test_place = \"local\" and checks = [\"forge-pr-check\"], keeping each test's rule; forge.toml and forge.yml do not change",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T02:24:11.295057+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Tests read this repo's own forge.yml and expect GitHub test groups, so the repo cannot switch to test_place = \"local\" (owner, 26 Nov 2026: run tests on this machine to avoid another GitHub ban)."
+}
