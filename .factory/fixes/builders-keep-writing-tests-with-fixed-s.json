@@ -1,0 +1,16 @@
+{
+  "base": "5986fb2efd9a571f4d2c99582e71efd40eecf412",
+  "branch": "fix/builders-keep-writing-tests-with-fixed-s",
+  "done_when": "The worker brief includes, inline, three test rules: wait on a condition with a bounded timeout and never a fixed sleep; start no process the test does not stop and check none is left; point every machine-wide path (home, XDG_CONFIG_HOME, the repos list) at the test's temp folder; and the standards file states the third rule",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T16:30:34.564512+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Builders keep writing tests with fixed sleeps, tests that leave processes behind, and tests that reach the machine's real settings (on 27 Nov a runner test read the real repos list and acted on the real repo for two hours). The standards file already has the first two rules, but since briefs only name the standards file, builders miss them."
+}
