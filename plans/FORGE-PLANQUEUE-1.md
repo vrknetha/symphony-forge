@@ -1,67 +1,80 @@
 # Move story plans to approval without reminders
 
-<n> parts · Risks: ... · New moving parts: ...
+1 part · Risks: none one-way; four accepted limits · New moving parts: one lock file for each story being planned, and one hidden entry that the runner starts (not a command)
 
 ## What changes for you
 
-- Start a story once and let Forge draft the plan, run independent reviews, and address review notes in the background.
-- Get a desktop notice when the plan is ready to approve, and step in when Forge needs an owner decision.
+- After you start a story, Forge writes its plan, has it read cold by the other tool, and answers the read notes. It does this in the background with no chat open. You send no message to move the plan from the first draft to the point where it can be approved. (Source: the owner's request, 27 Nov 2026)
+- The same runner that moves approved work to merge (the story FORGE-RUNNER-1) does this. It starts the plan work by itself when you use Forge. There is no new helper, no new command and no new setting. (Source: the owner's request, 27 Nov 2026)
+- You are needed at two points only. First, to approve a plan: when it is ready you get one desktop notice, and you approve it as before (Plan Mode in Claude, the typed line in Codex). Forge never approves a plan. Second, when a cold read reaches its round limit with open notes: you choose one more round, split the plan, or accept it. (Source: the owner's request, 27 Nov 2026)
+- When the plan writer has a question that only you can answer, or the story needs a screen design that a person must make, only that story stops. You get one notice with the question. The other stories and builds go on. (Source: the owner's request, 27 Nov 2026)
+- The choices Forge made alone when it answered read notes are listed in the plan's Notes. Your coordinator shows them to you when it asks for your approval. (Source: the owner's request, 27 Nov 2026)
+- Your coordinator agent no longer writes the plan, starts each cold read or answers each read note. It shows you the plan when a notice says it is ready, and it asks you the question when a notice says a plan needs you.
+- What each repo gets: a new repo and an existing repo both get all of this on upgrade to the release that has this story, and `forge sync` refreshes the guide text. Nothing converts, and no setting changes. The story builds only after FORGE-RUNNER-1 has merged, because it extends that runner.
+
+Design: none (no screen is added; the flow is: you start a story, Forge writes, reads and corrects the plan in the background, and a desktop notice reaches you when the plan is ready or needs you)
 
 ## Why
 
-Planning still depends on an active coordinator chat to start each step, so stories can stall before approval and leave build slots idle even when the queue runner is ready.
+After the queue runner ships, building moves to merge without reminders, but planning still depends on an open coordinator chat. The chat must write the plan, start each cold read and answer each note. If nobody pushes it, a started story waits, no part becomes ready to build, and build places stay empty. The owner asked that nobody should have to push the agent to keep work moving. Forge already knows each story's state from its files: `forge next` says whether the plan needs writing, a read, answers to notes, an owner choice or an approval.
 
 ## Done when
 
-1. **After a story starts, Forge drafts its plan, runs the required reviews, and addresses their notes without reminders, even after the coordinator chat closes.**
-2. **When a review reaches its limit with unresolved findings, Forge presents the owner with the available choices and continues according to their decision.**
-3. **When the plan is ready, Forge sends a desktop notice, and build work starts only after the owner approves that version of the plan.**
+1. **After you start a story, Forge writes its plan, has it read cold and answers the notes by itself, with no chat open, until the plan is ready or needs you.**
+2. **When a plan is ready, you get one desktop notice, and nothing is built until you approve the plan yourself; Forge never approves a plan.**
+3. **When a plan needs you (a read reaches its round limit with open notes, or the writer has a question only you can answer), only that story stops, you get one notice with the question and your choices, and your answer lets it go on.**
+4. **A restart repeats no finished step, and a plan that a person is editing is left alone.**
 
 ## Risks
 
-<!-- Each one-way step: deleting data, a destructive migration, a new vendor. -->
+Risks: none one-way. The part reverts with its pull request, and every plan change is a commit on the story's own branch.
 
-Risks: none
+Accepted limits:
+- A story that adds a screen or changes a flow needs a design that a person makes in a chat. The writer sees this, asks its one question, and the story stops with a notice. The runner never makes a design.
+- The runner plans only stories that have a folder on this computer, which is where `forge start` put them. A repo whose `workers` is `antigravity` is not planned by the runner: Forge stops the story once with a notice, and the coordinator plans it as today.
+- A plan folder with changes that nobody committed is left alone, because a person may be editing it. The runner does not say so; `forge next` shows the same plan step as before.
+- The runner picks the reader the same way `forge read` does. A repo that uses one tool (`tools` set to `claude` or `codex`) is read by that same tool, as it is today.
 
 ## For the builders
 
-<!-- Everything from here down is for the agents. The owner doesn't see it when approving, and
-tightening it needs no new approval. -->
+### Shared seam (one part, so nothing to pin)
+
+FORGE-RUNNER-1 is merged first, both parts (RUNNER and STOPS), so `runner.py`, `stops.py`, the land lock, the quiet and retry rules, `FORGE_RUNNER` and `repo.route` returning "kit" for it already exist. This story adds to them; it adds no second background process. Read `src/forge/runner.py` and `src/forge/stops.py` as merged before you write, because this plan was written against the RUNNER task branch.
 
 ### Done-when details
 
-<!-- Under each Done-when item's number: its evidence, edge cases and the tests that prove it.
-Workers and reviewers get the entries of the items they cover. An item with nothing to add has
-no entry. -->
+1. New module `src/forge/planrun.py` (hidden entry, like the runner's: the runner starts it with `sys.executable -c` and `forge.planrun.main`, the same way `runner._child_cmd` starts `forge`; it is not a `forge` command, because Forge is at its limit of 26). It takes one story key, does exactly one step, and exits. Then the runner does another pass.
+   - **Which stories.** In the runner's pass, after `startable` and the land starts, for each story that has a folder in `story.worktrees(top)` (branch `story/<KEY>`), whose record has no approval hash and is not `done` or `dropped`. A repo with `workers = "antigravity"` gets one `stops.ended` call with a plain reason and nothing else.
+   - **Which step.** The one source of truth is what `forge next` already prints for the story: read the `Next:` line of that story from `nextstep._report(top)`, the same report that `nextstep.startable` parses. `Next: forge read <KEY>` is the read step. `Next: give finding <N> in plans/<KEY>.read.md a disposition, then forge read <KEY>` is the answer step. The read-loop line is the owner stop (item 3). The "is waiting for approval" line is the ready notice (item 2). A story whose `plans/<KEY>.md` still has no row in its Tasks table is a draft: its step is the write step, whatever `forge next` says. No new record is written: the next step comes from files in git each time. Confirm in the first test what `forge next` prints for a draft with an empty Tasks table, and handle that line too.
+   - **Write step.** One turn of the worker family (`repo.worker_family(cfg, design=False)`) with the design-kind model that the `planner` role uses (`repo.design_models`, see `roles.ROLES["planner"]`), in the story's folder, with write access, in one agent place (`machine.agent_slot`, kind `work`) and with `codex.hold` as `forge read` does. On Claude it runs through `worker._run`, which `forge work` uses. On Codex it runs through `codex.run` with a write sandbox. Reuse these calls; write no new driver. The prompt is a new template, `src/forge/templates/plan-run.md` (two sections split by a marker, as `cold-read.md` is split: write, and answer). The write prompt tells the writer to fill each placeholder in the draft by its own comments (the parts count line, Risks, Done-when details, the Tasks table with Scope and Tests, the moving-parts line, Notes), to split into the fewest tasks that each prove Done-when items end to end, to keep one part per story unless Scopes cannot be separated, to change nothing above `## Risks` except the parts line, to remove the template comments, and to end with the `Question:` paragraph, as a builder does, when it needs the owner. The step ends with `repo.commit_state` of the plan file. A run that ends with a `Question:` paragraph, or when the story needs a design, exits non-zero with the line "needs you" and the question, which the runner sends to `stops.ended`, as it does for a land run.
+   - **Read step.** The child runs `forge read <KEY>` as a subprocess with `FORGE_RUNNER=1` and the new `FORGE_RUNNER_AS=<the worker family>`. `repo.coordinator()` (`src/forge/repo.py`, 2 lines, the only change there) returns `FORGE_RUNNER_AS` when `FORGE_RUNNER=1`; `story._read` then picks the reader through `roles.read_family` exactly as for a chat, so with both tools the other tool reads. `story.py` is at 1,200 lines and does not change. `repo.py` is at 1,185 lines plus RUNNER's 3: keep the change to 2 lines and check the file stays at or under 1,200.
+   - **Answer step.** One turn like the write step, with the answer prompt: for each blocking note of the latest round, either amend the plan or write `Disposition: cut|defer|keep - <reason>` under the note in `plans/<KEY>.read.md`, whichever the note needs; change `What changes for you` or `Done when` only when a note requires it; and add every choice that picked a behaviour, a limit, a refusal or a scope cut to a list "Choices made while answering notes" in the plan's `## Notes`. Commit. Then the next pass runs the next read round.
+   - **Locks and restart.** Each child takes `repo.forge_dir(top)/plan-<KEY>.lock` with `codex._try_lock` and exits quietly if another child holds it (the same rule as the land lock). A folder with uncommitted changes that this child did not make is left alone with exit 0 and no notice. The lock file's own content holds the marker: it is written when a write or answer turn starts and cleared after the commit. A child that finds the marker with a free lock knows a turn was killed; it restores only `plans/<KEY>.md` and `plans/<KEY>.read.md` from HEAD and runs the step again.
+   - **Runner side.** Add to `runner.py` the plan children next to the land children: the same run table, log (`.git/forge/runner.log`), quiet set, retries (twice, then `stops.ended`), and a wake after each finished step. Exit 0 means a step is done and the pass runs again at once; it is not a merge check. A plan step adds nothing to `worked_repos`, so a repo where the runner only planned gets no summary notice. A runner whose passes find no story to plan, no land to start and nothing waiting ends as `runner.py` already does.
+   - Tests (new `tests/test_runner_plans_a_story_to_approval.py`, run the forge command, reuse the repo, gh stub and agent stub of `tests/test_land.py` for the writer and answerer, and the reader stub of `tests/test_codex_reader.py`): a draft story made by `forge story new`, then the one waking command, as the runner tests do. With nothing else run, the plan gains its task row and loses its comments and placeholders, round 1 of the cold read has one blocking note, the plan and notes file are amended with a disposition, round 2 says `No findings.`, and the story's record has no approval. Also: the story's Notes carry the "Choices made while answering notes" list; and `tools = "claude"` with no session plans and reads the same way.
+2. Test in the same file: when round 2 passes, the stub notifier on `PATH` is called exactly once, its title names the repo and the story and its body says the plan is ready; repeated wakes and a runner restart add no call; no `task start` call and no approval record appear over the next ticks, and the runner ends with no summary call. Then `forge hook approval` with the stub owner's reply approves the plan, and the runner starts the first part (the crossing test with RUNNER's flow). The runner's source never calls the approval code: the proof is that behaviour, not a text search.
+3. New `tests/test_runner_stops_a_plan_at_its_limit.py`: two stories planned together. The reader stub keeps reporting a new blocking note, so the first story reaches `cold_read_rounds` with open notes; the second story's stub passes and is ready. The first story gets exactly one notice whose body is the question `story.read_question` prints (plain words, with accept, more and split), and its stub reader is not run again over repeated wakes and a runner restart (the stop is parked until the story's files change, as RUNNER's `told` signature does). The second story is not held back. Then `forge read <KEY> --resolve more --reason "<text>"` by hand, and the next wake runs round 3 (the stub now says `No findings.`) and the ready notice follows. A third story whose writer stub ends with a `Question:` paragraph stops alone with a notice holding that question, the stub reader is never run for it, and after the plan file is edited and committed by hand it goes on.
+4. Tests in `tests/test_runner_plans_a_story_to_approval.py`: a runner killed with SIGKILL during the write turn of the stub, then woken again by the next command: the folder holds no half-written plan (the marker restored the two files), the stub's log shows the write run twice, and the finished plan has one task row set. A story whose folder has an uncommitted edit to its plan: the stub is not run and no notice is sent; after the edit is committed the planning continues.
 
-1. <Evidence, edge cases and the tests that prove item 1.>
+Each new test names its story slug and number as existing tests do, so the rule checks pass.
+
+### Guide text
+
+In `src/forge/templates/skill.md`, "Planning a story": remove the coordinator's steps that the runner now does. They are writing the first draft's builders part and Tasks, running the story's cold reads, and "Handle cold-read rounds yourself: amend the plan and write dispositions", and "Grill the human one question at a time" for notes the runner answered. Keep the rows "Read the plan cold" and "I've amended it" as the way to act by hand, and keep the approval steps (Plan Mode in Claude, the typed line in Codex), the `--resolve` steps for a stopped read, the design process for a story that adds a screen, and the rule that a person may still write the plan in the chat. Add: after `forge start` picks a plan, Forge plans it in the background, and the coordinator does nothing until a notice arrives; on "ready to approve", show the plan's Notes list "Choices made while answering notes" with the approval; on "needs you", ask the owner the question in the notice and run the matching `forge read --resolve`, or answer the writer's question in the plan; plan by hand only when the notice says the runner cannot. Change the same flow lines in `src/forge/templates/adapters/AGENTS.md` (step 2). Run `forge sync` for `AGENTS.md` and the two generated skill copies. `src/forge/templates/brief.md` needs no change, because builders are not affected; if the builder finds a place in it that names planning by the coordinator, change it too. The new writer prompt is `src/forge/templates/plan-run.md`; check that the file is part of the package data as the other templates are.
 
 ## Tasks
 
-<!-- One row per task. Covers: the Done-when numbers it delivers, at most three. Scope: the paths
-it may change. Before writing each Scope, search the code for the files the task needs. The plan
-check refuses two tasks whose Scope paths have the same prefix up to the first wildcard, unless
-one waits for the other through After, directly or through another task; it names both tasks.
-Paths with a segment named `tests`, `test`, `__tests__` or `spec` do not cause Scope overlaps
-and can be shared without an After link. Explicit After links still apply.
-When tasks need the same production file, put it in the first task's Scope with the shared names and stubs;
-tasks that need them wait for that task through After and then own only their files. Keep a file
-that a script can make at build time out of the repo and out of every Scope; when the repo keeps such
-a file on purpose, give its change to one part that the others wait for. Tests: the
-tests it adds or changes. After: the tasks it waits for. When two tasks share a function, field,
-file format or command, the first task pins it: it commits the shared names and stubs plus one
-test that crosses both sides, and the tasks that use it list it under After. Split tasks so each
-owns its files; shared lines (command table, guide list, registry) go to one task or a small last
-wiring task; After only when a task needs another task's code. The
-Developer column is optional: the lead fills or changes a GitHub username here, below For the
-builders, without another approval. Leave it blank for an unassigned part. Forge next uses
-the caller's GitHub login; another developer may start it with a warning. Existing tables
-without Developer still work. The moving-parts line stays last: "none", or each new dependency, service, datastore,
-queue, background job or abstraction layer, with the Done-when item that needs it. -->
-
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
+| PLAN | The runner plans a started story to approval | A hidden step runner for one story, the write, read and answer steps on the worker family, the lock and restart rule, plan children in the runner, the ready and needs-you notices through the existing stops, guide text | 1, 2, 3, 4 | `src/forge/planrun.py`, `src/forge/templates/plan-run.md`, `src/forge/runner.py`, `src/forge/repo.py`, `src/forge/templates/skill.md`, `src/forge/templates/adapters/AGENTS.md`, `AGENTS.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_runner_plans_a_story_to_approval.py` (new), `tests/test_runner_stops_a_plan_at_its_limit.py` (new) | FORGE-RUNNER-1/RUNNER, FORGE-RUNNER-1/STOPS | no | |
 
-New moving parts: none
+New moving parts: one lock file for each story being planned, `.git/forge/plan-<KEY>.lock`, whose content marks a turn in progress (Done-when 1 and 4); one hidden entry, `forge.planrun`, that the runner starts for one planning step and that is not a command (Done-when 1 to 3)
 
 ## Notes
+
+- Source: the owner's request of 27 Nov 2026: nobody should have to push the agent to keep the build places busy; planning must run in the background, and the owner stops it only to approve a plan and to choose at a round limit.
+- Why one part: the pieces cannot prove any Done-when item alone. The step runner needs its wiring in the runner, and the wiring needs the step runner. The estimate is about 170 lines in `planrun.py`, about 45 in `runner.py`, 2 in `repo.py`, about 60 lines of prompt text and about 40 lines of guide text, plus 150 to 250 lines of tests, under the 400-line aim for one part.
+- Reuse, not new: the runner process, its wake, its log, its quiet and retry rules, `stops.ended` for every notice (a ready plan is an item that needs a person, as a ready pull request is), the `told` signature that parks an item, `forge next` as the source of the step, `forge read` for the reader, `forge read --resolve` for the owner's choice, `worker._run` and `codex.run` for the turns. No new command, setting or record.
+- Score (F x H >= 2 x C): F 3 (every story is planned), H 2 (a stalled plan leaves build places empty, a broken step). C 3 (a second kind of background step and one lock file; model calls). 6 >= 6. Kept. Principle 6: it removes the coordinator's plan writing, read starts, note answers and the choice grilling from the flow, and adds one step runner.
+- Guesses to confirm in the first test and not change in the plan: what `forge next` prints for a draft with an empty Tasks table; that `story.read_question` is the text the owner should see in the notice; whether `machine.agent_slot` for a write turn needs a kind other than `work` (check `machine.py`). The builder fixes these in code and in the test, without a new approval.
+- Not in this story: a planner that makes screen designs, a setting to turn background planning off, planning for stories started on another computer, planning for specs and decisions (only story plans), and any change to approval, the round limit, who reads, or merge settings.
