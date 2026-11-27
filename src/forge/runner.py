@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -16,6 +17,11 @@ _SKIP_ENV = ("FORGE_NO_RUNNER", "FORGE_WORKER", "FORGE_RUNNER", "CI")
 _POLL_INITIAL = 60.0
 _POLL_CAP = 1800.0
 _POLL_MAX_AGE = 86400.0
+_TRANSIENT_HTTP = re.compile(
+    r"The requested URL returned error: 5\d\d|\bHTTP 50[234]\b|"
+    r"\b502 Bad Gateway\b|\b503 Service Unavailable\b|\b504 Gateway Timeout\b",
+    re.I,
+)
 
 
 def _state_dir() -> Path:
@@ -134,7 +140,8 @@ def _safe_merged(top: Path, branch: str) -> bool | None:
 
 
 def _transient(text: str) -> bool:
-    return any(marker in text for marker in (*repo.NETWORK, repo.REFUSALS["no_github"][0], "cannot lock ref"))
+    return (any(marker in text for marker in (*repo.NETWORK, repo.REFUSALS["no_github"][0], "cannot lock ref"))
+            or bool(_TRANSIENT_HTTP.search(text)))
 
 
 def _retry_wait(count: int) -> float:
@@ -211,8 +218,10 @@ def main() -> int:
 def _loop(wake_path: Path) -> int:
     running: dict[tuple[Path, str], tuple[subprocess.Popen[str], threading.Thread, list[str], str]] = {}
     quiet: set[tuple[Path, str]] = set()
-    retries: dict[tuple[Path, str], tuple[int, float]] = {}
-    repo_retries: dict[Path, tuple[int, float]] = {}
+    retries: dict[tuple[Path, str], float] = {}
+    attempts: dict[tuple[Path, str], int] = {}
+    repo_retries: dict[Path, float] = {}
+    repo_attempts: dict[Path, int] = {}
     polling: dict[tuple[Path, str], dict[str, Any]] = {}
     seen_repos: set[Path] = set()
     pass_needed: set[Path] = set()
@@ -220,27 +229,34 @@ def _loop(wake_path: Path) -> int:
     merged_by_repo: dict[Path, list[str]] = {}
     last_wake = _wake_mtime(wake_path)
 
+    def clear_item_retry(key: tuple[Path, str]) -> None:
+        retries.pop(key, None)
+        attempts.pop(key, None)
+
     def schedule_item_retry(key: tuple[Path, str], code: int, lines: list[str], now: float) -> None:
         top, item = key
-        count = retries.get(key, (0, 0.0))[0]
+        count = attempts.get(key, 0)
         if count < 2:
-            retries[key] = (count + 1, now + _retry_wait(count))
+            attempts[key] = count + 1
+            retries[key] = now + _retry_wait(count)
         else:
-            retries.pop(key, None)
+            clear_item_retry(key)
             stops.ended(top, item, code, lines)
             quiet.add(key)
 
     def schedule_repo_retry(top: Path, now: float) -> None:
-        count = repo_retries.get(top, (0, 0.0))[0]
+        count = repo_attempts.get(top, 0)
         if count < 2:
-            repo_retries[top] = (count + 1, now + _retry_wait(count))
+            repo_attempts[top] = count + 1
+            repo_retries[top] = now + _retry_wait(count)
         else:
             repo_retries.pop(top, None)
+            repo_attempts.pop(top, None)
 
     def record_merge(top: Path, item: str) -> None:
         nonlocal quiet
         key = (top, item)
-        retries.pop(key, None)
+        clear_item_retry(key)
         polling.pop(key, None)
         quiet = {k for k in quiet if k[0] != top}
         worked_repos.add(top)
@@ -277,6 +293,7 @@ def _loop(wake_path: Path) -> int:
                 ready_line = next((line for line in lines
                                    if line.startswith(f"{item} is ready; a human merges")), None)
                 if ready_line:
+                    clear_item_retry(key)
                     polling[key] = {"branch": branch, "delay": _POLL_INITIAL,
                                     "next": now + _POLL_INITIAL, "deadline": now + _POLL_MAX_AGE}
                     stops.ended(top, item, 0, lines)
@@ -288,12 +305,14 @@ def _loop(wake_path: Path) -> int:
                     elif merged is None:
                         schedule_item_retry(key, 0, lines, now)
                     else:
+                        clear_item_retry(key)
                         quiet.add(key)
             else:
                 lock_refused = any(f"Another land run is working on {item}." in line for line in lines)
                 net = any(_transient(line) for line in lines)
                 needs_you = any("needs you" in line for line in lines)
                 if lock_refused:
+                    clear_item_retry(key)
                     quiet.add(key)
                 elif net:
                     schedule_item_retry(key, proc.returncode, lines, now)
@@ -303,7 +322,7 @@ def _loop(wake_path: Path) -> int:
                 elif not needs_you:
                     schedule_item_retry(key, proc.returncode, lines, now)
                 else:
-                    retries.pop(key, None)
+                    clear_item_retry(key)
                     stops.ended(top, item, proc.returncode, lines)
                     quiet.add(key)
 
@@ -313,6 +332,7 @@ def _loop(wake_path: Path) -> int:
             info = polling[key]
             if now >= info["deadline"]:
                 polling.pop(key, None)
+                clear_item_retry(key)
                 quiet.add(key)
                 continue
             if now >= info["next"]:
@@ -324,11 +344,13 @@ def _loop(wake_path: Path) -> int:
                     info["next"] = now + info["delay"]
 
         # 3. Trigger passes only for due retries or explicitly needed repos.
-        for (top, _), (_, due) in list(retries.items()):
+        for key, due in list(retries.items()):
             if now >= due:
-                pass_needed.add(top)
-        for top, (_, due) in list(repo_retries.items()):
+                retries.pop(key, None)
+                pass_needed.add(key[0])
+        for top, due in list(repo_retries.items()):
             if now >= due:
+                repo_retries.pop(top, None)
                 pass_needed.add(top)
 
         if pass_needed:
@@ -344,11 +366,12 @@ def _loop(wake_path: Path) -> int:
                     continue
                 started = _local_started(top)
                 if not started and not _has_approved_unstarted(top):
-                    for key in [k for k in retries if k[0] == top]:
-                        retries.pop(key, None)
+                    for key in [k for k in set(retries) | set(attempts) if k[0] == top]:
+                        clear_item_retry(key)
                     for key in [k for k in polling if k[0] == top]:
                         polling.pop(key, None)
                     repo_retries.pop(top, None)
+                    repo_attempts.pop(top, None)
                     continue
                 fetched = repo.run("git", "fetch", "-q", "origin", cwd=top)
                 if fetched.returncode != 0:
@@ -383,23 +406,24 @@ def _loop(wake_path: Path) -> int:
                     schedule_repo_retry(top, now)
                 else:
                     repo_retries.pop(top, None)
+                    repo_attempts.pop(top, None)
                 default = repo.default_branch(top)
                 live = {run.get("item") for run in live_entries if run.get("repo_root") == top.as_posix()}
                 current_items = _local_started(top)
                 active_keys = {(top, item) for item, *_ in current_items}
-                for key in [k for k in retries if k[0] == top and k not in active_keys]:
-                    retries.pop(key, None)
+                for key in [k for k in set(retries) | set(attempts) if k[0] == top and k not in active_keys]:
+                    clear_item_retry(key)
                 for key in [k for k in polling if k[0] == top and k not in active_keys]:
                     polling.pop(key, None)
                 for item, branch, tree, state in current_items:
                     key = (top, item)
                     if task._merged(f"origin/{default}", item, top):
-                        retries.pop(key, None)
+                        clear_item_retry(key)
                         polling.pop(key, None)
                         continue
                     if key in running or key in quiet or key in polling:
                         continue
-                    if key in retries and now < retries[key][1]:
+                    if key in retries and now < retries[key]:
                         continue
                     if stops.stopped(top, item):
                         continue
@@ -410,6 +434,7 @@ def _loop(wake_path: Path) -> int:
                         continue
                     if not _lock_free(top, item):
                         continue
+                    retries.pop(key, None)
                     proc, reader, lines = _spawn_land(top, item)
                     running[key] = (proc, reader, lines, branch)
                     worked_repos.add(top)

@@ -103,10 +103,12 @@ if args[:2] == ["api", "graphql"] and "query=@-" in args:
 
 fail_view = here / "gh-fail-pr-view"
 if fail_view.exists() and args[:2] == ["pr", "view"] and len(args) > 2 and args[2] == "fix/retry-fix":
-    n = int(fail_view.read_text("utf-8").strip())
+    raw = fail_view.read_text("utf-8").strip().split("|", 1)
+    n = int(raw[0])
+    msg = raw[1] if len(raw) > 1 else "error connecting to api.github.com"
     if n > 0:
-        fail_view.write_text(str(n - 1), "utf-8")
-        answer("", 1, "error connecting to api.github.com\\n")
+        fail_view.write_text(f"{{n - 1}}|{{msg}}", "utf-8")
+        answer("", 1, msg + "\\n")
 
 if args[:2] == ["pr", "list"] and "--head" in args:
     branch = args[args.index("--head") + 1]
@@ -161,17 +163,32 @@ def _install_multi_gh(env, tmp_path: Path) -> None:
 
 
 def _install_process_tracker(env, tmp_path: Path) -> None:
-    """Record every detached runner and runner child in *.owned-process.json for crash cleanup."""
+    """Record every detached runner and runner child in *.owned-process.json for crash cleanup,
+    and log every Popen call launching forge.runner so CI-skip tests are deterministic."""
     snippet = (
-        "\nimport json as _j, os as _o, pathlib as _p, sys as _s, time as _t\n"
-        f"if 'forge.runner' in ' '.join(_s.argv) or _o.environ.get('FORGE_RUNNER') == '1':\n"
-        f"    _p.Path({tmp_path.as_posix()!r}, f'runner-{{_o.getpid()}}.owned-process.json').write_text(\n"
+        "\nimport json as _j, os as _o, pathlib as _p, subprocess as _sp, sys as _s, time as _t\n"
+        f"_runner_tmp = _p.Path({tmp_path.as_posix()!r})\n"
+        "if _s.argv[:1] == ['-c'] or _o.environ.get('FORGE_RUNNER') == '1':\n"
+        "    _runner_tmp.joinpath(f'runner-{_o.getpid()}.owned-process.json').write_text(\n"
         "        _j.dumps({'pid': _o.getpid(), 'at_ns': _t.time_ns()}), encoding='utf-8')\n"
+        "_orig_popen = _sp.Popen\n"
+        "class _TrackedPopen(_orig_popen):\n"
+        "    def __init__(self, args, *a, **kw):\n"
+        "        super().__init__(args, *a, **kw)\n"
+        "        text = ' '.join(map(str, args)) if isinstance(args, (list, tuple)) else str(args)\n"
+        "        env_map = kw.get('env') or {}\n"
+        "        if 'forge.runner' in text or env_map.get('FORGE_RUNNER') == '1':\n"
+        "            _runner_tmp.joinpath(f'runner-{self.pid}.owned-process.json').write_text(\n"
+        "                _j.dumps({'pid': self.pid, 'at_ns': _t.time_ns()}), encoding='utf-8')\n"
+        "        if 'forge.runner' in text:\n"
+        "            with _runner_tmp.joinpath('runner-spawns.jsonl').open('a', encoding='utf-8') as _f:\n"
+        "                _f.write(_j.dumps({'pid': self.pid}) + '\\n')\n"
+        "_sp.Popen = _TrackedPopen\n"
     )
     for target in (env.repo.bin / "sitecustomize.py", tmp_path / "clock" / "sitecustomize.py"):
         if target.parent.is_dir():
             existing = target.read_text("utf-8") if target.exists() else ""
-            if "owned-process.json" not in existing:
+            if "_TrackedPopen" not in existing:
                 target.write_text(existing + snippet, encoding="utf-8")
 
 
@@ -339,15 +356,22 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
 
     if case == "ci_skips_runner":
         _agent(land)
-        # Start a fix while runner is disabled, then wake under CI=true: runner must never start.
+        # Start a fix while runner is disabled, then wake under CI=true: wake() must never spawn a runner.
         assert land.repo.forge("fix", "start", "CI check", "--done", "Not built in CI", "--slug", "ci-fix").returncode == 0
         monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
         monkeypatch.setenv("CI", "true")
         assert land.repo.forge("lanes").returncode == 0
-        time.sleep(0.25)
+        # Deterministic check: Popen for forge.runner was never called inside forge lanes.
+        assert not (tmp_path / "runner-spawns.jsonl").exists()
         assert not _runner_started(tmp_path)
         assert not calls(land.repo.bin / "claude-sdk-calls.jsonl")
         assert not (land.repo.bin / "merged-fix-ci-fix").exists()
+        # Removing CI proves the exact same command now spawns and tracks a runner that merges the fix.
+        monkeypatch.delenv("CI", raising=False)
+        assert land.repo.forge("lanes").returncode == 0
+        _wait_for(lambda: (land.repo.bin / "merged-fix-ci-fix").exists() and _runner_exited(tmp_path))
+        assert (tmp_path / "runner-spawns.jsonl").exists()
+        assert list(tmp_path.glob("runner-*.owned-process.json"))
         return
 
     if case == "other_pin_skipped":
@@ -480,14 +504,16 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
         return
 
     if case == "human_merge_stops_after_24h":
-        # Default merge = "human": unmerged PR stops polling after 24h and never re-lands.
+        # Default merge = "human": even after recovering from a transient 503 failure, an unmerged PR
+        # stops polling after 24h, clears its retry entry, never re-lands, and exits cleanly.
+        (land.repo.bin / "gh-fail-pr-view").write_text("1|The requested URL returned error: 503", "utf-8")
         monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
-        done = land.repo.forge("fix", "start", "Stale PR", "--done", "Stops after 24h", "--slug", "stale-pr")
+        done = land.repo.forge("fix", "start", "Stale PR", "--done", "Stops after 24h", "--slug", "retry-fix")
         assert done.returncode == 0, done.stderr
         _wait_for(lambda: _runner_exited(tmp_path), timeout=45.0)
         log = _runner_log(land)
-        assert log.count("Building stale-pr.") == 1, log
-        assert "stale-pr is ready; a human merges" in log, log
+        assert "GitHub did not answer" in log or "error connecting to" in log, log
+        assert log.count("retry-fix is ready; a human merges") == 1, log
         return
 
     if case == "two_part_human_merge":
