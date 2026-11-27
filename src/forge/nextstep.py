@@ -181,7 +181,7 @@ def next_step(args: Any) -> int:
         top, history, schedules=True, numbers=True, facts=facts)
     step = ([journey.step_line(top, _report_config(top, {}), history, idle=_idle(top)[0] in lines)]
             if (top / "forge.toml").is_file() else [])
-    lines += doctor.stuck_items(top, facts)
+    lines = doctor.with_stuck_items(top, lines, facts)
     print("\n".join(owner_choices.first(top, step + notice + lines, (facts["github"] or {}).get("open", []))))
     if removed:
         print(f"Removed {removed} finished folders.")

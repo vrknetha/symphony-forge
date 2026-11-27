@@ -91,9 +91,13 @@ def test_2_unfinished_worker_waits_only_while_a_process_or_lock_is_live(
     assert following["next"] == row["next"]
     next_text = client.forge("next")
     assert next_text.returncode == 0, next_text.stderr
-    # The board names the title; text next names the fix. Both report its liveness.
-    expected = ("A worker is building The fix correct-state." if alive
-                else "The fix correct-state's worker has stopped.")
-    assert expected in next_text.stdout
-    if not alive:
-        assert "Next: forge work correct-state" in next_text.stdout
+    # The board names the title; text next reports live builds inline and lists stopped builders
+    # under Stuck items with one `forge land` next step (FORGE-TIDYUP-1 replaces the old inline
+    # "worker has stopped / Next: forge work" lines so each stuck item gets one next step).
+    if alive:
+        assert "A worker is building The fix correct-state." in next_text.stdout
+    else:
+        assert "A worker is building" not in next_text.stdout
+        assert ("Stuck items:\n"
+                "- Readers see the correct state: its builder stopped before it finished.\n"
+                "  Next: forge land correct-state") in next_text.stdout, next_text.stdout
