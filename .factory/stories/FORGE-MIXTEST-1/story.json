@@ -9,7 +9,12 @@
     "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
   },
   "doc": "plans/FORGE-MIXTEST-1.md",
-  "status": "approved",
+  "drop": {
+    "at": "2026-11-27T10:31:22.703948+00:00",
+    "because": "Owner, 27 Nov 2026: this repo stays on GitHub tests with small pull-request test sets (FORGE-PRSMOKE-1), so the mixed test place is not needed",
+    "by": "vrknetha <vrknetha@gmail.com> 1795775482 +0530"
+  },
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-27T08:51:37.616813+00:00",
