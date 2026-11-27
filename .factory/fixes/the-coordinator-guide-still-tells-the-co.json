@@ -1,0 +1,16 @@
+{
+  "base": "4e69b174ce53920964c0e4c003a5fb2fe578cd5c",
+  "branch": "fix/the-coordinator-guide-still-tells-the-co",
+  "done_when": "Every coordinator-guide line that tells the coordinator to edit forge.toml in a settings fix says the fix's Done-when must name forge.toml, and the generated SKILL.md copies match",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T11:38:07.299553+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The coordinator guide still tells the coordinator to edit forge.toml in a settings fix without naming forge.toml in that fix's Done-when (skill.md around the prototype sample_data step, the runner labels step and the fast_test step), so a builder that the queue runner starts can restore the file and discard the edit; split from FORGE-RUNNER-1/RUNNER by the owner."
+}
