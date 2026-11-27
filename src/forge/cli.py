@@ -159,10 +159,18 @@ def _run(argv: list[str] | None, holding: contextlib.ExitStack) -> int:
         function = None
     if function is None:
         repo.refuse(REFUSALS["not_built"], command=args.words)
+    wake_runner = args.words != "test" and (
+        not args.words.startswith("hook ") or args.words in ("hook approval", "hook context"))
+    if wake_runner:
+        from forge import runner
+        runner.record_install(Path.cwd())
     try:
         result = function(args) or 0
         if result == 0 and args.words in ("init", "migrate", "sync", "next") and not getattr(args, "dry_run", False):
             machine.remember(Path.cwd())
+        if result == 0 and wake_runner:
+            from forge import runner
+            runner.wake(Path.cwd())
         return result
     except subprocess.CalledProcessError as exc:
         # A git (or gh) failure the command didn't expect: show what the tool said.

@@ -31,8 +31,9 @@ def test_9_synced_guides_explain_tools_and_the_session_handoff(repo):
                                     ("Run everything in Codex", 'tools = "codex"`, `workers = "codex"'),
                                     ("Use both", 'tools = "both"')):
                 row = next(line for line in skill.splitlines() if f'"{intent}"' in line)
-                assert "Ask, then in a fix:" in row and setting in row
-                assert "forge close <fix>" in row
+                # FORGE-RUNNER-1 replaces manual forge.toml edits + forge close <fix> with a settings fix
+                # whose --done names forge.toml so the background runner builds, checks and merges it.
+                assert "Ask, then start a settings fix with `--done` naming `forge.toml`" in row and setting in row
                 if intent != "Use both":
                     assert "forge sync" in row
             tools = skill.split("## Tools\n", 1)[1].split("\n## ", 1)[0]

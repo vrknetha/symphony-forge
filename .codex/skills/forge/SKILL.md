@@ -193,7 +193,7 @@ the next merge.
 | "Close it" or "Is it ready?" | `forge close <item>` |
 | "What were the review findings?" after a close | `forge close <item> --show` in the item's checkout prints the latest saved review in full, with each finding's state; never close again just to read it |
 | "A person asks to skip the model review" | For a task or fix, run `forge close <item> --no-review --by "<name>" --reason "<why>"` only when a person asks |
-| "Land it" | `forge land <item>`, run in the background and watched like `forge work` |
+| "Land it" | `forge land <item>` (the background runner already runs it automatically; run by hand only to continue a stopped item or when a notice asks) |
 | "Land everything that's ready" | `forge land --all`, run in the background; never a hand-made merge lane |
 | "Merge this ready item" | `forge merge <item>` when the default branch allows agent merges |
 | "Let the agent merge" | The owner runs `forge merge enable` in a terminal outside Claude Code or Codex; never you |
@@ -212,19 +212,31 @@ the next merge.
 | "Is my setup healthy?" or "Fix my setup" | `forge doctor`, then `forge doctor --fix` for what it can repair. On the default branch, repairs to Forge's files need a clean checkout at `origin/<default>` and use a dated fix `forge-files-<YYYYMMDD-HHMM>`: `forge close <name>`, then merge it like any other. An existing `fix/forge-files-*` branch with no merged or closed pull request blocks another repair, record or not; follow doctor's finish-or-remove step. Finished-work cleanup skips only the open doctor fix. If a repair already used this minute's name, run `forge doctor --fix` in the next minute. A file it holds back as changed by hand: move that change out of the file, then `forge doctor --fix` again. In AGENTS.md, only hand edits inside the `forge:begin` and `forge:end` lines hold the file; your rules outside them stay as written when doctor refreshes Forge's block |
 | "Set up a new repo" | Before `forge init`, answer "Does this repo run GitHub Actions?" from the repo's settings: `gh api repos/{owner}/{repo}/actions/permissions` gives `enabled`. Ask the human only if the settings do not answer it. Pass `--actions yes` or `--actions no`; yes uses CI checks, while no selects laptop tests with `checks = []`. Then use `forge init --starter` for a new React app, `forge init --starter python` for a new app whose owner asks for a Python backend, or `forge init` for another stack. Propose a `fast_test` as in step 9 of Adopt a live app, below |
 | "Bring our live app into Forge" | Adopt a live app, below |
-| "Change the test command" | Ask, then in a fix: edit `forge.toml` (never its `merge` setting), `forge close <fix>` |
-| "Use fewer cold-read or task-review rounds" | Ask the owner which limit to change; then in a fix set `cold_read_rounds` or `task_review_rounds` to `1` in `forge.toml`, then run `forge close <fix>` |
-| "Run everything in Claude" | Ask, then in a fix: set `tools = "claude"`, `workers = "claude"` in `forge.toml`, then `forge sync`, `forge close <fix>` |
-| "Run everything in Codex" | Ask, then in a fix: set `tools = "codex"`, `workers = "codex"` in `forge.toml`, then `forge sync`, `forge close <fix>` |
-| "Build with Antigravity" | Ask, then in a settings fix set `workers = "antigravity"` in `forge.toml`. Install Antigravity CLI 1.5.12 or newer and run `agy` to sign in. |
-| "Use both" | Ask, then in a fix: set `tools = "both"` in `forge.toml`, `forge close <fix>` |
+| "Change the test command" | Ask, then start a settings fix with `--done` naming `forge.toml` (never its `merge` setting) |
+| "Use fewer cold-read or task-review rounds" | Ask the owner which limit to change; then start a settings fix with `--done` naming `forge.toml` to set `cold_read_rounds` or `task_review_rounds` to `1` |
+| "Run everything in Claude" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `tools = "claude"`, `workers = "claude"`, and run `forge sync` |
+| "Run everything in Codex" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `tools = "codex"`, `workers = "codex"`, and run `forge sync` |
+| "Build with Antigravity" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `workers = "antigravity"`. Install Antigravity CLI 1.5.12 or newer and run `agy` to sign in. |
+| "Use both" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `tools = "both"` |
 | "Change who builds just for me" | Edit `forge.local.toml` beside `forge.toml` in the main checkout (not a worktree): only `tools`, `workers` and `[models.<kind>]` tables. Git ignores it, so no fix; every worktree of that clone uses it. `forge next` and `forge doctor` name what it sets |
-| "Close takes too long running every test" | In a local-test repo, ask, then in a fix: set `fast_test` in `forge.toml`, a command close runs instead of `test`, with `{base}` replaced by the merge base with the default branch (for example `npx vitest run --changed {base}` plus lint). In a CI-test repo, its pull request check runs the tests that import the changed source files, not only the changed test files (see step 9 of 'Adopt a live app'); the nightly full run covers the rest. Then `forge close <fix>` |
+| "Close takes too long running every test" | In a local-test repo, ask, then start a settings fix with `--done` naming `forge.toml` to set `fast_test`, a command close runs instead of `test`, with `{base}` replaced by the merge base with the default branch (for example `npx vitest run --changed {base}` plus lint). In a CI-test repo, its pull request check runs the tests that import the changed source files, not only the changed test files (see step 9 of 'Adopt a live app'); the nightly full run covers the rest |
 | "Upgrade Forge" | Ask which release, then `forge upgrade <release>`; Upgrade Forge, below |
 
 Merge and each item in land print the start time, merge time, elapsed hours and minutes,
 and largest wait from How it went. The board shows the median start-to-merge time for
 items merged today in UTC. New and existing repos get these figures on upgrade.
+
+A background runner starts automatically when you use Forge, approve a plan, or open a chat in a
+Forge repo. It starts approved parts that nothing blocks (without stacking), runs `forge land` on
+started parts and fixes with no chat, polls pull requests waiting for a human merge, removes
+finished folders, and ends when nothing is left to do. Check progress with `forge board` and
+`forge next`. A coordinator no longer starts each approved part, starts each fix build, watches
+background runs, checks `forge next` after every merge, or copies the queue into the handoff note;
+answer notices and builders' questions instead. Each notice names the repo, the item, and its
+question, refusal with next step, or pull request link; run `forge land <item>` by hand only when
+a notice says the runner cannot, or to continue an item the owner stopped. Start a settings fix
+with `--done` naming `forge.toml` so its worker can edit the named settings with no chat. New and
+existing repos get this on upgrade.
 
 `forge doctor` lists started fixes with no work commits after more than seven days.
 Each row gives `forge fix drop <fix> --because "<reason>"`. Only drop a fix after
@@ -236,8 +248,8 @@ story or a fix. Forge uses the same tool as a non-design build. If that tool mat
 session, run the explorer and hand back its reply as instructed. Otherwise, Forge runs the
 explorer and acts on its reply directly. If a prompt for this session is lost, run the same
 `forge start "<idea>"` again or read `forge next` to see the prompt and handback command.
-Only the session that holds the prompt can hand back. When the answer is a fix, run its
-`forge land <fix>` in the background and watch it.
+Only the session that holds the prompt can hand back. When the answer is a fix, the background
+runner builds, checks and merges it automatically.
 For an idea that extends an existing story, the explorer can return that story's key with
 `Lane: plan`. Forge reuses its branch and worktree and adds to its plan. Read the revised plan
 before approval.
@@ -417,7 +429,9 @@ for you, Why and Done when, a fix's why and Done when, pull request summaries, q
 human, and board and `forge next` lines. Briefs, guides and code stay as they are.
 
 The human never edits `forge.toml`; you keep it. When a setting must change, ask first with
-options, then make the change yourself in a fix: `forge fix start`, the edit, then `forge close`.
+options, then start a settings fix whose `--done` names `forge.toml`:
+`forge fix start "<why>" --done "<done when naming forge.toml>"`. The background runner builds,
+checks and merges it, and its worker edits only the named settings in `forge.toml`.
 Close refuses a settings change in `forge.toml` unless this item's Done-when names the file.
 It leaves the settings and branch change intact, so `forge land` also stops before merging.
 For a fix, run `forge fix amend <item> --done "<done when naming forge.toml>" --because "<why>"`.
@@ -425,7 +439,8 @@ For a task part, name `forge.toml` in the plan's covered Done-when details in th
 and commit the plan there. These details do not change the approved numbered result.
 Then run `forge close <item>` again. A version-pin-only difference still passes.
 Initial migration and adoption keep their new settings until their first pull request merges.
-New and earlier-adopted repos get this check on upgrade. Workers never edit settings.
+New and earlier-adopted repos get this check on upgrade. Workers edit `forge.toml` only when a
+fix's Done-when names `forge.toml` (never on a story part).
 New and existing repos can choose Antigravity for builds and fixes after installing this release.
 Use `[models.build.antigravity]`, `[models.fix.antigravity]` or `[models.lite.antigravity]`
 to name a model and effort. Forge uses the account's default model when the entry is absent.
@@ -944,12 +959,12 @@ Data rule: the table, every row in it and the feature's existing change history 
 drop migration in this change; a later drop follows the database skill and the deploy guide as
 they are.
 
-If the prototype holds only made-up data and has no back end, ask the person, then have the
-coordinator set `sample_data = true` in `forge.toml`. A sign-off record does not turn sample mode
+If the prototype holds only made-up data and has no back end, ask the person, then start a
+settings fix whose `--done` names `forge.toml` to set `sample_data = true`. A sign-off record does not turn sample mode
 on. Forge skips tests and CI while the setting is on; walk the demo steps in a browser.
 Real data or a back end keeps tests from day one.
-After sign-off, `forge next` shows setting up tests as the first step. In a coordinator-owned fix,
-set the test command and CI checks as needed, then turn off the setting. In the same fix, list the
+After sign-off, `forge next` shows setting up tests as the first step. Start a settings fix whose
+`--done` names `forge.toml` to set the test command and CI checks as needed and turn off `sample_data`. In the same fix, list the
 prototype's screens in the app's browser tests with `checkScreen` from `.forge/design/render-check.mjs`,
 so the rendered check starts with the first tests. Close blocks that fix until
 the `Personal data` answer is settled.
@@ -982,8 +997,8 @@ go through the whole list with the client in one sitting, then record the answer
 change it. After an upgrade, rewrite each existing to-confirm list and open question in this form
 once in a mechanical fix.
 
-For each demo round, gather all requests from one conversation into one prototype fix. Build,
-test, review and merge that round before starting another. Tell the salesperson what changed in
+For each demo round, gather all requests from one conversation into one prototype fix; wait for
+the background runner to build, test, review and merge that round before starting another. Tell the salesperson what changed in
 the demo: "the next version is ready to demo" or "the reviewer found a missing error message".
 Say a version is live only after the requested deployment is verified. Do not
 use Forge's words (fix, worktree, branch, pull request) in progress updates to the salesperson.
@@ -1229,8 +1244,9 @@ choice at once. The owner can accept a held finding with a reason or ask for a r
 without the setting keeps the current full-run and whole-source review rules, including an
 earlier-adopted repo whose sign-off record says `sample_data: true`.
 
-Only the coordinator writes `sample_data = true` in `forge.toml`, after asking the person. A worker
-cannot change this setting. Existing clients get the new sign-off behaviour after the setting is
+Ask the person before turning on `sample_data = true` in `forge.toml`, then start a settings fix
+whose `--done` names `forge.toml` so its worker makes the edit (a worker never edits `forge.toml`
+without `forge.toml` in its fix's Done-when). Existing clients get the new sign-off behaviour after the setting is
 written, and get the brief rules after upgrading and syncing. They do not need to add prototype
 design files for sign-off. A sample-data repo may approve its rules page and start stories with an
 open `Personal data` answer. A repo that never declared sample data keeps today's refusal at rules
@@ -1238,7 +1254,7 @@ page approval.
 
 After sign-off, read `Before production` in `forge next`. First check what is already in progress,
 so no line is started twice. Leave sample data by the existing step: settle the `Personal data`
-answer, set the test command and checks, then the coordinator turns `sample_data` off. For the
+answer, set the test command and checks, then start a settings fix whose `--done` names `forge.toml` to turn `sample_data` off. For the
 light-review line and the "Demo only" line, start one normal change with
 `forge start "<your sentence>"`. Take the work from the row's Say text, but write your own sentence.
 Never paste the Say text into a command, because a file name in it can hold shell characters. Use
@@ -1525,8 +1541,8 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    AGENTS.md, outside Forge's block, and deletes CLAUDE.md, since Claude Code reads AGENTS.md itself.
 9. Propose a `fast_test` for the repo: its own test command, keeping its configuration and setup,
    with the test tool's built-in changed-only option and `{base}` (for example
-   `vitest --changed {base}` or `jest --changedSince {base}`). Once the human agrees, set it in
-   `forge.toml` through a fix. For pytest repos, propose
+   `vitest --changed {base}` or `jest --changedSince {base}`). Once the human agrees, start a
+   settings fix whose `--done` names `forge.toml` to set it. For pytest repos, propose
    `forge test --pytest {base}`: Forge runs this picker outside the project, keeping the repo's
    full `test` command and narrows pytest to changed and module-related test files. Use the
    repo's Python runner for `test`; keep Forge outside the project, and keep lint and other
@@ -1946,8 +1962,10 @@ setup-only, platform or "foundation" stories. Cut a story that answers no proble
 when linked to a spec, it must also serve that spec's behaviour.
 
 `forge next` shows this release's running builder rounds against this machine's builder places as `Builds running: N of M`.
-Start every task and fix `forge next` lists as ready at once, and close each as its worker
-finishes. One machine runs work rounds on half its available cores (at least one place),
+Forge's background runner starts each ready part after approval and builds, closes and merges
+started parts and fixes through `forge land`. Check `forge board` and `forge next` to see progress;
+start or land an item by hand only when a notice says the runner cannot, or run `forge land <item>`
+to continue an item the owner stopped. One machine runs work rounds on half its available cores (at least one place),
 across all its repos; the rest wait in line. Reads and reviews take no agent place.
 On GitHub Actions (`GITHUB_ACTIONS=true`), tests use all available runner cores,
 without reserving cores for agents or other runner jobs. Laptops keep their existing share.
@@ -1960,7 +1978,7 @@ Busy local CI jobs reduce the available budget until they finish. Within the rem
 first, first-come within each group; runs print their place and why when they start waiting and
 each time it changes. Running agents keep their places except during test commands.
 A run that dies frees its place once its agent ends. A waiting
-run is working as meant: keep watching it. When a fix changed a story's plan on the default branch, `forge next` and `forge task start` say
+run is working as meant; the background runner keeps moving work without a chat watching it. When a fix changed a story's plan on the default branch, `forge next` and `forge task start` say
 so with the command that merges it into the story branch; run it, then carry on. Forge compares
 content history, never commit dates: an older copy on the default branch does not block a start.
 When only the story doc differs, `forge task start` merges the default branch into the clean
@@ -2422,7 +2440,7 @@ existing repo with a direct pytest command and pytest-split keeps its six groups
 runs its share of the related tests through `forge test --change`. The required `tests` check passes
 only when every job passes; branch protection keeps the same `tests` check.
 A full run covers only `forge.toml`'s `test` command; if the repo's whole suite runs elsewhere, point that setting at it.
-Set `full_suite_workflow = "nightly.yml"` in `forge.toml`, then run `forge sync` and commit the generated workflow to omit Forge's full-suite jobs.
+Set `full_suite_workflow = "nightly.yml"` in a settings fix whose `--done` names `forge.toml` (and runs `forge sync` to commit the generated workflow) to omit Forge's full-suite jobs.
 The repo's workflow must support `workflow_dispatch`. Start its full run with `gh workflow run nightly.yml --ref <default>`.
 That workflow must post `forge-full-suite` on the default branch commit after its run, with `state` set to `success` or `failure`:
 `gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f context=forge-full-suite -f "state=$state"`.
@@ -2470,11 +2488,11 @@ command because arguments cannot select each runner inside them; `forge doctor`,
 and adoption name such a script, and step 9 of Adopt a live app says how to write the command.
 Set `fast_test` for a different selection. Supported runners with no related tests run none locally. A red CI still sends
 the item back to the worker.
-To include fast checks or a wider selection, set `fast_test` in `forge.toml` (in a fix), with
+To include fast checks or a wider selection, set `fast_test` in `forge.toml` (in a settings fix whose `--done` names `forge.toml`), with
 `{base}` standing for the merge base with the default branch.
 Tests that check the whole repo, such as rules over every test file, name no changed file, so
 the pytest picker never picks them by default. List them in `always_test` in
-`forge.toml` (in a fix), as test files or pytest node IDs such as
+`forge.toml` (in a settings fix whose `--done` names `forge.toml`), as test files or pytest node IDs such as
 `tests/test_rules.py::test_1_rules`; it is empty by default. With the pytest picker, close runs
 them on every change that includes code or settings, beside the tests it picks. Docs-only changes
 skip these tests too.
@@ -2672,9 +2690,9 @@ If GitHub fails to start the review check, close stops at once and says so. It d
 Push a new commit or reopen the pull request on GitHub, then run `forge close <item>`.
 Land says which checks are still running, missing, or
 unreadable. Close and merge also wait until queued or running checks finish.
-With no running or queued checks, they wait at most ten minutes. When close
-stops, follow its refusal and the
-Closing section above, then run it again. Run it in the background and keep watching it.
+With no running or queued checks, they wait at most ten minutes. When close or the runner
+stops on an item, follow its refusal and the
+Closing section above, then run `forge land <item>` to continue it.
 Never wrap `forge work` or `forge land` in a shell timeout. A forced kill cannot report an unfinished round or clean up its lock.
 GitHub reads also retry unreadable answers and server errors three times, pausing for one,
 two and four seconds. If GitHub still does not answer, rerun the command. Not-found and
@@ -2749,11 +2767,10 @@ every change, holds none and merges none, and lists the ready ones oldest first,
 with their pull request links: merge them
 in that order.
 
-Start a part with `forge task start <KEY>/<TASK>`, or a named fix with
-`forge fix start "<why>" --done "<done when>" --slug <name>`, then `forge land <item>`.
-To guide a round and continue through close and merge, use `forge land <item> --note "<text>"`.
-To queue several items, run `forge land <item>` for each in the background, with `--note` when
-needed. Forge admits each worker round by machine capacity. Do not write shell queues or private
+After approval (or `forge fix start`), the background runner starts ready parts and runs
+`forge land <item>` automatically. Run `forge task start <KEY>/<TASK>` or `forge land <item>` by
+hand only when a notice says the runner cannot, to continue a stopped item, or with `--note "<text>"`
+to guide a round. Forge admits each worker round by machine capacity. Do not write shell queues or private
 slot loops. `--note` takes one item and cannot be used with `--all`.
 `forge work` queues work rounds across the machine, while reads and close reviews skip
 that line. All runs wait for high load to fall and memory to recover. Busy local CI jobs reserve
@@ -2809,10 +2826,10 @@ Next, start and both boards reconcile published assignments with local builder e
 a locally changed assignment takes precedence, and conflicting other edits need reconciliation.
 The plan's Owner line and Developer cells are the assignment records. There is no separate roster.
 
-Serialize start commands. When task start refuses for overlapping work or an unmet dependency,
-keep other ready work moving while that work finishes. Run `forge next` after each merge to
-start what was unblocked. Retry a start only after its dependency or overlap clears; follow
-other refusals' next actions instead of repeatedly retrying them.
+When running `forge task start` by hand, serialize start commands. When it refuses for overlapping
+work or an unmet dependency, keep other ready work moving while that work finishes; the background
+runner starts unblocked parts automatically after each merge. Retry a hand-run start only after its
+dependency or overlap clears; follow other refusals' next actions instead of repeatedly retrying them.
 
 ## Hotspots
 

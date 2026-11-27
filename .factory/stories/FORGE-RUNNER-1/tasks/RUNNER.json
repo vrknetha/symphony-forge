@@ -1,0 +1,268 @@
+{
+  "branch": "task/FORGE-RUNNER-1-RUNNER",
+  "known": [
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 248,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Recover from transient network failures in runner operations",
+      "work": 2
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 296,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Scale: Avoid querying GitHub on every runner tick",
+      "work": 2
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 272,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Stop polling a human merge after 24 hours",
+      "work": 1
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 341,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: When the work is done, the runner ends and makes no recurring GitHub calls.",
+      "work": 2
+    },
+    {
+      "area": "land() in src/forge/land.py",
+      "file": "src/forge/land.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 82,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Plan gap: Wire the stop continuation and summary callbacks",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 4,
+      "line": 229,
+      "outcome": "follow-up",
+      "reason": "Split into follow-up fix review-findings-split-from-forge-runner",
+      "round": 1,
+      "security": false,
+      "title": "Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change",
+      "work": 1
+    },
+    {
+      "area": "tests/test_runner_moves_approved_work_to_merge.py",
+      "file": "tests/test_runner_moves_approved_work_to_merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 169,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: After one approval, every part becomes ready for a person to merge",
+      "work": 2
+    },
+    {
+      "area": "test_2_runner_builds_a_started_fix() in tests/test_runner_builds_a_started_fix.py",
+      "file": "tests/test_runner_builds_a_started_fix.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 17,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The folder of every merged item that holds no local changes is removed",
+      "work": 2
+    },
+    {
+      "area": "test_6_runner_ends_when_idle() in tests/test_runner_ends_when_idle.py",
+      "file": "tests/test_runner_ends_when_idle.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 21,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: When the work is done, the runner ends and makes no recurring GitHub calls.",
+      "work": 2
+    },
+    {
+      "area": "test_1_runner_moves_approved_work_to_merge() in tests/test_runner_moves_approved_work_to_merge.py",
+      "file": "tests/test_runner_moves_approved_work_to_merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 190,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: CI and older-release repos do not start background work",
+      "work": 2
+    },
+    {
+      "area": "test_2_runner_builds_a_started_fix() in tests/test_runner_builds_a_started_fix.py",
+      "file": "tests/test_runner_builds_a_started_fix.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 19,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Standard: Tests own and clean up every process they start, even after a crash",
+      "work": 2
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 2,
+      "harm": 2,
+      "line": 296,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: Clean merged worktrees in repos with submodules",
+      "work": 3
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "518553d371d02ece8f2ee43920e27edda2dd6341bf1034671b338269a4a66ada",
+    "changed": "865166933229f7f81ac0b119f37097afaee4e50ba3f42a1fb115bbdae763c783",
+    "commit": "2d533e818883f7f964c63e4a2d825990f9b1c6c6",
+    "dismissals": [],
+    "findings": [],
+    "id": "178ab1d9-e75c-4bf2-a7dc-9b752b05320f",
+    "status": "clean"
+  },
+  "round": 6,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-27T02:18:40.052208+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-27T02:18:54.104287+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T02:49:12.515976+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T02:49:31.766853+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T03:13:07.762133+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T03:14:30.866823+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T03:46:00.651745+00:00",
+      "by": "owner",
+      "choice": "same",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T03:46:23.229133+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T06:31:20.290328+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T06:32:11.763530+00:00",
+      "by": "owner",
+      "choice": "same",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T06:32:41.726067+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T06:34:24.860532+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T08:59:25.781437+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T08:59:43.021812+00:00",
+      "round": 5,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T09:01:11.077800+00:00",
+      "by": "owner",
+      "choice": "split",
+      "round": 5,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T10:40:37.895338+00:00",
+      "round": 6,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T11:03:25.969228+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "a6fb41f3-c8ea-41c4-b561-e3082aeddd41",
+    "head": "ae3e4a46106ff3e05a5c386a81fc151bba25244f",
+    "keys": {},
+    "round": 5
+  },
+  "worker": "antigravity"
+}

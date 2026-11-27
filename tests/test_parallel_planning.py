@@ -23,8 +23,9 @@ def test_1_the_skill_says_to_split_by_files_and_start_ready_work_together(repo, 
                      "registry", "goes to one task, or to a small last wiring task",
                      "Use After only when a task needs another task's code"):
             assert rule in planning, rule
-        assert ("Start every task and fix `forge next` lists as ready at once, and close each as "
-                "its worker finishes") in skill
+        # FORGE-RUNNER-1 replaces manual coordinator starts with the background runner.
+        assert ("Forge's background runner starts each ready part after approval and builds, closes "
+                "and merges started parts and fixes through `forge land`") in skill
 
 
 def test_2_the_story_template_and_cold_read_say_to_split_by_files(repo):

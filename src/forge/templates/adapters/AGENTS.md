@@ -13,12 +13,15 @@ and the Rules below, and leave the flow and the approval steps to the agent coor
    Never ask the human whether it is a story or a fix.
 2. A plan gets rounds of cold read (`forge read <KEY>`) until no notes block building, then one
    approval from the human.
-3. Each task runs in its own branch and worktree: `forge task start <KEY>/<TASK>`, then
-   `forge work <KEY>/<TASK>`.
-4. `forge close <item>` closes it when the tests pass and the review finds no serious problem.
+3. After approval (or `forge fix start`), Forge's background runner starts each ready part, builds
+   and checks it through `forge land`, merges it when `merge = "agent"` (or polls until a person
+   merges), removes finished folders, and ends when nothing is left to do. You do not need to start
+   each part, start each fix build, or watch background runs; answer notices and builders' questions.
+4. `forge close <item>` closes an item by hand when needed, when tests pass and review finds no
+   serious problem.
 5. The human merges unless the default branch's `forge.toml` has `merge = "agent"`.
-   Then, once close says Ready, the agent runs `forge merge <item>`. The story's last task merge
-   records it done, using `--outcome "<outcome>"` or its title. Use `forge story done` on an
+   Then, once close says Ready, the agent or runner runs `forge merge <item>`. The story's last task
+   merge records it done, using `--outcome "<outcome>"` or its title. Use `forge story done` on an
    existing work branch only to change that outcome later; it opens no separate pull request.
 
 ### The lanes

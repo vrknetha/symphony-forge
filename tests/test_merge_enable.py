@@ -292,7 +292,8 @@ def _synced_skill(env, _):
         assert "The `merge` setting is the owner's" in skill
         assert 'never change it to `"agent"` or run `forge merge enable`' in skill
         assert "tell them to run `forge merge enable` in a terminal outside Claude Code or Codex" in skill
-        assert "edit `forge.toml` (never its `merge` setting)" in skill
+        # FORGE-RUNNER-1 starts settings fixes with --done naming forge.toml (still never its merge setting).
+        assert "naming `forge.toml` (never its `merge` setting)" in skill
         assert '| "Let the agent merge" | The owner runs `forge merge enable`' in skill
 
 

@@ -60,8 +60,9 @@ def delivered(repo, gh, tmp_path, request):
 AFTER_SIGN_OFF = (
     "After sign-off, read `Before production` in `forge next`.",
     "First check what is already in progress, so no line is started twice.",
+    # FORGE-RUNNER-1 turns sample_data off via a settings fix whose --done names forge.toml.
     "Leave sample data by the existing step: settle the `Personal data` answer, set the test command "
-    "and checks, then the coordinator turns `sample_data` off.",
+    "and checks, then start a settings fix whose `--done` names `forge.toml` to turn `sample_data` off.",
     'For the light-review line and the "Demo only" line, start one normal change with '
     '`forge start "<your sentence>"`.',
     "Take the work from the row's Say text, but write your own sentence.",
