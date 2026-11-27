@@ -20,7 +20,7 @@
       "gain": 4,
       "harm": 3,
       "line": 513,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -33,7 +33,7 @@
       "gain": 4,
       "harm": 3,
       "line": 174,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -46,7 +46,7 @@
       "gain": 4,
       "harm": 3,
       "line": 661,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -72,7 +72,7 @@
       "gain": 3,
       "harm": 3,
       "line": 55,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -85,7 +85,7 @@
       "gain": 3,
       "harm": 3,
       "line": 86,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -108,98 +108,27 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "8f23d9767c7cedafb6e753f97fa774e031a8122654419afbb0bc20ddad76ad04",
-    "changed": "99b4b590e6facefabaa9f1fd210440701291ecf13e8d24cee053a911eb4432f6",
-    "commit": "92df86a6fd86a2c43a671646b082b0410d462be5",
+    "branch_diff": "5a6a7529cfd0ddaa81449d4d2fb28e374c08492cb2e9c7fe6e9291d0fcd3b5a2",
+    "changed": "f06e4711092674b5ed73e2bc32496b4fe0a399744fbffed70486f2d2e5eee38a",
+    "commit": "e9ef6bb20144a44010171c59ca168c570451f1be",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a review reaches its round limit and the owner must choose what to do. This selects the first output line that is not on a short prefix list, while the decision question is not in the worker-question record. Close prints review and pull-request progress before raising the refusal containing the question (src/forge/close.py:449 and src/forge/close.py:475), so the desktop notice can contain progress text and a command but omit the decision the owner needs.",
-        "file": "src/forge/stops.py",
-        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
-        "gain": 4,
-        "harm": 3,
-        "line": 130,
-        "priority": "P1",
-        "title": "Not done: The owner gets one desktop notice when an item first needs them, with its question or pull request link",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - a pull request awaits a human merge when the computer restarts, or its 24-hour polling period ends and Forge is used again. The new runner starts with an empty polling table, but this check skips the unchanged parked item before it can recreate that entry. The runner exits instead of watching the pull request; a later human merge will not trigger dependent work or cleanup until another Forge use. The accepted polling limit explicitly says the next use starts the runner again.",
-        "file": "src/forge/runner.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 513,
-        "priority": "P1",
-        "title": "Functional: Restore polling for parked pull requests after a restart",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - a person merges a pull request that the runner had reported, and a different item finishes in a later runner session. This treats every historical entry in `told` as still waiting unless it merged in the current session. The human-merge path records the merge without removing that entry (src/forge/runner.py:338), so the later summary incorrectly tells the owner that the already merged item still needs them. The same stale entry can remain after an answered question leads to an automatic merge.",
-        "file": "src/forge/stops.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 174,
-        "priority": "P1",
-        "title": "Functional: Exclude resolved items from later summary notices",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Gate\nCase: normal use - run the repository's full pytest suite. Recording a durable stop changes the expected continuation, but existing tests still immediately run work or close on the same item. For example, tests/test_stop_releases_abandoned_item.py:81 expects `forge work` to succeed at line 87, and tests/test_antigravity_review.py:225 expects a subsequent close to reach its reviewer. Both now hit `task.require_active` and refuse. Update these tests to continue the item explicitly while preserving their existing lock and reviewer assertions.",
-        "file": "src/forge/machine.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 661,
-        "priority": "P1",
-        "title": "Gate: Update existing tests for durable owner stops",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Test\nCase: normal use - the runner is killed and Forge is opened again. Both test cases look for its PID under `tmp_path/xdg`, but the shared fixture sets its configuration directory to `tmp_path/config` (tests/conftest.py:396). The PID lookup therefore returns nothing and both conditional SIGKILLs are skipped, so the claimed restart proof can pass without killing a runner. Moreover, the following `_runner_exited` helper requires the PID file to have been removed, which SIGKILL does not do. Exercise an actual termination at the relevant build and merge boundaries.",
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Test\nCase: normal use - the owner stops an item, then the runner is killed and Forge is used again. The test kills the runner here before recording the stop on the next line, and it never kills a live runner after that stop. Also, `forge stop` itself wakes a replacement runner (src/forge/cli.py:162-173), so the subsequent `forge next` can merely wake that process. The test therefore still does not prove that an existing owner stop survives an abrupt runner restart.",
         "file": "tests/test_runner_restart_repeats_nothing.py",
         "gain": 4,
         "harm": 3,
-        "line": 28,
+        "line": 255,
         "priority": "P1",
         "title": "Test: A restart repeats no finished build and undoes no stop that the owner set, and the runner comes back the first time Forge is used.",
         "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - the owner must answer a review-limit question or receives a summary after an earlier item was resolved. The named proof only fabricates worker `Question:` messages and checks a summary in a fresh repo. It still passes with the actual review-question omission in src/forge/stops.py:130 and the stale waiting item in src/forge/stops.py:174. Cover those owner-facing outcomes through the Forge command.",
-        "file": "tests/test_runner_stops_one_item_and_tells_the_owner.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 55,
-        "priority": "P1",
-        "title": "Test: The owner gets one desktop notice when an item first needs them, with its question or pull request link",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Gate\nCase: normal use - run the test suite on Windows, which the accepted limits explicitly support without desktop pop-ups. `stops._notify` returns without launching a notifier on Windows (src/forge/stops.py:140), but this test unconditionally requires two item notices and a summary. It therefore fails on that supported platform even when Forge follows the accepted behavior.",
-        "file": "tests/test_runner_stops_one_item_and_tells_the_owner.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 86,
-        "priority": "P1",
-        "title": "Gate: The notice test must accept Windows' no-popup behavior",
-        "work": 1
-      },
-      {
-        "body": "Gain 2, Work 2, Harm 1\nThe requested check-wait scenario is absent: this test stops only a sleeping builder, so it would still pass if the new wait-process termination in src/forge/machine.py:677 were removed and the land lock stayed held until checks finished. Adds work: exercise stopping a check wait and continuing the item; F 2 x H 2 = 4; 2 x C = 4.",
-        "file": "tests/test_runner_restart_repeats_nothing.py",
-        "gain": 2,
-        "harm": 1,
-        "line": 91,
-        "priority": "P2",
-        "title": "Follow-up: Exercise stopping an item during its check wait",
-        "work": 2
       }
     ],
-    "id": "8337c1bc-16ea-42b5-9a5f-937b98dbb113",
+    "id": "2272963d-7052-42f7-bcc9-e125a9076790",
     "status": "blocked"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-27T11:23:16.065720+00:00",
@@ -218,8 +147,22 @@
       "at": "2026-11-27T11:42:19.181876+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T12:28:49.504079+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T12:28:49.504234+00:00",
+      "round": 2,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-27T12:28:49.504234+00:00",
+    "file": "tests/test_runner_restart_repeats_nothing.py",
+    "wait_id": "81f980a6-09f6-4aaf-ace0-fd2bbbb85560"
+  },
   "stuck": {
     "close": "04393627-e38f-4909-94a8-a716c33e9002",
     "head": "2995a1658c706dc1c28ad5c9644e4d1305a5c9b1",
