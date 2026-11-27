@@ -90,10 +90,14 @@ Only a genuine trade-off goes to the human, as a question with options.
    Case: normal use - A repository created with GitHub Actions keeps Forge’s default one group and requires `tests` in branch protection. [Init](/src/forge/init.py:204) sets one group, and [protect](/src/forge/init.py:259) requires the named checks. The amended [plan](/plans/FORGE-MIXTEST-1.md:40) gives this repository the local workflow, which [emits no `tests` check](/tests/test_testplace_workflow.py:113). The settings pull request cannot merge while that check remains required.  
    Gain 5, Work 2, Harm 3
 
+   Disposition: cut Mixed acts as `local` for a one-group repo, which emits no `tests` check, so the plan now says the settings fix that sets `mixed` on such a repo also removes `tests` from `checks` (the existing removed-check rule, no new code); a repo with more than one group keeps `tests`. A test covers it.
+
 9. **Advisory: Not done: The selector change also alters existing CI repositories.**  
    Raise: Not done.  
    Case: normal use - A CI repository with multiple groups edits more than a third of its independent test files. The current [selector](/src/forge/templates/review-tests.py:154) chooses one group, but the amended [plan](/plans/FORGE-MIXTEST-1.md:41) applies `one_group = one_group and not wide` without limiting it to mixed mode. The planned workflow comparison can pass while that CI repository starts every group.  
    Gain 3, Work 2, Harm 3
+
+   Disposition: cut The plan now applies `one_group = one_group and not wide` only when `test_place` is `mixed`; every other place keeps today's selection. A test checks that a `ci` repo with the same test-only change still writes `one-group=true`.
 
 10. **Advisory: Functional: Switching from CI to mixed removes the existing nightly full run.**  
     Raise: Functional.  
