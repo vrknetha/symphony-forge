@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-ASKFAMILY-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-27T12:33:10.710078+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Ask another model family for a second opinion",
+  "touches": 0
+}
