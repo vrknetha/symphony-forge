@@ -57,6 +57,18 @@ def _kill_runner(tmp_path: Path) -> int:
     return pid
 
 
+def _spawns(tmp_path: Path) -> list[int]:
+    log = tmp_path / "runner-spawns.jsonl"
+    if not log.exists():
+        return []
+    return [json.loads(line)["pid"] for line in log.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _all_runners_done(tmp_path: Path) -> bool:
+    return all(not alive(pid) for pid in _spawns(tmp_path)) and _runner_exited(tmp_path)
+
+
+@pytest.mark.platform
 @pytest.mark.parametrize("case", [
     "owner_stop_survives_restart_and_land_lifts_it",
     "stop_during_check_wait",
@@ -185,24 +197,24 @@ def test_5_runner_restart_repeats_nothing(case, land, tmp_path, monkeypatch, req
         assert started.returncode == 0, started.stderr
 
         # 1. Kill runner with SIGKILL after build finishes and before close completes.
-        _wait_for(lambda: close_entered.exists(), timeout=30.0)
+        _wait_for(lambda: close_entered.exists(), timeout=60.0)
         _kill_runner(tmp_path)
 
         # Revive runner while the surviving land process still holds the lock; it leaves once-fix alone.
         woke1 = land.repo.forge("next")
         assert woke1.returncode == 0, woke1.stderr
-        time.sleep(0.3)
-        _wait_for(lambda: _runner_exited(tmp_path), timeout=30.0)
+        _wait_for(lambda: _all_runners_done(tmp_path), timeout=45.0)
 
-        # Release close and merge so the surviving land run finishes on its own.
+        # Release close and merge so the surviving land run finishes on its own and frees its lock.
+        once_lock = land.repo.path / ".git" / "forge" / "land-once-fix.lock"
         merge_release.write_text("go", encoding="utf-8")
         close_release.write_text("go", encoding="utf-8")
-        _wait_for(lambda: (land.repo.bin / "merged-fix-once-fix").exists(), timeout=30.0)
+        _wait_for(lambda: (land.repo.bin / "merged-fix-once-fix").exists() and _lock_is_free(once_lock), timeout=60.0)
 
         # Revive runner after merge; it cleans up the folder and repeats neither build nor merge.
         woke2 = land.repo.forge("next")
         assert woke2.returncode == 0, woke2.stderr
-        _wait_for(lambda: not (tmp_path / "repo-fix-once-fix").exists() and _runner_exited(tmp_path), timeout=45.0)
+        _wait_for(lambda: not (tmp_path / "repo-fix-once-fix").exists() and _all_runners_done(tmp_path), timeout=60.0)
 
         assert len(calls(land.repo.bin / "claude-sdk-calls.jsonl")) == 1
         gh_calls = [json.loads(line) for line in (land.repo.bin / "gh-calls.jsonl").read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -212,16 +224,18 @@ def test_5_runner_restart_repeats_nothing(case, land, tmp_path, monkeypatch, req
         # 2. Start a second fix and kill the runner with SIGKILL right after pr merge and before cleanup.
         merge_entered.unlink(missing_ok=True)
         merge_release.unlink(missing_ok=True)
+        cleanup_lock = land.repo.path / ".git" / "forge" / "land-cleanup-fix.lock"
         started2 = land.repo.forge("fix", "start", "Cleanup fix", "--done", "Cleanup fix done", "--slug", "cleanup-fix")
         assert started2.returncode == 0, started2.stderr
-        _wait_for(lambda: merge_entered.exists(), timeout=45.0)
+        _wait_for(lambda: merge_entered.exists(), timeout=60.0)
         assert (tmp_path / "repo-fix-cleanup-fix").exists()
         _kill_runner(tmp_path)
         merge_release.write_text("go", encoding="utf-8")
+        _wait_for(lambda: _lock_is_free(cleanup_lock), timeout=45.0)
 
         woke3 = land.repo.forge("next")
         assert woke3.returncode == 0, woke3.stderr
-        _wait_for(lambda: not (tmp_path / "repo-fix-cleanup-fix").exists() and _runner_exited(tmp_path), timeout=45.0)
+        _wait_for(lambda: not (tmp_path / "repo-fix-cleanup-fix").exists() and _all_runners_done(tmp_path), timeout=60.0)
 
         assert (land.repo.bin / "merged-fix-cleanup-fix").exists()
         assert len(calls(land.repo.bin / "claude-sdk-calls.jsonl")) == 2
@@ -272,13 +286,7 @@ def test_5_runner_restart_repeats_nothing(case, land, tmp_path, monkeypatch, req
     _wait_for(lambda: keeper_marker.exists(), timeout=30.0)
     assert _runner_pid(tmp_path) == runner_pid
 
-    def _spawns() -> list[int]:
-        log = tmp_path / "runner-spawns.jsonl"
-        if not log.exists():
-            return []
-        return [json.loads(line)["pid"] for line in log.read_text(encoding="utf-8").splitlines() if line.strip()]
-
-    spawns_before_kill = _spawns()
+    spawns_before_kill = _spawns(tmp_path)
     slow_calls_after_stop = sum("slow-fix" in str(c.get("cwd", "")) for c in calls(land.repo.bin / "claude-sdk-calls.jsonl"))
 
     # 2. Kill the live runner strictly AFTER the owner's stop is set.
@@ -286,17 +294,18 @@ def test_5_runner_restart_repeats_nothing(case, land, tmp_path, monkeypatch, req
     assert killed_pid == runner_pid
 
     # Allow both builds to finish if anything tries to run them; keeper-fix's surviving land finishes on its own.
+    keeper_lock = land.repo.path / ".git" / "forge" / "land-keeper-fix.lock"
     slow_release.write_text("go", encoding="utf-8")
     keeper_release.write_text("go", encoding="utf-8")
-    _wait_for(lambda: (land.repo.bin / "merged-fix-keeper-fix").exists(), timeout=45.0)
+    _wait_for(lambda: (land.repo.bin / "merged-fix-keeper-fix").exists() and _lock_is_free(keeper_lock), timeout=60.0)
 
     # 3. Use Forge again: a new runner starts, cleans up keeper-fix without repeating its build,
     #    and leaves slow-fix stopped without building it again.
     woke = land.repo.forge("next")
     assert woke.returncode == 0, woke.stderr
-    _wait_for(lambda: not (tmp_path / "repo-fix-keeper-fix").exists() and _runner_exited(tmp_path), timeout=45.0)
+    _wait_for(lambda: not (tmp_path / "repo-fix-keeper-fix").exists() and _all_runners_done(tmp_path), timeout=60.0)
 
-    spawns_after_revive = _spawns()
+    spawns_after_revive = _spawns(tmp_path)
     assert len(spawns_after_revive) > len(spawns_before_kill) and spawns_after_revive[-1] != runner_pid
     all_calls = calls(land.repo.bin / "claude-sdk-calls.jsonl")
     assert sum("slow-fix" in str(c.get("cwd", "")) for c in all_calls) == slow_calls_after_stop

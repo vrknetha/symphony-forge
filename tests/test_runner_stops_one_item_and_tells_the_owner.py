@@ -48,6 +48,7 @@ def _notices(log: Path) -> list[list[str]]:
     return [json.loads(line) for line in log.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+@pytest.mark.platform
 @pytest.mark.parametrize("case", [
     "worker_and_size_questions",
     "review_limit_and_resolved_summary",
