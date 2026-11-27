@@ -39,10 +39,11 @@ def test_1_ask_runs_one_read_only_codex_turn(repo, monkeypatch, sdk_data):
     repo.write("forge.toml", f'version = "{version}"\nrepo = "forge-source"\nworkers = "codex"\n'
                '\n[models.ask]\nmodel = "gpt-6.2-sol"\neffort = "high"\n')
 
-    # The model comes from [models.ask].
+    # The model comes from [models.ask], and the answer is printed and recorded in the work log.
     asked = repo.forge("ask", "Why is the sky blue?")
     assert asked.returncode == 0, asked.stdout + asked.stderr
     assert "stub codex: built it with" in asked.stdout
+    assert any("stub codex: built it with" in text for text in _ask_logs(repo))
     assert [call["forge_worker"] for call in _stub(stub) if "pid" in call] == ["1"]
     starts, turns = _sent(stub, "thread/start"), _sent(stub, "turn/start")
     assert len(starts) == len(turns) == 1
@@ -54,11 +55,11 @@ def test_1_ask_runs_one_read_only_codex_turn(repo, monkeypatch, sdk_data):
     assert repo.forge("ask", "Q", "--model", "gpt-6.2-astra").returncode == 0
     assert _sent(stub, "thread/start")[-1]["config"]["model"] == "gpt-6.2-astra"
 
-    # A failed turn says why and gives a command that runs.
+    # A failed turn says why and gives a safe retry line (replacing the old raw-question echo).
     monkeypatch.setenv("STUB_CODEX_STATUS", "failed")
     failed = repo.forge("ask", "Q")
     assert failed.returncode == 1 and failed.stderr.startswith("Codex ended the turn: failed")
-    assert 'Next: forge ask "Q"' in failed.stderr
+    assert "Next: run forge ask again with the same question\n" in failed.stderr
     monkeypatch.delenv("STUB_CODEX_STATUS")
 
     # With every place taken, a second ask waits its turn; both show in the lane views as asks.
@@ -119,10 +120,38 @@ def _install_agy_with_autoreview(repo, monkeypatch):
     return log
 
 
+def _wait_in_line(repo, model: str, expected_text: str) -> None:
+    """Hold the single agent place with a stalled Codex ask and verify `model` waits its turn."""
+    first = _forge(repo, "ask", "Hold", "--model", "gpt-6.2-sol", stall=True)
+    second = None
+    try:
+        for _ in range(100):
+            if any(run["kind"] == "ask" and run["started_at"] for run in _lanes(repo)):
+                break
+            time.sleep(0.2)
+        second = _forge(repo, "ask", "Waiting question", "--model", model)
+        runs = []
+        for _ in range(100):
+            runs = [run for run in _lanes(repo) if run["kind"] == "ask"]
+            if len(runs) == 2:
+                break
+            time.sleep(0.2)
+        assert sorted(bool(run["started_at"]) for run in runs) == [False, True]
+        assert any(run["model"] == model and not run["started_at"] for run in runs)
+        first.send_signal(signal.SIGINT)
+        first.wait(timeout=30)
+        out, err = second.communicate(timeout=60)
+        assert second.returncode == 0, out + err
+        assert expected_text in out
+    finally:
+        for process in (first, second):
+            if process is not None:
+                process.kill()
+
+
 @pytest.mark.platform
-def test_3_ask_routes_claude_and_gemini_and_records_answers(repo, monkeypatch):
-    version = repo.forge("--version").stdout.split()[-1]
-    repo.write("forge.toml", f'version = "{version}"\nrepo = "forge-source"\n')
+def test_3_ask_routes_claude_and_gemini_and_records_answers(repo, monkeypatch, sdk_data):
+    _codex_repo(repo, monkeypatch, sdk_data, start_task=False)
     install_claude(repo, worker=True)
     claude_log = repo.bin / "claude-calls.jsonl"
     monkeypatch.setenv("STUB_CLAUDE_RESULT", "Claude final answer\n")
@@ -135,8 +164,10 @@ def test_3_ask_routes_claude_and_gemini_and_records_answers(repo, monkeypatch):
     opts = recorded[0]["options"]
     assert opts["model"] == "claude-haiku-5-5"
     assert opts["permission_mode"] == "plan"
-    assert opts["setting_sources"] == ["user"]
-    assert opts["disallowed_tools"] == ["Bash", "Edit", "Write"]
+    assert opts["setting_sources"] == []
+    assert opts["disallowed_tools"] == ["Bash", "Edit", "Write", "NotebookEdit"]
+    assert opts["strict_mcp_config"] is True
+    assert opts["mcp_servers"] == {}
     assert any("Claude final answer" in text for text in _ask_logs(repo))
 
     agy_log = _install_agy_with_autoreview(repo, monkeypatch)
@@ -147,6 +178,11 @@ def test_3_ask_routes_claude_and_gemini_and_records_answers(repo, monkeypatch):
     agy_entries = [json.loads(line) for line in agy_log.read_text("utf-8").splitlines()]
     assert any(entry.get("method") == "session/prompt" for entry in agy_entries)
     assert any("Gemini final answer" in text for text in _ask_logs(repo))
+
+    if os.name != "nt":
+        machine_cores(repo, 2)  # one agent place
+        _wait_in_line(repo, "claude-haiku-5-5", "Claude final answer")
+        _wait_in_line(repo, "gemini-4-neon", "Gemini final answer")
 
 
 @pytest.mark.platform
@@ -173,10 +209,26 @@ def test_4_model_flag_and_config_precedence_and_worktree_routing(repo, monkeypat
     assert codex_cfg["model"] == "gpt-6.2-astra"
     assert "model_reasoning_effort" not in codex_cfg
 
-    # Per-family [models.ask.<family>] uses the selected family's effort.
+    # Per-family [models.ask.<family>] uses the selected family's model and effort on bare asks and --model.
     repo.write("forge.toml", f'version = "{version}"\nrepo = "forge-source"\n'
-               '\n[models.ask.claude]\nmodel = "claude-haiku-5-5"\neffort = "high"\n'
+               '\n[models.ask.codex]\nmodel = "gpt-6.2-sol"\neffort = "medium"\n'
+               '\n[models.ask.claude]\nmodel = "claude-sonnet-5-5"\neffort = "high"\n'
                '\n[models.ask.antigravity]\nmodel = "gemini-4-neon"\neffort = "medium"\n')
+    # Bare ask from Codex session picks [models.ask.claude]'s configured model and effort.
+    asked = repo.forge("ask", "Bare from codex")
+    assert asked.returncode == 0, asked.stdout + asked.stderr
+    recorded = claude_calls(claude_log)
+    assert (recorded[-1]["options"]["model"], recorded[-1]["options"]["effort"]) == ("claude-sonnet-5-5", "high")
+    # Bare ask from Claude session picks [models.ask.codex]'s configured model and effort.
+    monkeypatch.delenv("CODEX_THREAD_ID", raising=False)
+    monkeypatch.setenv("CLAUDECODE", "1")
+    asked = repo.forge("ask", "Bare from claude")
+    assert asked.returncode == 0, asked.stdout + asked.stderr
+    codex_cfg = _sent(stub, "thread/start")[-1]["config"]
+    assert (codex_cfg["model"], codex_cfg["model_reasoning_effort"]) == ("gpt-6.2-sol", "medium")
+    monkeypatch.delenv("CLAUDECODE", raising=False)
+    monkeypatch.setenv("CODEX_THREAD_ID", "codex-session")
+    # Explicit --model gemini-... picks [models.ask.antigravity]'s configured effort.
     asked = repo.forge("ask", "Check agy effort", "--model", "gemini-4-neon")
     assert asked.returncode == 0, asked.stdout + asked.stderr
     agy_entries = [json.loads(line) for line in agy_log.read_text("utf-8").splitlines()]
@@ -241,8 +293,9 @@ def test_5_default_family_asks_other_session_family(repo, monkeypatch, sdk_data)
 
 @pytest.mark.platform
 def test_6_read_only_and_failures_across_families(repo, monkeypatch, sdk_data):
-    _codex_repo(repo, monkeypatch, sdk_data, start_task=False)
+    _, stub = _codex_repo(repo, monkeypatch, sdk_data, start_task=False)
     install_claude(repo, worker=True)
+    claude_log = repo.bin / "claude-calls.jsonl"
     _install_agy_with_autoreview(repo, monkeypatch)
 
     tracked = repo.path / "README.md"
@@ -251,7 +304,9 @@ def test_6_read_only_and_failures_across_families(repo, monkeypatch, sdk_data):
     untracked.write_text("untracked\n", encoding="utf-8")
     before_status = repo.git("status", "--porcelain")
 
-    # Gemini runs on a scratch copy, so even a dirty write leaves the real checkout untouched.
+    # Stubs attempt writes whenever read-only isolation is missing: Claude via hooks/MCP/tools
+    # (STUB_CLAUDE_UNSAFE_TOUCH) and Gemini in its checkout (STUB_AGY_DIRTY).
+    monkeypatch.setenv("STUB_CLAUDE_UNSAFE_TOUCH", str(tracked))
     monkeypatch.setenv("STUB_AGY_DIRTY", "1")
     for model in ("gpt-6.2-sol", "claude-haiku-5-5", "gemini-4-neon"):
         asked = repo.forge("ask", "Inspect only", "--model", model)
@@ -259,26 +314,55 @@ def test_6_read_only_and_failures_across_families(repo, monkeypatch, sdk_data):
         assert tracked.read_bytes() == b"edited tracked\n"
         assert untracked.read_bytes() == b"untracked\n"
         assert repo.git("status", "--porcelain") == before_status
+    monkeypatch.delenv("STUB_CLAUDE_UNSAFE_TOUCH")
     monkeypatch.delenv("STUB_AGY_DIRTY")
+    assert _sent(stub, "thread/start")[-1]["sandbox"] == "read-only"
+    assert _sent(stub, "turn/start")[-1]["sandboxPolicy"]["type"] == "readOnly"
+    claude_opts = claude_calls(claude_log)[-1]["options"]
+    assert claude_opts["permission_mode"] == "plan"
+    assert claude_opts["setting_sources"] == []
+    assert claude_opts["strict_mcp_config"] is True
+    assert claude_opts["mcp_servers"] == {}
+    assert {"Bash", "Edit", "Write"}.issubset(set(claude_opts["disallowed_tools"]))
 
     secret_q = "Check `uname` and $(whoami)"
+
+    # Codex failure keeps the reason, preserves --model, and never echoes shell expressions.
+    monkeypatch.setenv("STUB_CODEX_STATUS", "failed")
+    failed_codex = repo.forge("ask", secret_q, "--model", "gpt-6.2-sol")
+    assert failed_codex.returncode == 1
+    assert failed_codex.stderr.startswith("Codex ended the turn: failed")
+    assert "Next: run forge ask again with the same question and --model gpt-6.2-sol\n" in failed_codex.stderr
+    assert secret_q not in failed_codex.stderr
+    monkeypatch.delenv("CODEX_THREAD_ID", raising=False)
+    monkeypatch.setenv("CLAUDECODE", "1")
+    failed_codex_bare = repo.forge("ask", secret_q)
+    assert failed_codex_bare.returncode == 1
+    assert "Next: run forge ask again with the same question\n" in failed_codex_bare.stderr
+    assert "--model" not in failed_codex_bare.stderr
+    assert secret_q not in failed_codex_bare.stderr
+    monkeypatch.delenv("CLAUDECODE", raising=False)
+    monkeypatch.setenv("CODEX_THREAD_ID", "codex-session")
+    monkeypatch.delenv("STUB_CODEX_STATUS")
+
     monkeypatch.setenv("STUB_CLAUDE_EXIT", "1")
     failed = repo.forge("ask", secret_q, "--model", "claude-haiku-5-5")
     assert failed.returncode == 1
     assert "stub claude: the model gave up" in failed.stderr
-    assert "Next: run forge ask again with the same question and --model claude-haiku-5-5" in failed.stderr
+    assert "Next: run forge ask again with the same question and --model claude-haiku-5-5\n" in failed.stderr
     assert secret_q not in failed.stderr
 
     failed_bare = repo.forge("ask", secret_q)
     assert failed_bare.returncode == 1
     assert "Next: run forge ask again with the same question\n" in failed_bare.stderr
     assert "--model" not in failed_bare.stderr
+    assert secret_q not in failed_bare.stderr
     monkeypatch.delenv("STUB_CLAUDE_EXIT")
 
     monkeypatch.setenv("STUB_AGY_BROKEN", "1")
     failed_agy = repo.forge("ask", secret_q, "--model", "gemini-4-neon")
     assert failed_agy.returncode == 1
     assert "Unrecognized test failure" in failed_agy.stderr
-    assert "Next: run forge ask again with the same question and --model gemini-4-neon" in failed_agy.stderr
+    assert "Next: run forge ask again with the same question and --model gemini-4-neon\n" in failed_agy.stderr
     assert secret_q not in failed_agy.stderr
     monkeypatch.delenv("STUB_AGY_BROKEN")

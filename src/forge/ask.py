@@ -1,7 +1,6 @@
 """forge ask: one read-only turn on Codex, Claude or Gemini, for a quick second opinion."""
 import contextlib
 import io
-import json
 import os
 import uuid
 from typing import Any
@@ -57,8 +56,7 @@ def ask(args: Any) -> int:
             if ran["status"] != "completed":
                 ended = [line for line in repo.work_log(top, item).read_text("utf-8", errors="replace").splitlines()
                          if line.startswith("Codex ended the turn")]
-                raise repo.Refused(ended[-1] if ended else "Codex reported no end to the turn.",
-                                   f"forge ask {json.dumps(args.question)}")
+                raise repo.Refused(ended[-1] if ended else "Codex reported no end to the turn.", again)
             text = (ran["text"] or "").strip()
         elif family == "claude":
             flags = [*(["--model", model] if model else []), *(["--effort", effort] if effort else [])]

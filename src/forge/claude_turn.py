@@ -37,8 +37,10 @@ async def turn(request):
         session_id=request.get("session_id"), add_dirs=request["add_dirs"],
         env={"FORGE_WORKER": "1"},
         system_prompt={"type": "preset", "preset": "claude_code"},
-        setting_sources=["user"] if read_only else ["user", "project", "local"],
-        disallowed_tools=["Bash", "Edit", "Write"] if read_only else [],
+        setting_sources=[] if read_only else ["user", "project", "local"],
+        disallowed_tools=["Bash", "Edit", "Write", "NotebookEdit"] if read_only else [],
+        strict_mcp_config=read_only,
+        mcp_servers={},
         agents={name: AgentDefinition(**definition) for name, definition in request["agents"].items()},
         stderr=lambda line: print(line, file=sys.stderr, flush=True))
     failed = False
