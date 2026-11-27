@@ -160,28 +160,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "721f00d58ffcf8d8aa4580e48298f1dd21d226b6bc63cdf5ac4155d649d7b470",
-    "changed": "a6137898be8e9f3eea343174ed51b76bea3bd3f9245c47133ec7013a2aebb807",
-    "commit": "148394f7d4aa2539b9f3667f7639d8c5d5731713",
+    "branch_diff": "518553d371d02ece8f2ee43920e27edda2dd6341bf1034671b338269a4a66ada",
+    "changed": "865166933229f7f81ac0b119f37097afaee4e50ba3f42a1fb115bbdae763c783",
+    "commit": "2d533e818883f7f964c63e4a2d825990f9b1c6c6",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 1, Harm 4\nRaise: Data loss\nCase: normal use - a coordinator follows the guide to change a repo's test or runner settings.\nThe earlier issue remains: this prototype instruction says to set the test command and checks before starting a settings fix for `sample_data`. The guide also tells the coordinator to set runner labels directly at lines 459\u2013462 and to set `fast_test` through a fix at line 1618, without requiring the file in that fix's Done-when. If the coordinator edits `forge.toml` in such a fix while its automatically started builder runs, `worker.py:467\u2013472` restores the file and discards the edit when Done-when omits `forge.toml`. The guide also retains manual build-and-close instructions for dependency fixes at lines 1761\u20131779. This leaves the old path beside the replacement, contrary to the standard: \u201cReplacing behaviour deletes the old path, its tests and its docs in the same change.\u201d",
-        "file": "src/forge/templates/skill.md",
-        "follow_up": "Split into follow-up fix review-findings-split-from-forge-runner",
-        "gain": 4,
-        "harm": 4,
-        "line": 1257,
-        "priority": "P1",
-        "title": "Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change",
-        "work": 1
-      }
-    ],
-    "id": "1f809927-b18f-43b7-b38d-5097de9e6055",
+    "findings": [],
+    "id": "178ab1d9-e75c-4bf2-a7dc-9b752b05320f",
     "status": "clean"
   },
   "round": 6,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-27T02:18:40.052208+00:00",
@@ -264,6 +252,10 @@
       "at": "2026-11-27T10:40:37.895338+00:00",
       "round": 6,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T11:03:25.969228+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
