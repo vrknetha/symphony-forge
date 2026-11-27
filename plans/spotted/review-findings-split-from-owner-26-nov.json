@@ -30,8 +30,8 @@
       "text": "Gate: the local close test misses real repository conditions",
       "from": "blocking",
       "item": "review-findings-split-from-owner-26-nov",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     },
     {
       "key": "edge\ttests/test_proto_deploy.py\tSelected container deployment tests need an explicit local opt-in after the generated test jobs go away.",
