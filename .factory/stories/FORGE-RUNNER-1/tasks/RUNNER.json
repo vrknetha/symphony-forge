@@ -72,8 +72,8 @@
       "gain": 4,
       "harm": 4,
       "line": 229,
-      "outcome": "open",
-      "reason": "",
+      "outcome": "follow-up",
+      "reason": "Split into follow-up fix review-findings-split-from-forge-runner",
       "round": 1,
       "security": false,
       "title": "Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change",
@@ -160,14 +160,15 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "20691e6e4d512237a832adbab0c2822e40ba02dfb96a3c032445f17bd946cdc0",
-    "changed": "d58ff76d06cd569fcf4d017aeb610ef4a797dbb3d112de508484686ecca561c2",
+    "branch_diff": "721f00d58ffcf8d8aa4580e48298f1dd21d226b6bc63cdf5ac4155d649d7b470",
+    "changed": "a6137898be8e9f3eea343174ed51b76bea3bd3f9245c47133ec7013a2aebb807",
     "commit": "148394f7d4aa2539b9f3667f7639d8c5d5731713",
     "dismissals": [],
     "findings": [
       {
         "body": "Gain 4, Work 1, Harm 4\nRaise: Data loss\nCase: normal use - a coordinator follows the guide to change a repo's test or runner settings.\nThe earlier issue remains: this prototype instruction says to set the test command and checks before starting a settings fix for `sample_data`. The guide also tells the coordinator to set runner labels directly at lines 459\u2013462 and to set `fast_test` through a fix at line 1618, without requiring the file in that fix's Done-when. If the coordinator edits `forge.toml` in such a fix while its automatically started builder runs, `worker.py:467\u2013472` restores the file and discards the edit when Done-when omits `forge.toml`. The guide also retains manual build-and-close instructions for dependency fixes at lines 1761\u20131779. This leaves the old path beside the replacement, contrary to the standard: \u201cReplacing behaviour deletes the old path, its tests and its docs in the same change.\u201d",
         "file": "src/forge/templates/skill.md",
+        "follow_up": "Split into follow-up fix review-findings-split-from-forge-runner",
         "gain": 4,
         "harm": 4,
         "line": 1257,
@@ -177,10 +178,10 @@
       }
     ],
     "id": "1f809927-b18f-43b7-b38d-5097de9e6055",
-    "status": "blocked"
+    "status": "clean"
   },
   "round": 5,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T02:18:40.052208+00:00",
@@ -251,13 +252,27 @@
       "at": "2026-11-27T08:59:43.021812+00:00",
       "round": 5,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-27T09:01:11.077800+00:00",
+      "by": "owner",
+      "choice": "split",
+      "round": 5,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-27T08:59:43.021812+00:00",
+    "by": "owner",
+    "choice": "split",
+    "fixes": [
+      "review-findings-split-from-forge-runner"
+    ],
     "question": "Approved work keeps moving to merge without reminders: A background runner moves approved work to merge is stuck. It should deliver: Wake and start of the runner, automatic part and fix starts, builds through `forge land` with no chat, the land lock, polling of human merges, cleanup, the end of the runner, the stub seam for STOPS, all guide text\nTwo rounds in a row left the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md.\nThe worker tried: Isolate runner in tests, enforce install-time scope cutoff, block test wakes, and finish prototype guide updates.\nChoose one: switch this item to Claude; keep Antigravity for one more round; or narrow or split it.",
+    "reason": "Owner chose split: the guide lines that tell the coordinator to edit forge.toml in a settings fix without naming it (skill.md ~1257 sample_data, ~459-462 runner labels, ~1618 fast_test) become their own small fix that merges before v1.2.50",
     "tool": "antigravity",
-    "wait_id": "c10946b2-e1ed-48f6-bc4f-c1536f1cc514"
+    "wait_id": "c10946b2-e1ed-48f6-bc4f-c1536f1cc514",
+    "worker_round": 5
   },
   "stuck": {
     "close": "41f1fc1f-0d84-4599-8f20-fb7ebf138d8e",
