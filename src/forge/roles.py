@@ -70,7 +70,7 @@ ROLES = {
 }
 
 
-def _family(model: str) -> str:
+def model_family(model: str) -> str:
     if model.startswith("gemini"):
         return "antigravity"
     return "claude" if re.match(r"claude|opus|sonnet|haiku|fable", model) else "codex"
@@ -140,7 +140,7 @@ def _chosen(cfg: dict[str, Any], kind: str, family: str, building: bool = False)
         entry = entry.get(family, {})
     model, effort = entry.get("model", ""), entry.get("effort", "")
     # A per-family entry is already the host's own; a single entry names one model for both hosts.
-    return (model if model and (per_family or _family(model) == family) else ""), effort
+    return (model if model and (per_family or model_family(model) == family) else ""), effort
 
 
 def subagent_defaults(cfg: dict[str, Any]) -> dict[str, str]:
