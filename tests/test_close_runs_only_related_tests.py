@@ -35,6 +35,27 @@ def test_1_close_runs_only_changed_and_module_related_tests_unless_shared_inputs
     monkeypatch.setenv("UV_NO_SYNC", "1")  # Reuse the enclosing run's installed test dependencies.
     log = env.tmp / "pytest-ran"
     log.mkdir()
+    if shared_input is None:
+        # Let the real picker reach pytest before close records the spawned process.
+        # An admitted parent still holds the only allocation, so a second entry cannot start.
+        launcher = env.repo.bin / "forge"
+        launcher.write_text(launcher.read_text("utf-8").replace("from forge.cli import main", f'''
+import time
+from pathlib import Path
+
+record_started = machine.started
+
+def after_pytest(entry, pid):
+    if entry["kind"] == "test":
+        deadline = time.monotonic() + 30
+        while not Path({(log / "test_changed").as_posix()!r}).is_file():
+            if time.monotonic() >= deadline:
+                raise RuntimeError("Nested pytest did not reuse the admitted test lane.")
+            time.sleep(0.05)
+    record_started(entry, pid)
+
+machine.started = after_pytest
+from forge.cli import main'''), "utf-8")
     env.repo.write("conftest.py", f'''import json, pathlib, sys
 import pytest
 sys.path.insert(0, str(pathlib.Path(__file__).parent / "src"))

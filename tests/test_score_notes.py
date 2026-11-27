@@ -98,7 +98,8 @@ def test_1_every_note_and_finding_shows_scores_and_the_harm_floor(env, tmp_path,
                                 "Gain 4, Work 3, Harm 1\nRaise: Functional\nOld baskets vanish."),
                         _scored("P1", "Saving overwrites another shopper's basket",
                                 "Gain 3, Work 2, Harm 2\nRaise: Data loss\nTwo saves at once keep one.")))
-    item, _ = env.start_fix()
+    item, _ = env.start_fix(changes={"app.py": "print('hello')\n",
+                                    "migrations/0002_baskets.sql": "-- Change the basket schema\n"})
     closed = env.close(item)
     out = closed.stdout + closed.stderr
     assert "it wrote findings Forge cannot read" not in out

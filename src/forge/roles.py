@@ -1,7 +1,7 @@
 """Forge's subagent roles for both hosts, from forge.toml and the host's built-in defaults.
 
 A Codex role whose kind's model belongs to the other family inherits the session's model.
-Claude planning uses grill, diagnostics use Opus, and implementation uses its worker settings.
+Claude planning uses grill, diagnostics use Sonnet at high effort, and implementation uses its worker settings.
 Roles set no tools or permission mode: they inherit the session's.
 """
 from __future__ import annotations
@@ -120,8 +120,10 @@ def _chosen(cfg: dict[str, Any], kind: str, family: str, building: bool = False)
     if building and kind == "design":  # the frontend role builds on the design model
         entry = repo.design_models(cfg, family)
         return entry["model"], "max" if family == "claude" and entry["effort"] == "ultra" else entry["effort"]
-    if kind == "explore" and kind not in models:
-        kind = "lite"
+    if kind == "explore":
+        entry = repo.worker_models(cfg, kind, family)
+        effort = entry["effort"]
+        return entry["model"], "max" if family == "claude" and effort == "ultra" else effort
     if family == "claude":
         entry = (repo.CLAUDE_GRILL_DEFAULT if kind == "review" else
                  repo.models(cfg, "grill", family) if kind in ("design", "grill") else

@@ -27,6 +27,8 @@ DOCTOR = {
     "doctor-default-setting": (None, {"scripts": {"test": DIRECT["scripts"]["ci"]}}, "test"),
     "doctor-script-steps": (TEST, COMBINED, "ci"),
     "doctor-direct-vitest": (TEST, DIRECT, "ci"),
+    "doctor-quoted-script-name": ('npm run "ci"', COMBINED, "ci"),
+    "doctor-or-fallback": ("npm run ci || npm run fallback", COMBINED, "ci"),
     "doctor-corepack": ("corepack pnpm install --frozen-lockfile && corepack pnpm run ci", COMBINED, "ci"),
 }
 GUIDE = (
@@ -34,9 +36,13 @@ GUIDE = (
     "that names the script and suggest no command; you write the command.",
     "Keep every step the tests need, in the order the script runs them, including any step that "
     "runs after the tests.",
-    # Browser tests now belong to the nightly full command, outside pull request CI.
-    "Keep browser-test steps in the nightly full command, outside `fast_test`.",
+    "Limit only the unit-test steps to the changed code with the runner's own option and `{base}`",
+    "passes `--` options only to the last command of a script.",
+    "Keep the browser-test steps because the pull request check also runs `fast_test`.",
     "Keep the setup a script runs before or after itself (`pre` and `post` scripts).",
+    "Run the command once with `{base}` set to the default branch.",
+    "Tell the owner that changed-only selection follows imports, so API tests that reach the code "
+    "only through a URL run only in the full test run.",
     "Then ask the owner, and set it in `forge.toml` through a fix.",
 )
 
@@ -110,16 +116,25 @@ def test_1_the_combined_script_is_named_and_no_command_is_suggested(case, reques
     assert "fast_test =" not in done.stdout and "Suggested quick tests" not in done.stdout
 
 
-@pytest.mark.parametrize("repo_kind", ["new repo"])
+@pytest.mark.parametrize("repo_kind", ["new repo", "earlier-adopted repo"])
 def test_2_the_synced_guide_tells_the_agent_how_to_write_the_quicker_command(repo_kind, request):
-    repo, gh = request.getfixturevalue("repo"), request.getfixturevalue("gh")
-    client = _new_repo(repo, gh, request.getfixturevalue("tmp_path"))
-    assert repo.forge("init", "--actions", "yes", cwd=client).returncode == 0
-    skills = [(client / host / "skills/forge/SKILL.md").read_text("utf-8") for host in (".claude", ".codex")]
+    hosts = (".claude", ".codex")
+    if repo_kind == "earlier-adopted repo":
+        up = request.getfixturevalue("unsynced_up")
+        _adopted_upgrade(up, COMBINED)
+        skills = [up.show(f"{host}/skills/forge/SKILL.md") for host in hosts]
+    else:
+        repo, gh = request.getfixturevalue("repo"), request.getfixturevalue("gh")
+        client = _new_repo(repo, gh, request.getfixturevalue("tmp_path"))
+        assert repo.forge("init", "--actions", "yes", cwd=client).returncode == 0
+        skills = [(client / host / "skills/forge/SKILL.md").read_text("utf-8") for host in hosts]
     for skill in skills:
         text = " ".join(skill.split())
-        for sentence in GUIDE:
-            assert sentence in text, sentence
+        end = 0
+        for instruction in GUIDE:
+            start = text.find(instruction, end)
+            assert start >= 0, instruction
+            end = start + len(instruction)
 
 
 def test_3_adoption_suggests_no_pytest_command_for_another_runner(repo, gh):
@@ -130,10 +145,11 @@ def test_3_adoption_suggests_no_pytest_command_for_another_runner(repo, gh):
 
 
 @pytest.mark.platform  # shell quoting: Windows must read the script's quotes the same way
-def test_4_a_quoted_pipe_in_one_runner_argument_is_not_a_combined_script(repo, gh, tmp_path):
+@pytest.mark.parametrize("pattern", ["a|b", "|"])
+def test_4_a_quoted_pipe_in_one_runner_argument_is_not_a_combined_script(repo, gh, tmp_path, pattern):
     client = _new_repo(repo, gh, tmp_path)
     assert repo.forge("init", "--actions", "yes", cwd=client).returncode == 0
-    _inputs(client, "single", "npm ci && npm run unit", {"scripts": {"unit": 'vitest run -t "a|b"'}})
+    _inputs(client, "single", "npm ci && npm run unit", {"scripts": {"unit": f'vitest run -t "{pattern}"'}})
     done = repo.forge("doctor", cwd=client)
     assert "combined script" not in done.stdout, done.stdout
     assert 'fast_test = "npm ci && npm run unit -- --changed {base} --passWithNoTests"' in done.stdout

@@ -52,7 +52,7 @@ REFUSALS = {
                   "move {key} to forge.toml in a fix, or take it out of forge.local.toml"),
     "pin": (
         "Forge {installed} is installed, but this repo pins {pinned}.",
-        "uv tool install git+https://github.com/knacklabs/symphony-forge@{pinned}",
+        "uv tool install symphony-forge=={package_version}",
     ),
     "pin_elsewhere": ("{item} is checked out in {folder}, which pins Forge {installed}; "
                       "this folder pins {pinned}.", "cd {folder}, then forge {words} {item}"),
@@ -562,17 +562,17 @@ def record_run(top: Path, item: str, kind: str, **fields: Any):
 
 # --- forge.toml, the pin and the roadmap -----------------------------------------------
 
-# ponytail: stop_default only loads settings from earlier releases; stops always wait for the owner.
+# ponytail: stop_default only loads settings from earlier releases; it no longer chooses a stop action.
 KEYS = {"version": str, "repo": str, "stage": str, "workers": str, "reviews": str, "tools": str, "test": str, "fast_test": str,
         "signoff": str, "sample_data": bool, "runner": str, "test_runner": str, "codex_fast": str, "stop_default": str,
-        "merge": str, "stack": str, "test_place": str, "checks": list, "interfaces": list,
+        "merge": str, "stack": str, "auto_more_round": bool, "test_place": str, "checks": list, "interfaces": list,
         "always_test": list, "groups": int, "models": dict, "full_suite_workflow": str,
         "added_work_min_gain": int, "always_block": list, "cold_read_rounds": int, "task_review_rounds": int, "boxes": str}
 # A client repo without a stage counts as live: prototype rules never reach an app by default.
 DEFAULTS = {"repo": "client", "stage": "live", "workers": "codex", "tools": "both", "test": "", "fast_test": "",
             "signoff": "", "runner": "ubuntu-24.04", "test_runner": "", "codex_fast": "off",
             "stop_default": "narrow", "merge": "human", "stack": "on", "checks": [], "interfaces": [], "always_test": [],
-            "models": {}, "cold_read_rounds": 2, "task_review_rounds": 2, "boxes": "off"}
+            "models": {}, "cold_read_rounds": 2, "task_review_rounds": 2, "auto_more_round": False, "boxes": "off"}
 # ponytail: retain stop_default's old values so existing forge.toml files still load.
 FAMILIES = ("codex", "claude", "antigravity")
 CHOICES = {"repo": ("client", "forge-source"), "stage": ("live", "prototype"),
@@ -598,7 +598,10 @@ WORKER_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "low"},
 DESIGN_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "xhigh"},
                    "codex": {"model": "gpt-6.2-sol", "effort": "high"},
                    "antigravity": {"model": "default", "effort": "high"}}
-CLAUDE_GRILL_DEFAULT = {"model": "claude-opus-5-5", "effort": "high"}
+EXPLORE_DEFAULTS = {"claude": {"model": "claude-haiku-5-5", "effort": "high"},
+                    "codex": {"model": "gpt-6.1-terra", "effort": "medium"},
+                    "antigravity": {"model": "gemini-4-neon", "effort": "low"}}
+CLAUDE_GRILL_DEFAULT = {"model": "claude-sonnet-5-5", "effort": "high"}
 TOP_EFFORT = {"codex": "high", "claude": "xhigh", "antigravity": "high"}
 SUBAGENT_DEFAULT = {"model": "claude-haiku-5-5", "effort": "high"}
 
@@ -768,18 +771,16 @@ def ready_path(item: str, top: Path) -> Path:
 
 
 def models(cfg: dict[str, Any], kind: str, family: str) -> dict[str, str]:
-    """One kind's entry for a family ("codex" or "claude") from forge.toml's [models] table: its
-    own entry, or a single entry whose model is that family's; Claude plan reads default to
-    Opus at high effort, and other missing entries return {}."""
-    if kind == "explore" and kind not in cfg.get("models", {}):
-        kind = "lite"
+    """One kind's entry for a family from forge.toml's [models] table: its own entry or a single
+    entry for that family. Explore and Claude plan reads have their own defaults."""
     chosen = cfg.get("models", {}).get(kind) or {}
+    fallback = EXPLORE_DEFAULTS[family] if kind == "explore" else {}
     if "model" not in chosen:
         return chosen.get(family) or (CLAUDE_GRILL_DEFAULT
-                                     if kind == "grill" and family == "claude" else {})
+                                     if kind == "grill" and family == "claude" else fallback)
     model = chosen["model"]
     owner = "codex" if model.startswith("gpt") else "antigravity" if model.startswith("gemini") else "claude"
-    return chosen if owner == family else {}
+    return chosen if owner == family else fallback
 
 
 def user_facing(cfg: dict[str, Any], row: dict[str, str]) -> bool:
@@ -830,7 +831,7 @@ def setting_sources(cfg: dict[str, Any], kind: str, design: bool) -> str:
     local = cfg.get("local")
     if local is None:
         return ""  # ponytail: no local file means forge.toml set them all, so output stays as it was
-    kind = "design" if design else "lite" if kind == "explore" and "explore" not in cfg["models"] else kind
+    kind = "design" if design else kind
     files: dict[str, list[str]] = {LOCAL: [], "forge.toml": [], "built-in default": []}
     for key in ("tools", "workers"):
         files[LOCAL if key in local else "forge.toml"].append(f"{key} = {cfg[key]}")
@@ -841,7 +842,8 @@ def setting_sources(cfg: dict[str, Any], kind: str, design: bool) -> str:
 def model_source(cfg: dict[str, Any], kind: str, family: str) -> str:
     """Where a worker's models for this kind come from. A local [models.<kind>] replaces the whole
     kind, so without an entry for this worker Forge's built-in default applies, as forge work does."""
-    if not models(cfg, kind, family):
+    entry = models(cfg, kind, family)
+    if not entry or (kind == "explore" and entry is EXPLORE_DEFAULTS[family]):
         return "built-in default"
     return LOCAL if kind in cfg.get("local", {}).get("models", {}) else "forge.toml"
 
@@ -998,7 +1000,7 @@ def check_pin(cwd: str | os.PathLike[str] | None = None, item: str = "", words: 
         print(f"Forge v{__version__} is installed, but this repo pins v{pinned}, so v{pinned} runs "
               f"through uv.{advice}", file=sys.stderr)
         sys.exit(run_release(f"v{pinned}", sys.argv[1:], cwd))
-    refuse(REFUSALS["pin"], installed=f"v{__version__}", pinned=f"v{pinned}")
+    refuse(REFUSALS["pin"], installed=f"v{__version__}", pinned=f"v{pinned}", package_version=pinned)
 
 
 def resume_pin(top: Path, previous: str, rounds: int | None = None, *, accepted: bool = False,
@@ -1025,14 +1027,12 @@ def run_release(release: str, args: list[str], cwd: str | os.PathLike[str] | Non
     """Run a Forge release's `forge <args>` through uv in cwd, its output streamed; its exit code."""
     return subprocess.run(
         [shutil.which("uv") or "uv", "tool", "run", "--from",
-         f"git+https://github.com/knacklabs/symphony-forge@{release}", "forge", *args],
+         f"symphony-forge=={release.removeprefix('v')}", "forge", *args],
         cwd=cwd, env={**uv_env(), "FORGE_PINNED_RUN": release}).returncode
 
 
 def uv_env() -> dict[str, str]:
-    """This environment for uv, without a git hook's repository: uv fetches a git+ source with
-    its own `git init` and `git reset --hard`, which would turn this repo bare or overwrite its
-    index. The program uv starts finds the repository from its folder."""
+    """Keep a git hook's repository variables out of uv and the Forge it starts."""
     return {key: value for key, value in os.environ.items()
             if key not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE")}
 

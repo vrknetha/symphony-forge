@@ -41,7 +41,8 @@ def test_1_generated_skill_copies_share_the_review_round_rule(repo, gh, tmp_path
     assert ("When the same P0 stays open in two worker rounds in a row, Forge stops and asks the owner."
             in skill)
     assert ("At the round limit (the repo's setting, two by default), open findings below P0 "
-            "stop the item only when no P0 remains open." in skill)
+            "stop the item only when no P0 remains open and close does not apply the policy above."
+            in skill)
     assert ("Close stops at the round limit (the repo's setting, two by default) for a story part "
             "or fix when findings below P0 remain open and no P0 is open."
             in skill)

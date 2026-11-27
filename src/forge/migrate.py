@@ -80,7 +80,7 @@ REFUSALS = {
 
 BRANCH, ITEM, MESSAGE = "forge/migrate-v1", "migrate-v1", "Move to Forge v1"
 MADE = "migrate-made"  # in .git/forge/: the one commit migrate made, so a rerun may replace it
-SOURCE = "https://github.com/knacklabs/symphony-forge"
+SOURCE = "https://github.com/vrknetha/symphony-forge"
 # The copied-in Forge: a file here that differs from the copied-in version is set aside.
 VENDORED = ("factory", "forge", "forge.cmd", "harness.yaml", "harness", "install", "constitution",
             "WORKFLOW.md", "setup", "docs/FACTORY.md", "docs/QUALITY.md", "docs/ROLES.md",

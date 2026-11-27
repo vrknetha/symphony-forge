@@ -8,6 +8,13 @@ discovery asks a question and starts no fix. Workers work only on their brief.
 Forge ignores a dropped fix whose checkout no longer exists. A worker follows
 this brief even when there are no failed checks or open review findings.
 
+Close and the pull request show each finding's reviewer-assigned severity and say if it blocks the merge.
+An `After merge:` finding is a post-merge check: it does not block the merge, stays listed under
+`Pending after merge:` with its check and owner across review rounds, and is run by its owner after merge.
+The migration Harm floor applies when the change adds or edits a migration across its commits.
+Close asks the reviewer to score an open finding again if an old review applied that floor
+to a change without a migration addition or edit.
+
 Settled findings stay settled. Each reader and reviewer gets earlier rounds' notes and answers,
 including findings already fixed or dismissed. Do not reopen them with the same finding text
 (cold reads) or title and file (reviews); report a new defect with distinct text and new evidence.
@@ -103,7 +110,8 @@ Close then reviews only conflict repairs and later edits when an earlier clean r
 $delegation
 - Claude SDK workers get their helper roles and `general-purpose` through turn options only.
   Each worker kind uses its `subagents` and `subagent_effort` pair, or `claude-haiku-5-5` at
-  high when it has no pair. Design turns use the build pair. Helper settings stay the same
+  high when it has no pair. With that stock pair, debugger, security and performance use
+  `claude-sonnet-5-5` at high. Design turns use the build pair. Helper settings stay the same
   after a failed round and set no process-wide value or `settings.json` value.
 - Edit files only inside this checkout.
 - $file_ownership
@@ -164,6 +172,7 @@ $delegation
   commit and stop instead of asking the coordinator to push or run CI. CI is the merge gate. Commit
   your local proof in the `Proof list:` without waiting for CI results or timings.
 - Close and doctor cancel only this pull request's older forge.yml runs when they block its newest queued run. Client workflows stay untouched. If a run stays active after cancellation, Forge prints GitHub's force-cancel command for the operator. It never calls that command automatically. Close keeps waiting for the new run.
+- When the Forge review is the only required check that failed, close retries its job once and waits for it to finish. Close still needs a passing review on the current commit. New repos get this at init. Existing repos get it on upgrade.
 - On new and upgraded repos, close and merge retry failed CI test jobs once only after runner
   loss, cancellation or timeout. Assertion failures get no retry. They wait for that attempt.
   Cancelled runs use the same retry limit.
@@ -333,6 +342,9 @@ their settings until that fix changes them. Keep `test` as the full suite.
 For a pytest repo, the shipped picker is `forge test --pytest <base>`; it runs the repo's own
 test command without installing Forge in the project. This picker belongs in `fast_test`;
 workers run bare `forge test` to enter the lane.
+On Windows, a builder's own bare run skips separate Playwright or Cypress steps, directly or
+through one package script. A step that reaches the browser runner through another file still runs.
+Pull request checks, close and full runs keep their configured browser steps.
 Codex full-access worker turns send permission requests to Forge, which accepts them,
 including requests to run `forge test`. Read-only turns decline permission requests.
 Root dependency files select the full test command. A nested project's dependency files
@@ -594,9 +606,15 @@ part of that address only when the listed address has one. Set `phone: true` whe
 other answer, leave it out. When the browser tests run, the check opens each listed screen in light and
 dark and fails on sideways overflow, cut text, low contrast or a page that is not the listed screen.
 To set one kind of problem aside for a screen, add `waive: { '<kind>': '<the reason>' }` to its entry.
-On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep all browser projects in the nightly full command and outside `fast_test`. Pull request CI runs the desktop Playwright project; this Windows shortcut does not change selection elsewhere.
+On Windows, a builder's own bare `forge test` run skips separate Playwright or Cypress steps.
+A step that reaches Playwright through another file still runs. Pull request checks and close
+keep their configured browser steps.
 The rendered check runs with browser tests in the full test command and nightly full run.
-Keep browser tests outside `fast_test`, even when shared settings select all other tests.
+For Forge's separate browser job, follow this default.
+Keep all browser projects in the nightly full command and outside `fast_test`.
+Pull request CI runs the desktop Playwright project. Nightly runs all projects.
+When splitting an adopted app's combined test script, keep its existing browser steps in the
+quick command for the pull request check.
 Pull request CI runs the desktop Playwright project. Nightly runs all projects.
 When you add a sample-data prototype's first
 tests, list every screen the prototype has. A new app asks the phone-view question before its build
@@ -690,7 +708,7 @@ lines that name its ID in the same change.
 
 ## When you finish
 
-Before close, put a `Proof list:` paragraph in your last commit message (close reads commit messages only, not your report; `forge handback` copies a Proof list from your report into a commit only when you wrote none): each covered item has a numbered line `- <n>: <test> (<decision>)` (a fix uses `- Done when:`, and `- 1, 3:` covers two items), naming a pytest node ID or file, or a Vitest or Playwright file with an optional title in backticks, such as `path.test.ts::title` or `path.spec.ts::suite > title`; the decision is `reuse`, `extend <closest test>`, or `new; closest <test or none>; proves <outcome>`, and `check:` replaces the test only for an item that changes only settings, docs or tests.
+Before close, put a `Proof list:` paragraph in your last commit message (close reads commit messages only, not your report; `forge handback` copies a Proof list from your report into a commit only when you wrote none): each covered item has a numbered line `- <n>: <test> (<decision>)` (a fix uses `- Done when:`, and `- 1, 3:` covers two items), naming a pytest node ID or file, or a Vitest or Playwright file with an optional title in backticks, such as `path.test.ts::title` or `path.spec.ts::suite > title`; the decision is `reuse`, `extend <closest test>`, or `new; closest <test or none>; proves <outcome>`, and `check:` replaces the test only for an item that changes only settings, docs or tests, or whose proof can exist only after the merge (naming the check).
 Write no test results: close refuses an item with no test, a named test that is not on the branch, and a named pytest test that did not run, failed or was skipped. Name any other check with its result. Every commit's `Proof list:` carries
 the previous one forward and adds to it, even in a small repair commit; never list only the latest
 change. Forge copies it into the pull request and gives it to

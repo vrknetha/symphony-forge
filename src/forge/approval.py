@@ -1,15 +1,15 @@
 """v1 approval: one human approval binds a story doc's "What changes for you" and "Done when".
 
-`forge hook approval` runs after Claude Code's ExitPlanMode and AskUserQuestion and after Codex's
-request_user_input. It keeps today's trust checks (docs/specs/plan-approval.md), applied to the
-section hash: a completed call, the exact digest, the runtime, the tool, a stable session and event
-identity, replay refusal and exactly one story waiting for that digest. It also holds the client
-sign-off gate, and counts every answered question as a human touch of the item being worked on.
+`forge hook approval` runs after Claude Code's plan and question tools and after Codex's question
+tool or prompt submission. Each path checks the sender and event, rejects replays, and matches
+one waiting story by its section hash. The recorder also checks client sign-off and counts
+answered questions as human touches.
 """
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -19,6 +19,8 @@ from forge import __version__, design, machine, repo, story
 
 REFUSALS = {
     "bad_payload": ("The hook input is not a JSON object.", "forge doctor"),
+    "bad_line": ("The approval line must read approve <KEY> <6-character code>.", "forge next"),
+    "not_owner": ("Only the owner can type the approval line, so nothing was recorded.", "forge next"),
     "wrong_runtime": ("{tool} is not {runtime}'s approval tool, so nothing was recorded.", "forge next"),
     "not_completed": ("The approval question was cancelled or failed, so nothing was recorded.",
                       "forge next"),
@@ -46,6 +48,18 @@ SUCCESS = {"success", "succeeded", "completed"}
 CHOICES = ["Approve plan", "Request changes", "Stop"]
 
 
+def codex_guidance(shown: str, key: str, digest: str) -> list[str]:
+    return [
+        f"Next: in Codex, show {shown}, then ask the owner to type approve {key} {digest[:6]}. "
+        f"In Plan Mode, you can instead ask request_user_input with id approve_plan_{digest}, "
+        'question "Approve this plan?", header "Approve plan" and choices "Approve plan", '
+        '"Request changes", "Stop".',
+        "After the owner types the line, run forge next. If the story still waits and Forge gives "
+        "no reason, ask the owner to review and trust the new hook with /hooks in Codex. "
+        "Check that the installed Forge version matches the version this repo pins.",
+    ]
+
+
 def ships(top: Path, cfg: dict[str, Any]) -> dict[str, str]:
     from forge import sync
 
@@ -61,6 +75,8 @@ def hook(args: Any) -> int:
         payload = None
     if not isinstance(payload, dict):
         repo.refuse(REFUSALS["bad_payload"])
+    if payload.get("hook_event_name") == "UserPromptSubmit":
+        return _typed(payload)
     tool, answered = payload.get("tool_name"), _answered(payload)
     approving = tool == "ExitPlanMode" or (tool == "request_user_input" and _asks_approval(payload))
     if not approving and not (tool in QUESTIONS and answered):
@@ -102,6 +118,38 @@ def last_refusal(top: Path) -> Path:
     return repo.forge_dir(top) / "approval-refused.txt"
 
 
+def _typed(payload: dict[str, Any]) -> int:
+    if os.environ.get("FORGE_WORKER") == "1":
+        return 0
+    prompt = _text(payload.get("prompt"))
+    prefix = rf"approve[ \t]+({story.KEY.pattern})"
+    start = re.match(prefix + r"(?=\s|$)", prompt, re.I | re.ASCII)
+    if not start:
+        return 0
+    line = re.fullmatch(prefix + r"[ \t]+([0-9a-f]{6})", prompt, re.I | re.ASCII)
+    typed_key = start[1]
+    key = typed_key.upper()
+    cwd = payload.get("cwd")
+    top = repo.root(cwd if isinstance(cwd, str) and Path(cwd).is_dir() else None)
+    # A bare lowercase word can be prose ("approve the plan") or a real short story key.
+    if not line and typed_key.isalpha() and typed_key.islower() and not any(
+            key in story.stories_here(checkout) for checkout in _checkouts(top)):
+        return 0
+    try:
+        if "agent_id" in payload:
+            repo.refuse(REFUSALS["not_owner"])
+        if not line:
+            repo.refuse(REFUSALS["bad_line"])
+        _record_approval(top, payload, "codex", line[2].lower(), "turn_id", key)
+    except repo.Refused as refusal:
+        reason = str(refusal).partition("\nNext: ")[0]
+        last_refusal(top).write_text(reason, encoding="utf-8")
+        print(reason)
+    else:
+        last_refusal(top).unlink(missing_ok=True)
+    return 0
+
+
 def _approve(top: Path, payload: dict[str, Any], tool: str) -> None:
     runtime = "codex" if "turn_id" in payload else "claude"  # ponytail: only Codex payloads carry turn_id
     if tool != TOOLS[runtime]:
@@ -109,22 +157,32 @@ def _approve(top: Path, payload: dict[str, Any], tool: str) -> None:
     if not _completed(payload):
         repo.refuse(REFUSALS["not_completed"])
     digest = _claude_digest(payload) if runtime == "claude" else _codex_digest(payload)
-    session, event = _text(payload.get("session_id")), _text(payload.get("tool_use_id"))
+    _record_approval(top, payload, runtime, digest, "tool_use_id")
+
+
+def _checkouts(top: Path) -> dict[Path, None]:
+    return dict.fromkeys([machine.main_checkout(top), *machine.remembered()])
+
+
+def _record_approval(top: Path, payload: dict[str, Any], runtime: str, code: str, event_field: str,
+                     named_key: str | None = None) -> None:
+    session, event = _text(payload.get("session_id")), _text(payload.get(event_field))
     if not session or not event:
         repo.refuse(REFUSALS["no_identity"])
     marker = hashlib.sha256(f"{runtime}\0{session}\0{event}".encode("utf-8")).hexdigest()
     chat_used = repo.forge_dir(top) / "approvals" / marker
     if chat_used.exists():
         repo.refuse(REFUSALS["replay"])
-    checkouts = dict.fromkeys([machine.main_checkout(top), *machine.remembered()])
-    matches = [(key, path) for checkout in checkouts
+    matches = [(key, path, digest) for checkout in _checkouts(top)
                for key, path in story.stories_here(checkout).items()
-               if waiting_digest(key, path) == digest]
+               if (named_key is None or key == named_key)
+               and (digest := waiting_digest(key, path)) is not None
+               and digest[:len(code)] == code]
     if not matches:
         repo.refuse(REFUSALS["no_match"])
     if len(matches) > 1:
         repo.refuse(REFUSALS["several"], count=len(matches))
-    key, path = matches[0]
+    key, path, digest = matches[0]
     pinned = repo.config(path)["version"]
     story_used = repo.forge_dir(path) / "approvals" / marker
     if story_used.exists():

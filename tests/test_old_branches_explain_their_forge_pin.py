@@ -65,7 +65,7 @@ def test_1_old_branches_explain_the_pin_after_a_fetched_upgrade(repo, gh, tmp_pa
     ran = repo.forge(*command)
     assert ran.returncode == 3
     assert ran.stderr == original.rstrip() + f" {notice}\n"
-    assert _calls(log)[-1]["args"][3].endswith("@v1.2.2")
+    assert _calls(log)[-1]["args"][3] == "symphony-forge==1.2.2"
 
     # Even a stale local default is not told to merge itself.
     repo.git("switch", "-q", "main")

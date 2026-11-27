@@ -25,8 +25,10 @@ STARTERS = {"starter_smoke", "python_starter_smoke"}
 @pytest.mark.platform
 def test_4_own_repo_selects_smoke_areas_and_runs_related_tests_once(env, monkeypatch):
     # Boundary contracts: wrong area rows waste CI or miss smoke coverage, skipped
-    # dependencies lose nightly proof, and local close tests duplicate CI. Existing
-    # tests own live app behavior and dispatch paths, not selection. No new seam.
+    # dependencies lose nightly proof, and close runs this fixture's changed test
+    # once via the route forge.toml picks (CI wait without local pytest, or local
+    # pytest without sibling tests). Existing tests own live app behavior,
+    # dispatch, .forge/always-tests.txt, and pre-push check waits. No new seam.
     monkeypatch.setenv("GITHUB_EVENT_NAME", "pull_request")
     repo = env.repo
     areas = env.tmp / "areas"
@@ -126,15 +128,13 @@ def test_4_own_repo_selects_smoke_areas_and_runs_related_tests_once(env, monkeyp
             # The Python starter smoke job ran at 45 minutes and was cancelled on release runs.
             limit = 60 if job == "python_starter_smoke" else 45
             assert f"    timeout-minutes: {limit}\n" in body
-    paths = re.search(r"  pull_request:\n    paths:\n(.*?)(?=\n\S)", workflow, re.S)[1]
-    assert re.findall(r"^      - (.+)$", paths, re.M) == [
-        ".github/workflows/starter-smoke.yml", "src/forge/templates/**", "src/forge/feature*.py",
-        "tests/test_starter_tree.py", "tests/test_libs_layout.py"]
+    # Starter smoke now runs by hand or on schedule. The selector and job
+    # wiring above still matter to those runs.
     concurrency = workflow.split("concurrency:\n", 1)[1].split("\n\n", 1)[0]
     assert "github.workflow" in concurrency and "github.event.pull_request.number || github.run_id" in concurrency
     assert "cancel-in-progress: ${{ github.event_name == 'pull_request' }}" in concurrency
 
-    # Copy Forge's real settings unchanged: close must wait for CI without pytest.
+    # Copy Forge's real settings so the receipt proves the route in use.
     machine_runners(repo)
     for rel in ("forge.toml", "pyproject.toml", "uv.lock"):
         repo.write(rel, (ROOT / rel).read_text("utf-8"))
@@ -157,17 +157,23 @@ def record_run(request):
     item, where = env.start_fix({"tests/test_probe.py":
                                 "def test_related():\n    assert 2 + 2 == 4\n"})
     settings = tomllib.loads((ROOT / "forge.toml").read_text("utf-8"))
-    env.checks([run(name, None, "queued") if name == "tests" else run(name)
-                for name in settings["checks"]])
-    waiting = env.close(item)
-    assert waiting.returncode != 0, waiting.stdout + waiting.stderr
-    assert "tests is still queued" in waiting.stderr, waiting.stdout + waiting.stderr
-    assert not log.exists()
-    monkeypatch.setenv("FORGE_GROUP", "1")
-    monkeypatch.setenv("FORGE_GROUPS", "1")
-    ci = repo.forge("test", "--change", cwd=where, timeout=120)
-    assert ci.returncode == 0, ci.stdout + ci.stderr
-    assert log.read_text("utf-8").splitlines() == ["test_related"]
+    test_place = settings.get("test_place", "ci" if any(
+        name != "forge-pr-check" for name in settings["checks"]) else "local")
+    local_tests = test_place == "local"
+    ci_tests = not local_tests and "tests" in settings["checks"]
+    if ci_tests:
+        env.checks([run(name, None, "queued") if name == "tests" else run(name)
+                    for name in settings["checks"]])
+        waiting = env.close(item)
+        assert waiting.returncode != 0, waiting.stdout + waiting.stderr
+        assert "tests is still queued" in waiting.stderr, waiting.stdout + waiting.stderr
+        assert not log.exists()
+    if not local_tests:
+        monkeypatch.setenv("FORGE_GROUP", "1")
+        monkeypatch.setenv("FORGE_GROUPS", "1")
+        ci = repo.forge("test", "--change", cwd=where, timeout=120)
+        assert ci.returncode == 0, ci.stdout + ci.stderr
+        assert log.read_text("utf-8").splitlines() == ["test_related"]
     env.checks([run(name) for name in settings["checks"]])
     closed = env.close(item)
     assert closed.returncode == 0, closed.stdout + closed.stderr

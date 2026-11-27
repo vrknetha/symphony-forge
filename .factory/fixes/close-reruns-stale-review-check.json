@@ -1,0 +1,156 @@
+{
+  "amendments": [
+    {
+      "at": "2026-11-26T01:18:37.910960+00:00",
+      "because": "Owner chose narrow: the run's reported commit can be the base commit, so finding the reviewed commit stayed broken after two rounds",
+      "done_when": "When the only failed required check is a review check that ran before the branch's latest commit, close re-runs that job once and waits for it."
+    }
+  ],
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/close-reruns-stale-review-check",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21378-3acd-7b62-9643-7c6f47bebd21",
+    "head": null,
+    "start": "68a18ab03e8d261f7cd1a447eec6d930fbe4b71d"
+  },
+  "done_when": "When the only failed required check is the review check, close re-runs that review job once and waits for it, without looking up which commit the review run reports.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "_retry_old_review() in src/forge/checks.py",
+      "file": "src/forge/checks.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 509,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Retry and wait for the only failed required review from an older commit",
+      "work": 3
+    },
+    {
+      "area": "_retry_old_review() in src/forge/checks.py",
+      "file": "src/forge/checks.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 518,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: A current-head review can be mistaken for an old review",
+      "work": 2
+    },
+    {
+      "area": "test_1_close_retries_the_only_failed_review_from_an_older_commit() in tests/test_close_reruns_old_review.py",
+      "file": "tests/test_close_reruns_old_review.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 22,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Retry and wait for the only failed required review from an older commit",
+      "work": 2
+    },
+    {
+      "area": "_retry_old_review() in src/forge/checks.py",
+      "file": "src/forge/checks.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 540,
+      "outcome": "fixed in round 4",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Functional: The repair rejects stale reviews whose runs report the base SHA",
+      "work": 3
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "5fc8f2814324eecc24cf3e47dbd9f9ae256305c2e55ab9c141f6922c48b4f271",
+    "changed": "70afbb790a674c14f25c28d9de528f19c2b32885d55a522fcdcc849b7531b7b0",
+    "commit": "e39e6e614ef492e94381647242b1d564ffefa395",
+    "dismissals": [],
+    "findings": [],
+    "id": "5185336c-4223-4a3b-a8bc-39b9edccaa1d",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T16:08:14.765442+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T16:09:32.309975+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:12:16.601464+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:50:10.412002+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T16:50:30.864969+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:59:33.772322+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T17:00:23.715362+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:04:54.663360+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T17:05:09.794412+00:00",
+      "round": 4,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-26T01:18:16.097192+00:00",
+      "by": "owner",
+      "choice": "narrow",
+      "round": 4,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-26T01:18:56.037814+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T01:26:16.796371+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "07b33e0a-e665-424b-86ad-158875f54660",
+    "head": "45abd73ecb0eedf7ab09d8328740d27bad34f1bc",
+    "keys": {
+      "the open P0 functional: the repair rejects stale reviews whose runs report the base sha in src/forge/checks.py": 2
+    },
+    "round": 4
+  },
+  "why": "A review check that failed before a CI fix stays failed until someone re-runs that job by hand, so close keeps reporting a failed check after the cause is fixed.",
+  "worker": "codex"
+}

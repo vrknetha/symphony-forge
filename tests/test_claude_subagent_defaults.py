@@ -43,13 +43,13 @@ effort = "low"
 
 @pytest.mark.parametrize("models,planning,implementation_effort", [
     (None, ("claude-sonnet-5-5", "high"), "low"),
-    (CODEX_MODELS, ("claude-opus-5-5", "high"), "low"),
+    (CODEX_MODELS, ("claude-sonnet-5-5", "high"), "low"),
     (CODEX_MODELS + CLAUDE_MODELS, ("custom-opus", "medium"), "xhigh"),
 ], ids=["new-repo", "missing-claude-entries", "configured-grill-and-old-review"])
 def test_5_init_and_sync_write_claude_role_defaults_and_preserve_codex_settings(
         repo, gh, tmp_path, models, planning, implementation_effort):
     # Building stays on Sonnet. Planning follows grill rather than design, while diagnostic
-    # roles use Opus independently of obsolete review pins owned by the external reviewer.
+    # roles use Sonnet independently of review pins owned by the external reviewer.
     top = repo.path
     if models is None:
         top, initialized = _fresh_client(repo, gh, tmp_path)
@@ -71,14 +71,12 @@ def test_5_init_and_sync_write_claude_role_defaults_and_preserve_codex_settings(
         # An omitted entry uses low effort. Explicit pins and design keep xhigh.
         effort = "xhigh" if name == "frontend" else implementation_effort
         assert _settings(top, name)[1] == ("claude-sonnet-5-5", effort), name
-    # Fresh init separates read-only explore; configs without explore retain lite.
-    assert _settings(top, "explorer")[1] == (
-        ("claude-haiku-5-5", "high") if models is None else
-        ("claude-sonnet-5-5", implementation_effort))
+    # Missing explore entries use the read-only defaults, regardless of lite settings.
+    assert _settings(top, "explorer")[1] == ("claude-haiku-5-5", "high")
     for name in ("planner", "architect"):
         assert _settings(top, name)[1] == planning, name
     for name in ("debugger", "security", "performance"):
-        assert _settings(top, name)[1] == ("claude-opus-5-5", "high"), name
+        assert _settings(top, name)[1] == ("claude-sonnet-5-5", "high"), name
 
     if models is None:
         # Init pins both tools' reviews. Codex diagnostic roles use its review entry.
@@ -88,7 +86,7 @@ def test_5_init_and_sync_write_claude_role_defaults_and_preserve_codex_settings(
     if models is not None:
         for name in ("worker", "coder", "tester", "refactorer"):
             assert _settings(repo.path, name)[0] == ("gpt-6.1-sol", "medium"), name
-        assert _settings(repo.path, "explorer")[0] == ("gpt-6-luna", "max")
+        assert _settings(repo.path, "explorer")[0] == ("gpt-6.1-terra", "medium")
         # The frontend role builds on the design entry, as planning does here.
         for name in ("frontend", "planner", "architect"):
             assert _settings(repo.path, name)[0] == ("gpt-6-sol", "xhigh"), name

@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from forge.close_remote import push_replay, reconcile, replay_baseline, save_replay, squash_replay
-from forge import __version__, app_baseline, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
+from forge import __version__, app_baseline, autoreview, checks, codex, design, githooks, init, merge_review, merge_timings, migration_warnings, owner_choices, pr_block, proof as done_when_proof, repo, review, review_skip, score, spotted, story, sync, task, time_records
 
 SWITCH_WORKER = {"claude": "codex", "codex": "claude", "antigravity": "claude"}
 REFUSALS = {
@@ -63,7 +63,7 @@ REFUSALS = {
                  "for it.", "forge sync in {path}, commit what it wrote, then forge close {item}"),
     "unsynced_forge": ("This {kind} pins Forge {pinned}, but Forge {installed} is running close, "
                        "so it can't tell whether the {kind}'s files are what {pinned} writes.",
-                       "uv tool install git+https://github.com/knacklabs/symphony-forge@{pinned}, "
+                       "uv tool install symphony-forge=={package_version}, "
                        "then forge close {item}"),
     "tests_failed": ("`{command}` failed on this machine; the "
                      "next worker round gets its output.", "forge work {item}"),
@@ -74,7 +74,7 @@ REFUSALS = {
                      "the repo owner removes the extra change, then forge close {item}"),
 }
 REFUSALS.update(review_skip.REFUSALS)
-BEGIN, END = "<!-- forge:begin -->", "<!-- forge:end -->"
+BEGIN, END = pr_block.BEGIN, pr_block.END
 # forge merge enable's fix is known by these; only the repo owner merges it.
 WHY, DONE = "Let the agent merge this repo's ready pull requests.", 'The default branch\'s forge.toml sets merge = "agent".'
 
@@ -145,7 +145,8 @@ def _close(args: argparse.Namespace, top: Path) -> int:
                 result["dismissals"].extend(
                     {"finding": number, "because": f"Human accepted the remaining finding: {reason}",
                      "accepted": True}
-                    for number, _ in enumerate(result["findings"], 1) if number not in dismissed)
+                    for number, finding in enumerate(result["findings"], 1)
+                    if number not in dismissed and not score.pending(finding))
                 result["status"] = "clean"
                 score.remember(_known(top, item, state, f"origin/{repo.default_branch(top)}", result),
                                result, sum(step["step"] == "review" for step in state.get("steps", [])), {})
@@ -319,6 +320,8 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     if choice != "accept" and (review.blocking(result) or
                                any(d.get("accepted") for d in result.get("dismissals", []))):
         fresh = fresh and result.get("changed") == changed
+    if fresh and choice != "accept" and autoreview.stale_migration_floor(result, top, f"origin/{default}", head):
+        fresh = False
     refreshed = classified or fresh and (result.get("changed") != changed or
                                          result.get("branch_diff") != branch_diff)
     if fresh:
@@ -422,11 +425,10 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     if serious and "/" not in item:
         blocked_rounds = sum(bool(review.blocking(old)) for old in
                              review._history(top, item, review_ref, result, state=state))  # pyright: ignore[reportPrivateUsage]
-    if (serious and blocked_rounds >= cfg["task_review_rounds"] and
-            not any(score.holds(f, "P0") for _, f in serious) and (not fresh or not state.get("stop"))):
-        stopped = {"file": serious[0][1]["file"], "at": repo.now(),
-                   "wait_id": repo.record_event(top, item, "owner wait start", reason="review loop")}
-        state["stop"] = stopped
+    if serious and blocked_rounds >= cfg["task_review_rounds"]:
+        stopped, granted = owner_choices.review_limit(top, item, state, result, serious,
+                                                     fresh=fresh, auto_more=cfg["auto_more_round"])
+        refreshed = refreshed or granted
     noted = (spotted.own_path(item),) if not switch and spotted.record(
         top, item, state, review_ref, result) else ()
     if not fresh or dismissals or refreshed or stopped:
@@ -446,15 +448,18 @@ def _close(args: argparse.Namespace, top: Path) -> int:
 
     print(f"Review: {review_skip.label(result)}.", flush=True)
     for number, finding in serious:
-        print(f"{number}. {score.priority(finding)} {finding['title']} "
+        print(f"{number}. {score.severity(finding)}, blocks the merge. {finding['title']} "
               f"({finding['file']}:{finding['line']})\n{finding['body']}\n")
+    if pending := pr_block.pending_lines(result["findings"]):
+        print("Pending after merge:\n" + "\n".join(pending) + "\n")
     advice = [(n, f) for n, f in enumerate(result["findings"], 1)
-              if not f.get("required_done_when") and not score.holds(f, result.get("blocking_level"))]
+              if not score.pending(f) and not f.get("required_done_when")
+              and not score.holds(f, result.get("blocking_level"))]
     if advice:
         print("Advice that does not block the merge:" if serious else
               "Follow-ups that do not block the merge (recorded in the pull request):")
         for number, finding in advice:
-            priority = f"{score.priority(finding)} " if serious else ""
+            priority = f"{score.severity(finding)} " if serious else ""
             reason = finding.get("follow_up") or (
                 "Rare case outside normal use" if score.RARE.search(finding["body"]) else
                 "Light review holds only P0 findings" if result.get("blocking_level") == "P0"
@@ -791,7 +796,7 @@ def _merge_default(top: Path, item: str, branch: str, default: str,
             if release != cfg["version"] and repo.VERSION.fullmatch(release):
                 # Isolate Python imports too: the old checkout may have set PYTHONPATH.
                 done = repo.run("uv", "run", "--isolated", "--no-project", "--with",
-                                f"git+https://github.com/knacklabs/symphony-forge@{release}",
+                                f"symphony-forge=={release.removeprefix('v')}",
                                 "--python", sys.executable, "python", "-I", "-c", script, cwd=top,
                                 env=repo.uv_env())
             else:
@@ -823,7 +828,7 @@ def _synced(top: Path, item: str, changed_files: list[str]) -> None:
         return sync.check_guides(top, changed_files)
     kind = "task" if "/" in item else "fix"
     if (behind := repo._older(pinned, release)) or pinned != __version__:  # pyright: ignore[reportPrivateUsage]
-        repo.refuse(("This {kind} pins Forge {pinned}, but the default branch pins Forge {release}.", "forge work {item} to merge the default branch, then forge close {item}") if behind else REFUSALS["unsynced_forge"], kind=kind, pinned=f"v{pinned}",
+        repo.refuse(("This {kind} pins Forge {pinned}, but the default branch pins Forge {release}.", "forge work {item} to merge the default branch, then forge close {item}") if behind else REFUSALS["unsynced_forge"], kind=kind, pinned=f"v{pinned}", package_version=pinned,
                     installed=f"v{__version__}", item=item, release=f"v{release}")
     # forge sync refuses a detached HEAD, so the throwaway checkout gets a throwaway branch.
     check, branch = Path(tempfile.mkdtemp()) / "sync", f"forge-synced-{os.getpid()}"
@@ -972,7 +977,7 @@ def _publish(top: Path, item: str, state: dict[str, Any], branch: str, default: 
     if rebuilding and rebuilt is None:
         # Keep rendered local observations, but no record that would retire the missing-history retry.
         history = re.sub(r"\n<!-- forge:time-record \{.*?\} -->", "", history, flags=re.S)
-    block = _block(result, "\n\n".join(part for part in (history, proof, check) if part))
+    block = pr_block.render(result, "\n\n".join(part for part in (history, proof, check) if part))
     draft = pr is None or result["status"] == "blocked" or bool(state.get("tests"))
     # The body goes through a file under .git/forge/: in argv it meets length limits, and a
     # multi-line argument can't pass through a Windows .cmd shim.
@@ -1097,46 +1102,6 @@ def _bounded_body(body: str, *, suffix: str = "") -> str:
     lines = body.splitlines(keepends=True)
     body = prose(0)
     return body.rstrip() + "\n\n" + note + "\n" + suffix
-
-
-def _block(result: dict[str, Any], check: str) -> str:
-    """Forge's block in the pull request body: the open blocking findings plainly first, or one
-    `Review: clean` line, then the dismissed and advisory findings folded away, then the worker's
-    functional check from its commit message. Each finding is a bullet naming its --dismiss number
-    in text, since GitHub renumbers an ordered list."""
-    because = {d["finding"]: d for d in result["dismissals"]}
-    blocking, rest, below = [], [], {"follow-up": [], "live with": []}
-    for n, finding in enumerate(result["findings"], 1):
-        outcome = "follow-up" if finding.get("follow_up") else score.bar(score.of(finding))
-        scores = score.of(finding)
-        line = "Gain {}, Work {}, Harm {}".format(*scores) if scores else ""
-        is_blocking = n not in because and (
-            finding.get("required_done_when") or score.holds(finding, result.get("blocking_level")))
-        note = (f"dismissed because {because[n]['because']}"
-                + (" (evidence from the base)" if because[n].get("from_base") else "")
-                if n in because
-                else "blocks the merge" if is_blocking
-                else finding.get("follow_up") or line if outcome in below
-                else "advisory: " + " ".join(score.strip(finding.get("body", "")).split()))
-        note += f"; {line}" if line and note != line else ""
-        (blocking if is_blocking else below[outcome] if n not in because and outcome in below
-         else rest).append(f"- Finding {n} ({score.priority(finding)}): {finding['title']} "
-                           f"({finding['file']}:{finding['line']}): {note}")
-    if result.get("skipped"):
-        lines = [BEGIN, f"Review: {review_skip.label(result, reason=True)}."]
-    elif result["status"] == "reviewing":
-        lines = [BEGIN, "Review: running; CI is running alongside it."]
-    elif result["status"] == "blocked":
-        lines = [BEGIN, "The review found serious problems.", "", *blocking]
-    else:
-        lines = [BEGIN, f"Review: clean, {len(because)} dismissed, {len(rest) - len(because) + sum(map(len, below.values()))} advice."]
-    folded = [*rest, *[line for name, title in (("follow-up", "Follow-ups:"), ("live with", "Lived with:"))
-                       if below[name] for line in ("", title, *below[name])]]
-    folded = folded[1:] if folded[:1] == [""] else folded
-    if folded:
-        lines += ["", "<details>", "<summary>Dismissed and advisory findings</summary>", "", *folded,
-                  "", "</details>"]
-    return "\n".join([*lines, *(["", check] if check else []), END])
 
 
 def _title(top: Path, item: str, state: dict[str, Any]) -> tuple[str, str, str]:

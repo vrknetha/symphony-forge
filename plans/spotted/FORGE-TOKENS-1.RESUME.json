@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_repair_brief_lists_changed_files.py\tTest: 2: tests/test_repair_brief_lists_changed_files.py\tFORGE-TOKENS-1/RESUME",
+      "kind": "bug",
+      "path": "tests/test_repair_brief_lists_changed_files.py",
+      "line": 13,
+      "text": "Test: 2: tests/test_repair_brief_lists_changed_files.py",
+      "from": "blocking",
+      "item": "FORGE-TOKENS-1/RESUME",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/worker.py\tNot done: A repair round's brief lists the changed files since the last turn instead of their full change",
+      "kind": "edge",
+      "path": "src/forge/worker.py",
+      "line": 541,
+      "text": "Not done: A repair round's brief lists the changed files since the last turn instead of their full change",
+      "from": "review",
+      "item": "FORGE-TOKENS-1/RESUME",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

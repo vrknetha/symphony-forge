@@ -123,10 +123,13 @@ def test_11_codex_doctor(repo, gh, tmp_path, monkeypatch):
                 UNTRUSTED, APPROVE):
         assert row in first.stdout, first.stdout
     assert not env.exists()
-    # Both hosts share four command/payload pairs, including PreCompact; each is probed once.
+    # The shared event/command pairs run once, and the Codex prompt hook adds one pair.
     calls = hooks.read_text(encoding="utf-8")
-    assert calls.count('"hook_event_name"') == 4
+    assert calls.count('"hook_event_name"') == 6
+    assert calls.count('"hook_event_name": "UserPromptSubmit"') == 1
+    assert calls.count('"SessionEnd"') == 1
     assert calls.count("hook handoff\n") == 1
+    assert calls.count("hook approval\n") == 2
     monkeypatch.setenv("PATH", path)
     _install(repo.bin, "uv", UV_STUB.format(python=sys.executable, pin=PIN, program=str(program)))
 

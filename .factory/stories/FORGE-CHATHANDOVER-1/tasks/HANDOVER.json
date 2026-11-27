@@ -1,0 +1,184 @@
+{
+  "branch": "task/FORGE-CHATHANDOVER-1-HANDOVER",
+  "chat": {
+    "approval": "8b9fea3590ff8cc3f2c405b780de1bee1da7029397ec8acb80427f6c9e3a2422",
+    "claude": null,
+    "conversation": "01a21726-b11e-7d20-88dc-2e1b35c6e9b6",
+    "head": null,
+    "start": "c79b60dd141dd3cfdde23213d1c91fba5ba3340e"
+  },
+  "known": [
+    {
+      "area": "_counts() in src/forge/contextsize.py",
+      "file": "src/forge/contextsize.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 42,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted: only old 200K Claude models are affected; Forge supports the newest models, which all have 1M windows",
+      "round": 1,
+      "security": false,
+      "title": "Use the actual window for supported 200K Claude models",
+      "work": 2
+    },
+    {
+      "area": "warning() in src/forge/contextsize.py",
+      "file": "src/forge/contextsize.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 65,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Rearm the half-window warning after compaction",
+      "work": 2
+    },
+    {
+      "area": "test_3_context_hook_names_handoff_note() in tests/test_context_hook_names_handoff_note.py",
+      "file": "tests/test_context_hook_names_handoff_note.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 6,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: mark the new hook tests for the platform subset",
+      "work": 1
+    },
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 661,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: keep the existing handover guide test passing",
+      "work": 1
+    },
+    {
+      "area": "test_1_context_line_past_half_window.record() in tests/test_context_line_past_half_window.py",
+      "file": "tests/test_context_line_past_half_window.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 14,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: the half-window proof never checks multiple transcript records",
+      "work": 2
+    },
+    {
+      "area": "test_1_sync_ships_precompact_handoff_and_hook_preserves_decisions() in tests/test_fix_client_repos_lose_the_agent_s_state_the.py",
+      "file": "tests/test_fix_client_repos_lose_the_agent_s_state_the.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 69,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: the guide proof misses required handoff steps",
+      "work": 2
+    },
+    {
+      "area": "handoff_hook() in src/forge/nextstep.py",
+      "file": "src/forge/nextstep.py",
+      "gain": 2,
+      "harm": 3,
+      "line": 222,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: prove edits made during a handoff refresh survive",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "02b54b5114204e9df2598481c25e5de684d5242898646c7f0d111ce08bde3a7b",
+    "changed": "a923505ee980be33195d9a2f2f3d21d05169e7aa0d76d736e121db68c092e831",
+    "commit": "8faa88a1d43c78a075b6dfbb51390c4d6e6788db",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted: only old 200K Claude models are affected; Forge supports the newest models, which all have 1M windows",
+        "finding": 1
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Functional.\nCase: normal use - a coordinator continues using a pinned Claude Opus 4.1 model on Amazon Bedrock. The new matcher handles 4.5 models but not Opus 4.1, so a 120K-token chat still falls back to a 1M-token window and receives no warning before compaction. [Amazon Bedrock](https://docs.aws.amazon.com/bedrock/latest/userguide/model-lifecycle-legacy.html) lists Opus 4.1 as available to existing users until January 8, 2027, and [Anthropic](https://platform.claude.com/docs/en/models/overview) lists its window as 200K.",
+        "file": "src/forge/contextsize.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 44,
+        "priority": "P1",
+        "title": "Use the actual window for supported 200K Claude models",
+        "work": 2
+      }
+    ],
+    "id": "5840f378-efcd-416a-9893-debd8f932a04",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-26T09:18:41.988996+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T09:18:59.364050+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T09:37:01.140894+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T09:37:21.548933+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T09:45:53.018560+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T09:45:53.018816+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-26T09:46:45.511450+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 2,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-26T09:45:53.018816+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/contextsize.py",
+    "reason": "Owner accepted: only old 200K Claude models are affected; Forge supports the newest models, which all have 1M windows",
+    "wait_id": "7affec6b-fbd2-46c0-b685-b73caaf56f40",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "441ccc53-7eb3-45f2-944c-bd3149bde0f7",
+    "head": "aad453960c3ecdd19be564ec26d982a9c50e3048",
+    "keys": {},
+    "round": 1
+  },
+  "worker": "codex"
+}

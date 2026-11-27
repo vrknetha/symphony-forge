@@ -3,6 +3,7 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -67,10 +68,18 @@ def test_1_repo_required_rules_join_unrelated_selection(repo, monkeypatch, histo
     if change == "docs":
         monkeypatch.setenv("BASE_SHA", base)
         monkeypatch.setenv("HEAD_SHA", repo.git("rev-parse", "HEAD"))
-        workflow = (ROOT / ".github/workflows/forge.yml").read_text("utf-8")
-        excludes = re.search(r"^          DOCS_ONLY_EXCLUDES: '(.*)'$", workflow, re.M)
-        assert excludes
-        monkeypatch.setenv("DOCS_ONLY_EXCLUDES", excludes[1])
+        settings = tomllib.loads((ROOT / "forge.toml").read_text("utf-8"))
+        checks = settings.get("checks", [])
+        place = settings.get("test_place", "ci" if any(
+            check != "forge-pr-check" for check in checks) else "local")
+        if place == "ci":
+            workflow = (ROOT / ".github/workflows/forge.yml").read_text("utf-8")
+            excludes = re.search(r"^          DOCS_ONLY_EXCLUDES: '(.*)'$", workflow, re.M)
+            assert excludes
+            monkeypatch.setenv("DOCS_ONLY_EXCLUDES", excludes[1])
+        else:
+            # The local workflow has no classifier job. Supply the fixture's docs path.
+            monkeypatch.setenv("DOCS_ONLY_EXCLUDES", json.dumps([":(exclude,glob)docs/**"]))
         output = repo.path / "workflow-output"
         monkeypatch.setenv("GITHUB_OUTPUT", str(output))
         classified = subprocess.run([sys.executable, ".forge/review-tests.py"], cwd=repo.path,

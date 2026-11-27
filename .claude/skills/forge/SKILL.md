@@ -19,7 +19,8 @@ Start with the largest measured cost:
 1. Upgrade to the record-commit rerun fix to remove repeated runs caused only by Forge records.
    Keep runs that test changed code or a changed base.
 2. Run the desktop Playwright project on pull requests and all projects nightly through the full
-   command, including each screen's rendered check. Keep browser tests outside `fast_test`.
+   command, including each screen's rendered check. Keep browser tests outside `fast_test`
+   when the pull request already has a separate browser job.
 3. Keep test setup and helpers from importing the app entry or the whole app. Preserve real
    import dependencies: never drop changed files from related selection or replace them with
    area names. Keep a table of slow tests and their input paths; run them for changed inputs on
@@ -78,6 +79,13 @@ own fix that changes only `checks`, `test_place` and the generated workflow from
 that the branch and default branch share. Added checks keep their usual checks.
 
 Start with `forge next`. It says where things stand and gives the exact next command.
+If it names another coordinator session, use one chat to coordinate the repo.
+
+`forge next`, `forge start` and `forge land` also remove finished folders and
+say how many they removed. Forge keeps the current folder and folders with
+local work that GitHub does not have. For a closed pull request, GitHub must
+still have the matching branch. New repos get this at setup. Existing repos
+get it on upgrade.
 
 ## Guide a person with little technical experience
 
@@ -224,10 +232,14 @@ the owner agrees. `forge doctor --fix` does not drop these fixes. New and upgrad
 client repos get this check from the installed Forge command.
 
 Send every new idea through `forge start "<their words>"`. Never ask the human whether it is a
-story or a fix. If the explorer prompt is lost, run the same `forge start "<idea>"` again, or read `forge next`: both print
-the prompt and handback command again (only the session that holds it can hand back). When the answer is a fix, run its `forge land <fix>` in the background and watch it.
+story or a fix. Forge uses the same tool as a non-design build. If that tool matches this
+session, run the explorer and hand back its reply as instructed. Otherwise, Forge runs the
+explorer and acts on its reply directly. If a prompt for this session is lost, run the same
+`forge start "<idea>"` again or read `forge next` to see the prompt and handback command.
+Only the session that holds the prompt can hand back. When the answer is a fix, run its
+`forge land <fix>` in the background and watch it.
 For an idea that extends an existing story, the explorer can return that story's key with
-`Lane: plan`. Handback reuses its branch and worktree and adds to its plan. Read the revised plan
+`Lane: plan`. Forge reuses its branch and worktree and adds to its plan. Read the revised plan
 before approval.
 
 The human approves stories and chooses between options. In a client repo before the default
@@ -513,7 +525,7 @@ other), file a bug on Forge's GitHub. No client code, names, paths or secrets: d
 Read the template text from GitHub and drop its front matter:
 
 ```
-gh api repos/knacklabs/symphony-forge/contents/.github/ISSUE_TEMPLATE/forge-bug.md -H "Accept: application/vnd.github.raw"
+gh api repos/vrknetha/symphony-forge/contents/.github/ISSUE_TEMPLATE/forge-bug.md -H "Accept: application/vnd.github.raw"
 ```
 
 Fill every section, then save the filled body with your own file-writing tool as UTF-8.
@@ -532,7 +544,7 @@ The template's sections, which the body file keeps exactly:
 File it with no prompt:
 
 ```
-gh issue create --repo knacklabs/symphony-forge --title "<short plain title>" --body-file <that file>
+gh issue create --repo vrknetha/symphony-forge --title "<short plain title>" --body-file <that file>
 ```
 
 ## Laptop setup and after cloning
@@ -549,13 +561,13 @@ If neither tool is signed in, it asks you to sign in. Existing repos keep their 
 If you use Claude, open Claude Code in the repo once and accept the trust question before running headless Claude commands.
 
 The repeatable laptop installers are published for
-[Mac](https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-mac.sh)
-and [Windows](https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-windows.ps1).
+[Mac](https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-mac.sh)
+and [Windows](https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-windows.ps1).
 They install the tools Forge needs; follow their prompts to sign in to GitHub and your agent.
 
 After every clone, read the pinned `version` in `forge.toml` and install that release,
 even if the laptop installer installed a different one:
-`uv tool install git+https://github.com/knacklabs/symphony-forge@<release>`
+`uv tool install symphony-forge==<release>`
 (replace `<release>` with the pin, such as `v1.2.4`). Then run `forge sync` to install
 the local git hooks and refresh the generated files, followed by `forge doctor --fix`.
 In Husky repos, sync preserves the team's hooks and adds Forge's checks to the committed
@@ -573,6 +585,20 @@ or `forge migrate`. It ships beside this skill and covers the human's agreement,
 preservation review, merge, cleanup and rollback. Follow it in order.
 
 ## Waiting or stopped runs
+
+Keep one coordinator chat active for the same work. When the hook reports more than half of the context window, hand over at a quiet moment after a merge or while CI runs.
+Before starting a round that needs `forge handback`, leave enough
+context to finish it. Before you switch chats, finish any such rounds, including
+native plan reads and builds, and run their printed `forge handback` commands in
+the original chat. Give the next chat the current item, any work still running and
+the next step. In Claude Code, delete any session timers before `/clear`. They
+survive the clear.
+
+Forge records step-end events in its run history. The events do not start a chat
+turn. After a handover or a completion notice from the host, run `forge next` to see
+what finished and what comes next. If the run is still active, wait for its completion
+notice if the host can send it to this chat. If it cannot, use a one-shot wait, then
+run `forge next` again. Never use repeating flow-check timers (`CronCreate` or `/loop`).
 
 When a run is waiting or stopped, read the [run reference](run-reference.md) for
 machine queues, board JSON fields and the Claude Code pane. Use `forge next` for
@@ -626,10 +652,17 @@ still load it yourself whenever you need it.
 a compaction. Before each compaction Forge rewrites its current-state part from `forge next` and
 keeps everything under `## Decisions and lessons`. Add one line there at each milestone: a story
 approved, a task merged, a decision the owner made, a lesson learned or a mistake you won't
-repeat. After a compaction or in a new session, read it first. The scratch file stays local and is
-never committed. At hand over, copy its settled notes to `docs/handover.md` through a fix.
+repeat. After a compaction or in a new session, read it first, then run `forge next`.
+The scratch file stays local and is never committed.
 
-## Hand over
+At the next quiet moment after the context warning, or when the owner asks, run
+`forge hook handoff` to refresh the note. Under `## Decisions and lessons`, add one
+line per open decision, lesson and log path for your own background jobs. Add a log
+path when the job starts. If the note does not exist, run `forge hook handoff` first.
+Then tell the owner to clear the chat in one plain line. In Claude, use `/clear`.
+In Codex, start a new chat.
+
+## Hand over to another machine or person
 
 1. **Push everything.** In each worktree, commit and push. Through an ordinary fix, copy
    new decisions and lessons from `.git/forge/handoff.md` into `docs/handover.md`, and merge it.
@@ -1504,6 +1537,7 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    beside changed-test selection in TypeScript `fast_test`, through the normal settings fix after
    the human agrees. Keep `test` as the full suite. New repos get this review at setup; existing
    adopted repos get this guidance on upgrade and sync, with settings changed only through that fix.
+   When the pull request has a separate browser job, use this setup.
    Keep browser tests and each screen's rendered check in the full test command and nightly
    full run, outside `fast_test`, including shared-settings changes.
    Pull request CI runs the desktop Playwright project. Nightly runs all projects.
@@ -1560,8 +1594,8 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    tests need, in the order the script runs them, including any step that runs after the
    tests. Limit only the unit-test steps to the changed code with the runner's own option and
    `{base}`, for example `vitest run --changed {base}` or `jest --changedSince {base}`; npm
-   passes `--` options only to the last command of a script. Keep browser-test steps in the
-   nightly full command, outside `fast_test`. Keep the setup a script runs before or
+   passes `--` options only to the last command of a script. Keep the browser-test steps because
+   the pull request check also runs `fast_test`. Keep the setup a script runs before or
    after itself (`pre` and `post` scripts). Run the command once with `{base}` set to the
    default branch. Tell the owner that changed-only selection follows imports, so API tests
    that reach the code only through a URL run only in the full test run. Then ask the owner,
@@ -1611,7 +1645,7 @@ After an upgrade, forge upgrade and then forge next (once on each computer) list
 release and the open known Forge issues. Tell the owner the changes that affect them in plain
 words, follow each line's instruction, and read the "Known Forge issues" part at the end of
 this guide.
-`forge next` gives `Next: forge upgrade <release>` when its release check finds a newer release
+`forge next` gives `Next: forge upgrade <release>` when PyPI has a newer release
 than the repo pins. If upgrade refuses outside the default branch, move to the main checkout.
 Drop the current fix only if Forge started it and the owner agrees. Then switch to the default
 branch and run `forge upgrade <release>`. The refusal gives these steps in plain words.
@@ -1665,8 +1699,12 @@ without old check-run requests. Retries keep the same batch and never take anoth
 Older items keep their text or show unmeasured time. New and existing repos get this
 behavior on upgrade.
 
-A repo pinned to a release without `forge upgrade` runs it once through uv:
-`uvx --from git+https://github.com/knacklabs/symphony-forge@<release> forge upgrade <release>`.
+A repo pinned to a release unavailable from PyPI can install a newer release and then upgrade.
+Use a published release that includes the switch to PyPI. Run
+`uv tool install --force symphony-forge==X.Y.Z`, then `forge upgrade vX.Y.Z`.
+If the default branch's workflow still installs from the
+retired GitHub repository, Forge opens the upgrade pull request and the owner follows the
+[upgrade recovery steps](https://github.com/vrknetha/symphony-forge/blob/main/docs/guide.md#recovering-upgrades-from-the-retired-github-repository).
 Until the upgrade merges, the default branch keeps working with the new release installed.
 After it merges, older branches keep their pinned release and its rules. When Forge says the
 default branch already pins the installed release, merge `origin/<default>` into your branch to
@@ -1765,18 +1803,28 @@ there are no findings, ignoring other note lines. A numbered or bulleted blockin
 needs a disposition and another round.
 
 Handle cold-read rounds yourself: amend the plan and write dispositions.
-Once a read is clean, before Plan Mode approval, list the choices you made alone answering
+Once a read is clean, before approval, list the choices you made alone answering
 notes in all rounds: each amendment that picked a behaviour, a limit, a refusal or a scope cut.
 Grill the human one question at a time, with your recommendation first.
 Record each answer in the plan, then ask for approval. Plain factual corrections need no question.
 
-Use one framing line before showing a story in Plan Mode:
+Use one framing line before you show the story:
 `Approving: <title>, <n> parts, <risks>`.
 
 The owner approves only the top of the story doc. Show it from its title down to
-`## For the builders`, unchanged, in Plan Mode and exit Plan Mode with that part as the plan; in
-Codex, show the same part, then ask the approval question `forge next` gives. A doc with no
-`## For the builders` heading is shown whole. The approval binds "What changes for you" and
+`## For the builders`, unchanged. Show the whole doc if it has no such heading. In Claude Code,
+exit Plan Mode with that text as the plan. In Codex, ask the owner to type the
+`approve <KEY> <code>` line from `forge next`. Only the owner's own reply counts. If Codex is
+already in Plan Mode, you can ask the question from `forge next` instead.
+
+After the owner types the line, run `forge next`. If the code no longer matches, show the current
+text and give the owner its new line. If the story still waits and Forge gives no reason, ask the
+owner to review and trust the new hook with `/hooks` in Codex. Codex skips a new hook until the
+owner trusts it. Forge trusts hooks only in the threads it starts. Check that the installed Forge
+version matches the version the repo pins. New repos get this hook at setup. Existing repos get it
+on upgrade, with no settings change.
+
+The approval binds "What changes for you" and
 "Done when", so tightening anything below `## For the builders` needs no new approval, while
 changing a result or "What changes for you" does. Once a round of cold read has passed, an edit only
 below `## For the builders` needs no new round either, and `forge read` refuses to run one; an
@@ -1938,6 +1986,13 @@ No command retires a started part: to replace one, close its pull request and de
 
 ## Cold read findings
 
+Close and the pull request show each finding's reviewer-assigned severity and say if it blocks the merge.
+An `After merge:` finding is a post-merge check: it does not block the merge, stays listed under
+`Pending after merge:` with its check and owner across review rounds, and is run by its owner after merge.
+The migration Harm floor applies when the change adds or edits a migration across its commits.
+Close asks the reviewer to score an open finding again if an old review applied that floor
+to a change without a migration addition or edit.
+
 **Settled findings stay settled.** Readers and reviewers receive all earlier rounds' notes,
 answers and fixed or dismissed findings, including the coordinator's recorded work notes.
 Forge ignores repeats of disposed cold-read text or a fixed review title and file; they cannot
@@ -2038,8 +2093,9 @@ Codex build, fix and lite default to `gpt-6.2-sol` at low effort; design uses it
 New repos pin Codex reviews, including working-prototype reviews, and cold reads to
 `gpt-6.1-terra` at max effort. Upgrade and sync keep existing model settings unchanged.
 Claude build, fix and lite accept a `subagents` and `subagent_effort` pair, or use
-`claude-haiku-5-5` at high when neither is set. The SDK's `general-purpose` helper
-gets the same pair. These options affect only the Claude builder's turn, not other
+`claude-haiku-5-5` at high when neither is set. With that stock pair, SDK debugger, security
+and performance helpers use `claude-sonnet-5-5` at high. A different pair applies to every
+SDK helper, including `general-purpose`. These options affect only the Claude builder's turn, not other
 Claude sessions or settings. Codex helpers keep their configured pair, defaulting
 to `gpt-6-luna` at max. Neither tool's helpers change effort after a failure.
 
@@ -2050,8 +2106,8 @@ build has none. With neither pair, sync leaves the defaults unset. Hands-on Code
 that same pair when set, so their worker model does not override the subagent budget.
 
 Claude build, fix and lite default to `claude-sonnet-5-5` at `low` effort.
-Claude design, including frontend, keeps `xhigh` effort. Claude plan reads with no entry use
-`claude-opus-5-5` at `high` effort, including when Claude is the only installed tool.
+Claude design, including frontend, keeps `xhigh` effort. Claude plan reads with no Claude grill
+entry use `claude-sonnet-5-5` at `high` effort, including when Claude is the only installed tool.
 `forge init` writes Sonnet at high for Claude plan reads and reviews.
 Existing model and effort entries stay unchanged after upgrade and sync.
 After a red close test, a blocking review finding or a failed required check named
@@ -2067,7 +2123,7 @@ retain its first effort. Each run records its round number and effort. The board
 and story history show `built at <effort>` in the round line, and omit it for old
 records without effort.
 Claude planner and architect roles use the plan-read entry; debugger, security
-and performance roles use Opus 5.5 at high effort. Reviews, including prototype sign-off,
+and performance roles use Sonnet 5.5 at high effort. Reviews, including prototype sign-off,
 use the selected tool's `models.review` entry, or Autoreview's defaults when unset.
 
 Existing model entries stay unchanged on upgrade. To opt in, set each of
@@ -2135,21 +2191,22 @@ For a side job inside your own session, hand it to one of Forge's subagent roles
 `performance` to diagnose; `worker`, `coder`, `frontend`, `tester` and `refactorer` to build.
 The diagnosing and planning roles change no files. Building an item still goes through
 `forge work`. To change a building or planning role's model or effort, change `forge.toml`
-and run `forge sync`; Claude diagnostic roles keep Opus at high effort.
+and run `forge sync`.
 Codex roles use their host's entry when the kind has per-tool entries. With a single entry, a model
 from the other tool is omitted so the Codex role uses the session's model. Claude building
-roles use their implementation entry or Sonnet low; Claude planning uses grill or Opus high,
-and Claude diagnosing always uses Opus high.
+roles use their implementation entry or Sonnet at low effort. Claude planning uses the grill
+entry or Sonnet at high effort. Claude diagnostic roles use Sonnet at high effort.
 
 Set a model explicitly on every ad-hoc subagent you start outside Forge's roles,
 including the built-in general-purpose agent. In Claude Code, use Sonnet for analysis and
 research, and Haiku for sorting and search.
 
-The explorer role uses the read-only `explore` kind; `lite` keeps a fix's first
-build round. New repos get `[models.explore.claude]` with `claude-haiku-5-5` at high effort and
-`[models.explore.codex]` with `gpt-6.2-sol` at medium effort. Existing repos
-without explore keep using lite for read-only work after upgrading and syncing. To choose
-separate read-only settings there, add the explore entries in a fix and run `forge sync`.
+The explorer uses the read-only `explore` kind. A fix's first build round uses `lite`.
+The explorer defaults are `gpt-6.1-terra` at medium effort for Codex,
+`claude-haiku-5-5` at high effort for Claude, and `gemini-4-neon` at low effort
+for Antigravity. New repos get these entries at setup. Upgraded repos use the defaults
+for missing entries and keep their configured entries. Run `forge sync` after changing
+explore settings to update the native explorer roles.
 
 ## Build simple
 
@@ -2199,12 +2256,20 @@ restore after they fetch.
 
 In `forge.toml`, `cold_read_rounds` sets the cold-read limit and `task_review_rounds` sets the task and fix review limit. Each accepts 1 or 2 and defaults to 2. For a fix, only blocked reviews count toward this limit.
 
+The owner can set `auto_more_round = true` in `forge.toml` to permit one more review round per item.
+At the review limit, close applies this policy only when all open blocking findings are P0 or P1
+with `Raise: Functional`. Close reports the policy when it applies it. The setting is off by default.
+P0 findings already return to the worker and do not use this permission. The next worker turn
+uses the permission even if it changes no reviewed file. Land starts the authorized round even
+if local tests also fail, so the worker can address both problems.
+All other choices still wait for the owner. New and existing repos can use this setting after upgrade.
+
 For a fix, close also runs its new or changed pytest Done-when tests on the code before the fix, in a temporary copy of the repo, and refuses a test that passes there; when the test cannot start there, close warns and the review judges it.
 
 A person can ask you to skip the model review for a task or fix. Run `forge close <item> --no-review --by "<name>" --reason "<why>"` only when a person asks. Close adds the name and reason to the pull request. Close refuses if an earlier review blocked the item. Tests, CI, design checks and merge still run.
 
 At the round limit (the repo's setting, two by default), open findings below P0
-stop the item only when no P0 remains open.
+stop the item only when no P0 remains open and close does not apply the policy above.
 Forge asks the owner: one more round, split or accept.
 Accept makes the open findings follow-ups in Known issues with the owner's reason.
 An open P0 returns to the worker. When the same P0 stays open in two worker rounds in a row,
@@ -2380,7 +2445,7 @@ An app repair on the sign-off branch can use the default branch's green run.
 A failed latest full run still blocks.
 Earlier clients need no migration, and accepted sign-off records stay valid. Everyday merges do
 not wait for a full run.
-In Forge's own repository, releases follow the "Releasing Forge" section of `docs/guide.md` for the daily cut, Windows run and merge freeze.
+In Forge's own repository, follow the "Releasing Forge" section of `docs/guide.md` for the daily cut, Linux full run and merge freeze.
 A failed scheduled or manual full run appears in `forge next` with its failed test names.
 The required `forge-pr-check` fails a pull request from a branch Forge did not start.
 Before the first committed review, this check stays pending. A stale or blocked review still
@@ -2450,10 +2515,13 @@ upgrade. Upgrade never rewrites their `test` or `fast_test` settings. Doctor rep
 in the project: it loads a temporary pytest hook to exclude unrelated files, including on pytest
 before 8.2. Test launchers must preserve `PYTHONPATH`, forward pytest arguments and expose xdist
 options in the command or pytest configuration.
-On Windows, a builder's own bare `forge test` run skips each separate Playwright or Cypress step (directly or through one script of the repo) and prints one line that says so. A step that reaches Playwright through another file still runs. A test setting that is one combined script, or a script with a pre or post script, runs whole. Other runs keep their configured steps. Keep all browser projects in the nightly full command and outside `fast_test`. Pull request CI runs the desktop Playwright project; this Windows shortcut does not change selection elsewhere.
 Workers run tests only through bare `forge test`. It runs `fast_test`, or `test` when none is
 set (using pytest selection when supported), with `{base}` as the merge base with
 `origin/<default branch>`, in the same fair machine-wide test lane as close.
+On Windows, this run skips separate Playwright or Cypress steps, directly or through one package
+script. A combined script, a script with a pre or post script, and a step that reaches the
+browser runner through another file still run. Pull request checks, close and full runs keep
+their configured browser steps.
 It prints the report close keeps and always runs, including docs-only and
 uncommitted changes. If the remote default branch is missing it says to fetch it; if forge.toml
 names no test command it says so and exits successfully. In a sample-data prototype, it says
@@ -2874,3 +2942,6 @@ Open known issues in this Forge release, from its release notes. When one affect
 - **Upgrade drops hand edits in generated files.** The release's `forge sync` writes the CI workflow and other generated files again from forge.toml, so a hand edit there, such as a self-hosted runner or extra install steps, is lost (#1781). Workaround: before the upgrade, move each such edit into its forge.toml setting (runner, test, groups), then upgrade. (Since v1.2.47.)
 - **A handback with the wrong round number says the round was stopped.** `forge handback` gives the same message for a wrong round number as for a stopped round, and no next step (#1791). Workaround: hand back with the round number from the last `forge work` output, or run `forge next`, which names the pending handback; run the handback again with that round. (Since v1.2.48.)
 - **The design checks read text, not the rendered page.** A word such as `uppercase` in a class name, a long spinner animation, or a `#abc` value that is not a colour can be reported. `<strong>` and `<b>` tags and motion times set in seconds by animation libraries are not checked. Workaround: put `forge-ui-ignore <rule>: <reason>` in the file; it covers that rule for the whole file, and the review still reads the rest. (Since v1.2.48.)
+- **The recovery install can break a running Forge run.** The recovery step reinstalls Forge with `uv tool install --force`; a build, review or CI wait running on that machine at the same time can fail or mix releases. Workaround: let running Forge work finish, or stop it, before the recovery install. (Since v1.2.49.)
+- **A work branch started on v1.2.48 can still use the old GitHub address.** After the default branch upgrades, an existing work branch that pins v1.2.48 can try the disabled GitHub source when close merges the default branch. Workaround: merge the default branch into that work branch with v1.2.49 installed, or start the item again. (Since v1.2.49.)
+- **The half-window line can be missed on older Claude models.** A coordinator on an older Claude model with a 200K window (for example Opus 4.1) is measured against a 1M window, so it gets no line before the chat is shortened automatically. Workaround: use a current Claude model, or hand over by hand when the chat feels long. (Since v1.2.50.)

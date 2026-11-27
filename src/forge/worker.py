@@ -17,7 +17,7 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
-from forge import claude_sdk, codex, design, doctor, machine, merge_timings, native, repo, review_process, roles, routing, story, task
+from forge import claude_sdk, codex, design, doctor, machine, merge_timings, native, owner_choices, repo, review_process, roles, routing, story, task
 from forge.repo import git, refuse
 
 HERE = Path(__file__).parent
@@ -27,7 +27,8 @@ TEST_PATHS = repo.TEST_PATHS
 REVIEW_LOOP = (
     "At the round limit (the repo's setting, two by default) for a task or fix review, "
     "close stops when findings below P0 are still open. "
-    "Wait for the owner's recorded choice of one more round, "
+    "If close applied the owner's policy, complete its authorized repair round. "
+    "Otherwise, wait for the owner's recorded choice of one more round, "
     "split or accept. An open P0 never stops for the owner: fix it in this round. "
     "When the same P0 stays open two rounds in a row, Forge stops and asks the owner. "
     "A cold read stops at the round limit (the repo's setting, two by default) when notes below "
@@ -36,8 +37,7 @@ REVIEW_LOOP = (
     "forge read <target> --resolve <accept|more|split> --reason \"<human's choice>\".")
 LIVE_RUN = ("Before review round two, run the real flow once (not tests or stubs). "
             "Add `Live run: <what you ran> - <what you saw>` to your `Functional check:` paragraph.")
-# The bytes of change a continued conversation is shown in full; a larger one is listed by file.
-LARGE = 200 * 1024
+RELATED_TEST_LIST_LIMIT = 2_000
 NUDGING = "The worker left changes uncommitted, so Forge asks it once to follow its test instructions and commit."
 SETTINGS = ("Workers never edit `forge.toml`. Never edit it even temporarily. It belongs to the "
             "coordinator, through a settings fix the owner asked for. Report a needed settings "
@@ -294,6 +294,9 @@ def _work(args: argparse.Namespace) -> bool:
         from forge import close  # close imports story, which imports this module
 
         close.stuck_round(top, item, state, config)
+        if owner_choices.policy_pending(state):
+            note = ((note + "\n") if note else "") + (
+                "The owner's policy authorized this repair round. Continue with the open functional findings.")
         if "round" in state:
             round_number = state["round"] + 1
         elif session:
@@ -522,12 +525,12 @@ def _approval(key: str, item: str, top: Path) -> str:
 
 
 def _changes(top: Path, start: str) -> str:
-    """For a continued conversation: the commits since its last turn ended, and every change git
+    """For a continued conversation: the commits since its last turn ended, and every changed file git
     sees in the checkout since then, untracked files included through a temporary index, so git's
-    own index stays as it is. A very large change is listed by file."""
+    own index stays as it is."""
     if repo.run("git", "cat-file", "-e", f"{start}^{{commit}}", cwd=top).returncode:
         start = git("hash-object", "-w", "-t", "tree", "--stdin", cwd=top)
-        commits = "The previous commit is unavailable, so the full current checkout follows."
+        commits = "The previous commit is unavailable, so the list covers the entire checkout."
     else:
         commits = git("log", "--oneline", f"{start}..HEAD", cwd=top) or "None."
     with tempfile.TemporaryDirectory() as folder:
@@ -539,13 +542,10 @@ def _changes(top: Path, start: str) -> str:
             return subprocess.run(["git", *args], cwd=top, env=env, capture_output=True, text=True,
                                   encoding="utf-8", errors="replace", check=True).stdout
         cached("add", "-A")
-        diff = cached("diff", "--cached", start)
-        if len(diff.encode("utf-8")) > LARGE:
-            diff = ("The change is over 200 KB, so here are the files it touches:\n"
-                    + cached("diff", "--cached", "--name-status", start))
-    return (f"\n## Since your last turn\n\nThe new commits:\n\n{commits}\n\nEvery change in "
+        files = cached("diff", "--cached", "--name-status", start)
+    return (f"\n## Since your last turn\n\nThe new commits:\n\n{commits}\n\nChanged files in "
             "the checkout since your last turn ended, new files included:\n\n"
-            f"```diff\n{diff}```\n")
+            f"```text\n{files}```\n")
 
 
 def _fix_round(state: dict[str, Any]) -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
@@ -571,7 +571,15 @@ def _failing(branch: str) -> list[tuple[str, str]]:
     for check in checks if isinstance(checks, list) else []:
         if check.get("bucket") == "fail":
             job = re.search(r"/job/(\d+)", check.get("link") or "")
-            log = repo.run("gh", "run", "view", "--job", job[1], "--log-failed").stdout if job else ""
+            log = ""
+            if job:
+                view = repo.run("gh", "run", "view", "--job", job[1], "--log-failed")
+                log = view.stdout
+                if view.returncode:
+                    # gh run view needs the whole workflow to finish, even for a completed job.
+                    download = repo.run("gh", "api", f"repos/{{owner}}/{{repo}}/actions/jobs/{job[1]}/logs")
+                    if download.returncode == 0:
+                        log = download.stdout
             lines = log.splitlines()
             start = next((n for n in range(len(lines) - 1, -1, -1)
                           if "Failed tests:" in lines[n]), len(lines))
@@ -626,7 +634,8 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
             row="\n".join(f"| {' | '.join(cells)} |" for cells in (
                 list(row), ["---"] * len(row), list(row.values()))),
             covers=row.get("Covers", ""), scope=row.get("Scope", ""), tests=row.get("Tests", ""),
-            existing_tests=_existing_tests(top, task.cell_list(row.get("Scope", ""))))
+            existing_tests=_existing_tests(top, f"{match['key']}/{match['task']}",
+                                           task.cell_list(row.get("Scope", ""))))
     else:
         on.add("fix")
         fix_kind = state.get("fix_kind")
@@ -792,7 +801,7 @@ def design_context(top: Path, text: str, user_facing: bool, *, review_base: str 
     return "\n\n".join(parts), owned
 
 
-def _existing_tests(top: Path, scope: list[str]) -> str:
+def _existing_tests(top: Path, item: str, scope: list[str]) -> str:
     """The checkout's test files that name a Scope file or folder, listed for the brief."""
     # ponytail: a whole-word match on each entry's last plain name (`board` for `web/board.py`), so
     # a common name such as `index` lists more tests than it should; match imports if that's noisy.
@@ -801,7 +810,12 @@ def _existing_tests(top: Path, scope: list[str]) -> str:
     patterns = [arg for name in names for arg in ("-e", name)]
     found = repo.run("git", "grep", "-l", "-w", "-F", *patterns, "--", *TEST_PATHS,
                      cwd=top).stdout.splitlines() if names else []
-    return ", ".join(f"`{path}`" for path in found) or "none found"
+    listed = ", ".join(f"`{path}`" for path in found)
+    if len(listed) > RELATED_TEST_LIST_LIMIT:
+        path = codex._item_file(top, item, ".related-tests.txt", "Build")
+        path.write_text("\n".join(found) + "\n", encoding="utf-8")
+        return f"{len(found)} files listed in `{path.as_posix()}`"
+    return listed or "none found"
 
 
 def _agy_turn(item: str, top: Path, brief: str, chosen: dict[str, str],
@@ -887,13 +901,16 @@ def _run(item: str, top: Path, brief: str, models: list[str], budget: dict[str, 
     if problem := claude_sdk.sdk_problem():
         refuse(REFUSALS["claude_sdk"], problem=problem, top=repo.quote(top))
     command = [str(claude_sdk.python()), str(claude_sdk.TURN)]
+    # Init writes the stock helper pair explicitly, so compare values here.
+    diagnostic_budget = repo.CLAUDE_GRILL_DEFAULT if budget == repo.SUBAGENT_DEFAULT else budget
     request = {"prompt": brief, "cwd": str(top),
                "model": models[models.index("--model") + 1],
                "effort": models[models.index("--effort") + 1],
                "permission_mode": "bypassPermissions", "add_dirs": [str(CONVENTIONS)],
                "resume": resume, "session_id": session_id,
-               "agents": {name: {"description": description, "prompt": instructions, **budget}
-                          for name, (_, description, instructions) in
+               "agents": {name: {"description": description, "prompt": instructions,
+                                 **(diagnostic_budget if kind == "review" else budget)}
+                          for name, (kind, description, instructions) in
                           {**roles.ROLES, "general-purpose": roles.ROLES["worker"]}.items()}}
     final_result = None
     with repo.record_run(top, item, "worker", family="claude",

@@ -13,13 +13,13 @@ then use its **Code** button to copy the repo URL. Keep it for step 4.
 On a Mac, open Terminal and run:
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-mac.sh | bash
+curl -fsSL https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-mac.sh | bash
 ```
 
 On Windows, open PowerShell and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/knacklabs/symphony-forge/main/scripts/install-windows.ps1 | iex
+irm https://raw.githubusercontent.com/vrknetha/symphony-forge/main/scripts/install-windows.ps1 | iex
 ```
 
 The script checks your tools, installs what is missing and prints the next step. On Windows,

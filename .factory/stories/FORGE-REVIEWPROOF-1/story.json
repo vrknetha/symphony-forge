@@ -1,0 +1,33 @@
+{
+  "approval": {
+    "at": "2026-11-26T16:38:54.983926+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01N2hF2SkdMeB9kLDVVjtiw6",
+    "hash": "3ca8818954b66625bef7fd02e8742d3c79f872ac0c7932e6184f9c221849482d",
+    "round": 2,
+    "runtime": "claude",
+    "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
+  },
+  "doc": "plans/FORGE-REVIEWPROOF-1.md",
+  "status": "approved",
+  "steps": [
+    {
+      "at": "2026-11-26T15:23:07.408429+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T15:38:42.640651+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T16:35:41.285077+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T16:38:54.984107+00:00",
+      "step": "approved"
+    }
+  ],
+  "title": "Separate review severity from merge decisions",
+  "touches": 1
+}
