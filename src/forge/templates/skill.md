@@ -212,12 +212,12 @@ the next merge.
 | "Is my setup healthy?" or "Fix my setup" | `forge doctor`, then `forge doctor --fix` for what it can repair. On the default branch, repairs to Forge's files need a clean checkout at `origin/<default>` and use a dated fix `forge-files-<YYYYMMDD-HHMM>`: `forge close <name>`, then merge it like any other. An existing `fix/forge-files-*` branch with no merged or closed pull request blocks another repair, record or not; follow doctor's finish-or-remove step. Finished-work cleanup skips only the open doctor fix. If a repair already used this minute's name, run `forge doctor --fix` in the next minute. A file it holds back as changed by hand: move that change out of the file, then `forge doctor --fix` again. In AGENTS.md, only hand edits inside the `forge:begin` and `forge:end` lines hold the file; your rules outside them stay as written when doctor refreshes Forge's block |
 | "Set up a new repo" | Before `forge init`, answer "Does this repo run GitHub Actions?" from the repo's settings: `gh api repos/{owner}/{repo}/actions/permissions` gives `enabled`. Ask the human only if the settings do not answer it. Pass `--actions yes` or `--actions no`; yes uses CI checks, while no selects laptop tests with `checks = []`. Then use `forge init --starter` for a new React app, `forge init --starter python` for a new app whose owner asks for a Python backend, or `forge init` for another stack. Propose a `fast_test` as in step 9 of Adopt a live app, below |
 | "Bring our live app into Forge" | Adopt a live app, below |
-| "Change the test command" | Ask, then in a fix: edit `forge.toml` (never its `merge` setting), `forge close <fix>` |
-| "Use fewer cold-read or task-review rounds" | Ask the owner which limit to change; then in a fix set `cold_read_rounds` or `task_review_rounds` to `1` in `forge.toml`, then run `forge close <fix>` |
-| "Run everything in Claude" | Ask, then in a fix: set `tools = "claude"`, `workers = "claude"` in `forge.toml`, then `forge sync`, `forge close <fix>` |
-| "Run everything in Codex" | Ask, then in a fix: set `tools = "codex"`, `workers = "codex"` in `forge.toml`, then `forge sync`, `forge close <fix>` |
-| "Build with Antigravity" | Ask, then in a settings fix set `workers = "antigravity"` in `forge.toml`. Install Antigravity CLI 1.5.12 or newer and run `agy` to sign in. |
-| "Use both" | Ask, then in a fix: set `tools = "both"` in `forge.toml`, `forge close <fix>` |
+| "Change the test command" | Ask, then start a settings fix with `--done` naming `forge.toml` (never its `merge` setting) |
+| "Use fewer cold-read or task-review rounds" | Ask the owner which limit to change; then start a settings fix with `--done` naming `forge.toml` to set `cold_read_rounds` or `task_review_rounds` to `1` |
+| "Run everything in Claude" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `tools = "claude"`, `workers = "claude"`, and run `forge sync` |
+| "Run everything in Codex" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `tools = "codex"`, `workers = "codex"`, and run `forge sync` |
+| "Build with Antigravity" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `workers = "antigravity"`. Install Antigravity CLI 1.5.12 or newer and run `agy` to sign in. |
+| "Use both" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `tools = "both"` |
 | "Change who builds just for me" | Edit `forge.local.toml` beside `forge.toml` in the main checkout (not a worktree): only `tools`, `workers` and `[models.<kind>]` tables. Git ignores it, so no fix; every worktree of that clone uses it. `forge next` and `forge doctor` name what it sets |
 | "Close takes too long running every test" | In a local-test repo, ask, then in a fix: set `fast_test` in `forge.toml`, a command close runs instead of `test`, with `{base}` replaced by the merge base with the default branch (for example `npx vitest run --changed {base}` plus lint). In a CI-test repo, its pull request check runs the tests that import the changed source files, not only the changed test files (see step 9 of 'Adopt a live app'); the nightly full run covers the rest. Then `forge close <fix>` |
 | "Upgrade Forge" | Ask which release, then `forge upgrade <release>`; Upgrade Forge, below |
@@ -225,6 +225,15 @@ the next merge.
 Merge and each item in land print the start time, merge time, elapsed hours and minutes,
 and largest wait from How it went. The board shows the median start-to-merge time for
 items merged today in UTC. New and existing repos get these figures on upgrade.
+
+A background runner starts automatically when you use Forge, approve a plan, or open a chat in a
+Forge repo. It starts approved parts that nothing blocks (without stacking), runs `forge land` on
+started parts and fixes with no chat, polls pull requests waiting for a human merge, removes
+finished folders, and ends when nothing is left to do. A coordinator no longer starts each approved
+part, starts each fix build, watches background runs, or copies the queue into the handoff note;
+answer notices and builders' questions instead. Start a settings fix with `--done` naming
+`forge.toml` so its worker can edit the named settings with no chat. New and existing repos get
+this on upgrade.
 
 `forge doctor` lists started fixes with no work commits after more than seven days.
 Each row gives `forge fix drop <fix> --because "<reason>"`. Only drop a fix after

@@ -24,6 +24,7 @@ REFUSALS = {
     "one_or_all": ("Give one change or --all, not both and not neither.",
                    "forge land <item>, or forge land --all"),
     "one_run": ("A land run already works in this repo.", "wait for it to end, then forge land --all"),
+    "item_locked": ("Another land run is working on {item}.", "wait for it to end, then forge land {item}"),
     "note_all": ("Give one change with --note.", 'forge land <item> --note "<text>"'),
 }
 # A child of forge land --all: lend its queue place while close waits for CI.
@@ -73,6 +74,18 @@ def land(args: argparse.Namespace) -> int:
     if item == merge.ENABLE:
         repo.refuse(merge.REFUSALS["owner_merges"], item=item)
     top = close._worktree(item)
+    lock_path = repo.forge_dir(top) / f"land-{item.replace('/', '-')}.lock"
+    with lock_path.open("ab") as land_lock:
+        if not codex._try_lock(land_lock):
+            repo.refuse(REFUSALS["item_locked"], item=item)
+        try:
+            return _land_one(args, item, top, queued, member, hold, left)
+        finally:
+            codex._unlock(land_lock)
+
+
+def _land_one(args: argparse.Namespace, item: str, top: Path, queued: bool,
+              member: str, hold: bool, left: bool) -> int:
     pin = repo.config(top)["version"]
     state, branch = repo.read_state(item, top) or {}, repo.current_branch(top)
     step = argparse.Namespace(item=item, dismiss=None, because=None, wait_for_progress=True,

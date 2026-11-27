@@ -508,6 +508,7 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     # Set this after isolation, which would remove a session-level FORGE_ default.
     # Autouse covers commands in tests that do not use the repo fixture too.
     monkeypatch.setenv("FORGE_CHECKS_POLL", "0.01")
+    monkeypatch.setenv("FORGE_NO_RUNNER", "1")
     # cmd.exe expands %CI% in a .cmd stub's arguments, case-insensitively: git's
     # --format=%x00%cI%x00 would reach git as %x00truex00 on CI runners.
     monkeypatch.delenv("CI", raising=False)

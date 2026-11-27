@@ -857,6 +857,8 @@ def coordinator() -> str | None:
 
 def route(cfg: dict[str, Any], tool: str, *, command: str, item: str) -> str:
     """A round runs natively in its coordinating app, otherwise through the tool's kit."""
+    if os.environ.get("FORGE_RUNNER") == "1":
+        return "kit"
     here = coordinator()
     if cfg["tools"] != "both" and here is None:
         refuse(REFUSALS["no_session"], command=command, item=item)

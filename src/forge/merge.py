@@ -217,6 +217,8 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
             base = checked_default
         if train and repo.git("rev-parse", f"origin/{default}^{{tree}}", cwd=top) != train:
             repo.refuse(REFUSALS["train_moved"], item=item, default=default)
+        from forge import stops
+        stops.require_running(top, item)
         done = repo.run("gh", "pr", "merge", str(pr["number"]), "--squash",
                         "--subject", pr["title"], *completion, "--match-head-commit", head, cwd=top, input=body)
         after = repo.run("gh", "pr", "view", str(pr["number"]), "--json", "state", "--jq", ".state", cwd=top)
