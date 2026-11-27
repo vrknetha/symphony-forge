@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-27T09:09:44.190075+00:00
-seconds: 707.812
-read_hash: fc9ded25d8617de9bb77eb67f457bca1a3e0aaa4
-round: 1
+read_at: 2026-11-27T09:21:12.616562+00:00
+seconds: 435.256
+read_hash: f3eb09a75b810379f985e8d4f0b494bd2ce31e30
+round: 2
 passed: no
-doc_seen: fc9ded25d8617de9bb77eb67f457bca1a3e0aaa4
+doc_seen: f3eb09a75b810379f985e8d4f0b494bd2ce31e30
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 1264f8aa72674d8a54e4d98bdec8a95f437a288a
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21c39-cb5d-7a13-9178-e47d07ae1105
 session:
-loop_choice:
-loop_reason:
+loop_choice: more
+loop_reason: One more round: fix notes 8 and 9, and add the owner's 27 Nov request that the release full-suite run goes to GitHub
 ---
 # Cold read notes
 
@@ -82,3 +82,22 @@ Only a genuine trade-off goes to the human, as a question with options.
    Gain 3, Work 2, Harm 3
 
    Disposition: cut Mixed acts as `local` when `groups = 1` (`wide` returns false, `prcheck` builds the `local` workflow only for `mixed and groups > 1`), so no single GitHub test job starts for a small change; the Accepted limit text and the tests use `groups = 2` plus a one-group case.
+
+## Round 2
+
+8. **Blocking: Not done: One-group repositories can lose a required check when switching to mixed.**  
+   Raise: Not done.  
+   Case: normal use - A repository created with GitHub Actions keeps Forge’s default one group and requires `tests` in branch protection. [Init](/src/forge/init.py:204) sets one group, and [protect](/src/forge/init.py:259) requires the named checks. The amended [plan](/plans/FORGE-MIXTEST-1.md:40) gives this repository the local workflow, which [emits no `tests` check](/tests/test_testplace_workflow.py:113). The settings pull request cannot merge while that check remains required.  
+   Gain 5, Work 2, Harm 3
+
+9. **Advisory: Not done: The selector change also alters existing CI repositories.**  
+   Raise: Not done.  
+   Case: normal use - A CI repository with multiple groups edits more than a third of its independent test files. The current [selector](/src/forge/templates/review-tests.py:154) chooses one group, but the amended [plan](/plans/FORGE-MIXTEST-1.md:41) applies `one_group = one_group and not wide` without limiting it to mixed mode. The planned workflow comparison can pass while that CI repository starts every group.  
+   Gain 3, Work 2, Harm 3
+
+10. **Advisory: Functional: Switching from CI to mixed removes the existing nightly full run.**  
+    Raise: Functional.  
+    Case: normal use - A CI repository relies on Forge’s generated nightly full suite and has no separate full-suite workflow. The amended plan keeps `full_run` limited to CI mode; [prcheck.py](/src/forge/prcheck.py:306) consequently removes the schedule after the settings fix merges. The full run then needs to be started manually, even though [test selection](/src/forge/fasttest.py:850) still says the nightly run covers missed tests.  
+    Adds work: retain the existing nightly run after switching; F 3 x H 2 = 6; 2 x C = 6.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
