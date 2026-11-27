@@ -79,10 +79,13 @@ def test_1_ask_runs_one_read_only_codex_turn(repo, monkeypatch, sdk_data):
                 time.sleep(0.2)
             assert sorted(bool(run["started_at"]) for run in runs) == [False, True]
             assert {run["title"] for run in runs} == {"A question"} and runs[0]["model"] == "gpt-6.2-sol"
+            # The waiting ask must not have invoked Codex before acquiring the agent place.
+            assert not any("Q2" in turn["input"][0]["text"] for turn in _sent(stub, "turn/start"))
             first.send_signal(signal.SIGINT)
             first.wait(timeout=30)
             out, _ = second.communicate(timeout=60)
             assert second.returncode == 0 and "stub codex" in out
+            assert any("Q2" in turn["input"][0]["text"] for turn in _sent(stub, "turn/start"))
         finally:
             for process in (first, second):
                 process.kill()
@@ -120,8 +123,10 @@ def _install_agy_with_autoreview(repo, monkeypatch):
     return log
 
 
-def _wait_in_line(repo, model: str, expected_text: str) -> None:
-    """Hold the single agent place with a stalled Codex ask and verify `model` waits its turn."""
+def _wait_in_line(repo, model: str, expected_text: str, count_calls) -> None:
+    """Hold the single agent place with a stalled Codex ask and verify `model` runs only after acquiring it."""
+    before_calls = count_calls()
+    before_expected_logs = sum(expected_text in text for text in _ask_logs(repo))
     first = _forge(repo, "ask", "Hold", "--model", "gpt-6.2-sol", stall=True)
     second = None
     try:
@@ -138,11 +143,17 @@ def _wait_in_line(repo, model: str, expected_text: str) -> None:
             time.sleep(0.2)
         assert sorted(bool(run["started_at"]) for run in runs) == [False, True]
         assert any(run["model"] == model and not run["started_at"] for run in runs)
+        # While queued in agent_slot, neither the provider nor its work log has been written yet.
+        assert second.poll() is None
+        assert count_calls() == before_calls
+        assert sum(expected_text in text for text in _ask_logs(repo)) == before_expected_logs
         first.send_signal(signal.SIGINT)
         first.wait(timeout=30)
         out, err = second.communicate(timeout=60)
         assert second.returncode == 0, out + err
         assert expected_text in out
+        assert count_calls() == before_calls + 1
+        assert sum(expected_text in text for text in _ask_logs(repo)) == before_expected_logs + 1
     finally:
         for process in (first, second):
             if process is not None:
@@ -175,14 +186,16 @@ def test_3_ask_routes_claude_and_gemini_and_records_answers(repo, monkeypatch, s
     asked = repo.forge("ask", "Explain this module", "--model", "gemini-4-neon")
     assert asked.returncode == 0, asked.stdout + asked.stderr
     assert "Gemini final answer" in asked.stdout
-    agy_entries = [json.loads(line) for line in agy_log.read_text("utf-8").splitlines()]
-    assert any(entry.get("method") == "session/prompt" for entry in agy_entries)
+    agy_prompts = lambda: sum(  # noqa: E731
+        1 for line in agy_log.read_text("utf-8").splitlines()
+        if json.loads(line).get("method") == "session/prompt")
+    assert agy_prompts() == 1
     assert any("Gemini final answer" in text for text in _ask_logs(repo))
 
     if os.name != "nt":
         machine_cores(repo, 2)  # one agent place
-        _wait_in_line(repo, "claude-haiku-5-5", "Claude final answer")
-        _wait_in_line(repo, "gemini-4-neon", "Gemini final answer")
+        _wait_in_line(repo, "claude-haiku-5-5", "Claude final answer", lambda: len(claude_calls(claude_log)))
+        _wait_in_line(repo, "gemini-4-neon", "Gemini final answer", agy_prompts)
 
 
 @pytest.mark.platform
