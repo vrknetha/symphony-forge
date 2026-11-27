@@ -16,7 +16,7 @@ from functools import partial
 from graphlib import TopologicalSorter
 from pathlib import Path
 
-from forge import board, checks, close, codex, machine, merge, nextstep, owner_choices, repo, review, score, spotted, story, task, worker
+from forge import board, checks, close, codex, machine, merge, nextstep, owner_choices, repo, review, score, spotted, stops, story, task, worker
 
 NEEDS_CHOICE = 3
 REFUSALS = {
@@ -73,12 +73,15 @@ def land(args: argparse.Namespace) -> int:
         repo.refuse(repo.REFUSALS["bad_item"], item=item)
     if item == merge.ENABLE:
         repo.refuse(merge.REFUSALS["owner_merges"], item=item)
-    top = close._worktree(item)
-    lock_path = repo.forge_dir(top) / f"land-{item.replace('/', '-')}.lock"
+    main_root = repo.root()
+    lock_path = repo.forge_dir(main_root) / f"land-{item.replace('/', '-')}.lock"
     with lock_path.open("ab") as land_lock:
         if not codex._try_lock(land_lock):
             repo.refuse(REFUSALS["item_locked"], item=item)
         try:
+            if not queued and not os.environ.get("FORGE_RUNNER"):
+                stops.lift(main_root, item)
+            top = close._worktree(item)
             return _land_one(args, item, top, queued, member, hold, left)
         finally:
             codex._unlock(land_lock)
@@ -526,6 +529,12 @@ def _queue(top: Path, only: set[str]) -> int:
             continue
         age = (int(repo.git("log", "-1", "--diff-filter=A", "--format=%ct", "--",
                             repo.state_path(item), cwd=tree) or 0), item)
+        try:
+            task.require_active(item, tree)
+        except repo.Refused as error:
+            problem, _, step = str(error).partition("\nNext: ")
+            needs[item] = age, problem, step
+            continue
         if state.get("stop"):  # close decides whether the owner recorded a choice
             try:
                 close.check_stop(item, state, tree)

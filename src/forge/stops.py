@@ -9,9 +9,17 @@ def stopped(top: Path, item: str) -> bool:
     return False
 
 
-def require_running(top: Path, item: str) -> None:
-    """Refuse when the owner has stopped this item."""
+def lift(top: Path, item: str) -> None:
+    """Clear the owner's stop when a person runs forge land on this item."""
 
 
-def ended(top: Path, item: str, reason: str, *, next_step: str = "", url: str = "") -> None:
+def add(top: Path, item: str) -> None:
+    """Record that the owner stopped this item."""
+
+
+def ended(top: Path, item: str, code: int, lines: list[str]) -> None:
     """Record that an item stopped and needs the owner."""
+
+
+def summary(top: Path, merged: list[str]) -> None:
+    """Send the end-of-run summary notice for a repo the runner worked on."""

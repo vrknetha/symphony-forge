@@ -930,7 +930,7 @@ def amend(args: argparse.Namespace) -> None:
 
 def require_active(item: str, top: Path | None = None, *, allow_size: bool = False) -> None:
     """A retained checkout cannot resume a dropped fix without an explicit restore."""
-    from forge import nextstep, owner_choices, story
+    from forge import nextstep, owner_choices, stops, story
 
     if "/" in item:
         key = item.split("/", 1)[0]
@@ -938,8 +938,8 @@ def require_active(item: str, top: Path | None = None, *, allow_size: bool = Fal
         if _dropped(key, top, None):
             refuse(REFUSALS["dropped"], key=key)
     location = top or repo.root()
-    from forge import stops
-    stops.require_running(location, item)
+    if stops.stopped(location, item):
+        raise repo.Refused(f"{item} was stopped; forge land {item} continues it.", f"forge land {item}")
     location = next((path for branch, path in story.worktrees(location).items()
                      if branch == f"fix/{item}"), location)
     state = repo.read_state(item, location) or {}

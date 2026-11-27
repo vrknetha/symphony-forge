@@ -575,11 +575,29 @@ poll_seconds = {getattr(request, "param", None)!r}
 poll_interval = float(os.environ.get("FORGE_CHECKS_POLL", "60"))
 
 def monotonic():
-    return real() + float(offset.read_text("utf-8"))
+    for _ in range(20):
+        try:
+            text = offset.read_text("utf-8").strip()
+            if text:
+                return real() + float(text)
+        except (OSError, ValueError):
+            pass
+    return real()
 
 def sleep(seconds):
     seconds = poll_seconds if poll_seconds is not None and seconds == poll_interval else seconds
-    offset.write_text(str(float(offset.read_text("utf-8")) + seconds), encoding="utf-8")
+    current = 0.0
+    for _ in range(20):
+        try:
+            text = offset.read_text("utf-8").strip()
+            if text:
+                current = float(text)
+                break
+        except (OSError, ValueError):
+            pass
+    tmp = offset.with_name(f"elapsed.{os.getpid()}.tmp")
+    tmp.write_text(str(current + seconds), encoding="utf-8")
+    os.replace(tmp, offset)
 
 time.sleep = sleep
 time.monotonic = monotonic

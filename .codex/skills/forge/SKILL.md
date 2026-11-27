@@ -229,11 +229,14 @@ items merged today in UTC. New and existing repos get these figures on upgrade.
 A background runner starts automatically when you use Forge, approve a plan, or open a chat in a
 Forge repo. It starts approved parts that nothing blocks (without stacking), runs `forge land` on
 started parts and fixes with no chat, polls pull requests waiting for a human merge, removes
-finished folders, and ends when nothing is left to do. A coordinator no longer starts each approved
-part, starts each fix build, watches background runs, or copies the queue into the handoff note;
-answer notices and builders' questions instead. Start a settings fix with `--done` naming
-`forge.toml` so its worker can edit the named settings with no chat. New and existing repos get
-this on upgrade.
+finished folders, and ends when nothing is left to do. Check progress with `forge board` and
+`forge next`. A coordinator no longer starts each approved part, starts each fix build, watches
+background runs, checks `forge next` after every merge, or copies the queue into the handoff note;
+answer notices and builders' questions instead. Each notice names the repo, the item, and its
+question, refusal with next step, or pull request link; run `forge land <item>` by hand only when
+a notice says the runner cannot, or to continue an item the owner stopped. Start a settings fix
+with `--done` naming `forge.toml` so its worker can edit the named settings with no chat. New and
+existing repos get this on upgrade.
 
 `forge doctor` lists started fixes with no work commits after more than seven days.
 Each row gives `forge fix drop <fix> --because "<reason>"`. Only drop a fix after
@@ -426,7 +429,9 @@ for you, Why and Done when, a fix's why and Done when, pull request summaries, q
 human, and board and `forge next` lines. Briefs, guides and code stay as they are.
 
 The human never edits `forge.toml`; you keep it. When a setting must change, ask first with
-options, then make the change yourself in a fix: `forge fix start`, the edit, then `forge close`.
+options, then start a settings fix whose `--done` names `forge.toml`:
+`forge fix start "<why>" --done "<done when naming forge.toml>"`. The background runner builds,
+checks and merges it, and its worker edits only the named settings in `forge.toml`.
 Close refuses a settings change in `forge.toml` unless this item's Done-when names the file.
 It leaves the settings and branch change intact, so `forge land` also stops before merging.
 For a fix, run `forge fix amend <item> --done "<done when naming forge.toml>" --because "<why>"`.
@@ -434,7 +439,8 @@ For a task part, name `forge.toml` in the plan's covered Done-when details in th
 and commit the plan there. These details do not change the approved numbered result.
 Then run `forge close <item>` again. A version-pin-only difference still passes.
 Initial migration and adoption keep their new settings until their first pull request merges.
-New and earlier-adopted repos get this check on upgrade. Workers never edit settings.
+New and earlier-adopted repos get this check on upgrade. Workers edit `forge.toml` only when a
+fix's Done-when names `forge.toml` (never on a story part).
 New and existing repos can choose Antigravity for builds and fixes after installing this release.
 Use `[models.build.antigravity]`, `[models.fix.antigravity]` or `[models.lite.antigravity]`
 to name a model and effort. Forge uses the account's default model when the entry is absent.
@@ -1955,8 +1961,10 @@ setup-only, platform or "foundation" stories. Cut a story that answers no proble
 when linked to a spec, it must also serve that spec's behaviour.
 
 `forge next` shows this release's running builder rounds against this machine's builder places as `Builds running: N of M`.
-Start every task and fix `forge next` lists as ready at once, and close each as its worker
-finishes. One machine runs work rounds on half its available cores (at least one place),
+Forge's background runner starts each ready part after approval and builds, closes and merges
+started parts and fixes through `forge land`. Check `forge board` and `forge next` to see progress;
+start or land an item by hand only when a notice says the runner cannot, or run `forge land <item>`
+to continue an item the owner stopped. One machine runs work rounds on half its available cores (at least one place),
 across all its repos; the rest wait in line. Reads and reviews take no agent place.
 On GitHub Actions (`GITHUB_ACTIONS=true`), tests use all available runner cores,
 without reserving cores for agents or other runner jobs. Laptops keep their existing share.
@@ -2758,11 +2766,10 @@ every change, holds none and merges none, and lists the ready ones oldest first,
 with their pull request links: merge them
 in that order.
 
-Start a part with `forge task start <KEY>/<TASK>`, or a named fix with
-`forge fix start "<why>" --done "<done when>" --slug <name>`, then `forge land <item>`.
-To guide a round and continue through close and merge, use `forge land <item> --note "<text>"`.
-To queue several items, run `forge land <item>` for each in the background, with `--note` when
-needed. Forge admits each worker round by machine capacity. Do not write shell queues or private
+After approval (or `forge fix start`), the background runner starts ready parts and runs
+`forge land <item>` automatically. Run `forge task start <KEY>/<TASK>` or `forge land <item>` by
+hand only when a notice says the runner cannot, to continue a stopped item, or with `--note "<text>"`
+to guide a round. Forge admits each worker round by machine capacity. Do not write shell queues or private
 slot loops. `--note` takes one item and cannot be used with `--all`.
 `forge work` queues work rounds across the machine, while reads and close reviews skip
 that line. All runs wait for high load to fall and memory to recover. Busy local CI jobs reserve
@@ -2818,10 +2825,10 @@ Next, start and both boards reconcile published assignments with local builder e
 a locally changed assignment takes precedence, and conflicting other edits need reconciliation.
 The plan's Owner line and Developer cells are the assignment records. There is no separate roster.
 
-Serialize start commands. When task start refuses for overlapping work or an unmet dependency,
-keep other ready work moving while that work finishes. Run `forge next` after each merge to
-start what was unblocked. Retry a start only after its dependency or overlap clears; follow
-other refusals' next actions instead of repeatedly retrying them.
+When running `forge task start` by hand, serialize start commands. When it refuses for overlapping
+work or an unmet dependency, keep other ready work moving while that work finishes; the background
+runner starts unblocked parts automatically after each merge. Retry a hand-run start only after its
+dependency or overlap clears; follow other refusals' next actions instead of repeatedly retrying them.
 
 ## Hotspots
 
