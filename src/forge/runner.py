@@ -8,6 +8,7 @@ import subprocess
 import sys
 import threading
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,82 @@ _TRANSIENT_HTTP = re.compile(
 
 def _state_dir() -> Path:
     return machine._repos_file().parent
+
+
+def _allowed_repo(top: Path) -> bool:
+    """Under pytest, refuse any repo outside the test's temp folder."""
+    test_root = os.environ.get("FORGE_TEST_ROOT")
+    if os.environ.get("PYTEST_CURRENT_TEST") and not test_root:
+        return False
+    if not test_root:
+        return True
+    try:
+        return top.resolve().is_relative_to(Path(test_root).resolve())
+    except (OSError, ValueError):
+        return False
+
+
+def _parse_time(value: Any) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+    except ValueError:
+        return None
+
+
+def _installed_file() -> Path:
+    return _state_dir() / "runner-installed-at"
+
+
+def _installed_at() -> datetime:
+    """Record the runner's install moment once on this machine and return it."""
+    path = _installed_file()
+    try:
+        if path.is_file():
+            existing = _parse_time(path.read_text(encoding="utf-8"))
+            if existing is not None:
+                return existing
+    except OSError:
+        pass
+    stamp = repo.now()
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(f".{os.getpid()}.tmp")
+        tmp.write_text(stamp + "\n", encoding="utf-8")
+        os.replace(tmp, path)
+    except OSError:
+        pass
+    return _parse_time(stamp) or datetime.now(timezone.utc)
+
+
+def record_install(cwd: Path) -> None:
+    """Record the install moment before a command starts/approves new work."""
+    if any(os.environ.get(name) for name in _SKIP_ENV):
+        return
+    try:
+        top = machine.main_checkout(cwd)
+    except Exception:
+        return
+    if not (top / "forge.toml").is_file() or not _allowed_repo(top):
+        return
+    _installed_at()
+
+
+def _story_eligible(top: Path, key: str, cutoff: datetime) -> bool:
+    record = story.state_of(top, key, story.plan_ref(top, key))
+    approved_at = _parse_time((record.get("approval") or {}).get("at"))
+    return approved_at is not None and approved_at >= cutoff
+
+
+def _item_eligible(top: Path, item: str, state: dict[str, Any], cutoff: datetime) -> bool:
+    if "/" in item:
+        return _story_eligible(top, item.split("/", 1)[0], cutoff)
+    started = next((step.get("at") for step in state.get("steps", [])
+                    if isinstance(step, dict) and step.get("step") == "start"), None)
+    started_at = _parse_time(started)
+    return started_at is not None and started_at >= cutoff
 
 
 def _read_json(path: Path) -> dict[str, Any]:
@@ -65,8 +142,9 @@ def wake(cwd: Path) -> None:
         top = machine.main_checkout(cwd)
     except Exception:
         return
-    if not (top / "forge.toml").is_file():
+    if not (top / "forge.toml").is_file() or not _allowed_repo(top):
         return
+    _installed_at()
     machine.remember(top)
     state_dir = _state_dir()
     info = _read_json(state_dir / "runner.json")
@@ -106,8 +184,8 @@ def _local_started(top: Path) -> list[tuple[str, str, Path, dict[str, Any]]]:
     return found
 
 
-def _has_approved_unstarted(top: Path) -> bool:
-    """Local-only check: any approved story with a task not yet merged on the default branch."""
+def _has_approved_unstarted(top: Path, cutoff: datetime) -> bool:
+    """Local-only check: any story approved at or after `cutoff` with an unmerged task."""
     landed = story.landed_ref(top)
     keys = set(story.stories_here(top))
     refs = repo.run("git", "for-each-ref", "--format=%(refname)",
@@ -120,6 +198,9 @@ def _has_approved_unstarted(top: Path) -> bool:
         ref = story.plan_ref(top, key)
         record = story.state_of(top, key, ref)
         if record.get("status") in ("done", "dropped") or not (record.get("approval") or {}).get("hash"):
+            continue
+        approved_at = _parse_time((record.get("approval") or {}).get("at"))
+        if approved_at is None or approved_at < cutoff:
             continue
         doc = story._plan(top, key)
         if not doc:
@@ -227,6 +308,7 @@ def _loop(wake_path: Path) -> int:
     pass_needed: set[Path] = set()
     worked_repos: set[Path] = set()
     merged_by_repo: dict[Path, list[str]] = {}
+    cutoff = _installed_at()
     last_wake = _wake_mtime(wake_path)
 
     def clear_item_retry(key: tuple[Path, str]) -> None:
@@ -269,7 +351,7 @@ def _loop(wake_path: Path) -> int:
         now = time.monotonic()
         merge_happened = False
 
-        remembered = machine.remembered()
+        remembered = [top for top in machine.remembered() if _allowed_repo(top)]
         for top in remembered:
             if top not in seen_repos:
                 seen_repos.add(top)
@@ -364,8 +446,9 @@ def _loop(wake_path: Path) -> int:
                         continue
                 except OSError:
                     continue
-                started = _local_started(top)
-                if not started and not _has_approved_unstarted(top):
+                started = [(item, branch, tree, state) for item, branch, tree, state in _local_started(top)
+                           if _item_eligible(top, item, state, cutoff)]
+                if not started and not _has_approved_unstarted(top, cutoff):
                     for key in [k for k in set(retries) | set(attempts) if k[0] == top]:
                         clear_item_retry(key)
                     for key in [k for k in polling if k[0] == top]:
@@ -383,7 +466,8 @@ def _loop(wake_path: Path) -> int:
                 except Exception as exc:
                     _log_append(top, f"[runner] tidy_finished failed: {exc}\n")
                 try:
-                    to_start = nextstep.startable(top)
+                    to_start = [part for part in nextstep.startable(top)
+                                if _story_eligible(top, part.split("/", 1)[0], cutoff)]
                 except Exception as exc:
                     _log_append(top, f"[runner] startable failed: {exc}\n")
                     schedule_repo_retry(top, now)
@@ -409,7 +493,8 @@ def _loop(wake_path: Path) -> int:
                     repo_attempts.pop(top, None)
                 default = repo.default_branch(top)
                 live = {run.get("item") for run in live_entries if run.get("repo_root") == top.as_posix()}
-                current_items = _local_started(top)
+                current_items = [(item, branch, tree, state) for item, branch, tree, state in _local_started(top)
+                                 if _item_eligible(top, item, state, cutoff)]
                 active_keys = {(top, item) for item, *_ in current_items}
                 for key in [k for k in set(retries) | set(attempts) if k[0] == top and k not in active_keys]:
                     clear_item_retry(key)

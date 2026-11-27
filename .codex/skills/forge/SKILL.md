@@ -959,12 +959,12 @@ Data rule: the table, every row in it and the feature's existing change history 
 drop migration in this change; a later drop follows the database skill and the deploy guide as
 they are.
 
-If the prototype holds only made-up data and has no back end, ask the person, then have the
-coordinator set `sample_data = true` in `forge.toml`. A sign-off record does not turn sample mode
+If the prototype holds only made-up data and has no back end, ask the person, then start a
+settings fix whose `--done` names `forge.toml` to set `sample_data = true`. A sign-off record does not turn sample mode
 on. Forge skips tests and CI while the setting is on; walk the demo steps in a browser.
 Real data or a back end keeps tests from day one.
-After sign-off, `forge next` shows setting up tests as the first step. In a coordinator-owned fix,
-set the test command and CI checks as needed, then turn off the setting. In the same fix, list the
+After sign-off, `forge next` shows setting up tests as the first step. Start a settings fix whose
+`--done` names `forge.toml` to set the test command and CI checks as needed and turn off `sample_data`. In the same fix, list the
 prototype's screens in the app's browser tests with `checkScreen` from `.forge/design/render-check.mjs`,
 so the rendered check starts with the first tests. Close blocks that fix until
 the `Personal data` answer is settled.
@@ -997,8 +997,8 @@ go through the whole list with the client in one sitting, then record the answer
 change it. After an upgrade, rewrite each existing to-confirm list and open question in this form
 once in a mechanical fix.
 
-For each demo round, gather all requests from one conversation into one prototype fix. Build,
-test, review and merge that round before starting another. Tell the salesperson what changed in
+For each demo round, gather all requests from one conversation into one prototype fix; wait for
+the background runner to build, test, review and merge that round before starting another. Tell the salesperson what changed in
 the demo: "the next version is ready to demo" or "the reviewer found a missing error message".
 Say a version is live only after the requested deployment is verified. Do not
 use Forge's words (fix, worktree, branch, pull request) in progress updates to the salesperson.
@@ -1541,8 +1541,8 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    AGENTS.md, outside Forge's block, and deletes CLAUDE.md, since Claude Code reads AGENTS.md itself.
 9. Propose a `fast_test` for the repo: its own test command, keeping its configuration and setup,
    with the test tool's built-in changed-only option and `{base}` (for example
-   `vitest --changed {base}` or `jest --changedSince {base}`). Once the human agrees, set it in
-   `forge.toml` through a fix. For pytest repos, propose
+   `vitest --changed {base}` or `jest --changedSince {base}`). Once the human agrees, start a
+   settings fix whose `--done` names `forge.toml` to set it. For pytest repos, propose
    `forge test --pytest {base}`: Forge runs this picker outside the project, keeping the repo's
    full `test` command and narrows pytest to changed and module-related test files. Use the
    repo's Python runner for `test`; keep Forge outside the project, and keep lint and other
@@ -2440,7 +2440,7 @@ existing repo with a direct pytest command and pytest-split keeps its six groups
 runs its share of the related tests through `forge test --change`. The required `tests` check passes
 only when every job passes; branch protection keeps the same `tests` check.
 A full run covers only `forge.toml`'s `test` command; if the repo's whole suite runs elsewhere, point that setting at it.
-Set `full_suite_workflow = "nightly.yml"` in `forge.toml`, then run `forge sync` and commit the generated workflow to omit Forge's full-suite jobs.
+Set `full_suite_workflow = "nightly.yml"` in a settings fix whose `--done` names `forge.toml` (and runs `forge sync` to commit the generated workflow) to omit Forge's full-suite jobs.
 The repo's workflow must support `workflow_dispatch`. Start its full run with `gh workflow run nightly.yml --ref <default>`.
 That workflow must post `forge-full-suite` on the default branch commit after its run, with `state` set to `success` or `failure`:
 `gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f context=forge-full-suite -f "state=$state"`.

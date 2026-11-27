@@ -395,6 +395,7 @@ def isolated_forge_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     # Every Forge subprocess must write its per-machine repo list inside this test's temp folder.
     monkeypatch.setenv("APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME",
                        str(tmp_path / "config"))
+    monkeypatch.setenv("FORGE_TEST_ROOT", str(tmp_path.resolve()))
 
 
 def _left(tmp_path: Path) -> list[str]:
@@ -502,7 +503,7 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     # The checkout launcher exposes src through PYTHONPATH; clients and released tools must not.
     monkeypatch.delenv("PYTHONPATH", raising=False)
     for name in list(os.environ):
-        if name.startswith(("GIT_", "FORGE_")) and name != "FORGE_LIVE_CODEX" or name in (
+        if name.startswith(("GIT_", "FORGE_")) and name not in ("FORGE_LIVE_CODEX", "FORGE_TEST_ROOT") or name in (
                 "CLAUDECODE", "CODEX_BIN", "CLAUDE_BIN", "AUTOREVIEW"):
             monkeypatch.delenv(name)
     # Set this after isolation, which would remove a session-level FORGE_ default.

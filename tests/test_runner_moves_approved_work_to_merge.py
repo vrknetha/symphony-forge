@@ -156,10 +156,19 @@ if args[:2] == ["pr", "merge"]:
 
 
 def _install_multi_gh(env, tmp_path: Path) -> None:
+    # Ensure every runner test keeps machine-wide config inside tmp_path.
+    assert Path(os.environ.get("APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME", "")).resolve() == (
+        tmp_path / "config").resolve()
     _install(env.repo.bin, "gh", MULTI_GH.format(
         python=sys.executable, remote=str(tmp_path / "remote.git"), url=URL)
         + GH_STUB.format(python=sys.executable).split("\n", 1)[1])
     _install_process_tracker(env, tmp_path)
+
+
+def _mark_installed_before(tmp_path: Path, stamp: str = "2020-01-01T00:00:00+00:00") -> None:
+    path = tmp_path / "config" / "forge" / "runner-installed-at"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(stamp + "\n", encoding="utf-8")
 
 
 def _install_process_tracker(env, tmp_path: Path) -> None:
@@ -223,6 +232,9 @@ def runner_cleanup(tmp_path: Path):
                 os.kill(pid, signal.SIGKILL)
         except OSError:
             pass
+    deadline = time.monotonic() + 5.0
+    while time.monotonic() < deadline and not _lock_is_free(_runner_lock(tmp_path)):
+        time.sleep(0.05)
 
 
 def _runner_lock(tmp_path: Path) -> Path:
@@ -342,6 +354,9 @@ def _approve(env, folder: Path, plan: str, claude_payload, monkeypatch) -> None:
     "coordinator_task_start",
     "one_tool_no_session",
     "ci_skips_runner",
+    "worker_env_skips_runner",
+    "older_started_fix_left_alone",
+    "never_acts_outside_temp_folder",
     "other_pin_skipped",
     "land_lock_refuses_second_run",
     "network_retry_merges",
@@ -355,8 +370,63 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
                        else "3600" if case == "human_merge_stops_after_24h" else "0.05")
     monkeypatch.setenv("FORGE_NETWORK_RETRY_WAIT", "0")
 
+    if case == "never_acts_outside_temp_folder":
+        # A runner started under pytest must refuse to act on any repo outside FORGE_TEST_ROOT.
+        _agent(land)
+        _mark_installed_before(tmp_path)
+        assert land.repo.forge("fix", "start", "Outside fix", "--done", "Never touched", "--slug", "outside-fix").returncode == 0
+        # Narrow FORGE_TEST_ROOT to a separate subfolder so land.repo.path sits outside it,
+        # and also list land.repo.path in the test's repos file.
+        inner = tmp_path / "inner-only"
+        inner.mkdir()
+        inner_repo = inner / "empty"
+        inner_repo.mkdir()
+        subprocess.run(["git", "init", "-q", "-b", "main", str(inner_repo)], check=True, stdin=subprocess.DEVNULL)
+        version = land.repo.forge("--version").stdout.split()[-1]
+        (inner_repo / "forge.toml").write_text(f'version = "{version}"\n', encoding="utf-8")
+        repos_file = tmp_path / "config" / "forge" / "repos"
+        repos_file.parent.mkdir(parents=True, exist_ok=True)
+        repos_file.write_text(f"{land.repo.path.resolve()}\n{inner_repo.resolve()}\n", encoding="utf-8")
+        monkeypatch.setenv("FORGE_TEST_ROOT", str(inner.resolve()))
+        monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
+        assert land.repo.forge("lanes", cwd=inner_repo).returncode == 0
+        _wait_for(lambda: _runner_exited(tmp_path))
+        assert not (land.repo.path / ".git" / "forge" / "runner.log").exists()
+        assert not calls(land.repo.bin / "claude-sdk-calls.jsonl")
+        assert not (land.repo.bin / "merged-fix-outside-fix").exists()
+        return
+
+    if case == "older_started_fix_left_alone":
+        # A fix started before the runner was installed on this machine is left alone.
+        _agent(land)
+        monkeypatch.setenv("FORGE_NOW", "2025-01-01T00:00:00+00:00")
+        assert land.repo.forge("fix", "start", "Old fix", "--done", "Stays untouched", "--slug", "old-fix").returncode == 0
+        monkeypatch.delenv("FORGE_NOW", raising=False)
+        monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
+        assert land.repo.forge("lanes").returncode == 0
+        _wait_for(lambda: _runner_exited(tmp_path))
+        assert (tmp_path / "config" / "forge" / "runner-installed-at").exists()
+        assert not calls(land.repo.bin / "claude-sdk-calls.jsonl")
+        assert (tmp_path / "repo-fix-old-fix").exists()
+        assert not (land.repo.bin / "merged-fix-old-fix").exists()
+        return
+
+    if case == "worker_env_skips_runner":
+        _agent(land)
+        _mark_installed_before(tmp_path)
+        assert land.repo.forge("fix", "start", "Worker check", "--done", "Not built from worker", "--slug", "worker-fix").returncode == 0
+        monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
+        monkeypatch.setenv("FORGE_WORKER", "1")
+        assert land.repo.forge("lanes").returncode == 0
+        assert not (tmp_path / "runner-spawns.jsonl").exists()
+        assert not _runner_started(tmp_path)
+        assert not calls(land.repo.bin / "claude-sdk-calls.jsonl")
+        assert not (land.repo.bin / "merged-fix-worker-fix").exists()
+        return
+
     if case == "ci_skips_runner":
         _agent(land)
+        _mark_installed_before(tmp_path)
         # Start a fix while runner is disabled, then wake under CI=true: wake() must never spawn a runner.
         assert land.repo.forge("fix", "start", "CI check", "--done", "Not built in CI", "--slug", "ci-fix").returncode == 0
         monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
@@ -377,6 +447,7 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
 
     if case == "other_pin_skipped":
         _agent(land)
+        _mark_installed_before(tmp_path)
         assert land.repo.forge("fix", "start", "Old pin fix", "--done", "Left alone", "--slug", "other-pin").returncode == 0
         toml = land.repo.path / "forge.toml"
         lines = toml.read_text("utf-8").splitlines()
@@ -457,6 +528,7 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
 
     if case == "coordinator_task_start":
         _agent(land)
+        _mark_installed_before(tmp_path)
         folder = _setup_two_part_story(land)
         _approve(land, folder, TWO_PART_PLAN, claude_payload, monkeypatch)
         # Coordinator starts ONE by hand before runner wakes: must cause no stop.
@@ -470,6 +542,7 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
 
     if case == "overlapping_scope":
         _agent(land)
+        _mark_installed_before(tmp_path)
         land.approve_working_build()
         land.commit(land.repo.path, "plans/roadmap.json", json.dumps({"items": [
             {"key": "SHOP-1", "title": "First story"},
