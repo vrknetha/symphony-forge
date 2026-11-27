@@ -1,0 +1,16 @@
+{
+  "base": "6c9c0354aa288fca4d77d7725922c01e1ce2a040",
+  "branch": "fix/owner-26-nov-2026-stop-using-github-runn-2",
+  "done_when": "forge.toml sets test_place = \"local\" and checks = [\"forge-pr-check\"], and the generated workflow from forge sync matches; nothing else changes",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T02:43:36.849531+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Owner, 26 Nov 2026: stop using GitHub runners for tests (avoid another ban); tests run on this machine, related tests only."
+}
