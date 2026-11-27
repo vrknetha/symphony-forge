@@ -1,6 +1,11 @@
 {
   "doc": "plans/FORGE-DASH-1.md",
-  "status": "planning",
+  "drop": {
+    "at": "2026-11-27T16:49:52.869300+00:00",
+    "because": "The owner wants it later (27 Nov cleanup); kept in the idea list",
+    "by": "vrknetha <vrknetha@gmail.com> 1795798192 +0530"
+  },
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-10-25T17:43:31.960064+00:00",
