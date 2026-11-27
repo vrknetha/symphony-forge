@@ -110,6 +110,15 @@ if fail_view.exists() and args[:2] == ["pr", "view"] and len(args) > 2 and args[
         fail_view.write_text(f"{{n - 1}}|{{msg}}", "utf-8")
         answer("", 1, msg + "\\n")
 
+fail_list = here / "gh-fail-pr-list"
+if fail_list.exists() and args[:2] == ["pr", "list"] and "--head" in args and args[args.index("--head") + 1] == "fix/retry-fix":
+    raw = fail_list.read_text("utf-8").strip().split("|", 1)
+    n = int(raw[0])
+    msg = raw[1] if len(raw) > 1 else "error connecting to api.github.com"
+    if n > 0:
+        fail_list.write_text(f"{{n - 1}}|{{msg}}", "utf-8")
+        answer("", 1, msg + "\\n")
+
 if args[:2] == ["pr", "list"] and "--head" in args:
     branch = args[args.index("--head") + 1]
     mf = merged_file(branch)
@@ -365,9 +374,11 @@ def _approve(env, folder: Path, plan: str, claude_payload, monkeypatch) -> None:
 def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch, claude_payload, request):
     if case in ("two_part_human_merge", "human_merge_stops_after_24h"):
         request.getfixturevalue("fake_clock")
+        # Keep the runner's fake_clock tick advances from timing out checks.wait inside a child land run.
+        monkeypatch.setenv("FORGE_CHECKS_WAIT", "999999999")
     _install_multi_gh(land, tmp_path)
     monkeypatch.setenv("FORGE_RUNNER_TICK", "30" if case == "two_part_human_merge"
-                       else "3600" if case == "human_merge_stops_after_24h" else "0.05")
+                       else "300" if case == "human_merge_stops_after_24h" else "0.05")
     monkeypatch.setenv("FORGE_NETWORK_RETRY_WAIT", "0")
 
     if case == "never_acts_outside_temp_folder":
@@ -580,13 +591,13 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
     if case == "human_merge_stops_after_24h":
         # Default merge = "human": even after recovering from a transient 503 failure, an unmerged PR
         # stops polling after 24h, clears its retry entry, never re-lands, and exits cleanly.
-        (land.repo.bin / "gh-fail-pr-view").write_text("1|The requested URL returned error: 503", "utf-8")
+        (land.repo.bin / "gh-fail-pr-list").write_text("1|The requested URL returned error: 503", "utf-8")
         monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
         done = land.repo.forge("fix", "start", "Stale PR", "--done", "Stops after 24h", "--slug", "retry-fix")
         assert done.returncode == 0, done.stderr
         _wait_for(lambda: _runner_exited(tmp_path), timeout=45.0)
         log = _runner_log(land)
-        assert "GitHub did not answer" in log or "error connecting to" in log, log
+        assert "The requested URL returned error: 503" in log, log
         assert log.count("retry-fix is ready; a human merges") == 1, log
         return
 

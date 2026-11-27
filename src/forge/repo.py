@@ -1017,6 +1017,9 @@ def resume_pin(top: Path, previous: str, rounds: int | None = None, *, accepted:
         os.environ["FORGE_LAND_ROUNDS"] = str(rounds)
     if accepted:
         os.environ["FORGE_CLOSE_ACCEPTED"] = "1"
+    # Release any held per-item land lock before the replacement release acquires it.
+    from forge import land
+    land._release_lock()
     # The selected release can remove this checkout. A waiting parent must not
     # hold its current directory open on Windows; children still start in top.
     os.chdir(forge_dir(top).parent.parent)

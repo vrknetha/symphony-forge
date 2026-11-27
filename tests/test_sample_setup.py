@@ -106,7 +106,8 @@ def test_2_a_sample_data_repo_runs_no_tests_or_ci_until_its_first_build_step(
     assert (workflow.read_bytes() if workflow.exists() else None) == workflow_before
     for host in (".claude", ".codex"):
         skill = (top / host / "skills/forge/SKILL.md").read_text(encoding="utf-8")
-        assert "coordinator set `sample_data = true` in `forge.toml`" in skill
+        # FORGE-RUNNER-1 turns sample_data on via a settings fix whose --done names forge.toml.
+        assert "settings fix whose `--done` names `forge.toml` to set `sample_data = true`" in " ".join(skill.split())
     assert not marker.exists()
     before_signoff = repo.forge("next")
     assert before_signoff.returncode == 0, before_signoff.stderr

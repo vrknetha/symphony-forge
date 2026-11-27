@@ -41,6 +41,16 @@ UP_TO_DATE = ("Train: GitHub requires each pull request to be up to date with {d
               "save checks. The ready changes merge one at a time.")
 IN_CLOSE = ("reviewing", "fixing", "waiting for checks", "ready")
 say = partial(print, flush=True)
+_active_lock = None
+
+
+def _release_lock() -> None:
+    """Release this process's per-item land lock before handing off to another Forge release."""
+    global _active_lock
+    if _active_lock is not None:
+        codex._unlock(_active_lock)
+        _active_lock.close()
+        _active_lock = None
 
 
 def land(args: argparse.Namespace) -> int:
@@ -73,18 +83,21 @@ def land(args: argparse.Namespace) -> int:
         repo.refuse(repo.REFUSALS["bad_item"], item=item)
     if item == merge.ENABLE:
         repo.refuse(merge.REFUSALS["owner_merges"], item=item)
+    global _active_lock
     main_root = repo.root()
     lock_path = repo.forge_dir(main_root) / f"land-{item.replace('/', '-')}.lock"
-    with lock_path.open("ab") as land_lock:
-        if not codex._try_lock(land_lock):
-            repo.refuse(REFUSALS["item_locked"], item=item)
-        try:
-            if not queued and not os.environ.get("FORGE_RUNNER"):
-                stops.lift(main_root, item)
-            top = close._worktree(item)
-            return _land_one(args, item, top, queued, member, hold, left)
-        finally:
-            codex._unlock(land_lock)
+    land_lock = lock_path.open("ab")
+    if not codex._try_lock(land_lock):
+        land_lock.close()
+        repo.refuse(REFUSALS["item_locked"], item=item)
+    _active_lock = land_lock
+    try:
+        if not queued and not os.environ.get("FORGE_RUNNER"):
+            stops.lift(main_root, item)
+        top = close._worktree(item)
+        return _land_one(args, item, top, queued, member, hold, left)
+    finally:
+        _release_lock()
 
 
 def _land_one(args: argparse.Namespace, item: str, top: Path, queued: bool,

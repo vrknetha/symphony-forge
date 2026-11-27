@@ -566,7 +566,7 @@ def fake_clock(repo, tmp_path, monkeypatch, request):
     folder.mkdir()
     offset = folder / "elapsed"
     offset.write_text("0", encoding="utf-8")
-    (folder / "sitecustomize.py").write_text(f'''import os, subprocess, time
+    (folder / "sitecustomize.py").write_text(f'''import os, subprocess, threading, time
 from pathlib import Path
 from types import SimpleNamespace
 subprocess.time = SimpleNamespace(sleep=time.sleep)
@@ -596,9 +596,16 @@ def sleep(seconds):
                 break
         except (OSError, ValueError):
             pass
-    tmp = offset.with_name(f"elapsed.{os.getpid()}.tmp")
+    tmp = offset.with_name(f"elapsed.{{os.getpid()}}.{{threading.get_ident()}}.tmp")
     tmp.write_text(str(current + seconds), encoding="utf-8")
-    os.replace(tmp, offset)
+    for _ in range(20):
+        try:
+            os.replace(tmp, offset)
+            break
+        except PermissionError:
+            pass
+    else:
+        tmp.unlink(missing_ok=True)
 
 time.sleep = sleep
 time.monotonic = monotonic

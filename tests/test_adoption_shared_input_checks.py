@@ -65,4 +65,6 @@ def test_1_adoption_review_keeps_shared_input_checks(repo, gh, tmp_path, previou
             "for Python `always_test`, or their commands "
             "for TypeScript `fast_test` beside changed-test selection, through the normal "
             "settings fix with the owner's agreement.") in brief
-    assert "Workers never edit `forge.toml`; give the coordinator the list." in brief
+    # FORGE-RUNNER-1 allows a settings fix whose Done-when names forge.toml to edit forge.toml.
+    assert ("A worker edits `forge.toml` only when its fix's Done-when names `forge.toml`; "
+            "otherwise give the coordinator the list.") in brief
