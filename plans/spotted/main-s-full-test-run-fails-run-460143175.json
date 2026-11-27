@@ -8,8 +8,8 @@
       "text": "Not done: The five named tests pass in the full test run on GitHub, each still checking its rule",
       "from": "blocking",
       "item": "main-s-full-test-run-fails-run-460143175",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     },
     {
       "key": "bug\ttests/test_runner_moves_approved_work_to_merge.py\tTest: The five named tests pass in the full test run on GitHub, each still checking its rule\tmain-s-full-test-run-fails-run-460143175",
