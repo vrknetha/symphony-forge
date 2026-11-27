@@ -301,8 +301,9 @@ says that nothing is running before Forge has answered once.
 
 `forge sync` installs or updates the mod from Forge's latest release at user scope,
 one per machine, independently of each repo's pinned Forge version. It needs
-Claude Code v2.1.287 or newer on PATH. When the marketplace is missing, sync runs
-`claude plugin marketplace add knacklabs/symphony-forge`, then always runs
+Claude Code v2.1.287 or newer on PATH. Sync replaces the disabled user marketplace
+and reinstalls the mod. When the marketplace is missing, sync runs
+`claude plugin marketplace add vrknetha/symphony-forge`, then always runs
 `claude plugin marketplace update forge`. It runs
 `claude plugin install forge@forge --scope user` for a new user install, or
 `claude plugin update forge@forge --scope user` for an existing one.

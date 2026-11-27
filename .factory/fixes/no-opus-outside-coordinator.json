@@ -1,0 +1,95 @@
+{
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/no-opus-outside-coordinator",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21222-3187-7842-9f47-2535117b4adb",
+    "head": null,
+    "start": "d9528f782013b6b3d7737326c5440538250e17ec"
+  },
+  "done_when": "The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort in new repos and after upgrade in existing repos, and repos with their own model entries keep them.",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/repo.py",
+      "file": "src/forge/repo.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 601,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort",
+      "work": 2
+    },
+    {
+      "area": "test_1_claude_diagnostics_and_grill_default_to_sonnet_high() in tests/test_claude_diagnostic_model_defaults.py",
+      "file": "tests/test_claude_diagnostic_model_defaults.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 18,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "51bf6d4b6d6fa93c1c90d0be3546960cd4ca82ed408418724d5b1a91ba530f90",
+    "changed": "7e18eb8794ed8adf92dd8089e23f8aa43d649e2880d1f66de22a9c470afeadd7",
+    "commit": "3e05232faa67061fe560dd902e3644e9de820f17",
+    "dismissals": [],
+    "findings": [],
+    "id": "424ac123-d922-4de5-be7a-34ffccc8529c",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T09:55:44.834542+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T09:55:58.381088+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T10:09:27.415612+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T10:09:47.559341+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T10:19:44.113618+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T16:42:59.925279+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:47:11.541952+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "62a0a327-247c-44f2-bd79-d6d393d843a8",
+    "head": "b4da742350bf402a8c0da33a23b4ce0870acbd27",
+    "keys": {},
+    "round": 2
+  },
+  "why": "Forge sends Claude diagnostic roles (debugger, security, performance) and the grill and Claude plan-read defaults to Opus, but the owner wants Opus used only by the coordinating session, because Sonnet is enough for these roles and costs less.",
+  "worker": "codex"
+}

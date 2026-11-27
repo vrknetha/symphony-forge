@@ -1,0 +1,88 @@
+{
+  "allow_large": "Owner allowed (26 Nov): a release version bump touches every pinned version file, like v1.2.49",
+  "base": "daab32e63aff9e517369d10f8df5e640e710fe0e",
+  "branch": "fix/release-v1-2-50-publish-what-merged-sinc",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a217fa-6557-7121-b71f-8a94db188d95",
+    "head": null,
+    "start": "2b17d7ec785e23edb67d2a38df5294810ad12608"
+  },
+  "done_when": "Every version reference that names the current release says v1.2.50, including the forge.toml version pin and uv.lock (as the v1.2.49 release fix did, keeping older references used as a minimum release), src/forge/release-notes/v1.2.50.md exists, the release version tests and the release notes tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "test_1_forge_version_is_1_2_27_everywhere_it_is_recorded() in tests/test_release_version.py",
+      "file": "tests/test_release_version.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 20,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: pre-fix replay rejects the reused release-version proofs",
+      "work": 1
+    },
+    {
+      "area": "src/forge/release-notes/v1.2.50.md",
+      "file": "src/forge/release-notes/v1.2.50.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 1,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: proof list omits release-notes test cases",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "78399befda859128db384f3a52f8ce09567d17f002121cee3525d36576415483",
+    "changed": "307dad2131e5b002020a290555446f137030423b47df696c5bef3b327f38068d",
+    "commit": "541af884a13507835b51c4dafff0cd6749878957",
+    "dismissals": [],
+    "findings": [],
+    "id": "ba0102f8-6382-4ba4-8863-714df589aaeb",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-26T13:09:22.519882+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T13:10:13.124021+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T14:46:34.434396+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T14:46:55.279285+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T14:54:17.107183+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "f148ec8f-148b-4ec6-847e-3a5744fd139c",
+    "head": "012191057034f3de3028db061de5f4ed649bda8c",
+    "keys": {},
+    "round": 1
+  },
+  "why": "Release v1.2.50: publish what merged since v1.2.49 (handover past half the context window and a fresh-chat pointer to the handoff note, combined test scripts named with guide steps and Windows browser steps skipped in builder runs, failed full runs under Needs you, Antigravity review no longer ends in empty output)",
+  "worker": "codex"
+}

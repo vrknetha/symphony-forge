@@ -8,7 +8,7 @@ import signal
 
 import pytest
 
-from test_codex_worker import QUIET, _codex_repo, _sent, _toml, sdk_data  # noqa: F401
+from test_codex_worker import BUILDER_CONFIG, _codex_repo, _sent, _toml, sdk_data  # noqa: F401
 from test_task import DOC, story
 from test_worker import calls, install_claude
 
@@ -45,7 +45,7 @@ def test_1_workers_codex_builds_user_facing_and_plain_tasks_on_codex(repo, monke
     assert calls(claude_log) == []
     # User-facing work on Codex uses the design model's codex entry (its default here).
     assert _sent(codex_log, "thread/start")[-1]["config"] == {
-        **QUIET, "features.multi_agent": True, "model": "gpt-6.2-sol", "model_reasoning_effort": "high",
+        **BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6.2-sol", "model_reasoning_effort": "high",
         "agents.default_subagent_model": "gpt-6-luna",
         "agents.default_subagent_reasoning_effort": "max"}
     assert ("Building BOARD/PAGE with Codex (gpt-6.2-sol, high) because workers = codex, "
@@ -218,7 +218,7 @@ def test_7_the_launch_line_names_the_default_models_a_worker_runs_with(repo, mon
     again = repo.forge("work", "BOARD/HELP")
     assert again.returncode == 0, again.stdout + again.stderr
     assert _sent(codex_log, "thread/start")[-1]["config"] == {
-        **QUIET, "features.multi_agent": True, "model": "gpt-6.2-sol", "model_reasoning_effort": "low"}
+        **BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6.2-sol", "model_reasoning_effort": "low"}
     assert ("Building BOARD/HELP with Codex (gpt-6.2-sol, low) because workers = codex"
             in again.stdout)
 

@@ -141,7 +141,7 @@ def test_3_matching_pins_leave_the_story_unchanged(repo, older):
     assert repo.git("rev-parse", "story/BOARD") == before
     if older:
         # With no upgrade, keep normal pin routing instead of running installed task start.
-        assert _calls(log)[0]["args"][3].endswith("@v1.2.2")
+        assert _calls(log)[0]["args"][3] == "symphony-forge==1.2.2"
         assert repo.git("branch", "--list", "task/BOARD-PAGE") == ""
     else:
         assert _calls(log) == []

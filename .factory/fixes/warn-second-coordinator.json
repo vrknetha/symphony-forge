@@ -1,0 +1,149 @@
+{
+  "allow_large": "Owner allowed 7 code files: 2 are generated hook settings files written by sync",
+  "base": "0f3085bb9cdb382cc5af779fc6a4bf030b911557",
+  "branch": "fix/warn-second-coordinator",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a21378-3acd-7e51-b1ce-7e7fece49baa",
+    "head": null,
+    "start": "5504e0de57c98c9d1f3834b2f5aef8b232052737"
+  },
+  "done_when": "forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+  "fix_kind": "backend",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "coordinator_warnings() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 83,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+      "work": 2
+    },
+    {
+      "area": "coordinator_warnings() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 105,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: A shared Codex daemon keeps closed chats in the warning",
+      "work": 2
+    },
+    {
+      "area": "coordinator_warnings() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 76,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Native workers can be recorded as other coordinators",
+      "work": 2
+    },
+    {
+      "area": "test_1_next_names_the_other_live_coordinator() in tests/test_next_warns_about_other_coordinators.py",
+      "file": "tests/test_next_warns_about_other_coordinators.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 33,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: forge next warns, with the other session named, when another coordinator session is already running on the same repo.",
+      "work": 2
+    },
+    {
+      "area": "coordinator_warnings() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 141,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Functional: Existing Codex coordinators become invisible after upgrade",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "8af65641c7853acc7eaf2ee69e9db1f97ade2247c13adff3df76bb7253add097",
+    "changed": "c7318b5605bdd7db26da3675eca2cb4b1d67c6793e91f7cfce89d5a9eb0c670c",
+    "commit": "e13b31e5b22f5c75cb1e3ee559d7bc7f46178821",
+    "dismissals": [],
+    "findings": [],
+    "id": "c898a3e9-d04d-4b22-a6eb-0f4c8cb913cb",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T16:08:04.571939+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T16:09:33.701772+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T16:57:41.999728+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T16:58:00.462225+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:13:40.302953+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:22:54.005555+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T17:23:12.395926+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T17:30:18.822610+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T01:49:21.920405+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T01:58:40.319344+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "0a4eadc5-38f3-4da9-801e-80b105ade47c",
+    "head": "88d0bca7bb9687e0837274f1791eae4173e33f33",
+    "keys": {},
+    "round": 4
+  },
+  "why": "Two or more coordinator chats on the same repo each reread their own long conversation and act on the same items, which multiplied a client's token use.",
+  "worker": "codex"
+}

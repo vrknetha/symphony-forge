@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_long_builder_chat_is_shortened.py\tTest: A builder conversation over about 120K tokens is shortened by Codex, and the next repair round still lists\u2026\tFORGE-TOKENS-2/COMPACT",
+      "kind": "bug",
+      "path": "tests/test_long_builder_chat_is_shortened.py",
+      "line": 20,
+      "text": "Test: A builder conversation over about 120K tokens is shortened by Codex, and the next repair round still lists\u2026",
+      "from": "blocking",
+      "item": "FORGE-TOKENS-2/COMPACT",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

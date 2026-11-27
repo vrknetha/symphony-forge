@@ -108,7 +108,7 @@ subagents = "claude-haiku-5-5"
 subagent_effort = "high"
 
 [models.explore.codex]
-model = "gpt-6.2-sol"
+model = "gpt-6.1-terra"
 effort = "medium"
 subagents = "gpt-6-luna"
 subagent_effort = "max"
@@ -116,6 +116,10 @@ subagent_effort = "max"
 [models.explore.claude]
 model = "claude-haiku-5-5"
 effort = "high"
+
+[models.explore.antigravity]
+model = "gemini-4-neon"
+effort = "low"
 
 [models.grill.codex]
 model = "gpt-6.1-terra"

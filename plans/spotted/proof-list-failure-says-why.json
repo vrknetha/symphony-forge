@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/proof.py\tNot done: A Done-when proof failure says that test names must be in backticks and that a Proof list on a merge commit is not read.\tproof-list-failure-says-why",
+      "kind": "bug",
+      "path": "src/forge/proof.py",
+      "line": 222,
+      "text": "Not done: A Done-when proof failure says that test names must be in backticks and that a Proof list on a merge commit is not read.",
+      "from": "blocking",
+      "item": "proof-list-failure-says-why",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

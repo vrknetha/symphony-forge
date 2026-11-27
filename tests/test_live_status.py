@@ -113,7 +113,7 @@ def test_7_live_status_in_both_machine_views(env, monkeypatch, request, case):
             monkeypatch.setenv("STUB_SAY", "No findings.")
             model = "gpt-6-sol"
         if "default" in case:
-            model, effort = ("gpt-6.2-sol", "medium") if case.endswith("codex") else ("claude-opus-5-5", "high")
+            model, effort = ("gpt-6.2-sol", "medium") if case.endswith("codex") else ("claude-sonnet-5-5", "high")
         assert repo.forge("read", item).returncode == 0
         (folder / "plans/SHOP.md").write_text(DOC.replace("come back", "return"), "utf-8")
     elif case == "codex":

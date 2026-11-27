@@ -392,11 +392,15 @@ def test_29_doctor(repo, gh, tmp_path, monkeypatch, case, rows, doctor_sdks):
 
         assert done.returncode == 0, done.stdout + done.stderr
         assert done.stdout.startswith("Everything checks out"), done.stdout
-        # Identical hook commands and payloads shared by the hosts need one probe, not two.
+        # Shared event and command pairs need one probe; the new prompt event adds one pair.
         calls = log.read_text(encoding="utf-8")
-        for hook in ("context", "handoff", "deny", "approval"):
-            assert calls.count(f"hook {hook}\n") == 1, calls
-        assert calls.count('"hook_event_name"') == 4
+        for hook, count in (("handoff", 1), ("deny", 1), ("approval", 2)):
+            assert calls.count(f"hook {hook}\n") == count, calls
+        assert calls.count("hook context\n") == 2, calls
+        for event in ("SessionStart", "PreCompact", "SessionEnd", "PreToolUse",
+                      "PostToolUse", "UserPromptSubmit"):
+            assert calls.count(f'"hook_event_name": "{event}"') == 1, calls
+        assert calls.count('"hook_event_name"') == 6
     elif case == "missing tool":
         assert done.returncode == 0, done.stdout + done.stderr
         assert "Warning: Claude Code is missing or older than v2.1.287" in done.stdout
@@ -443,8 +447,11 @@ def test_38_host_hooks_fail_closed(repo, claude_payload, codex_payload, tmp_path
 
     commands = _hook_commands(repo.path)
     # Both new PreCompact commands must fail closed when Forge cannot launch.
-    assert len(commands) == 8
-    assert sum(event == "PreCompact" for _, event, _ in commands) == 2
+    assert len(commands) == 11
+    assert [(rel, event) for rel, event, _ in commands if event == "UserPromptSubmit"] == [
+        (".codex/hooks.json", "UserPromptSubmit")]
+    for lifecycle in ("PreCompact", "SessionEnd"):
+        assert sum(event == lifecycle for _, event, _ in commands) == 2
     for rel, event, command in commands:
         build = claude_payload if rel.startswith(".claude") else codex_payload
         tool, tool_input = tools.get(event, (None, None))

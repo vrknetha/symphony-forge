@@ -32,7 +32,7 @@ def test_2_close_lists_non_blocking_findings_under_their_own_heading(env):
     first = env.close(item)
     assert first.returncode == 1
     blocking, advice = first.stdout.split("Advice that does not block the merge:\n", 1)
-    assert "P1 Not done: A shopper can save a basket." in blocking
+    assert "P1, blocks the merge. Not done: A shopper can save a basket." in blocking
     assert "P1" not in advice
     assert "2. P2 Add a test for an empty readme (app.py:1)" in advice
 

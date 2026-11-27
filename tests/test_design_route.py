@@ -5,7 +5,7 @@ import json
 import os
 import shutil
 
-from test_codex_worker import QUIET, _codex_repo, _sent, sdk_data
+from test_codex_worker import BUILDER_CONFIG, _codex_repo, _sent, sdk_data
 from test_worker import calls, install_claude
 from test_story import prototype_design
 
@@ -138,7 +138,7 @@ def test_4_missing_or_cleanly_failed_claude_falls_back_to_sol(repo, monkeypatch,
                for line in clean.stdout.splitlines()), clean.stdout
     [claude_call] = calls(claude_log)
     [first] = _sent(codex_log, "thread/start")
-    assert first["config"] == {**QUIET, "features.multi_agent": True, "model": "gpt-6-nova",
+    assert first["config"] == {**BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6-nova",
                                "model_reasoning_effort": "xhigh",
                                "agents.default_subagent_model": "gpt-6-luna",
                                "agents.default_subagent_reasoning_effort": "max"}
@@ -164,7 +164,7 @@ def test_4_missing_or_cleanly_failed_claude_falls_back_to_sol(repo, monkeypatch,
     assert missing.returncode == 0, missing.stdout + missing.stderr
     assert "fell back to Codex" in missing.stdout and "exit code 3" in missing.stdout
     assert _sent(codex_log, "thread/start")[-1]["config"] == {
-        **QUIET, "features.multi_agent": True, "model": "gpt-6.2-sol", "model_reasoning_effort": "high"}
+        **BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6.2-sol", "model_reasoning_effort": "high"}
     install_claude(repo)
     assert len(calls(claude_log)) == 2
     # The round started on Claude after a round that ended on Codex, so its fallback starts a new

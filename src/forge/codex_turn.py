@@ -26,6 +26,7 @@ from openai_codex.errors import InvalidRequestError, JsonRpcError
 from openai_codex._run import _final_assistant_response_from_items
 from openai_codex.models import (ItemCompletedNotification, ThreadTokenUsageUpdatedNotification,
                                  TurnCompletedNotification, UnknownNotification)
+from openai_codex.types import ReasoningEffort
 
 LOCK = threading.Lock()
 START = 120  # the seconds Codex gets to start: Codex() waits on initialize with no timeout
@@ -184,6 +185,11 @@ def main() -> int:
         # Forge's accepting handler at the protocol boundary below instead.
         settings = {"approval_mode": ApprovalMode.deny_all, "sandbox": sandbox,
                     "cwd": request["cwd"], "config": request["config"] or None}
+        if request.get("kind") in ("Build", "Fix", "Lite"):
+            # Count the full context even when the user's Codex settings exclude the prefix.
+            settings["config"] = {**(settings["config"] or {}),
+                                  "model_auto_compact_token_limit": 120_000,
+                                  "model_auto_compact_token_limit_scope": "total"}
         # Codex skips a project hook it doesn't trust, and any change to one un-trusts it. Forge
         # trusts its own hooks for this thread by their current hash (decision 0102) and starts
         # nothing while any other project hook waits for the user's review.
@@ -202,6 +208,10 @@ def main() -> int:
                 state[hook["key"]] = {"trusted_hash": hook["currentHash"]}
         if state:  # nested: a hook's key holds dots, which a dotted override would split
             settings["config"] = {**(settings["config"] or {}), "hooks": {"state": state}}
+        resume_config = dict(settings["config"] or {})
+        configured_effort = resume_config.pop("model_reasoning_effort", None)
+        turn_effort = ReasoningEffort(configured_effort) if configured_effort is not None else None
+        resume_settings = {**settings, "config": resume_config or None}
         # The SDK's high-level Thread discards these settings; null effort follows the model.
         request_raw = client._request_raw
         tier = "default"  # The protocol's standard-speed override also clears inherited Fast.
@@ -256,13 +266,13 @@ def main() -> int:
         resumed = None
         if request.get("thread"):
             try:
-                resumed = codex.thread_resume(request["thread"], **settings)
+                resumed = codex.thread_resume(request["thread"], **resume_settings)
             except JsonRpcError as error:
                 reason = error.message
                 if "already has an active writer" in reason:
                     time.sleep(2)
                     try:
-                        resumed = codex.thread_resume(request["thread"], **settings)
+                        resumed = codex.thread_resume(request["thread"], **resume_settings)
                     except JsonRpcError as retry_error:
                         reason = retry_error.message
                 if resumed is None:
@@ -286,7 +296,11 @@ def main() -> int:
         prompt = (request["prompt"] if resumed is not None else
                   request.get("fresh_prompt", request["prompt"]))
         for attempt in range(RETRIES + 1):
-            turn = thread.turn(prompt, approval_mode=ApprovalMode.deny_all, sandbox=sandbox)
+            turn = thread.turn(prompt, approval_mode=ApprovalMode.deny_all, sandbox=sandbox,
+                               effort=turn_effort)
+            if turn_effort is not None and selection["effort"] != turn_effort.value:
+                selection["effort"] = turn_effort.value
+                emit(selection=selection)
             emit(turn=turn.id, requested_tier=tier, tier=client.received_tier,
                  model=selection["model"], fast_wanted=selection["fast_wanted"])
             usage, items, busy = None, [], False

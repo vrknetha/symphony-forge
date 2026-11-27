@@ -228,7 +228,7 @@ def _attempt(argv: list[str], cwd: Path, out: Path,
             "scoped-clean", "findings", "filtered", "incorrect"):
         return [], "it did not report a completed review"
     raw = report.get("findings")
-    findings = ([_finding(f) for f in [*raw, *rejected]]
+    findings = ([_finding(f, strict=strict) for f in [*raw, *rejected]]
                 if isinstance(raw, list) and isinstance(rejected, list) else [None])
     if None in findings:
         return [], "it wrote findings Forge cannot read"
@@ -237,7 +237,32 @@ def _attempt(argv: list[str], cwd: Path, out: Path,
     return findings, ""  # type: ignore[return-value]
 
 
-def _finding(raw: Any) -> dict[str, Any] | None:
+def _changes_migration(top: Path, base: str, head: str) -> bool:
+    return bool(repo.git("diff", "--name-only", "-z", "--no-renames", "--diff-filter=AMT",
+                         f"{base}...{head}", "--", ":(glob)**/migrations/**",
+                         ":(glob)**/alembic/versions/**", cwd=top))
+
+
+def stale_migration_floor(result: dict[str, Any], top: Path, base: str, head: str) -> bool:
+    """Earlier reviews stored the floored score in place of the reviewer's score."""
+    return any((line := score.LINE.search(f["body"])) and "(floor: migration)" in line[0]
+               for f in score.open_findings(result)) and not _changes_migration(top, base, head)
+
+
+def migration_floor(findings: list[dict[str, Any]], top: Path, base: str, head: str) -> None:
+    """Apply the migration floor using the full change, including earlier repair rounds."""
+    if not findings or not _changes_migration(top, base, head):
+        return
+    for finding in findings:
+        # Findings already at Harm 4 or above may carry a security or data-loss floor label.
+        if (current := score.of(finding)) and current[2] < 4:
+            scores, body = score.normalise(finding["title"], finding["body"])
+            if scores:
+                finding["gain"], finding["work"], finding["harm"] = scores
+                finding["body"] = body
+
+
+def _finding(raw: Any, *, strict: bool) -> dict[str, Any] | None:
     """The fields Forge uses from one finding, or None when they can't be read."""
     where = raw.get("code_location") if isinstance(raw, dict) else None
     if not isinstance(where, dict) or raw.get("priority") not in PRIORITIES:
@@ -248,7 +273,7 @@ def _finding(raw: Any) -> dict[str, Any] | None:
     if category in ("security", "data loss") and not any(
             name == category and pattern.search(body) for pattern, name in score.FLOORS[:2]):
         body += f"\nRaise: {category.capitalize()}"
-    scores, body = score.normalise(title, body)
+    scores, body = score.normalise(title, body, migration=strict)
     return {"priority": raw["priority"], "title": title, "body": body,
             **(dict(zip(("gain", "work", "harm"), scores)) if scores else {}),
             "file": str(where.get("file_path", "")), "line": where.get("line", 0)}
