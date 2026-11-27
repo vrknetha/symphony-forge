@@ -10,6 +10,28 @@
       "item": "owner-26-nov-2026-stop-using-github-runn-2",
       "status": "open",
       "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/fasttest.py\tLocal pytest picker messages promise a nightly full run covers missed or skipped tests even when forge.yml has no scheduled full-suite job.",
+      "kind": "bug",
+      "path": "src/forge/fasttest.py",
+      "line": 850,
+      "text": "Local pytest picker messages promise a nightly full run covers missed or skipped tests even when forge.yml has no scheduled full-suite job.",
+      "from": "worker",
+      "item": "owner-26-nov-2026-stop-using-github-runn-2",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/worker.py\tLocal-test worker instructions promise a nightly full run covers remaining tests even when forge.yml has no scheduled full-suite job.",
+      "kind": "bug",
+      "path": "src/forge/worker.py",
+      "line": 58,
+      "text": "Local-test worker instructions promise a nightly full run covers remaining tests even when forge.yml has no scheduled full-suite job.",
+      "from": "worker",
+      "item": "owner-26-nov-2026-stop-using-github-runn-2",
+      "status": "open",
+      "closed_by": null
     }
   ]
 }
