@@ -1,0 +1,44 @@
+{
+  "base": "af8c74d5d3b4966cbdbf145289b846d1563f6d60",
+  "branch": "fix/owner-27-nov-2026-until-v1-2-50-is-out-r",
+  "done_when": "forge.toml sets test_place = \"ci\" and checks = [\"tests\", \"forge-pr-check\"], and the generated workflow from forge sync matches; nothing else changes",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "ed61e416494ba193f5db5133a251c92adb7270c5039aa014197baab6f6cf9744",
+    "changed": "0a8069dbaf02cc6b6f086c5568155bf83ae7f5970138f53f7731b5db2739684f",
+    "commit": "7dba4a1fdd3c9dcc2585afdd4b9c330fc83be0f8",
+    "dismissals": [],
+    "findings": [],
+    "id": "be91b0c9-5968-4cac-ad9f-a22cb88fee2a",
+    "status": "clean"
+  },
+  "round": 1,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-27T09:58:36.138426+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-27T10:00:19.761851+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T10:06:47.186732+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": null,
+    "head": "79317cb8614407736ecaf0b93e5ccce13249106f",
+    "keys": {},
+    "round": null
+  },
+  "why": "Owner, 27 Nov 2026: until v1.2.50 is out, run this repo's tests on GitHub again, because every remaining change runs the whole suite and that takes about 2.5 hours on the laptop against about 30 minutes on GitHub; switch back after the release.",
+  "worker": "antigravity"
+}
