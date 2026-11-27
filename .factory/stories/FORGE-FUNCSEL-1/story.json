@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-FUNCSEL-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-27T10:19:30.698072+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Select Forge tests by the functions they run",
+  "touches": 0
+}

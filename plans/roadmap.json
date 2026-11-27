@@ -750,6 +750,12 @@
       "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-FUNCSEL-1",
+      "title": "Select Forge tests by the functions they run",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [
