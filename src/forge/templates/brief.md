@@ -296,6 +296,10 @@ such test and why it changed in your handoff, and never weaken a test to hide a 
 
 One command-level test per rule is enough.
 
+- Wait on a condition with a bounded timeout; never use a fixed sleep.
+- Start no process the test does not stop, and check none is left behind.
+- Point every machine-wide path (`HOME`, `XDG_CONFIG_HOME`, the repos list) at the test's temp folder.
+
 Windows checklist:
 - A path written into a file or compared as text goes through `json.dumps` or `as_posix`.
 - Tests never assume a drive letter or a '/' separator.
