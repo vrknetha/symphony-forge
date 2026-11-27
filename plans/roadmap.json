@@ -750,6 +750,12 @@
       "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-PLANQUEUE-1",
+      "title": "Move story plans to approval without reminders",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [
