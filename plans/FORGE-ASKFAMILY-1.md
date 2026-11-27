@@ -1,67 +1,57 @@
 # Ask another model family for a second opinion
 
-<n> parts · Risks: ... · New moving parts: ...
+1 part · Risks: none one-way · New moving parts: none
 
 ## What changes for you
 
-- Ask Codex, Claude, or Gemini from the same command and get a second opinion from another family by default.
+- `forge ask` can now put your question to Codex, Claude or Gemini (Antigravity), not only Codex. The question is still read-only: the model can look at your code but cannot change it. Forge still waits for a free agent place, prints the answer and records it. (Source: the owner's request, 27 Nov 2026)
+- The model name picks the family: `gpt-...` is Codex, `claude-...` is Claude, `gemini-...` is Gemini. `--model` wins over the `[models.ask]` setting in `forge.toml`. (Source: the owner's request, 27 Nov 2026)
+- When you give no model, Forge asks a family other than the one you are working in: from Claude Code it asks Codex, from Codex it asks Claude. A second opinion should come from a different family. A repo that uses only one tool has no other family, so it asks that tool. (Source: the owner's request, 27 Nov 2026)
+- What each repo gets: a new repo gets this from its first `forge ask`. An existing repo gets it when it upgrades to the release that has this story. No command or setting is added. An existing `[models.ask]` entry keeps working: a repo that set a Codex model still asks Codex, and a repo that set no model now asks the other family instead of always Codex.
+
+Design: none (no screen changes)
 
 ## Why
 
-Forge always sends questions to Codex, so Codex coordinators cannot get a second opinion from another family through this command.
+`forge ask` is meant to give a second opinion from another model family. Today it runs only Codex, so a Codex coordinator asks its own family and cannot reach Claude or Gemini. Forge already runs a read-only turn on all three families for cold reads and for sorting ideas, so this story reuses those turns and adds no new way to run a model.
 
 ## Done when
 
-1. **An explicit model takes precedence over [models.ask], and the gpt-, claude-, or gemini- prefix selects the corresponding family.**
-2. **With no explicit or configured model, Forge selects a different family from the active Claude Code, Codex, or Antigravity coordinator.**
-3. **Forge waits for an agent place, reuses the selected family's existing read-only turn from cold reads, and prints the answer without changing checkout files.**
-4. **New repositories get this behavior at setup, and existing repositories get it on upgrade with their model settings preserved.**
+1. **A `gpt-` model asks Codex, a `claude-` model asks Claude and a `gemini-` model asks Gemini, and each family's answer is printed and recorded after the command waits for an agent place.**
+2. **`--model` takes precedence over `[models.ask]`, and `[models.ask]` can hold a model for each family.**
+3. **With no model, the command asks the family other than the one that runs the session, Codex from Claude Code and Claude from Codex.**
+4. **No family can change a file in the checkout, and a failed turn says why and gives a command to run again.**
 
 ## Risks
 
-<!-- Each one-way step: deleting data, a destructive migration, a new vendor. -->
+Risks: none one-way. The part reverts with its pull request.
 
-Risks: none
+Accepted limits:
+- Asking Gemini needs the Antigravity program installed and signed in, and asking Claude needs the Claude Agent SDK. When one is missing, the command refuses and says how to install it; it does not fall back to another family.
+- Outside a Claude Code or Codex session (a plain terminal) there is no "other family" to pick, so a question with no model asks Codex, as today.
 
 ## For the builders
 
-<!-- Everything from here down is for the agents. The owner doesn't see it when approving, and
-tightening it needs no new approval. -->
-
 ### Done-when details
 
-<!-- Under each Done-when item's number: its evidence, edge cases and the tests that prove it.
-Workers and reviewers get the entries of the items they cover. An item with nothing to add has
-no entry. -->
-
-1. <Evidence, edge cases and the tests that prove item 1.>
+1. Today `src/forge/ask.py` (34 lines) runs `codex.run(top, item, "Ask", "Ask", question, "read-only", ...)`. Add one choice of family, then one branch per family that reuses the turn `forge start` already runs in `src/forge/intake.py` `start` (about lines 54 to 95): Codex through `codex.run(..., "read-only", model=, effort=, echo=False)`; Claude through `story._sdk_read(top, item, ["--model", m, "--effort", e], question, question, None, "", 1, lambda _: None)` (it runs the SDK with `permission_mode: "plan"`); Gemini through `antigravity.ready(cfg, "ask", False)` and `antigravity.read(top, item, models, question, question, kind="explore", again=f"forge ask {json.dumps(question)}")` (a filtered copy of the checkout in a scratch folder, mode read). Family from a model name: `roles._family(model)` already maps `gemini` to antigravity, `claude|opus|sonnet|haiku|fable` to Claude and everything else to Codex (today's behavior); the builder may make it public with a rename inside `src/forge/roles.py`. Before a Claude turn, run `claude_sdk.install()` when `claude_sdk.sdk_problem()` says it is missing, as `ask.py` does for the Codex SDK now. Keep the Codex install call, the `FORGE_WORKER` check that skips a second place, and `machine.agent_slot(top, "ask", None, model, effort)` around every family, so a Claude or Gemini ask also shows as an ask in `forge lanes`. `_sdk_read` prints each assistant line while it runs, then `ask` prints the final text; the builder must make the answer print once (for example by printing only when nothing was streamed, or by printing nothing after a Claude turn) and the test must count the lines. Tests, in `tests/test_ask_command.py` through `forge ask`: a Codex model (the existing stub app-server, the current case 1 checks stay), `--model claude-haiku-5-5` with `install_claude(repo, worker=True)` from `tests/test_worker.py` (SDK call log `claude-sdk-calls.jsonl`: one call, the stub's answer printed once), and `--model gemini-4-neon` with `install_agy` from `tests/test_antigravity_build.py` (log `agy-calls.jsonl`: one call in read mode, the answer printed). Each reads the `forge lanes --json` entry of kind `ask` while the turn runs only in the existing wait case, which stays on Codex.
+2. `repo.models(cfg, "ask", family)` (`src/forge/repo.py:773`) already reads a single `[models.ask]` entry for the family its model name names, and `[models.ask.codex]`, `[models.ask.claude]` and `[models.ask.antigravity]` entries per family (`_models_problem` at line 873 accepts them for any kind). Add no setting. Model choice: `--model` first, else the selected family's `repo.models` entry (its `model` and `effort`), else the family's default (Antigravity: `repo.worker_models(cfg, "ask", "antigravity")` through `antigravity.ready`; Claude and Codex: the family's own default model, as the Codex case does today, with no effort). The family follows the model: `--model` family, else a single `[models.ask]` model's family, else item 3. Tests: with `[models.ask]` `model = "claude-haiku-5-5"` and `effort = "high"`, a bare `forge ask` calls the Claude stub with that model and effort; `--model gpt-6.2-astra` on the same repo calls Codex and `--effort` from the Claude entry is not sent to it; with `[models.ask.claude]` and `[models.ask.antigravity]` both set, `--model gemini-...` uses the Antigravity entry's effort.
+3. The default family: `here = repo.coordinator()` (reads `CLAUDECODE` and `CODEX_THREAD_ID`; it is None in a plain terminal and when both are set; do not use `native.session()`, which walks the process tree and refuses outside a session). When the model names no family, call `roles.read_family(cfg, here, "")` (`src/forge/roles.py:101`), the cold-read reader choice: it returns the other of Claude and Codex when `tools = "both"` and that tool is installed, the repo's only tool when `tools` is `claude` or `codex`, and Antigravity when `reviews = "antigravity"`. With `here` None, ask Codex (today's behavior). An Antigravity coordinator cannot be detected today (`repo.coordinator()` knows only Claude Code and Codex), so the "Claude or Codex from Antigravity" case is covered only by passing `--model`; say this in the part's notes. Tests: `tests/conftest.py` sets `CODEX_THREAD_ID` for every test and the `claude_session` fixture switches to `CLAUDECODE`. With `tools = "both"`: Claude Code session and no model asks Codex (stub app-server, one turn); Codex session (the default) and no model asks Claude (SDK stub, one call); plain terminal (delete both variables) asks Codex; `tools = "claude"` asks Claude in a Claude Code session. The last block of the existing case 1 (default config, no model, `model_reasoning_effort` not sent) now runs in a Codex session and would pick Claude: change it to pass `--model gpt-6.2-sol` so it still proves that no effort is sent.
+4. Read-only: Codex keeps the `read-only` sandbox (the existing case 1 asserts `sandbox` and `approvalPolicy`); Claude runs with `permission_mode: "plan"` (assert it in the SDK stub's recorded options); Gemini runs in mode read on a copy of the checkout, so the real checkout is not written. Test: for each family, `git status --porcelain` in the repo is unchanged after the ask. Failures: Codex keeps its `Codex ended the turn: ...` refusal with `Next: forge ask "<question>"`. For Claude and Gemini, refuse with the last stderr line (`doctor._last(done)` is what `intake.start` uses) and the same Next line; test one failure per family with the stub's failure switches (`STUB_CLAUDE_*` in `tests/stubs/claude`, `tests/stubs/agy`).
+No record format changes, so the suite's one upgrade test is not extended. New cases run on a new repo only.
 
 ## Tasks
 
-<!-- One row per task. Covers: the Done-when numbers it delivers, at most three. Scope: the paths
-it may change. Before writing each Scope, search the code for the files the task needs. The plan
-check refuses two tasks whose Scope paths have the same prefix up to the first wildcard, unless
-one waits for the other through After, directly or through another task; it names both tasks.
-Paths with a segment named `tests`, `test`, `__tests__` or `spec` do not cause Scope overlaps
-and can be shared without an After link. Explicit After links still apply.
-When tasks need the same production file, put it in the first task's Scope with the shared names and stubs;
-tasks that need them wait for that task through After and then own only their files. Keep a file
-that a script can make at build time out of the repo and out of every Scope; when the repo keeps such
-a file on purpose, give its change to one part that the others wait for. Tests: the
-tests it adds or changes. After: the tasks it waits for. When two tasks share a function, field,
-file format or command, the first task pins it: it commits the shared names and stubs plus one
-test that crosses both sides, and the tasks that use it list it under After. Split tasks so each
-owns its files; shared lines (command table, guide list, registry) go to one task or a small last
-wiring task; After only when a task needs another task's code. The
-Developer column is optional: the lead fills or changes a GitHub username here, below For the
-builders, without another approval. Leave it blank for an unassigned part. Forge next uses
-the caller's GitHub login; another developer may start it with a warning. Existing tables
-without Developer still work. The moving-parts line stays last: "none", or each new dependency, service, datastore,
-queue, background job or abstraction layer, with the Done-when item that needs it. -->
-
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
+| FAMILY | Ask any family from any session | `forge ask` picks Codex, Claude or Gemini from the model name or `[models.ask]`, defaults to the other family of the session, and keeps the read-only turn, place wait, print and record | 1, 2, 3, 4 | `src/forge/ask.py`, `src/forge/roles.py`, `src/forge/templates/skill.md`, `README.md`, `docs/commands.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_ask_command.py` (changed: new Claude, Gemini and default-family cases; the last block of case 1 passes `--model`) | | no | |
 
 New moving parts: none
 
 ## Notes
+
+- One part: the change is one function in a 34-line module plus its guide text, and the three family turns already exist. Two parts would share `ask.py`.
+- Review rule (a change to a command updates the skill or brief): update `src/forge/templates/skill.md` at line 175 (the table row "Ask Codex (or Astra) a question": say Codex, Claude or Gemini, the model name picks the family, and with no model Forge asks the other family of the session) and at line 2104 ("To ask Codex itself ...": same text), and the `COMMANDS` `help` and `listing` strings in `ask.py`. `docs/commands.md` is generated from the listing (`sync.command_page()`, run by `forge sync`); `README.md` line 298 says "Asks Codex" and is edited by hand. The synced copies `.claude/skills/forge/SKILL.md` and `.codex/skills/forge/SKILL.md` come from `forge sync`. The brief (`templates/brief.md`) does not describe `forge ask`, so it needs no change. `tests/test_ask_command.py` case 2 checks the guide shows the command string, which stays the same.
+- Module size: `ask.py` stays far below 1,200 lines; run the two cheap repo checks in the Tests section of AGENTS.md before the round ends.
+- Reuse, not new code: the Claude and Gemini turns are `story._sdk_read` and `antigravity.read(kind="explore")`, called the way `intake.start` calls them; the family choice is `roles.read_family` and the model-name rule is `roles._family`. No new command, setting or file format.
+- Guesses to confirm with the owner. (1) "Coordinator's family" is read from the session's environment through `repo.coordinator()`, so an Antigravity coordinator is not detected and only `--model` or `[models.ask]` reaches Claude or Codex from there. (2) With no model and no session (a plain terminal), the command asks Codex, as today. (3) In a repo with one tool (`tools = "claude"` or `"codex"`) the default is that tool, which can be the session's own family, because `roles.read_family` returns the repo's only tool; this changes today's behavior for a Claude-only repo that used to install and use Codex, so it now asks Claude. (4) A model name that is not `gpt`, `claude` or `gemini` and not a known Claude short name (`opus`, `sonnet`, `haiku`, `fable`) keeps asking Codex, as today. (5) Gemini runs with `kind="explore"`, so it uses a scratch copy and saves no conversation; Claude and Gemini asks are recorded as read runs in the run records, Codex as before.
