@@ -10,9 +10,9 @@
   },
   "doc": "plans/FORGE-MIXTEST-1.md",
   "drop": {
-    "at": "2026-11-27T10:31:22.703948+00:00",
-    "because": "Owner, 27 Nov 2026: this repo stays on GitHub tests with small pull-request test sets (FORGE-PRSMOKE-1), so the mixed test place is not needed",
-    "by": "vrknetha <vrknetha@gmail.com> 1795775482 +0530"
+    "at": "2026-11-27T16:49:25.641240+00:00",
+    "because": "The owner dropped mixed tests on 27 Nov; tests stay on GitHub",
+    "by": "vrknetha <vrknetha@gmail.com> 1795798165 +0530"
   },
   "status": "dropped",
   "steps": [
