@@ -3,6 +3,7 @@ from pathlib import Path
 import re
 import subprocess
 import sys
+import tomllib
 
 STORY = "FIX-WINDOWS-AND-LIVE-TESTS-NIGHTLY"
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,4 +30,9 @@ def test_1_live_starter_checks_run_nightly_outside_the_full_suite():
                 "organisation_invites_smoke_args"]
     full = (ROOT / ".github/workflows/forge.yml").read_text("utf-8")
     assert "FORGE_STARTER_LIVE" not in full
-    assert "timeout-minutes: 60" in full
+    settings = tomllib.loads((ROOT / "forge.toml").read_text("utf-8"))
+    checks = settings.get("checks", [])
+    place = settings.get("test_place", "ci" if any(
+        check != "forge-pr-check" for check in checks) else "local")
+    if place == "ci":
+        assert "timeout-minutes: 60" in full

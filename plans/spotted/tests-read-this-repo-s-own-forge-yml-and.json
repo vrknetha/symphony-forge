@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_fix_gate_on_split_checks.py\tGate: proof list\ttests-read-this-repo-s-own-forge-yml-and",
+      "kind": "bug",
+      "path": "tests/test_fix_gate_on_split_checks.py",
+      "line": 97,
+      "text": "Gate: proof list",
+      "from": "blocking",
+      "item": "tests-read-this-repo-s-own-forge-yml-and",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

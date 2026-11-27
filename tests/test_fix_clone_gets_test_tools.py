@@ -77,11 +77,17 @@ def test_2_ci_runs_the_documented_pytest_command():
     assert "--group" not in args and "--with" not in args
 
     workflows = ROOT / ".github" / "workflows"
+    checks = settings.get("checks", [])
+    place = settings.get("test_place", "ci" if any(
+        check != "forge-pr-check" for check in checks) else "local")
     for name in ("forge-next.yml", "forge.yml", "codex-smoke.yml"):
         workflow = (workflows / name).read_text(encoding="utf-8")
         if name == "forge.yml":
-            # The generated job installs Forge, then delegates test execution to it.
-            assert 'run: "forge test --change"' in workflow
+            if place == "ci" and "tests" in checks:
+                # The generated job installs Forge, then delegates test execution to it.
+                assert 'run: "forge test --change"' in workflow
+            else:
+                assert 'run: "forge test --change"' not in workflow
         else:
             assert re.search(r"\buv run (?:--frozen )?--python 3\.11 pytest\b", workflow), name
         assert "--group dev" not in workflow
