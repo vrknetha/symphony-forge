@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 from typing import Any
 
-from forge import repo
+from forge import repo, score
 
 PATH = "plans/spotted.json"
 DIRECTORY = "plans/spotted"
@@ -137,11 +137,11 @@ def hotspots(items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return found
 
 
-def before_signoff(top: Path, ref: str) -> set[str]:
+def before_signoff(top: Path, ref: str, offline: bool = False) -> set[str]:
     """Keys already noted when the default branch first accepted its sign-off."""
     from forge import story
 
-    cfg = repo.default_config(top)
+    cfg = repo.default_config(top, ref if offline else None)
     if cfg["repo"] != "client":
         return set()
     names = repo.git("ls-tree", "-r", "--name-only", ref, "--", "docs/decisions", cwd=top)
@@ -250,6 +250,8 @@ def record(top: Path, item: str, state: dict[str, Any], base: str,
                 path = found[2].replace("\\", "/").removeprefix("./")
                 add(found[1], path, int(found[3]), found[4], "worker")
     for finding in result.get("findings", []):
+        if score.pending(finding):
+            continue
         title = finding["title"]
         if (finding.get("follow_up") or finding["priority"] in ("P2", "P3")) and not title.startswith("Later:"):
             kind = ("simplify" if title.startswith("Simpler")

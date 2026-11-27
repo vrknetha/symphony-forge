@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -26,7 +27,8 @@ def bash(*args, **kwargs):
 
 
 def jobs(workflow):
-    return dict(re.findall(r"^  ([\w-]+):\n(.*?)(?=^  [\w-]+:\n|\Z)", workflow, re.M | re.S))
+    job_section = workflow.split("\njobs:\n", 1)[1]
+    return dict(re.findall(r"^  ([\w-]+):\n(.*?)(?=^  [\w-]+:\n|\Z)", job_section, re.M | re.S))
 
 
 def gate_passes(gate, result):
@@ -38,9 +40,11 @@ def gate_passes(gate, result):
 
 def check_gate(workflow):
     gate = jobs(workflow)["tests-passed"]
-    assert "&& 'tests' || 'tests (other event)'" in gate
+    # Only pull requests use this required check; merges no longer start tests.
+    # Its executable group-result contract below stays the same.
+    assert "'pull_request_target' && 'tests (other event)' || 'tests'" in gate
     assert "needs: [docs-check, tests]" in gate
-    assert "if: always() && github.event_name == 'pull_request'" in gate
+    assert "if: always() && github.event_name == 'pull_request'\n" in gate
     assert gate_passes(gate, "success")
     for result in ("failure", "cancelled", "skipped"):
         assert not gate_passes(gate, result)
@@ -85,6 +89,16 @@ def test_1_one_tests_check_passes_only_when_every_group_passes(repo, gh, tmp_pat
     assert synced.returncode == 0, synced.stderr
     workflow = (client / ".github/workflows/forge.yml").read_text(encoding="utf-8")
     found = jobs(workflow)
+    if kind == "source":
+        settings = tomllib.loads((client / "forge.toml").read_text(encoding="utf-8"))
+        checks = settings.get("checks", [])
+        place = settings.get("test_place", "ci" if any(
+            check != "forge-pr-check" for check in checks) else "local")
+        if place == "local":
+            assert set(found) == {"forge-pr-check"}
+            committed = jobs((ROOT / ".github/workflows/forge.yml").read_text(encoding="utf-8"))
+            assert found == committed
+            return
     groups = found["tests"]
     count = 1 if kind == "new" else 6
     if count == 1:
@@ -107,7 +121,7 @@ def test_1_one_tests_check_passes_only_when_every_group_passes(repo, gh, tmp_pat
         # A pull request restores only caches saved from main, so main's full run saves the same one.
         cache = re.search(r"      - uses: actions/cache@\S+\n.*?\n          key: \S+\n", groups, re.S)[0]
         cache = cache.split("        with:\n", 1)[1]
-        main = (ROOT / ".github/workflows/forge-next.yml").read_text(encoding="utf-8")
+        main = jobs((ROOT / ".github/workflows/forge.yml").read_text(encoding="utf-8"))["full-suite"]
         assert "      - uses: actions/cache@v4\n" in main and cache in main
     # Branch protection keeps waiting on the one check named tests.
     check_gate(workflow)
@@ -124,8 +138,11 @@ def test_2_small_split_suite_passes_without_hiding_errors(repo):
     repo.git("switch", "-q", "-c", "fix/small-split-suite")
     repo.write("requirements.txt", "pytest-split==0.11.0\n")
     repo.write("tests/test_small.py", "def test_small():\n    assert True\n")
-    repo.write("forge.toml", re.sub(r'^test = .*$', 'test = "pytest tests -q"',
-                                  (ROOT / "forge.toml").read_text(encoding="utf-8"), flags=re.M))
+    settings = (ROOT / "forge.toml").read_text(encoding="utf-8")
+    settings = re.sub(r'^test = .*$', 'test = "pytest tests -q"', settings, flags=re.M)
+    settings = re.sub(r'^checks = .*$', 'checks = ["tests", "forge-pr-check"]', settings, flags=re.M)
+    settings = re.sub(r'^test_place = .*$', 'test_place = "ci"', settings, flags=re.M)
+    repo.write("forge.toml", settings)
     repo.git("add", "-A")
     repo.git("commit", "-qm", "Add a small split test suite")
     synced = repo.forge("sync")
@@ -133,6 +150,8 @@ def test_2_small_split_suite_passes_without_hiding_errors(repo):
     workflow = (repo.path / ".github/workflows/forge.yml").read_text(encoding="utf-8")
     command = json.loads(re.findall(r"^      - run: (.+)$", jobs(workflow)["tests"], re.M)[-1])
     assert command == "forge test --change"
+    # These synthetic CI commits test group outcomes, not local commit admission.
+    repo.git("config", "core.hooksPath", str(repo.path.parent / "fixture-hooks"))
     # Actions checks out the tested commit detached, without a local Forge item.
     repo.git("checkout", "-q", "--detach", "HEAD")
 
@@ -147,10 +166,16 @@ def test_2_small_split_suite_passes_without_hiding_errors(repo):
         if group == 6:
             assert "This group got no tests to run." in result.stdout
     repo.write("tests/test_small.py", "def test_small():\n    assert False\n")
+    repo.git("add", "tests/test_small.py")
+    repo.git("commit", "-qm", "Fail the selected test group")
     assert run(1).returncode != 0
     repo.write("tests/test_small.py", "raise RuntimeError('collection failed')\n")
+    repo.git("add", "tests/test_small.py")
+    repo.git("commit", "-qm", "Break test collection")
     assert run(6).returncode != 0
     repo.write("tests/test_small.py", "# The changed group now has no tests to run.\n")
+    repo.git("add", "tests/test_small.py")
+    repo.git("commit", "-qm", "Empty the selected test group")
     empty = run(6)
     assert empty.returncode == 0, empty.stdout + empty.stderr
     assert "This group got no tests to run." in empty.stdout
@@ -159,10 +184,13 @@ def test_2_small_split_suite_passes_without_hiding_errors(repo):
 @pytest.mark.parametrize("command", ["make pytest", "uv run make pytest", "tox -e pytest"])
 def test_4_a_command_that_wraps_pytest_uses_change_tests_without_splitting(repo, command):
     # The wrapper is run by Forge's picker and is not assigned pytest-split options.
-    repo.write("forge.toml", (ROOT / "forge.toml").read_text(encoding="utf-8").replace(
+    settings = (ROOT / "forge.toml").read_text(encoding="utf-8").replace(
         'repo = "forge-source"\n', "").replace(
         re.search(r"^test = .*$", (ROOT / "forge.toml").read_text(encoding="utf-8"), re.M)[0],
-        f'test = "{command}"'))
+        f'test = "{command}"')
+    settings = re.sub(r'^checks = .*$', 'checks = ["tests", "forge-pr-check"]', settings, flags=re.M)
+    settings = re.sub(r'^test_place = .*$', 'test_place = "ci"', settings, flags=re.M)
+    repo.write("forge.toml", settings)
     shutil.copy(ROOT / "pyproject.toml", repo.path / "pyproject.toml")
     repo.git("add", "-A")
     repo.git("commit", "-q", "-m", "A wrapped pytest command")

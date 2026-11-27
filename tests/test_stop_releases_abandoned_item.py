@@ -43,7 +43,7 @@ def test_1_stop_releases_an_item_whose_run_ended(repo, gh, monkeypatch, tmp_path
     synced = repo.forge("sync")
     assert synced.returncode == 0, synced.stdout + synced.stderr
     repo.git("add", "-A")
-    repo.git("commit", "-qm", "Set the client tools")
+    repo.git("commit", "--allow-empty", "-qm", "Set the client tools")
     repo.git("switch", "-q", "main")
     repo.git("merge", "-q", "--ff-only", "fix/settings")
     _publish_default(repo, repo.git("remote", "get-url", "origin"))
@@ -83,7 +83,10 @@ def test_1_stop_releases_an_item_whose_run_ended(repo, gh, monkeypatch, tmp_path
         assert not lock.exists(), stopped.stdout
         assert "There is nothing to stop." not in stopped.stdout
         assert host.forge("--version").returncode == 0, "stop must preserve the coordinator"
-        again = host.forge("work", item)
+        refused_work = host.forge("work", item)
+        assert refused_work.returncode == 1 and f"{item} was stopped; forge land {item} continues it" in refused_work.stderr
+        gh.respond("pr", "list", stdout="[]")
+        again = host.forge("land", item)
         assert again.returncode == 0, again.stdout + again.stderr
         assert "Start a new fixer subagent" in again.stdout
         assert host.forge("stop", item).returncode == 0
@@ -109,7 +112,7 @@ def test_2_stop_keeps_a_live_older_work_lock_without_a_queue_entry(env, tmp_path
         stopped = repo.forge("stop", item)
         assert stopped.returncode == 0, stopped.stdout + stopped.stderr
         assert lock.exists(), "a live work command still owns the item"
-        busy = repo.forge("work", item)
+        busy = repo.forge("land", item)
         assert busy.returncode == 1 and "already running" in busy.stderr
         assert process.poll() is None
     finally:

@@ -1,0 +1,67 @@
+{
+  "base": "4e69b174ce53920964c0e4c003a5fb2fe578cd5c",
+  "branch": "fix/the-coordinator-guide-still-tells-the-co",
+  "done_when": "Every coordinator-guide line that tells the coordinator to edit forge.toml in a settings fix says the fix's Done-when must name forge.toml, and the generated SKILL.md copies match",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 2212,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Settings-fix instructions must name forge.toml in Done-when",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "676b9b7cfc05607c39a6d8392d89f007ed5faaad5611ee1e157b22478b277866",
+    "changed": "b21cbfe2db76d0966970b0b46f65ea6885f16a03eb91b33c14b3329821209fce",
+    "commit": "a97f6b3a2cdc8f6b19b63d2234d0e67293a0a7cd",
+    "dismissals": [],
+    "findings": [],
+    "id": "9e0f411e-ef3a-4be5-bdf1-440fcc922861",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-27T11:38:07.299553+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-27T11:38:32.259401+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T11:46:28.713012+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T11:46:47.157842+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T11:51:44.625111+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "12258e07-e9b4-44c8-a9d6-f201248e7c94",
+    "head": "1aa980a813be9c6deacbeda7ff1218c5207d7623",
+    "keys": {},
+    "round": 1
+  },
+  "why": "The coordinator guide still tells the coordinator to edit forge.toml in a settings fix without naming forge.toml in that fix's Done-when (skill.md around the prototype sample_data step, the runner labels step and the fast_test step), so a builder that the queue runner starts can restore the file and discard the edit; split from FORGE-RUNNER-1/RUNNER by the owner.",
+  "worker": "antigravity"
+}

@@ -14,8 +14,8 @@ exact saved plan body. The body is a reader-facing brief, with no Forge status,
 dates, reviewed-decision list, hashes, paths, or scope lists inserted into it.
 An agent-authored command, a board view, a synthetic closing question, or a
 marker proving only that plan mode was active cannot establish approval. Story
-approval consumes the host's native Plan Mode completion across Claude and Codex;
-task plans are covered by that approval after their matching cold read.
+approval comes from a native Plan Mode completion or a typed Codex reply.
+Task plans are covered by that approval after their matching cold read.
 
 Plan metadata lives in `.factory/stories/<story>/plan-meta.json` and contains
 status, dates, and reviewed decisions. Before saving, the planner reviews every
@@ -49,10 +49,14 @@ The shared recorder derives exactly one eligible current-frontier candidate:
 
 - Claude accepts only a successful `ExitPlanMode` PostToolUse event whose
   `tool_input.plan` bytes produce the displayed current semantic digest.
-- Codex accepts only a completed synchronous `request_user_input` whose single
+- In Plan Mode, Codex accepts a completed synchronous `request_user_input` whose single
   question uses id `approve_plan_<digest>`, prompt `Approve this plan?`, header
   `Approve plan`, the exact ordered choices `Approve plan`,
   `Request changes`, and `Stop`, and whose id-keyed answer is `Approve plan`.
+- R-1: The Codex `UserPromptSubmit` hook accepts an owner prompt of the form
+  `approve <KEY> <code>`. The six hex characters must match the start of the
+  current digest for that named story. The session and turn IDs identify a
+  replay. The hook excludes child agent prompts and chats Forge starts.
 - Each event binds runtime, stable session and event identity, plan kind, story,
   task, and current semantic plan digest. Attribution is
   `human-via-Claude` or `human-via-Codex`; Forge invents no display name.
@@ -64,9 +68,9 @@ Current Codex hooks expose no signed or otherwise unforgeable host attestation.
 The current native approval trust boundary is therefore the host's invocation
 of the hash-approved project hook together with these recorder checks; Forge
 does not claim cryptographic or signed host attestation. The recorder still
-requires the exact current digest, runtime, session/event/tool identity,
-supported payload shape, non-cancelled completion, replay refusal, and exactly
-one eligible candidate. A direct or synthetic hook invocation is outside the
+checks the current digest, runtime, session and event identity, payload shape,
+replay status, and candidate count. Approval through a tool also requires its
+identity and successful completion. A direct or synthetic hook invocation is outside the
 trusted operational boundary and cannot establish native human approval.
 Signed host attestation remains a host dependency.
 

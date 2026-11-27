@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/approval.py\tNot done: A typed line records nothing ... when it comes from anything other than the owner's own message\tFORGE-CODEXAPPROVE-1/TYPED",
+      "kind": "bug",
+      "path": "src/forge/approval.py",
+      "line": 139,
+      "text": "Not done: A typed line records nothing ... when it comes from anything other than the owner's own message",
+      "from": "blocking",
+      "item": "FORGE-CODEXAPPROVE-1/TYPED",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/githooks.py\tDisputed keep Plan read note 14: two hook-trust tests also fail\tFORGE-CODEXAPPROVE-1/TYPED",
+      "kind": "bug",
+      "path": "src/forge/githooks.py",
+      "line": 28,
+      "text": "Disputed keep Plan read note 14: two hook-trust tests also fail",
+      "from": "blocking",
+      "item": "FORGE-CODEXAPPROVE-1/TYPED",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_codex_typed_approval.py\tTest: typed approval rejects stale codes and Forge-started messages\tFORGE-CODEXAPPROVE-1/TYPED",
+      "kind": "bug",
+      "path": "tests/test_codex_typed_approval.py",
+      "line": 45,
+      "text": "Test: typed approval rejects stale codes and Forge-started messages",
+      "from": "blocking",
+      "item": "FORGE-CODEXAPPROVE-1/TYPED",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_shortplan_docs.py\tTest: The coordinator guide and forge next tell a Codex coordinator to show the story and ask the owner to type that line\tFORGE-CODEXAPPROVE-1/TYPED",
+      "kind": "bug",
+      "path": "tests/test_shortplan_docs.py",
+      "line": 75,
+      "text": "Test: The coordinator guide and forge next tell a Codex coordinator to show the story and ask the owner to type that line",
+      "from": "blocking",
+      "item": "FORGE-CODEXAPPROVE-1/TYPED",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/approval.py\tNot done: when it is an approval line typed wrongly",
+      "kind": "edge",
+      "path": "src/forge/approval.py",
+      "line": 126,
+      "text": "Not done: when it is an approval line typed wrongly",
+      "from": "review",
+      "item": "FORGE-CODEXAPPROVE-1/TYPED",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

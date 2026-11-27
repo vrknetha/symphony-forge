@@ -17,7 +17,7 @@ from pathlib import Path
 from string import Template
 from typing import Any
 
-from forge import claude_sdk, codex, doctor, machine, merge_timings, native, repo, roles, story, task
+from forge import claude_sdk, codex, design, doctor, machine, merge_timings, native, owner_choices, repo, review_process, roles, routing, story, task
 from forge.repo import git, refuse
 
 HERE = Path(__file__).parent
@@ -25,9 +25,10 @@ HERE = Path(__file__).parent
 CONVENTIONS = (HERE / "templates" / "conventions").resolve()
 TEST_PATHS = repo.TEST_PATHS
 REVIEW_LOOP = (
-    "At the round limit (the repo's setting, two by default) for a task review, or after "
-    "one round for a fix, close stops when findings below P0 are still open. "
-    "Wait for the owner's recorded choice of one more round, "
+    "At the round limit (the repo's setting, two by default) for a task or fix review, "
+    "close stops when findings below P0 are still open. "
+    "If close applied the owner's policy, complete its authorized repair round. "
+    "Otherwise, wait for the owner's recorded choice of one more round, "
     "split or accept. An open P0 never stops for the owner: fix it in this round. "
     "When the same P0 stays open two rounds in a row, Forge stops and asks the owner. "
     "A cold read stops at the round limit (the repo's setting, two by default) when notes below "
@@ -36,13 +37,15 @@ REVIEW_LOOP = (
     "forge read <target> --resolve <accept|more|split> --reason \"<human's choice>\".")
 LIVE_RUN = ("Before review round two, run the real flow once (not tests or stubs). "
             "Add `Live run: <what you ran> - <what you saw>` to your `Functional check:` paragraph.")
-# The bytes of change a continued conversation is shown in full; a larger one is listed by file.
-LARGE = 200 * 1024
+RELATED_TEST_LIST_LIMIT = 2_000
 NUDGING = "The worker left changes uncommitted, so Forge asks it once to follow its test instructions and commit."
 SETTINGS = ("Workers never edit `forge.toml`. Never edit it even temporarily. It belongs to the "
             "coordinator, through a settings fix the owner asked for. Report a needed settings "
             "change in your last message instead. To run an extra suite, run its command directly "
             "alongside `forge test`.")
+SETTINGS_ALLOWED = ("This fix's Done-when names `forge.toml`. Edit only the named settings in "
+                    "`forge.toml` and nothing else there. To run an extra suite, run its command "
+                    "directly alongside `forge test`.")
 TEST_STEPS = {
     "sample": ("commit your work on this branch first, then walk each demo step in a browser and "
                "record its result in the `Proof list:`; "
@@ -60,11 +63,16 @@ TEST_STEPS = {
 }
 START_HERE = ("Do not read the coordinator guide (the forge skill's `SKILL.md`): this brief has "
               "everything a worker needs. Start from the files and tests this brief names, and "
-              "search the rest of the repo only for what they call or what calls them.")
+              "search the rest of the repo only for what they call or what calls them. "
+              "Do not use `forge next` to choose work: it guides the coordinator across all items. "
+              "Run it when this brief needs it. "
+              "If this round has no failed checks or open findings, complete this brief; "
+              "do not ask which failure or finding to fix.")
 FILE_OWNERSHIP = ("Do not change a file that another open task's Scope owns. "
                   "Leave it and name it in your handback. "
                   "This restriction excludes paths with a segment named tests, test, __tests__ or spec. "
                   "These test paths can be shared.")
+STORY_FILES = "Never delete story-level files, such as design images, to keep a part narrow."
 # Sent once, in the same conversation, when a round ends with changes left uncommitted.
 COMMIT_NUDGE = ("Your turn ended with changes left uncommitted, so the review can't see them. "
                 "Before you stop, $test_step "
@@ -165,7 +173,7 @@ def _work(args: argparse.Namespace) -> bool:
         refuse(REFUSALS["empty_note"], item=item)
     match, top, merge_first = prepare(item)
     repo.command_fact("prepared work", top, dict).pop(item)
-    config = repo.config(top)  # the item's own forge.toml, not the caller's
+    config = routing.routed(top, repo.config(top))  # the item's own forge.toml, but workers, tools and models from the default branch
     state = repo.read_state(item, top) or {}
     from forge import close, nextstep, review, time_records  # close imports story, which imports this module
     # GitHub is read only when this round answers or ends a wait on a person, never just to queue.
@@ -190,9 +198,10 @@ def _work(args: argparse.Namespace) -> bool:
     tool = getattr(args, "fallback", None) or state.get("tool")
     family = repo.worker(config, "build", design, tool)[0]
     on_codex = family == "codex"
+    on_agy = family == "antigravity"
     # Native Codex children inherit the coordinator's tier, even over role config.
     # The SDK can request normal speed without changing the coordinator.
-    is_native = (repo.route(config, family, command="work", item=item) == "native"
+    is_native = (not on_agy and repo.route(config, family, command="work", item=item) == "native"
                  and (not on_codex or config["codex_fast"] != "off"))
     if is_native and not on_codex:
         is_native = bool(claude_sdk.sdk_problem())
@@ -210,7 +219,12 @@ def _work(args: argparse.Namespace) -> bool:
         kind = "Build" if state["fix_kind"] == "backend" else "Lite"
     # Readiness checks run before the round's status commit.
     approval = _approval(match["key"], item, top) if match["task"] else None
-    claude = ready(top, config, kind, on_codex, design=design, native=is_native)
+    if on_agy:
+        from forge import antigravity
+        antigravity.ready(config, kind, design)
+        claude = []
+    else:
+        claude = ready(top, config, kind, on_codex, design=design, native=is_native)
     _, chosen, why = repo.worker(config, kind.lower(), design, tool)
     review.bound_review(top, item, state, state.get("review") or {})
     findings, failing = _fix_round(state)
@@ -262,20 +276,20 @@ def _work(args: argparse.Namespace) -> bool:
             refuse(REFUSALS["question"], item=item, question=question)
         if previous and last != family:  # a failed start leaves nothing of the other to resume
             codex._record(codex._item_file(top, item, ".json", kind), conversation=None,
-                          start=None, head=None, claude=None)
+                          start=None, head=None, claude=None, antigravity=None)
         if is_native:
             session, (session_record, thread, fresh) = None, native.resumable(top, item, owner)
         else:
             thread, fresh = (codex.conversation(top, item, approval) if on_codex
                              and last == family else (None, "first turn"))
             # A Claude worker continues the item's last session, including in a replacement checkout.
-            session = None if on_codex else codex.record(top, item).get("claude")
+            session = None if on_codex else codex.record(top, item).get(family)
             if last != family:
                 fresh = moved if previous else fresh
             elif session:
                 thread = session["id"]
             elif not on_codex and previous:
-                fresh = "Forge has no record of its Claude session on this machine"
+                fresh = f"Forge has no record of its {family.title()} session on this machine"
         state = repo.read_state(item, top) or {}
         stop = state.get("stop") or {}
         if note is None and stop.get("by") == "owner" and stop.get("worker_round") == state.get("round"):
@@ -283,6 +297,9 @@ def _work(args: argparse.Namespace) -> bool:
         from forge import close  # close imports story, which imports this module
 
         close.stuck_round(top, item, state, config)
+        if owner_choices.policy_pending(state):
+            note = ((note + "\n") if note else "") + (
+                "The owner's policy authorized this repair round. Continue with the open functional findings.")
         if "round" in state:
             round_number = state["round"] + 1
         elif session:
@@ -331,24 +348,25 @@ def _work(args: argparse.Namespace) -> bool:
         try:
             if not on_codex:
                 budget = repo.subagent_budget(config, "build" if design else kind.lower())
-                before = story._snapshot(top) if design else None  # pyright: ignore[reportPrivateUsage]
+                before = review_process.snapshot(top) if design else None
 
                 def before_turn() -> None:
                     nonlocal before
-                    before = story._snapshot(top)  # pyright: ignore[reportPrivateUsage]
+                    before = review_process.snapshot(top)
 
                 if design:
                     claude = ["--model", chosen["model"], "--effort", chosen["effort"]]
                 try:
-                    final = _claude(item, top, brief, fresh_brief, claude,
+                    final = _session_round(item, top, brief, fresh_brief, claude,
                             session, thread, None if fresh == "first turn" else fresh,
-                            budget, before_turn if design else None)
+                            budget, before_turn if design else None,
+                            family=family, chosen=chosen, kind=kind)
                 except (repo.Refused, OSError) as error:
                     # Only both with split falls back; one tool, or the owner's chosen one, keeps its
                     # failed round.
                     if (not design or config["tools"] != "both" or config["workers"] != "split" or
                             state.get("tool") or
-                            story._snapshot(top) != before):  # pyright: ignore[reportPrivateUsage]
+                            review_process.snapshot(top) != before):
                         raise
                     reason = str(error).split("\n", 1)[0].removeprefix("The worker ")
                     chosen = repo.design_models(config, "codex")
@@ -385,12 +403,13 @@ def _work(args: argparse.Namespace) -> bool:
                     _restore_settings(item, top, state)
                     if git("status", "--porcelain", "-uall", cwd=top):
                         print(NUDGING, flush=True)
-                        saved = codex.record(top, item)["claude"]
+                        saved = codex.record(top, item)[family]
                         try:
-                            nudged = _run(item, top, nudge, claude, budget, resume=saved["id"])
+                            nudged = (_agy_turn(item, top, nudge, chosen, kind, saved["id"])
+                                      if on_agy else _run(item, top, nudge, claude, budget, resume=saved["id"]))
                         finally:
                             codex._record(codex._item_file(top, item, ".json", kind),
-                                claude={**saved, "head": git("rev-parse", "HEAD", cwd=top)})
+                                **{family: {**saved, "head": git("rev-parse", "HEAD", cwd=top)}})
                     outcome = "completed"
                     return False
             name = f"{match['key']} · {subject}" if match["task"] else f"Fix · {subject}"
@@ -502,17 +521,19 @@ def _approval(key: str, item: str, top: Path) -> str:
     if planning and approved != task.approval_hash(story._text(planning / doc)):  # pyright: ignore[reportPrivateUsage]
         refuse(task.REFUSALS["changed"], key=key)
     if approved != task.approval_hash(story._text(top / doc)):  # pyright: ignore[reportPrivateUsage]
-        refuse(REFUSALS["brief"], item=item, key=key, top=top, base=base, doc=doc)
+        if design.kept_plan(top, key) != story._text(top / doc):  # a design part's redraw keeps the approval
+            refuse(REFUSALS["brief"], item=item, key=key, top=top, base=base, doc=doc)
+        return task.approval_hash(story._text(top / doc)) or approved
     return approved
 
 
 def _changes(top: Path, start: str) -> str:
-    """For a continued conversation: the commits since its last turn ended, and every change git
+    """For a continued conversation: the commits since its last turn ended, and every changed file git
     sees in the checkout since then, untracked files included through a temporary index, so git's
-    own index stays as it is. A very large change is listed by file."""
+    own index stays as it is."""
     if repo.run("git", "cat-file", "-e", f"{start}^{{commit}}", cwd=top).returncode:
         start = git("hash-object", "-w", "-t", "tree", "--stdin", cwd=top)
-        commits = "The previous commit is unavailable, so the full current checkout follows."
+        commits = "The previous commit is unavailable, so the list covers the entire checkout."
     else:
         commits = git("log", "--oneline", f"{start}..HEAD", cwd=top) or "None."
     with tempfile.TemporaryDirectory() as folder:
@@ -524,13 +545,10 @@ def _changes(top: Path, start: str) -> str:
             return subprocess.run(["git", *args], cwd=top, env=env, capture_output=True, text=True,
                                   encoding="utf-8", errors="replace", check=True).stdout
         cached("add", "-A")
-        diff = cached("diff", "--cached", start)
-        if len(diff.encode("utf-8")) > LARGE:
-            diff = ("The change is over 200 KB, so here are the files it touches:\n"
-                    + cached("diff", "--cached", "--name-status", start))
-    return (f"\n## Since your last turn\n\nThe new commits:\n\n{commits}\n\nEvery change in "
+        files = cached("diff", "--cached", "--name-status", start)
+    return (f"\n## Since your last turn\n\nThe new commits:\n\n{commits}\n\nChanged files in "
             "the checkout since your last turn ended, new files included:\n\n"
-            f"```diff\n{diff}```\n")
+            f"```text\n{files}```\n")
 
 
 def _fix_round(state: dict[str, Any]) -> tuple[list[dict[str, Any]], list[tuple[str, str]]]:
@@ -556,7 +574,15 @@ def _failing(branch: str) -> list[tuple[str, str]]:
     for check in checks if isinstance(checks, list) else []:
         if check.get("bucket") == "fail":
             job = re.search(r"/job/(\d+)", check.get("link") or "")
-            log = repo.run("gh", "run", "view", "--job", job[1], "--log-failed").stdout if job else ""
+            log = ""
+            if job:
+                view = repo.run("gh", "run", "view", "--job", job[1], "--log-failed")
+                log = view.stdout
+                if view.returncode:
+                    # gh run view needs the whole workflow to finish, even for a completed job.
+                    download = repo.run("gh", "api", f"repos/{{owner}}/{{repo}}/actions/jobs/{job[1]}/logs")
+                    if download.returncode == 0:
+                        log = download.stdout
             lines = log.splitlines()
             start = next((n for n in range(len(lines) - 1, -1, -1)
                           if "Failed tests:" in lines[n]), len(lines))
@@ -575,12 +601,16 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
     on, and its subject: the task's name, or the fix's why."""
     on: set[str] = set()
     design_text = ""
+    untyped_fix = False
+    settings_text = (SETTINGS_ALLOWED if not match["task"] and task.settings_allowed(match[0], top, state)
+                     else SETTINGS)
     values: dict[str, str] = {
-        "settings": SETTINGS,
+        "settings": settings_text,
         "test_step": TEST_STEPS[repo.config(top)["test_place"]],
         "checkout": top.resolve().as_posix(),
         "start_here": START_HERE,
         "file_ownership": FILE_OWNERSHIP,
+        "story_files": STORY_FILES,
         "review_loop": REVIEW_LOOP,
         "live_run": LIVE_RUN,
         "handover": (HERE / "templates" / "handover.md").read_text(encoding="utf-8").strip(),
@@ -609,10 +639,14 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
             row="\n".join(f"| {' | '.join(cells)} |" for cells in (
                 list(row), ["---"] * len(row), list(row.values()))),
             covers=row.get("Covers", ""), scope=row.get("Scope", ""), tests=row.get("Tests", ""),
-            existing_tests=_existing_tests(top, task.cell_list(row.get("Scope", ""))))
+            existing_tests=_existing_tests(top, f"{match['key']}/{match['task']}",
+                                           task.cell_list(row.get("Scope", ""))))
     else:
         on.add("fix")
-        user_facing = state.get("fix_kind") == "ui"
+        fix_kind = state.get("fix_kind")
+        user_facing = fix_kind == "ui"
+        # Older fixes may also have received the mechanical default without choosing it.
+        untyped_fix = fix_kind in (None, "mechanical") and not state.get("fix_kind_explicit")
         subject = state.get("why", "")
         values.update(why=subject, done=state.get("done_when", ""),
                       interfaces=", ".join(f"`{pattern}`" for pattern in
@@ -632,9 +666,11 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
                 "<!-- sample-data-proof -->\n", 1)[0].strip()
     if user_facing:
         on.add("user-facing")
-    values["design_context"], owned_design = design_context(top, design_text, user_facing)
+    inline_design = user_facing or untyped_fix or continued
+    values["design_context"], owned_design = design_context(
+        top, design_text, user_facing, inline_design=inline_design)
     values["theme_file"] = " (`apps/web/src/index.css`)" if (top / "apps/web/src/index.css").is_file() else ""
-    if owned_design:
+    if owned_design and inline_design:
         on.add("screen-design")
         values["design_folder"] = owned_design
     values["summary"] = (f"Fix round {round_number} on {subject}." if round_number > 1 else
@@ -673,7 +709,8 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
                       f"\n## Current Done when\n\n{values['done']}\n")
         brief += "\n" + values["delegation"] + "\n"
         brief += "\n" + FILE_OWNERSHIP + "\n"
-        brief += "\n" + SETTINGS + "\n"
+        brief += "\n" + STORY_FILES + "\n"
+        brief += "\n" + settings_text + "\n"
         brief += "\nNever run `forge stop`: only a person can stop a run, after confirmation in the host.\n"
         brief += "\n" + REVIEW_LOOP + "\n"
         if user_facing:
@@ -695,8 +732,8 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
             brief += (f"\n## Fix round\n\n### Open serious findings\n\n{values['findings']}\n"
                       f"\n### Failing checks\n\n{values['checks']}\n")
         return brief + changes + "\n" + values["handover"] + "\n" + values["prototype_proof"] + "\n", subject
-    on.add("standards")
-    values["standards"] = (HERE / "standards.md").read_text(encoding="utf-8").strip()
+    values["standards"] = (HERE / "standards.md").as_posix()
+    values["release_notes"] = (HERE / "release-notes").as_posix()
     values["conventions"] = str(CONVENTIONS)
     text = (HERE / "templates" / "brief.md").read_text(encoding="utf-8")
     text = text.split("<!-- prototype-proof -->\n", 1)[0]
@@ -720,9 +757,10 @@ def commit_nudge(top: Path) -> str:
     return prompt + ("\n" + sample_proof() + "\n" if sample else "")
 
 
-def design_context(top: Path, text: str, user_facing: bool) -> tuple[str, str]:
+def design_context(top: Path, text: str, user_facing: bool, *, review_base: str = "",
+                   inline_design: bool = True) -> tuple[str, str]:
     """The same design and short skill guidance on both hosts; only an owned canvas sets a gate."""
-    from forge import roles, sync
+    from forge import autoreview, roles, sync
 
     body = task.sections(text).get("What changes for you", "")
     named = re.search(r"^Design: (docs/design/[^/\s]+/) \(", body, re.M)
@@ -740,9 +778,23 @@ def design_context(top: Path, text: str, user_facing: bool) -> tuple[str, str]:
         files = sorted(path.relative_to(top).as_posix() for path in (top / folder).rglob("*") if path.is_file())
         parts.append("Screens, images and design files (open the images when checking screens):\n"
                      + "\n".join(f"- `{path}`" for path in files))
-    for name in ["PRODUCT.md", "DESIGN.md", *([folder + "SCREENS.md"] if folder else [])]:
+    names = ["PRODUCT.md", "DESIGN.md"] if inline_design else []
+    if not inline_design:
+        parts.append("Open `PRODUCT.md` for product goals and `DESIGN.md` for design rules if your work needs them.")
+        if folder:
+            parts.append(f"Open `{folder}SCREENS.md` if your work needs the screen requirements.")
+    elif folder:
+        names.append(folder + "SCREENS.md")
+    generated = autoreview.generated_paths(top, review_base, "HEAD", [
+        name for name in names if (top / name).is_file()]) if review_base else set()
+    for name in names:
         path = top / name
-        parts.append(f"### {name}\n\n" + (path.read_text(encoding="utf-8").strip() if path.is_file() else "Missing."))
+        if path.is_file() and name in generated:
+            size = repo.git("cat-file", "-s", f"HEAD:{name}", cwd=top)
+            content = f"generated: {name} ({size} bytes)"
+        else:
+            content = path.read_text(encoding="utf-8").strip() if path.is_file() else "Missing."
+        parts.append(f"### {name}\n\n" + content)
     if user_facing:
         parts += ["### impeccable and emil-design-eng\n\n"
                   "impeccable owns layout, type, colour, states and copy: shape before building, then audit and polish. "
@@ -754,7 +806,7 @@ def design_context(top: Path, text: str, user_facing: bool) -> tuple[str, str]:
     return "\n\n".join(parts), owned
 
 
-def _existing_tests(top: Path, scope: list[str]) -> str:
+def _existing_tests(top: Path, item: str, scope: list[str]) -> str:
     """The checkout's test files that name a Scope file or folder, listed for the brief."""
     # ponytail: a whole-word match on each entry's last plain name (`board` for `web/board.py`), so
     # a common name such as `index` lists more tests than it should; match imports if that's noisy.
@@ -763,21 +815,45 @@ def _existing_tests(top: Path, scope: list[str]) -> str:
     patterns = [arg for name in names for arg in ("-e", name)]
     found = repo.run("git", "grep", "-l", "-w", "-F", *patterns, "--", *TEST_PATHS,
                      cwd=top).stdout.splitlines() if names else []
-    return ", ".join(f"`{path}`" for path in found) or "none found"
+    listed = ", ".join(f"`{path}`" for path in found)
+    if len(listed) > RELATED_TEST_LIST_LIMIT:
+        path = codex._item_file(top, item, ".related-tests.txt", "Build")
+        path.write_text("\n".join(found) + "\n", encoding="utf-8")
+        return f"{len(found)} files listed in `{path.as_posix()}`"
+    return listed or "none found"
 
 
-def _claude(item: str, top: Path, brief: str, fresh_brief: str | None, models: list[str],
+def _agy_turn(item: str, top: Path, brief: str, chosen: dict[str, str],
+              kind: str, resume: str | None, session: dict[str, Any] | None = None) -> str:
+    from forge import antigravity
+    with repo.record_run(top, item, "worker", family="antigravity", **chosen) as ran:
+        ran["model_kind"] = kind.lower()
+        try:
+            result = antigravity.turn(top, item, brief, cwd=top, mode="full",
+                                      model=chosen["model"], effort=chosen["effort"],
+                                      again=f"forge work {item}", ran=ran, resume=resume)
+        finally:
+            if session is not None and ran.get("chat"):
+                session["id"] = ran["chat"]
+        ran["outcome"] = "completed"
+    final = result["text"]
+    print(final, flush=True)
+    with repo.work_log(top, item).open("a", encoding="utf-8") as out:
+        out.write(final + "\n")
+    return final
+
+
+def _session_round(item: str, top: Path, brief: str, fresh_brief: str | None, models: list[str],
             session: dict[str, Any] | None, resume: str | None, why: str | None,
             budget: dict[str, str],
-            before_turn: Callable[[], None] | None = None) -> str:
-    """A Claude worker's round: continue session `resume` with the short brief, else start a new
-    session with the whole brief and say why when there was one to continue. When Claude says it
-    has no such session, the same round starts fresh; any other failure fails the round and keeps
-    the session, so the next forge work continues it. The session, its checkout, the item's rounds
-    and HEAD when a round ends go in the item's record on this machine."""
+            before_turn: Callable[[], None] | None, *, family: str,
+            chosen: dict[str, str], kind: str) -> str:
+    """Resume with the short brief, or start again with the whole brief if the session is gone."""
     path = codex._item_file(top, item, ".json", "Fix")
     log = repo.work_log(top, item)
     rounds = session["rounds"] if session else 0
+    on_agy = family == "antigravity"
+    from forge.antigravity import NoSession
     try:
         if resume:
             codex.remember(top, item)
@@ -785,30 +861,42 @@ def _claude(item: str, top: Path, brief: str, fresh_brief: str | None, models: l
                 before_turn()
             size = log.stat().st_size if log.exists() else 0
             try:
+                if on_agy:
+                    return _agy_turn(item, top, brief, chosen, kind, resume)
                 return _run(item, top, brief, models, budget, resume=resume)
+            except NoSession:
+                pass
             except repo.Refused:
                 # Claude refuses a session it doesn't have before the turn starts, with this line.
                 output = log.read_bytes()[size:].decode("utf-8", "replace")
-                if "No conversation found" not in output:
+                if on_agy or "No conversation found" not in output:
                     raise
-            why = f"Claude no longer has session {resume}"
+            why = f"{family.title()} no longer has session {resume}"
         if why:
-            message = f"Starting a new Claude session with the whole brief, because {why}."
+            message = f"Starting a new {family.title()} session with the whole brief, because {why}."
             print(message, flush=True)
             with log.open("a", encoding="utf-8") as out:
                 out.write(message + "\n")
         # A replaced session keeps the item's round count.
-        session = {"id": str(uuid.uuid4()), "checkout": str(top),
-                   "start": git("rev-parse", "HEAD", cwd=top), "rounds": rounds}
-        codex._record(path, claude=session)
-        codex.remember(top, item, codex._json(path))
+        fresh_session = {"checkout": str(top), "start": git("rev-parse", "HEAD", cwd=top),
+                         "rounds": rounds}
+        if not on_agy:
+            session = {**fresh_session, "id": str(uuid.uuid4())}
+            codex._record(path, **{family: session})
+            codex.remember(top, item, codex._json(path))
         if before_turn is not None:
             before_turn()
+        if on_agy:
+            try:
+                return _agy_turn(item, top, fresh_brief or brief, chosen, kind, None, fresh_session)
+            finally:
+                if "id" in fresh_session:
+                    session = fresh_session
         return _run(item, top, fresh_brief or brief, models, budget, session_id=session["id"])
     finally:
         if session:
-            codex._record(path, claude={**session, "rounds": rounds + 1,
-                                        "head": git("rev-parse", "HEAD", cwd=top)})
+            codex._record(path, **{family: {**session, "rounds": rounds + 1,
+                                           "head": git("rev-parse", "HEAD", cwd=top)}})
 
 
 def _run(item: str, top: Path, brief: str, models: list[str], budget: dict[str, str],
@@ -818,13 +906,16 @@ def _run(item: str, top: Path, brief: str, models: list[str], budget: dict[str, 
     if problem := claude_sdk.sdk_problem():
         refuse(REFUSALS["claude_sdk"], problem=problem, top=repo.quote(top))
     command = [str(claude_sdk.python()), str(claude_sdk.TURN)]
+    # Init writes the stock helper pair explicitly, so compare values here.
+    diagnostic_budget = repo.CLAUDE_GRILL_DEFAULT if budget == repo.SUBAGENT_DEFAULT else budget
     request = {"prompt": brief, "cwd": str(top),
                "model": models[models.index("--model") + 1],
                "effort": models[models.index("--effort") + 1],
                "permission_mode": "bypassPermissions", "add_dirs": [str(CONVENTIONS)],
                "resume": resume, "session_id": session_id,
-               "agents": {name: {"description": description, "prompt": instructions, **budget}
-                          for name, (_, description, instructions) in
+               "agents": {name: {"description": description, "prompt": instructions,
+                                 **(diagnostic_budget if kind == "review" else budget)}
+                          for name, (kind, description, instructions) in
                           {**roles.ROLES, "general-purpose": roles.ROLES["worker"]}.items()}}
     final_result = None
     with repo.record_run(top, item, "worker", family="claude",

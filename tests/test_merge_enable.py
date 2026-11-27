@@ -221,7 +221,8 @@ def _prototype_run(env, _):
         "headRefName": BRANCH, "title": "Let the agent merge", "isDraft": False}))
     tidied = env.repo.forge("merge", FIX)
     assert tidied.returncode == 0, tidied.stderr
-    assert tidied.stdout == f"Merged {FIX} and removed its worktree and local branch.\n"
+    # Merge now reports elapsed time first; this rule still owns the final cleanup message.
+    assert tidied.stdout.endswith(f"Merged {FIX} and removed its worktree and local branch.\n")
     assert not worktree(env).exists() and BRANCH not in env.repo.git("branch", "--all")
     assert not env.gh_calls("pr", "merge")
 
@@ -291,7 +292,8 @@ def _synced_skill(env, _):
         assert "The `merge` setting is the owner's" in skill
         assert 'never change it to `"agent"` or run `forge merge enable`' in skill
         assert "tell them to run `forge merge enable` in a terminal outside Claude Code or Codex" in skill
-        assert "edit `forge.toml` (never its `merge` setting)" in skill
+        # FORGE-RUNNER-1 starts settings fixes with --done naming forge.toml (still never its merge setting).
+        assert "naming `forge.toml` (never its `merge` setting)" in skill
         assert '| "Let the agent merge" | The owner runs `forge merge enable`' in skill
 
 
@@ -304,7 +306,8 @@ def _merge_item(env, _):
     _merge_at_github(env)
     merged = env.repo.forge("merge", item)
     assert merged.returncode == 0, merged.stderr
-    assert merged.stdout == f"Merged {item} and removed its worktree and local branch.\n"
+    # Exact elapsed-time output is covered by test_start_to_merge_time.py.
+    assert merged.stdout.endswith(f"Merged {item} and removed its worktree and local branch.\n")
     assert env.gh_calls("pr", "merge")
 
 

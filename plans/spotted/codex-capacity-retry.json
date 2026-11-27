@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/autoreview.py\tNot done: Retry capacity failures after a long review turn\tcodex-capacity-retry",
+      "kind": "bug",
+      "path": "src/forge/autoreview.py",
+      "line": 147,
+      "text": "Not done: Retry capacity failures after a long review turn",
+      "from": "blocking",
+      "item": "codex-capacity-retry",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\ttests/test_codex_capacity_recovery.py\tGate: tests/test_codex_capacity_recovery.py::test_1_commands_retry_capacity_before_failing\tcodex-capacity-retry",
+      "kind": "bug",
+      "path": "tests/test_codex_capacity_recovery.py",
+      "line": 42,
+      "text": "Gate: tests/test_codex_capacity_recovery.py::test_1_commands_retry_capacity_before_failing",
+      "from": "blocking",
+      "item": "codex-capacity-retry",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

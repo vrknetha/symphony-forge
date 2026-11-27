@@ -4,6 +4,7 @@ Includes the warning work in src/forge/migration_warnings.py for related-test se
 Also covers src/forge/design.py's passive approval checks.
 Includes src/forge/records.py's approved constitution lookup in next.
 Includes src/forge/board.py's worktree reads shared by src/forge/nextstep.py.
+Includes src/forge/autoreview.py and src/forge/review.py's generated-content reads.
 """
 
 import json
@@ -55,7 +56,7 @@ from json_log import append_json
 append_json(pathlib.Path({json.dumps(log.as_posix())}), sys.argv[1:])
 sys.exit(subprocess.run([{json.dumps(real_git)}, *sys.argv[1:]]).returncode)
 ''')
-    result = env.repo.forge(command, *(["--json"] if command == "next" else [item]))
+    result = env.repo.forge(command, *([] if command == "next" else [item]))
     # Read the log before verification starts any additional git processes.
     calls = [json.loads(line) for line in log.read_text("utf-8").splitlines()]
     if os.name == "nt":
@@ -68,10 +69,8 @@ sys.exit(subprocess.run([{json.dumps(real_git)}, *sys.argv[1:]]).returncode)
           f"{len(batches)} batches, {len(individual)} individual file reads")
     assert result.returncode == 0, result.stdout + result.stderr
     if command == "next":
-        shown = json.loads(result.stdout)
-        row = next(row for row in shown["items"] if row["id"] == item)
         # The worker committed its changes and exited, so close is the next action.
-        assert row["next"]["command"] == f"forge close {item}"
+        assert f"Next: forge close {item}" in result.stdout.splitlines()
     else:
         ready = f"Ready: {item} has a clean review and green checks."
         assert result.stdout.splitlines()[-1] == (
@@ -99,7 +98,8 @@ sys.exit(subprocess.run([{json.dumps(real_git)}, *sys.argv[1:]]).returncode)
     assert len(roots) <= (2 if command == "close" else 1), calls
     # The read-history next case has two open branches. Overlap advice adds
     # one ancestry check and one changed-file diff for each: 32 + 2 * 2.
+    # Close in a CI repo adds one diff before it pushes its records: 90 + 1.
     # Other command ceilings stay unchanged.
-    ceiling = (90 if command == "close" else 36) if history else (
+    ceiling = (91 if command == "close" else 36) if history else (
         100 if command == "close" else 24 if previous else 30)
     assert len(calls) <= ceiling, calls

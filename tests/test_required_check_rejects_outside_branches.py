@@ -73,4 +73,7 @@ def test_2_required_check_keeps_reviewed_generated_branches_passing(env, branch)
                              env.repo.git("rev-parse", "HEAD"), "--head",
                              env.repo.git("rev-parse", "HEAD", cwd=where), "--branch", branch)
     assert checked.returncode == 0, checked.stdout + checked.stderr
-    assert checked.stdout == f"forge-pr-check passed for {branch}.\n"
+    # A README-only change is docs only in CI, and the check now says so on every such pull request.
+    assert checked.stdout == ("Done-when proof: CI treats this change as docs only and skips tests; "
+                              "only test names on the branch are checked.\n"
+                              f"forge-pr-check passed for {branch}.\n")

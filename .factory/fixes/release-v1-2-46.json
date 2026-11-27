@@ -1,0 +1,56 @@
+{
+  "allow_large": "Owner chose on 22 Nov 2026 to cut v1.2.46 now; a release bump changes the version in every place that names the current release",
+  "base": "a27cc967e4fbedac42dbca27c132e2ca7ca8851c",
+  "branch": "fix/release-v1-2-46",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a202e2-0001-7300-a331-89a133fd181c",
+    "head": null,
+    "start": "5081389166442c54da1c27c6eab27b048bf3ddf2"
+  },
+  "done_when": "Every version reference that names the current release says v1.2.46 (as the v1.2.45 release fix did, keeping v1.2.45 references used as a minimum release), the release version tests pass, and nothing else changes",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "884455bb2f95d1655d6bb5f817c15cffac50625beabaf46e7e0a456ccdc044b9",
+    "changed": "21770e5cdc92f0529aec5b2bfec7ab5c18d4ec7b2cb7b1a9895093d1a1a7fe05",
+    "commit": "a6e75f818854e3f87b3d8b22e0bc9654ec404425",
+    "dismissals": [],
+    "findings": [],
+    "id": "de7eb648-3e40-419e-834f-361eee3efe2b",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T10:45:51.153890+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T10:51:33.526700+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T10:56:45.918275+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T11:03:09.827122+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": null,
+    "head": "c0aeabfae46bc9b62d422c152e7fb301b79a1f12",
+    "keys": {},
+    "round": null
+  },
+  "why": "Release v1.2.46: publish what merged since v1.2.45 (answered worker questions clear, dismissals carry over while code is unchanged, CI reruns only after runner loss or timeout, Codex capacity retry, review findings through the temporary review folder kept, custom pytest commands get one group, CI timing counts only real retries, a green manual full run frees the nightly hold, JS/TS test-only changes run one group)",
+  "worker": "codex"
+}

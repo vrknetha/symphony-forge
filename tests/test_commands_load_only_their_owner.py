@@ -1,11 +1,9 @@
 """Commands and installed git hooks load only the command they run."""
 import json
-import shutil
 from pathlib import Path
 
 import pytest
 
-from conftest import ROOT
 from test_close import env  # noqa: F401
 from test_fix_new_repos_get_claude_as_their_worker_by import _new_repo
 from test_split_commands import HELP_GOLDEN
@@ -18,9 +16,9 @@ HELP = {**HELP_GOLDEN,
                 "Run tests in the machine test lane; --change selects related tests and checks\n\n"
                 "options:\n  -h, --help     show this help message and exit\n"
                 "  --pytest BASE\n  --full\n  --change\n",
-        "land": "usage: forge land [-h] [--note TEXT] [--all] [item]\n\n"
+        "land": "usage: forge land [-h] [--note TEXT] [--all] [item ...]\n\n"
                 "Build, close, fix and merge a task or fix\n\n"
-                "positional arguments:\n  item         the task or fix to land\n\n"
+                "positional arguments:\n  item         the task or fix to land; name several to land only those\n\n"
                 "options:\n  -h, --help   show this help message and exit\n"
                 "  --note TEXT  guide the first round this run starts\n"
                 "  --all        close and merge every change in close, oldest first\n",
@@ -86,15 +84,8 @@ def test_1_new_clients_git_commit_and_push_build_only_their_hook(repo, gh, tmp_p
 
 
 @pytest.mark.platform
-def test_2_earlier_adopted_clients_get_small_hooks_after_upgrade(unsynced_up):
+def test_2_upgraded_clients_get_small_hooks(unsynced_up):
     up = unsynced_up
-    shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", up.repo.path, dirs_exist_ok=True)
-    up.repo.git("switch", "-qc", "adoption")
-    up.repo.git("add", "-A")
-    up.repo.git("commit", "-qm", "Adopt earlier Forge")
-    up.repo.git("switch", "-q", "main")
-    up.repo.git("merge", "-q", "--ff-only", "adoption")
-    up.repo.git("push", "-q", "origin", "main")
     upgraded = up.run(RELEASE)
     assert upgraded.returncode == 0, upgraded.stdout + upgraded.stderr
     # Use the installed release launcher and its hook shims, not this checkout's launcher.

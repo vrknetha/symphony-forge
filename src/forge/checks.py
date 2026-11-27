@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import subprocess
 import time
 import tomllib
 from collections.abc import Callable
@@ -29,10 +30,64 @@ REFUSALS = {
     "not_green": ("The checks are not green yet: {reason}.", "forge close {item}"),
     "wait_ended": ("The check wait ended: {reason}. No decision is needed. "
                    "Run forge land again to resume without restarting checks.", "forge land {item}"),
+    "no_start": ("The review check failed to start on GitHub.",
+                 "push a new commit or reopen the pull request on GitHub, so the check starts again"),
     "conflict": ("GitHub reports this pull request clashes with the default branch, so it runs no checks on it.",
                  "forge close {item}, which brings the default branch in"),
 }
 PASS, PENDING, RED, SKIPPED, QUEUED = "pass", "pending", "red", "skipped", "queued"
+POLL = float(os.environ.get("FORGE_CHECKS_POLL", "60"))
+# One CLI process can wait before a push, after it, and again during merge.
+_progress_at: float | None = None
+
+
+def publish_on_exit(top: Path, run: Callable[[], int]) -> int:
+    """Flush newly saved records when close stops before its normal push."""
+    from forge import close, review
+    # Picking up the item already read this command's worktree snapshot.
+    trees = [dict(line.partition(" ")[::2] for line in block.splitlines())
+             for block in repo.git("worktree", "list", "--porcelain", cwd=top).split("\n\n")]
+    current = next(tree for tree in trees if Path(tree["worktree"]).resolve() == top.resolve())
+    before, branch = current["HEAD"], current["branch"].removeprefix("refs/heads/")
+    main = repo.forge_dir(top).parent.parent
+    flush = True
+    try:
+        result = run()
+        flush = result != 0
+        return result
+    except subprocess.CalledProcessError as error:
+        # The push already exhausted its bounded retries; keep the records local.
+        flush = error.cmd[:2] != ["git", "push"]
+        raise
+    finally:
+        # Windows can keep the folder after Git removes the checkout registration.
+        # Ask the surviving main checkout whether this branch still owns that folder.
+        if (flush and (attached := repo.git("branch", "--list", branch, "--format=%(worktreepath)", cwd=main))
+                and Path(attached).resolve() == top.resolve()):
+            saved = repo.git("log", "--format=", "--name-only", f"{before}..HEAD", cwd=top).splitlines()
+            remote = repo.run("git", "rev-parse", f"origin/{branch}", cwd=top)
+            if (any(path.startswith(review.BOOKKEEPING) or repo.SIGNOFF.fullmatch(path) for path in saved)
+                    and remote.stdout.strip() != repo.git("rev-parse", "HEAD", cwd=top)):
+                close._push_ready(top, branch, reviewed=True)
+
+
+def push_after_checks(top: Path, branch: str, *, reviewed: bool = False,
+                      slot: Callable[[bool], None] | None = None) -> None:
+    """Wait before record pushes, but flush saved records even when the wait stops."""
+    from forge import close, review
+    try:
+        after_code_ci(top, (review.branch_item(branch, top) or (branch, {}))[0],
+                      branch, repo.config(top), slot)
+    finally:
+        close._push_ready(top, branch, reviewed=reviewed)
+
+
+def _notice(message: str) -> None:
+    global _progress_at
+    now = time.monotonic()
+    if _progress_at is None or now - _progress_at >= 300:
+        print(message, flush=True)
+        _progress_at = now
 
 
 def required(top: Path, default: str, head: str = "HEAD") -> list[str] | None:
@@ -68,27 +123,33 @@ def required(top: Path, default: str, head: str = "HEAD") -> list[str] | None:
 
 
 def wait(top: Path, item: str, sha: str, names: list[str], *, branch: str,
-         progress: bool = False, slot: Callable[[bool], None] | None = None) -> None:
-    """Wait for green checks on sha; land renews its deadline on observed check progress."""
+         progress: bool = False, slot: Callable[[bool], None] | None = None, train: bool = False,
+         command: str = "close", home: Path | None = None) -> None:
+    """Wait for green checks on sha; land renews its deadline on observed check progress. A merge
+    train's draft pull request stays red on Forge's own review on purpose, so that check never counts."""
+    home = home or top  # where the item's own state file lives; top runs the gh and git calls
+    worker_round = (repo.read_state(item, home) or {}).get("round", 0)
     shared = required(top, repo.default_branch(top), sha)
     if shared is not None:
         names = shared
     start, clock = repo.now(), time.monotonic()
-    released = False
-
-    def waiting(value: bool) -> None:
-        nonlocal released
-        if slot is not None and value != released:
-            slot(value)
-            released = value
+    report_time = False
+    failed = False
 
     from forge import codex  # codex imports what imports checks
     # The waiting process: forge land --all leaves out a change only while that process runs.
-    with repo.record_run(top, item, "ci", process=codex.identity(os.getpid())) as result:
+    with repo.record_run(top, item, "ci", process=codex.identity(os.getpid()), command=command,
+                         round=worker_round) as result:
         result.update(outcome="unknown", state="unknown")
         try:
-            _wait(top, item, sha, names, branch, progress, result, waiting)
+            from forge import github
+            with github.check_wait(top, slot) as (admit, waiting):
+                _wait(top, item, sha, names, branch, progress, result, waiting, admit, train,
+                      retry_review=command == "close")
+            report_time = True
         except repo.Refused as error:
+            report_time = error.entry in (REFUSALS["red"], REFUSALS["timeout"])
+            failed = report_time
             if error.entry is REFUSALS["red"]:
                 result["outcome"] = "failed"
             result["reason"] = str(error).split("\n", 1)[0]
@@ -99,32 +160,139 @@ def wait(top: Path, item: str, sha: str, names: list[str], *, branch: str,
             result["reason"] = "Interrupted by Ctrl-C."
             raise
         finally:
-            waiting(False)
+            if report_time:
+                from forge import citime
+                citime.report(top, branch, current=failed)
             repo.record_event(top, item, "CI result", commit=sha, start=start, **result)
-            repo.record_timing(top, item, "CI wait", start, clock, result["outcome"])
+            repo.record_timing(top, item, "CI wait", start, clock, result["outcome"], worker_round=worker_round)
+
+
+def let_finish(top: Path, item: str, sha: str, names: list[str], branch: str,
+               slot: Callable[[bool], None] | None = None) -> None:
+    """Wait while any check on sha, except Forge's own review, is queued or running. Close calls
+    this before it pushes a record-only commit: that push cancels the run in progress, so the
+    record's own run could not reuse its result. Waiting reuses _seen and the wait's slot idea
+    (a running wait lends the land queue place back) and needs no change to the workflow.
+    A workflow can be queued before its job checks exist. Inspect the branch's recent
+    workflows too, including retries on earlier heads with the same code."""
+    from forge import github
+    with github.check_wait(top, slot) as (admit, waiting):
+        _let_finish(top, item, sha, names, branch, waiting, admit)
+
+
+def _let_finish(top: Path, item: str, sha: str, names: list[str], branch: str,
+                slot: Callable[[bool], None] | None, admit: Callable[[], None]) -> None:
+    explicit = "FORGE_CHECKS_WAIT" in os.environ
+    timeout = float(os.environ.get("FORGE_CHECKS_WAIT", "600"))
+    deadline = time.monotonic() + timeout
+    same_code = {sha: True}
+    try:
+        while True:
+            admit()
+            seen, _, runs, _ = _seen(top, item, sha)
+            # This head predates the review record. Its review cannot be green yet.
+            seen = [(name, PASS if name in ("forge-pr-check", "Review pull request") else state)
+                    for name, state in seen]
+            failed = False
+            try:
+                _recover(top, item, sha, names, runs, seen)
+                _pending(item, [name for name in names if name != "forge-pr-check"], seen)
+            except repo.Refused as error:
+                if error.entry not in (REFUSALS["red"], REFUSALS["timeout"]):
+                    raise
+                failed = True  # Still let an earlier same-code retry finish before publishing.
+            states = [] if failed else [state for _, state in seen]
+            # Active jobs already keep the wait open. Recovery also reads their workflow;
+            # another read here can get ahead of its still-stale aggregate check.
+            workflows = []
+            if not any(state in (PENDING, QUEUED) for state in states):
+                recent = _ask(top, item, ".workflow_runs",
+                         "repos/{owner}/{repo}/actions/runs", "--method", "GET",
+                         "--raw-field", "per_page=30", "--raw-field", f"branch={branch}", paginate=False)
+                for run in recent:
+                    if run.get("event") == "pull_request_target":
+                        continue
+                    head = run.get("head_sha", sha)
+                    if head == sha and failed:
+                        continue  # This run reported red; only earlier retries can hold the records.
+                    if head != sha and run.get("status") == "completed":
+                        continue
+                    if head not in same_code:
+                        # Record pushes cancel the whole PR's workflow, including retries
+                        # on an earlier head. Compare code once per immutable commit.
+                        same_code[head] = repo.run(
+                            "git", "diff", "--quiet", sha, head, "--", ".",
+                            ":(exclude).factory/", ":(exclude)plans/spotted/", cwd=top).returncode == 0
+                    if same_code[head]:
+                        workflows.append(run)
+            states.extend(QUEUED if run.get("status") == "queued" else PENDING
+                          for run in workflows if run.get("status") != "completed")
+            active = any(state in (PENDING, QUEUED) for state in states)
+            # Missing checks belong to the final gate after push. Only existing
+            # queued or running CI can be cancelled by publishing these records.
+            if not active:
+                return
+            now = time.monotonic()
+            if explicit and timeout > 0 and QUEUED in states:
+                deadline = now + timeout
+            left = POLL if active and not explicit else deadline - now
+            if left <= 0:
+                repo.refuse(REFUSALS["not_green"], item=item,
+                            reason=f"GitHub has shown no check progress for {timeout / 60:g} minutes: "
+                            "the code's checks are still queued or running")
+            _notice("Waiting: the code's checks are still queued or running.")
+            if slot is not None:
+                slot(QUEUED not in states)  # queued runs keep the place; running ones lend it
+            time.sleep(min(POLL, left))
+    finally:
+        if slot is not None:
+            slot(False)
+
+
+def after_code_ci(top: Path, item: str, branch: str, cfg: dict[str, Any],
+                  slot: Callable[[bool], None] | None = None) -> None:
+    """Let the code's CI run end before close pushes only Forge's records on top of it."""
+    from forge import close
+    # Three dots: a replayed branch, whose remote head is no ancestor, shows its code and is skipped.
+    # A branch with no remote head yet makes the diff fail, so nothing is running to wait for.
+    changed = repo.run("git", "diff", "--name-only", "-z", "--no-renames", f"origin/{branch}...HEAD", cwd=top)
+    paths = changed.stdout.split("\0")
+    if (changed.returncode
+            or any(path and not path.startswith((".factory/", "plans/spotted/"))
+                   for path in paths)):
+        return
+    remote, head = repo.git("rev-parse", f"origin/{branch}", "HEAD", cwd=top).splitlines()
+    if remote == head or close._pull_request(top, branch) is None:
+        return
+    let_finish(top, item, remote, cfg["checks"], branch, slot)
 
 
 def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progress: bool,
-          result: dict[str, Any], waiting: Callable[[bool], None]) -> None:
+          result: dict[str, Any], waiting: Callable[[bool], None], admit: Callable[[], None],
+          train: bool = False, *, retry_review: bool = False) -> None:
     # ponytail: an env override is the whole wait seam (tests set 0 to look once).
     timeout = float(os.environ.get("FORGE_CHECKS_WAIT", "1800" if progress else "600"))
     deadline = time.monotonic() + timeout
-    running_deadline = time.monotonic() + 90 * 60
     previous = None
     queued_since = None
-    printed_minute = None
     requested: set[int] = set()
+    review_retry = None
     cache = (repo.forge_dir(top) / f"check-wait-{repo.blob_hash(branch + sha)}.json"
              if progress else None)
     while True:
+        admit()
         queued = False
         running = False
         try:
-            seen, snapshot, check_runs, pr = _status(top, item, sha, branch, cache, requested)
-            running = any(state == PENDING for _, state in seen)
-            result["state"] = ("running" if running
-                               else "queued" if any(state == QUEUED for _, state in seen)
-                               else "unknown")
+            seen, snapshot, check_runs, statuses, pr = _status(top, item, sha, branch, cache, requested)
+            if train:  # keep every entry's place, so the timeout reader still lines up with the runs
+                # Forge's own review is exactly the "Review pull request" run of forge.yml's
+                # pull_request_target workflow and the forge-pr-check status; _seen lists runs first.
+                own = _own_review(top, item, sha)
+                for index, (name, _) in enumerate(seen):
+                    if (name == "Review pull request" and check_runs[index].get("check_suite", {}).get("id") in own
+                            if index < len(check_runs) else name == "forge-pr-check"):
+                        seen[index] = (name, PASS)
             if progress and snapshot != previous:
                 previous = snapshot
                 deadline = time.monotonic() + timeout
@@ -134,11 +302,41 @@ def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progres
             mergeable = pr.get("mergeable") if pr.get("headRefOid") == sha else None
             if mergeable == "CONFLICTING":
                 repo.refuse(REFUSALS["conflict"], item=item)
-            _tests_timeout(top, item, sha, names, check_runs, seen)
-            reason = _pending(item, names, seen)
+            if not any(name == "forge-pr-check" or name == "Review pull request" and state != SKIPPED
+                       for name, state in seen):  # the pull_request workflow skips its own job of that name
+                _no_start(top, item, sha, branch)  # before a red or timed-out test can hide it
+            review_state = None
+            if review_retry:
+                run = _review_workflow(top, item, review_retry)
+                if run.get("run_attempt") == 2 and run.get("status") == "completed":
+                    review_retry = None
+                else:
+                    review_state = QUEUED if run.get("status") == "queued" else PENDING
+            elif retry_review and not train and pr.get("headRefOid") == sha:
+                review_retry = _retry_failed_review(top, item, names, seen, statuses)
+                if review_retry:
+                    review_state = PENDING
+            if train:
+                # The train reads failed-job logs and owns its one retry in land._red.
+                _tests_timeout(top, item, sha, names, check_runs, seen)
+            elif review_state:
+                if cache is not None:
+                    cache.unlink(missing_ok=True)
+            elif _recover(top, item, sha, names, check_runs, seen) and cache is not None:
+                cache.unlink(missing_ok=True)  # Read the new attempt instead of cached failures.
+            if review_state:
+                # A fresh result on the current head can arrive before the old job finishes.
+                reason = _pending(item, [], [("forge-pr-check", review_state)])
+            else:
+                reason = _pending(item, names, seen)  # Report failures even while siblings are active.
+                active = [(name, state) for name, state in seen if state in (PENDING, QUEUED)]
+                if active:
+                    reason = _pending(item, [], active)
             if mergeable == "UNKNOWN":
                 reason = reason or "GitHub has not determined whether this pull request can merge"
-            queued = any(state == QUEUED for _, state in seen)
+            queued = review_state == QUEUED or any(state == QUEUED for _, state in seen)
+            running = review_state == PENDING or any(state == PENDING for _, state in seen)
+            result["state"] = "running" if running else "queued" if queued else "unknown"
         except repo.Refused as error:
             if cache is not None and error.entry is not REFUSALS["not_green"]:
                 cache.unlink(missing_ok=True)
@@ -157,41 +355,62 @@ def _wait(top: Path, item: str, sha: str, names: list[str], branch: str, progres
             if queued_since is None:
                 queued_since = now
             minute = int((now - queued_since) / 60)
-            if minute != printed_minute:
-                print(f"Waiting: checks queued for {minute} minutes during this wait; "
-                      "shared runners may be busy or no runner may match the runner setting "
-                      "in forge.toml.", flush=True)
-                printed_minute = minute
-            # Keep close's queue policy and the explicit wait override. Land's
-            # normal short limit still applies when no check actually starts.
-            if timeout > 0 and (not progress or "FORGE_CHECKS_WAIT" in os.environ):
+            _notice(f"Waiting: checks queued for {minute} minutes during this wait; "
+                    "shared runners may be busy or no runner may match the runner setting "
+                    "in forge.toml.")
+            if timeout > 0:
                 deadline = now + timeout
         else:
-            queued_since = printed_minute = None
-        left = deadline - time.monotonic()
-        remaining = running_deadline - time.monotonic()
-        if progress or running:
-            left = (remaining if running and "FORGE_CHECKS_WAIT" not in os.environ
-                    else min(left, remaining))
+            queued_since = None
+            if running:
+                _notice(f"Waiting: {reason}.")
+        # An explicit override still permits a bounded wait for operators.
+        left = (POLL if (queued or running) and "FORGE_CHECKS_WAIT" not in os.environ
+                else deadline - time.monotonic())
         if left <= 0:
             if result["state"] in ("queued", "running"):
                 result["outcome"] = "gave_up_" + result["state"]
             if progress or running:
-                reason = (f"The wait reached its 90 minutes limit: {reason}"
-                          if remaining <= 0 else
-                          f"GitHub has shown no check progress for {timeout / 60:g} minutes: {reason}")
+                reason = f"GitHub has shown no check progress for {timeout / 60:g} minutes: {reason}"
             if progress:
                 repo.refuse(REFUSALS["wait_ended"], reason=reason, item=item)
             repo.refuse(REFUSALS["not_green"], reason=reason, item=item)
         # Queued checks keep backpressure; running checks need no local close place.
         waiting(not queued)
-        time.sleep(min(15, left))
+        time.sleep(min(POLL, left))
+
+
+def own_runs(top: Path, item: str, sha: str) -> list[dict[str, Any]]:
+    """Forge's own review runs on sha: forge.yml's pull_request_target run."""
+    runs = _ask(top, item, ".workflow_runs", "repos/{owner}/{repo}/actions/runs", "--method", "GET",
+                "--raw-field", "per_page=100", "--raw-field", f"head_sha={sha}")
+    return [run for run in runs if run.get("event") == "pull_request_target"
+            and str(run.get("path", "")).partition("@")[0] == ".github/workflows/forge.yml"]
+
+
+def _no_start(top: Path, item: str, sha: str, branch: str) -> None:
+    """Stop when GitHub could not start Forge's review run for this branch's head commit."""
+    try:
+        runs = _ask(top, item, ".workflow_runs", "repos/{owner}/{repo}/actions/runs", "--method", "GET",
+                    "--raw-field", "per_page=100", "--raw-field", "event=pull_request_target",
+                    "--raw-field", f"branch={branch}")
+    except repo.Refused:
+        return  # A failed side lookup must not end the wait; the check status itself still decides.
+    if any(run.get("conclusion") == "startup_failure" and run.get("head_sha") == sha
+           and str(run.get("path", "")).partition("@")[0] == ".github/workflows/forge.yml"
+           for run in runs):
+        repo.refuse(REFUSALS["no_start"])
+
+
+def _own_review(top: Path, item: str, sha: str) -> set[Any]:
+    """The check suites of Forge's own review run on sha."""
+    return {run.get("check_suite_id") for run in own_runs(top, item, sha)} - {None}
 
 
 def _status(top: Path, item: str, sha: str, branch: str, cache: Path | None,
             requested: set[int]) -> list[Any]:
     def read() -> list[Any]:
-        seen, snapshot, runs = _seen(top, item, sha)
+        seen, snapshot, runs, statuses = _seen(top, item, sha)
         shown = repo.run("gh", "pr", "view", branch, "--json",
                          "mergeable,headRefOid,number,headRefName", cwd=top, timeout=60)
         try:
@@ -204,7 +423,7 @@ def _status(top: Path, item: str, sha: str, branch: str, cache: Path | None,
         elif pr.get("headRefOid") == sha and pr.get("mergeable") != "CONFLICTING":
             _cancel_superseded(top, item, runs, number=pr.get("number"), branch=branch,
                                requested=requested)
-        return [seen, snapshot, runs, pr]
+        return [seen, snapshot, runs, statuses, pr]
 
     if cache is None:
         return read()
@@ -224,7 +443,8 @@ def _status(top: Path, item: str, sha: str, branch: str, cache: Path | None,
             value = None
             try:
                 saved = json.loads(cache.read_text(encoding="utf-8"))
-                if 0 <= time.monotonic() - saved["at"] < 60:
+                if (0 <= time.monotonic() - saved["at"] < min(POLL, 60)
+                        and (isinstance(saved["status"], str) or len(saved["status"]) == 5)):
                     value = saved["status"]
             except (OSError, ValueError, KeyError, TypeError):
                 pass
@@ -243,32 +463,113 @@ def _status(top: Path, item: str, sha: str, branch: str, cache: Path | None,
     return value
 
 
+def timeout_limit(top: Path, sha: str) -> int | None:
+    """The generated test job's limit at the checked commit, when available locally."""
+    if not sha:
+        return None
+    workflow = repo.run("git", "show", f"{sha}:.github/workflows/forge.yml", cwd=top)
+    job = re.search(r"(?ms)^  tests:[ \t]*\n(.*?)(?=^  \S|\Z)", workflow.stdout)
+    cap = re.search(r"(?m)^    timeout-minutes: (\d+)[ \t]*$", job[1]) if job else None
+    return int(cap[1]) if cap else None
+
+
+def cancelled_at_limit(run: dict[str, Any], limit: int | None) -> bool:
+    """GitHub can cancel a test job rather than mark it timed out at its time limit."""
+    name = str(run.get("name", ""))
+    if (limit is None or run.get("status") != "completed" or run.get("conclusion") != "cancelled"
+            or not (name == "tests" or name.startswith("tests (")
+                    or re.fullmatch(r"test group \d+ of \d+", name))):
+        return False
+    seconds = _job_runtime_seconds(run)
+    if seconds is None:
+        return False
+    return abs(seconds - limit * 60) <= 60
+
+
+def _job_runtime_seconds(job: dict[str, Any]) -> float | None:
+    """Return elapsed runner time only when GitHub confirms the job actually ran."""
+    if not (job.get("runner_id") or any(step.get("started_at") for step in job.get("steps", []))):
+        return None
+    try:
+        return (datetime.fromisoformat(job["completed_at"])
+                - datetime.fromisoformat(job["started_at"])).total_seconds()
+    except (KeyError, ValueError, TypeError):
+        return None
+
+
+def _action_job(top: Path, item: str, run: dict[str, Any]) -> dict[str, Any] | None:
+    """Read the Actions job linked by a check run, if GitHub supplied one."""
+    url = str(run.get("details_url", run.get("detailsUrl", "")))
+    job_id = re.search(r"/actions/runs/\d+/job/(\d+)(?:\?|$)", url)
+    if not job_id:
+        return None
+    jobs = _ask(top, item, "[.]", f"repos/{{owner}}/{{repo}}/actions/jobs/{job_id[1]}")
+    return jobs[0] if jobs else None
+
+
+def _review_workflow(top: Path, item: str, run_id: str) -> dict[str, Any]:
+    runs = _ask(top, item, "[.]", f"repos/{{owner}}/{{repo}}/actions/runs/{run_id}")
+    return runs[0] if runs else {}
+
+
+def _retry_failed_review(top: Path, item: str, names: list[str],
+                         seen: list[tuple[str, str]], statuses: list[dict[str, Any]]) -> str | None:
+    failed = [i for i, (name, state) in enumerate(seen)
+              if state in (RED, SKIPPED) and any(
+                  name == want or name.startswith(want + " (") for want in names)]
+    if len(failed) != 1:
+        return None
+    index = failed[0]
+    first_status = len(seen) - len(statuses)
+    if index < first_status or seen[index] != ("forge-pr-check", RED):
+        return None
+    status = statuses[index - first_status]
+    run_link = re.search(r"/actions/runs/(\d+)/job/\d+(?:\?|$)", str(status.get("target_url", "")))
+    if not run_link:
+        return None
+    run_id = run_link[1]
+    workflow = _review_workflow(top, item, run_id)
+    if (workflow.get("event") != "pull_request_target"
+            or str(workflow.get("path", "")).partition("@")[0] != ".github/workflows/forge.yml"):
+        return None
+    if workflow.get("status") != "completed":
+        return run_id if workflow.get("run_attempt") == 2 else None
+    if workflow.get("run_attempt") == 1 and workflow.get("conclusion") == "failure":
+        if repo.run("gh", "run", "rerun", run_id, "--failed", cwd=top, timeout=60).returncode == 0:
+            return run_id
+    return None
+
+
+def _recover(top: Path, item: str, sha: str, names: list[str],
+             runs: list[dict[str, Any]], seen: list[tuple[str, str]]) -> bool:
+    # Ungrouped test timeouts keep their manual recovery, before any retry can start.
+    _tests_timeout(top, item, sha, names, runs, seen, groups=False)
+    recovered = _rerun_cancelled(top, item, sha, seen, runs, names)
+    if not recovered:
+        _tests_timeout(top, item, sha, names, runs, seen)
+    return recovered
+
+
 def _tests_timeout(top: Path, item: str, sha: str, names: list[str],
-                   runs: list[dict[str, Any]], seen: list[tuple[str, str]]) -> None:
+                   runs: list[dict[str, Any]], seen: list[tuple[str, str]], *, groups: bool = True) -> None:
     if "tests" not in names:
         return
     candidates = [(index, run) for index, run in enumerate(runs) if run.get("status") == "completed"
                   and run.get("conclusion") in ("timed_out", "cancelled")
                   and (run.get("name") == "tests"
                        or str(run.get("name", "")).startswith("tests (")
-                       or re.fullmatch(r"test group \d+ of \d+", str(run.get("name", ""))))]
+                       or groups and re.fullmatch(r"test group \d+ of \d+", str(run.get("name", ""))))]
     if not candidates:
         return
-    # Read the generated job's limit at the checked commit, not an uncommitted edit.
-    workflow = repo.run("git", "show", f"{sha}:.github/workflows/forge.yml", cwd=top)
-    job = re.search(r"(?ms)^  tests:[ \t]*\n(.*?)(?=^  \S|\Z)", workflow.stdout)
-    cap = re.search(r"(?m)^    timeout-minutes: (\d+)[ \t]*$", job[1]) if job else None
-    limit = int(cap[1]) if cap else None
+    limit = timeout_limit(top, sha)
     timed_out: dict[int, str] = {}
     for index, run in candidates:
-        try:
-            seconds = (datetime.fromisoformat(run["completed_at"])
-                       - datetime.fromisoformat(run["started_at"])).total_seconds()
-        except (KeyError, ValueError, TypeError):
-            seconds = None
-        if run["conclusion"] == "cancelled" and (
-                limit is None or seconds is None or abs(seconds - limit * 60) > 60):
-            continue
+        job = _action_job(top, item, run)
+        seconds = _job_runtime_seconds(job) if job is not None else None
+        if run["conclusion"] == "cancelled":
+            if job is None or not cancelled_at_limit(
+                    {**run, **job, "status": run["status"], "conclusion": "cancelled"}, limit):
+                continue
         minutes = limit if limit is not None else round(seconds / 60) if seconds is not None else None
         timed_out[index] = f" after {minutes} minutes" if minutes is not None else ""
     if not timed_out:
@@ -285,6 +586,63 @@ def _tests_timeout(top: Path, item: str, sha: str, names: list[str],
     # failure, including one from another workflow with the same check name.
     _pending(item, names, [entry for index, entry in enumerate(seen) if index not in ignored])
     repo.refuse(REFUSALS["timeout"], duration=next(iter(timed_out.values())), item=item)
+
+
+def _rerun_cancelled(top: Path, item: str, sha: str, seen: list[tuple[str, str]],
+                     runs: list[dict[str, Any]], names: list[str]) -> bool:
+    """Recover cancellations and test-only failures once per workflow run, sharing run_attempt.
+    A newer run of the same workflow and event takes precedence; a second attempt stays red."""
+    cancelled = [index for index, run in enumerate(runs)
+                 if run.get("status") == "completed" and run.get("conclusion") == "cancelled"]
+    groups = [index for index, run in enumerate(runs)
+              if re.fullmatch(r"test group \d+ of \d+", str(run.get("name", "")))]
+    failed = [index for index in groups if seen[index][1] == RED]
+    retry_suites = {runs[index].get("check_suite", {}).get("id") for index in cancelled + failed}
+    # A retry's dependent aggregate can show its earlier failure until the workflow ends.
+    suites = {runs[index].get("check_suite", {}).get("id") for index in groups} - {None}
+    failed += [index for index, run in enumerate(runs)
+               if run.get("name") == "tests" and run.get("conclusion") == "failure"
+               and run.get("check_suite", {}).get("id") in suites]
+    retryable = [index for index in cancelled + failed
+                 if runs[index].get("check_suite", {}).get("id") is not None]
+    if not retryable:
+        return False
+    # _pending applies the required-check rule to skipped and neutral checks too.
+    _pending(item, names, [entry for index, entry in enumerate(seen) if index not in retryable])
+    workflows = _ask(top, item, ".workflow_runs", "repos/{owner}/{repo}/actions/runs", "--method", "GET",
+                     "--raw-field", "per_page=100", "--raw-field", f"head_sha={sha}")
+    decided: dict[Any, str | None] = {}
+    for index in retryable:
+        suite = runs[index].get("check_suite", {}).get("id")
+        current = next((run for run in workflows if suite is not None and run.get("check_suite_id") == suite), None)
+        if current is None or not isinstance(current.get("id"), int):
+            continue  # Without its run, nothing can start it again: it stays red.
+        if suite not in decided:
+            newer = [run for run in workflows if run.get("workflow_id") == current.get("workflow_id")
+                     and run.get("event") == current.get("event")
+                     and (run.get("run_number") or 0) > (current.get("run_number") or 0)]
+            decided[suite] = None
+            if newer:  # The newer run's own checks decide; until they finish, the check is not done.
+                decided[suite] = PASS if all(run.get("status") == "completed" for run in newer) else PENDING
+            elif current.get("status") != "completed":
+                decided[suite] = PENDING  # A rerun is already going; GitHub keeps the run and counts attempts.
+            elif (current.get("run_attempt") or 1) == 1 and (suite not in suites or suite in retry_suites):
+                from forge import land
+                late = land._restart(top, [str(current["id"])])
+                if late and late != "gh":
+                    repo.refuse(REFUSALS["not_green"], item=item,
+                                reason="GitHub has not started the failed test jobs again")
+                if not late:
+                    if suite in suites:
+                        print("Started the failed test jobs again once; waiting for them.", flush=True)
+                    else:
+                        print(f"Run {current['id']} was cancelled. Started it again; waiting for it.", flush=True)
+                    decided[suite] = PENDING
+            elif suite in suites and suite in retry_suites:
+                _pending(item, [], seen)  # A second test timeout is a failure too: send it to work.
+        if decided[suite]:
+            seen[index] = (seen[index][0], decided[suite])
+    return any(decided.values())
 
 
 def _pending(item: str, names: list[str], seen: list[tuple[str, str]]) -> str:
@@ -471,7 +829,8 @@ def _cancel_superseded(top: Path, item: str, checks: list[dict[str, Any]], *,
     return bool(pending)
 
 
-def _seen(top: Path, item: str, sha: str) -> tuple[list[tuple[str, str]], list[str], list[dict[str, Any]]]:
+def _seen(top: Path, item: str, sha: str
+          ) -> tuple[list[tuple[str, str]], list[str], list[dict[str, Any]], list[dict[str, Any]]]:
     """Check outcomes on sha and the fields that show a run starting, ending or being replaced."""
     # Every page: a failed matrix job on page two must still count.
     endpoint = f"repos/{{owner}}/{{repo}}/commits/{sha}"
@@ -494,7 +853,7 @@ def _seen(top: Path, item: str, sha: str) -> tuple[list[tuple[str, str]], list[s
              for run in runs]
             + [(str(status.get("context")), {"success": PASS, "pending": PENDING}.get(
                 status.get("state"), RED)) for status in statuses])
-    return seen, snapshot, runs
+    return seen, snapshot, runs, statuses
 
 
 def _ask(top: Path, item: str, field: str, endpoint: str, *options: str,

@@ -1,0 +1,162 @@
+{
+  "base": "69a36ba0237524b744e79e74607de87b08615e03",
+  "branch": "fix/reprint-intake-prompt",
+  "done_when": "When an intake is pending for the same idea, forge start and forge next print that intake's prompt and handback command again instead of refusing, so the agent can start the explorer and hand back without forge stop; new repos get it at init and existing repos on upgrade",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "_idle() in src/forge/nextstep.py",
+      "file": "src/forge/nextstep.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 570,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Security: Quote the pending idea safely in the suggested shell command",
+      "work": 1
+    },
+    {
+      "area": "_idle() in src/forge/nextstep.py",
+      "file": "src/forge/nextstep.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 570,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: forge next omits the pending intake's prompt and handback command",
+      "work": 2
+    },
+    {
+      "area": "offer() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 110,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Reprint the original intake context",
+      "work": 2
+    },
+    {
+      "area": "offer() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 108,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Do not offer an intake the current session cannot hand back",
+      "work": 2
+    },
+    {
+      "area": "test_1_start_again_prints_the_prompt_and_the_handback_still_works() in tests/test_reprint_intake_prompt.py",
+      "file": "tests/test_reprint_intake_prompt.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 19,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Check both reprints and the complete handback command",
+      "work": 1
+    },
+    {
+      "area": "offer() in src/forge/native.py",
+      "file": "src/forge/native.py",
+      "gain": 1,
+      "harm": 1,
+      "line": 106,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Simpler: Unrecorded approach \u2192 state the need, simplest option and reuse",
+      "work": 1
+    },
+    {
+      "area": "_intake_offer() in src/forge/nextstep.py",
+      "file": "src/forge/nextstep.py",
+      "gain": 4,
+      "harm": 4,
+      "line": 569,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Functional: Keep forge next usable outside a coordinator",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "0857e2882a78fec82b0af77c6e03b95415bb2cd5283473a5108174864ff7e2a4",
+    "changed": "e6de2cc661347dafc717cc029416d63e0e6406cdebee368eac8778fdbf758d87",
+    "commit": "7995a11646b60453dc58a5f4cfec30bdd75cb294",
+    "dismissals": [],
+    "findings": [],
+    "id": "e4abc947-70e8-4e6e-a5ec-1ef6e8d3c807",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-23T04:24:31.539187+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-23T04:27:49.040329+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:40:41.422137+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:42:04.588147+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T04:54:23.338302+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T04:55:20.325002+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T05:03:06.774876+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-23T12:29:28.710263+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-23T12:35:11.838913+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "50cf381c-28e8-45e6-b95a-4cf6b3729570",
+    "head": "249d002b25cb365cd4c141d3d959798ad4db92ff",
+    "keys": {},
+    "round": 3
+  },
+  "why": "A lost intake prompt from forge start cannot be printed again: rerunning forge start says the intake is already running, a handback with hand-written lines is refused, and the lane entry stays until forge stop --id",
+  "worker": "claude"
+}

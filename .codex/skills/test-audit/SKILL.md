@@ -25,7 +25,7 @@ means do not add it yet:
 1. What observable behavior, invariant, or independent contract does it
    protect?
 2. What credible regression makes it fail?
-3. Why does existing coverage not already catch that failure? Each contract has
+3. Name the closest existing test; the brief lists the tests that name your Scope. Choose reuse when it already proves the outcome, extend when a new case or assertion in it can prove it, or new. A new test names the outcome that no existing test proves; write "closest none" when no test is near it. Record the choice on the test's Proof list line. Why does existing coverage not already catch that failure? Each contract has
    one primary test owner at the strongest boundary; another layer needs its
    own distinct risk, such as a transport or lifecycle failure the owner cannot
    reach. Prefer extending a table-driven case or shared fixture over a
@@ -44,6 +44,7 @@ Bug regression tests must fail on the pre-fix code for the intended reason and
 pass after the owner-boundary repair. A regression test that never demonstrably
 failed proves the mock, not the fix. One regression at the owner boundary
 covers the bug; do not replay the same scenario at every layer it crosses.
+Close checks this for a fix's pytest tests: it runs them on the code before the fix.
 
 ## Junk patterns
 

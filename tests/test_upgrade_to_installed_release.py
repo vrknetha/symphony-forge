@@ -1,8 +1,9 @@
 """Upgrade to the installed release while a real read holds a machine lane.
 
-Test-audit: protects upgrade completion without reinstalling a live release.
-The regression is the unconditional run refusal; existing tests cover only installs
-with live runs or no-run install skips. Use the real command, with no production seam.
+Test-audit: protects upgrade completion without reinstalling a live release and
+repairs an earlier-adopted task's published start in the same upgrade. Existing
+coverage rebuilds old records separately; it does not cover this upgrade path.
+Use the real command and a GitHub edge fake, with no production seam.
 """
 import os
 import re
@@ -14,29 +15,44 @@ import pytest
 from conftest import ROOT
 from test_close import env  # noqa: F401
 from test_fix_agent_runs_wait_in_line import _other_repo, _until
+from test_board_after_upgrade import History
+from test_first_start_survives_history_changes import (
+    assert_rewritten_published_task_start, prepare_rewritten_published_task,
+)
 from test_lanes_agents import finish, hold_agents, start
 from test_story import worktree
-from test_upgrade_command import assert_ready, ours, unsynced_up, up  # noqa: F401
+from test_subagent_roles import _settings
+from test_upgrade_command import MARK, assert_ready, ours, unsynced_up, up  # noqa: F401
 
 STORY = "upgrade-no-install-no-refusal"
 pytestmark = pytest.mark.platform
 
 
 @pytest.mark.parametrize("adopted", [False, True], ids=["new", "earlier-adoption"])
-def test_1_upgrade_to_installed_release_continues_during_runs(unsynced_up, tmp_path, adopted, request):
+def test_1_upgrade_to_installed_release_continues_during_runs(
+        unsynced_up, tmp_path, adopted, request, monkeypatch):
     upgrade = unsynced_up if adopted else request.getfixturevalue("up")
+    history = None
+    published_item = None
+    started_at = None
     if adopted:
-        upgrade.repo.git("switch", "-q", "-c", "adoption")
-        shutil.copytree(ROOT / "tests/fixtures/adopted-v1.2.2/client", upgrade.repo.path,
-                        dirs_exist_ok=True)
-        upgrade.repo.git("add", "-A")
-        upgrade.repo.git("commit", "-qm", "Use the earlier adoption")
-        upgrade.repo.git("switch", "-q", "main")
-        upgrade.repo.git("merge", "-q", "--ff-only", "adoption")
+        # History prepares the earlier-adopted repo and publishes a task whose
+        # old time record contains the rewritten start. Do this before pinning
+        # its version so this stays the installed-release upgrade under test.
+        history = History(upgrade, monkeypatch)
+        published_item, started_at = prepare_rewritten_published_task(history)
     release = upgrade.repo.forge("--version").stdout.split()[-1]
     # Both a new repo and an earlier-adopted repo can pin an older release.
-    upgrade.on_main("forge.toml", re.sub(r'^version = ".*"', 'version = "v1.0.0"',
-                                         upgrade.toml(), count=1, flags=re.M))
+    settings = re.sub(r'^version = ".*"', 'version = "v1.0.0"', upgrade.toml(), count=1, flags=re.M)
+    if not adopted:
+        diagnostics = [f".claude/agents/{name}.md" for name in ("debugger", "security", "performance")]
+        for path in diagnostics:
+            previous = upgrade.show(path, "main").replace('model: "claude-sonnet-5-5"', 'model: "claude-opus-5-5"')
+            assert 'model: "claude-opus-5-5"' in previous
+            upgrade.on_main(path, previous + "\n")
+        settings = ('models.grill.claude = { model = "opus", effort = "medium" }\n'
+                    'models.explore.codex = { model = "gpt-6-luna", effort = "high" }\n' + settings)
+    upgrade.on_main("forge.toml", settings)
     other = _other_repo(tmp_path, upgrade.repo.bin)
     hold_agents(upgrade.env)
     # Hold only the other repo's reader, not this upgrade's review service.
@@ -55,8 +71,27 @@ def test_1_upgrade_to_installed_release_continues_during_runs(unsynced_up, tmp_p
         name = "upgrade-forge-to-" + release.replace(".", "-")
         assert_ready(upgrade, result, ours(upgrade, installed=False, release=release, name=name),
                      release=release, name=name)
+        # The release fixture appends its marker to the source template. Both hosts
+        # must receive that whole release template, including the marker.
+        template = (ROOT / "src/forge/templates/skill.md").read_text(encoding="utf-8")
+        committed = (ROOT / ".claude/skills/forge/SKILL.md").read_text(encoding="utf-8")
+        part = committed[len(template.rstrip("\n")):]  # the open known issues follow the template
+        expected = (template + f"\n<!-- {MARK} {release} -->\n").strip() + part.rstrip("\n")
+        for host in (".claude", ".codex"):
+            assert upgrade.repo.git("show", f"fix/{name}:{host}/skills/forge/SKILL.md") == expected
+        if not adopted:
+            for path in diagnostics:
+                front = upgrade.show(path, f"fix/{name}").split("---", 2)[1].splitlines()
+                assert 'model: "claude-sonnet-5-5"' in front and 'effort: "high"' in front, path
+            expected_settings = settings.replace('version = "v1.0.0"', f'version = "{release}"', 1)
+            assert upgrade.show("forge.toml", f"fix/{name}") == expected_settings.rstrip("\n")
+            assert _settings(worktree(upgrade.repo, f"fix/{name}"), "explorer") == (
+                ("gpt-6-luna", "high"), ("claude-haiku-5-5", "high"))
         assert not [call for call in upgrade.uv() if call["args"][:2] == ["tool", "install"]]
         assert reader.poll() is None, "Upgrade must leave the other repo's run alone"
     finally:
         finish(upgrade.repo, processes)
     assert all(process.returncode == 0 for process in processes)
+    if history is not None:
+        assert published_item is not None and started_at is not None
+        assert_rewritten_published_task_start(history, published_item, started_at)

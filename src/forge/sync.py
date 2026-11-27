@@ -59,6 +59,7 @@ FORGE_COMMAND = re.compile(r'forge"? hook ')
 
 
 LAUNCHER = ".forge/hooks.sh"
+CODEX_SESSION_END_TIMEOUT = 3
 EXECUTABLE = {f"{host}/skills/impeccable/scripts/impeccable" for host in (".claude", ".codex")}
 
 
@@ -82,7 +83,7 @@ done
 export PATH
 if command -v forge >/dev/null 2>&1; then :
 elif command -v uvx >/dev/null 2>&1; then
-  forge() { uvx -q --from git+https://github.com/knacklabs/symphony-forge@v<version> forge "$@"; }
+  forge() { uvx -q --from symphony-forge==<version> forge "$@"; }
 else
   forge() { echo "Forge isn't installed, so this hook can't run; install it with <install>, then run forge doctor." >&2; return 2; }
 fi
@@ -147,7 +148,7 @@ SPOTTED_RULE = "plans/spotted.json merge=forge-roadmap"
 
 def install_line(version: str) -> str:
     """The command that installs the pinned Forge (the pin refusal's own Next line)."""
-    return repo.REFUSALS["pin"][1].format(pinned="v" + version.removeprefix("v"))
+    return repo.REFUSALS["pin"][1].format(package_version=version.removeprefix("v"))
 
 
 def read(path: Path) -> str:
@@ -239,6 +240,8 @@ def _hooks(top: Path, rel: str, events: dict[str, tuple[str | None, str]],
                 del hooks[event]
         for event, (matcher, hook) in events.items():
             group: dict[str, Any] = {"hooks": [{"type": "command", "command": command(hook)}]}
+            if event == "SessionEnd" and rel == ".codex/hooks.json":
+                group["hooks"][0]["timeout"] = CODEX_SESSION_END_TIMEOUT
             hooks.setdefault(event, []).append({"matcher": matcher, **group} if matcher else group)
         if allow:
             allowed = data.setdefault("permissions", {}).setdefault("allow", [])
@@ -477,10 +480,18 @@ def synced(top: Path, cfg: dict[str, Any], base: str, head: str, paths: list[str
     inputs = {"AGENTS.md", "CLAUDE.md", ".claude/settings.json", ".codex/hooks.json",
               ".codex/config.toml", ".gitattributes", ".gitignore", "package.json", ".nvmrc",
               ".node-version", "pnpm-lock.yaml", "package-lock.json", "pyproject.toml"}
+    if githooks.ANTIGRAVITY_SKILLS in paths:
+        inputs.add(githooks.ANTIGRAVITY_SKILLS)
     hooks = githooks.husky_folder(top)
     if hooks:
         inputs.update((hooks.relative_to(top) / name).as_posix()
                       for name in ("pre-commit", "pre-push"))
+    # A nested pnpm lockfile decides the workflow's pnpm step, so the snapshot needs it too.
+    for name in subprocess.run(
+            ["git", "ls-tree", "-rz", "--name-only", base], cwd=top, capture_output=True, check=True,
+    ).stdout.decode("utf-8").split("\0"):
+        if name.endswith("/pnpm-lock.yaml"):
+            inputs.update((name, name.removesuffix("pnpm-lock.yaml") + "package.json"))
     # Read the root tree and the renderer inputs through one Git process. A tree
     # entry is mode/name, NUL, then a binary object ID (20 or 32 bytes).
     with subprocess.Popen(["git", "cat-file", "--batch", "--follow-symlinks"], cwd=top,
@@ -602,7 +613,7 @@ def write(top: Path, cfg: dict[str, Any], keep: frozenset[str] = frozenset()) ->
 def check_guides(top: Path, changed_files: list[str]) -> None:
     """Check branch guide edits without blocking unrelated work on inherited drift."""
     if not any(path.startswith(("src/forge/templates/", "src/forge/standards.md",
-                                ".claude/skills/", ".codex/skills/")) for path in changed_files):
+                                "src/forge/release-notes/", ".claude/skills/", ".codex/skills/")) for path in changed_files):
         return
     package = top / "src" if repo.config(top)["repo"] == "forge-source" else Path(__file__).resolve().parent.parent
     script = f"""import sys, json
@@ -624,7 +635,7 @@ print(json.dumps(sync.differing(top, wanted)))
 def refresh_merged_guides(top: Path, before: str) -> None:
     """Keep committed skill copies current when a default merge changes their templates."""
     incoming = repo.git("diff", "--name-only", before, "HEAD", "--",
-                        "src/forge/templates", "src/forge/standards.md", cwd=top)
+                        "src/forge/templates", "src/forge/standards.md", "src/forge/release-notes", cwd=top)
     if not incoming:
         return
     # The merge can change the renderers as well as their templates. Import the merged
@@ -705,10 +716,25 @@ def install_merge_rules(top: Path) -> bool:
 
 
 def sync(args: argparse.Namespace) -> None:
-    from forge import codex
+    from forge import claude_sdk, codex, quicktest, release_notes
     top = repo.root()
     cfg = repo.config(top)
     raw_config = tomllib.loads((top / "forge.toml").read_text(encoding="utf-8"))
+    if (cfg["tools"] == "both" or cfg["tools"] == "codex"
+            and (cfg["codex_fast"] == "off" or shutil.which("claude"))):
+        if codex.sdk_problem():
+            codex.install()
+    if cfg["tools"] == "both" or cfg["tools"] == "claude" and shutil.which("codex"):
+        if claude_sdk.sdk_problem():
+            claude_sdk.install()
+    uses_codex_default = raw_config.get("tools", repo.DEFAULTS["tools"]) != "claude" and any(
+        not repo.models(raw_config, kind, "codex")
+        for kind in ("build", "fix", "lite", "explore", "design"))
+    if uses_codex_default or any(repo.models(raw_config, kind, "codex").get("model") == "gpt-6.1-sol"
+           for kind in raw_config.get("models", {})):
+        print("New repos use gpt-6.2-sol for Codex work. Your model settings stay the same. "
+              "To switch, ask your agent to set your Sol entries in forge.toml to gpt-6.2-sol. "
+              "Use this Forge release or newer: older SDKs reject gpt-6.2-sol.", flush=True)
     first = "`R-<n>:`" not in read(top / ".claude/skills/forge/SKILL.md")
     changed = write(top, cfg)
     if cfg.get("repo") == "forge-source":
@@ -740,6 +766,8 @@ def sync(args: argparse.Namespace) -> None:
             missing = 'app test check' if cfg['checks'] else 'checks'
             print(f'Forge runs change tests on this machine because forge.toml names no {missing}. To '
                   'run them in CI, write test_place = "ci".')
+    release_notes.upgrade_notice(top, cfg)
+    quicktest.combined_note(top, cfg)  # upgrade runs the new release's sync, so this line comes from it
     codex.preserve_chats(top)  # after every file is written, so a chat problem only warns
 
 
@@ -762,10 +790,14 @@ def install_mod(top: Path) -> None:
         installed = json.loads(run("list", "--json"))
         if not isinstance(markets, list) or not isinstance(installed, list):
             raise ValueError("Claude Code returned an unreadable plugin list")
-        if not any(isinstance(row, dict) and row.get("name") == "forge" for row in markets):
-            run("marketplace", "add", "knacklabs/symphony-forge")
+        market = next((row for row in markets if isinstance(row, dict) and row.get("name") == "forge"), None)
+        moved = market is not None and market.get("repo") == "knacklabs/symphony-forge"
+        if moved:
+            run("marketplace", "remove", "forge", "--scope", "user")
+        if market is None or moved:
+            run("marketplace", "add", "vrknetha/symphony-forge")
         run("marketplace", "update", "forge")
-        if any(isinstance(row, dict) and row.get("id") == "forge@forge"
+        if not moved and any(isinstance(row, dict) and row.get("id") == "forge@forge"
                and row.get("scope") == "user" for row in installed):
             run("update", "forge@forge", "--scope", "user")
         else:

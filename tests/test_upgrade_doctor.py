@@ -17,14 +17,14 @@ from test_setup import _autoreview, _fresh_client, _stub_forge, _version
 from test_setup import doctor_sdks, sdk_data  # noqa: F401
 from test_runs_wait_for_machine_load import runner_process_list
 
-INSTALL = "uv tool install git+https://github.com/knacklabs/symphony-forge@{pin}"
+INSTALL = "uv tool install symphony-forge=={pin}"
 
 
 def _compared(installed: str, pinned: str) -> str:
     if pinned == installed:
         return f"- Note: doctor compared the synced files with the installed Forge {installed}.\n"
     return (f"- Note: doctor compared the synced files with the installed Forge {installed}, not "
-            f"the pinned {pinned}.\n  To check with {pinned}: {INSTALL.format(pin=pinned)}, then "
+            f"the pinned {pinned}.\n  To check with {pinned}: {INSTALL.format(pin=pinned.removeprefix('v'))}, then "
             "run forge doctor again.\n")
 
 
@@ -63,7 +63,7 @@ def test_5_doctor_says_which_forge_version_it_compares_with(repo, gh, tmp_path, 
     if case == "all is well":
         request.getfixturevalue("doctor_sdks")
         toml.write_text(toml.read_text(encoding="utf-8").replace(
-            'workers = "split"', 'workers = "claude"', 1), encoding="utf-8")
+            'workers = "claude"', 'tools = "claude"\nworkers = "claude"', 1), encoding="utf-8")
         (tmp_path / "home").mkdir()
         monkeypatch.setenv("HOME", str(tmp_path / "home"))
         monkeypatch.setenv("USERPROFILE", str(tmp_path / "home"))

@@ -1,0 +1,151 @@
+{
+  "base": "fd4f51ffae9d5c78c915953f2d41341e45c67883",
+  "branch": "fix/main-s-full-test-run-fails-run-460143175",
+  "done_when": "The five named tests pass in the full test run on GitHub, each still checking its rule (the guide tests check the current guide wording; the runner tests do not depend on machine speed)",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "test_6_runner_ends_when_idle() in tests/test_runner_ends_when_idle.py",
+      "file": "tests/test_runner_ends_when_idle.py",
+      "gain": 4,
+      "harm": 2,
+      "line": 56,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted: the remaining timing note is checked by the next GitHub full run; a Claude builder fixes it if it still fails",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The five named tests pass in the full test run on GitHub, each still checking its rule",
+      "work": 2
+    },
+    {
+      "area": "test_1_runner_moves_approved_work_to_merge() in tests/test_runner_moves_approved_work_to_merge.py",
+      "file": "tests/test_runner_moves_approved_work_to_merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 599,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The five named tests pass in the full test run on GitHub, each still checking its rule",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "b667aaf7364b8b45cfcd0f67b6bb9cba8055a3dbad8ca5ea68998505235ab905",
+    "changed": "b6003627d4bcfcf2239af95f5c4d2d46a425d39d4d95183857768f096605b54a",
+    "commit": "b7a74a1f55a16a079b0bfe188b9038e23565f76e",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted: the remaining timing note is checked by the next GitHub full run; a Claude builder fixes it if it still fails",
+        "finding": 1
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 4, Work 2, Harm 2\nRaise: Not done\nCase: normal use - the full suite runs on a loaded GitHub worker.\nSplitting the scenarios removes the final merge from this invocation, but the human-merge case still has two sequential 60-second waits, plus `fix start`, the simulated merge, and `forge next`. The simulated merge runs six Git commands with individual 60-second limits (`tests/test_runner_moves_approved_work_to_merge.py:330`), and each Forge command also has a 60-second limit (`tests/conftest.py:346`), while `forge.toml:6` limits the whole test to 150 seconds. If the commands take 41 seconds in total and the two waits take 55 seconds each, pytest terminates the test even though every individual operation is within its limit. The test can therefore still fail on a loaded machine.",
+        "file": "tests/test_runner_ends_when_idle.py",
+        "gain": 4,
+        "harm": 2,
+        "line": 43,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: The five named tests pass in the full test run on GitHub, each still checking its rule",
+        "work": 2
+      },
+      {
+        "body": "Gain 1, Work 1, Harm 1\nThe full-suite workflow runs on a schedule or manual dispatch (`.github/workflows/forge.yml:211`), and a manual full run must use the latest default-branch commit (`src/forge/fullrun.py:83`). The final full-run proof remains pending after merge.\nCheck: Dispatch the full suite on the updated default branch and verify that all five named tests pass before releasing v1.2.50.\nOwner: Release coordinator.",
+        "file": "tests/test_runner_ends_when_idle.py",
+        "follow_up": "Pending after merge",
+        "gain": 1,
+        "harm": 1,
+        "line": 24,
+        "priority": "P2",
+        "title": "After merge: The five named tests pass in the full test run on GitHub, each still checking its rule",
+        "work": 1
+      }
+    ],
+    "id": "78680552-81b9-42b2-9304-222aec7b174d",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-27T14:46:15.930514+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-27T14:46:45.948217+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T14:57:40.748631+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T14:58:00.613427+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T15:12:15.725183+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T15:12:15.740929+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T15:16:04.638952+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T15:16:26.874366+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T15:25:17.347591+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T15:25:17.365591+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T15:29:23.659611+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 3,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-27T15:25:17.365591+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "tests/test_runner_ends_when_idle.py",
+    "reason": "Owner accepted: the remaining timing note is checked by the next GitHub full run; a Claude builder fixes it if it still fails",
+    "wait_id": "663d0f3b-68a2-48b2-9dfb-c915287188bb",
+    "worker_round": 3
+  },
+  "stuck": {
+    "close": "50d30c83-b91e-41a3-b21d-127a2b8f3b65",
+    "head": "4b758306e9d23731f8930cd2c82e8ae5d31871d5",
+    "keys": {},
+    "round": 2
+  },
+  "why": "Main's full test run fails (run 46014317556), blocking the v1.2.50 tag: tests/test_adoption_shared_input_checks.py::test_1_adoption_review_keeps_shared_input_checks[new-client] and tests/test_combined_script_quick_test.py::test_2_the_synced_guide_tells_the_agent_how_to_write_the_quicker_command[new repo] and [earlier-adopted repo] assert guide sentences that the settings-fix guide change reworded; tests/test_runner_moves_approved_work_to_merge.py::test_1_runner_moves_approved_work_to_merge[human_merge_stops_after_24h] and test_6_runner_ends_when_idle fail on GitHub's machines.",
+  "worker": "antigravity"
+}

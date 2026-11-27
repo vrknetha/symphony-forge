@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/repo.py\tNot done: The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort\tno-opus-outside-coordinator",
+      "kind": "bug",
+      "path": "src/forge/repo.py",
+      "line": 601,
+      "text": "Not done: The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort",
+      "from": "blocking",
+      "item": "no-opus-outside-coordinator",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_claude_diagnostic_model_defaults.py\tTest: The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort\tno-opus-outside-coordinator",
+      "kind": "bug",
+      "path": "tests/test_claude_diagnostic_model_defaults.py",
+      "line": 18,
+      "text": "Test: The debugger, security and performance agents and the grill and Claude plan-read defaults use claude-sonnet-5-5 at high effort",
+      "from": "blocking",
+      "item": "no-opus-outside-coordinator",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

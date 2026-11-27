@@ -1,0 +1,147 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/fasttest.py\tFunctional: Keep proof files out of unrelated pytest invocations\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/fasttest.py",
+      "line": 514,
+      "text": "Functional: Keep proof files out of unrelated pytest invocations",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tsrc/forge/fasttest.py\tPreserve related pytest selection when adding proof tests\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/fasttest.py",
+      "line": 856,
+      "text": "Preserve related pytest selection when adding proof tests",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/prcheck.py\tNot done: A stacked fix can inherit its parent's proof\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/prcheck.py",
+      "line": 547,
+      "text": "Not done: A stacked fix can inherit its parent's proof",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/prcheck.py\tNot done: a named pytest test can go unchecked when CI skips tests\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/prcheck.py",
+      "line": 519,
+      "text": "Not done: a named pytest test can go unchecked when CI skips tests",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/proof.py\tClose accepts untracked executable helpers as committed code\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/proof.py",
+      "line": 310,
+      "text": "Close accepts untracked executable helpers as committed code",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/proof.py\tDisputed keep 41: HTML test reports block the next close\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/proof.py",
+      "line": 304,
+      "text": "Disputed keep 41: HTML test reports block the next close",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/proof.py\tNot done: a named pytest test can be omitted after the default branch advances\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/proof.py",
+      "line": 56,
+      "text": "Not done: a named pytest test can be omitted after the default branch advances",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/review.py\tClose loses test-output records when it retests a changed branch\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/review.py",
+      "line": 542,
+      "text": "Close loses test-output records when it retests a changed branch",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/review.py\tDisputed keep 41: A test report left by close blocks the next close\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/review.py",
+      "line": 432,
+      "text": "Disputed keep 41: A test report left by close blocks the next close",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/review.py\tMerge retests check proof against the wrong history\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/review.py",
+      "line": 413,
+      "text": "Merge retests check proof against the wrong history",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/review.py\tWorker test runs can whitelist uncommitted source for close\tFORGE-TESTQUAL-1/PROOF",
+      "kind": "bug",
+      "path": "src/forge/review.py",
+      "line": 540,
+      "text": "Worker test runs can whitelist uncommitted source for close",
+      "from": "blocking",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/fasttest.py\tDisputed keep 41: Coverage data from the first run blocks the next close",
+      "kind": "edge",
+      "path": "src/forge/fasttest.py",
+      "line": 659,
+      "text": "Disputed keep 41: Coverage data from the first run blocks the next close",
+      "from": "review",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/proof.py\tNot done: Generated runtime changes bypass Done-when proof",
+      "kind": "edge",
+      "path": "src/forge/proof.py",
+      "line": 180,
+      "text": "Not done: Generated runtime changes bypass Done-when proof",
+      "from": "review",
+      "item": "FORGE-TESTQUAL-1/PROOF",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

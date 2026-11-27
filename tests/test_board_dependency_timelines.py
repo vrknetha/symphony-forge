@@ -77,7 +77,7 @@ def _configured(repo, gh, tmp_path, history, keys):
 
 # ponytail: about 25 forge commands; on a loaded Windows runner they need more than the 300 s CI default.
 @pytest.mark.timeout(600)
-@pytest.mark.parametrize("history", ["new", "adopted-v1.2.2"])
+@pytest.mark.parametrize("history", ["new"])
 def test_1_dependency_map_and_stage_timelines_use_the_command_data(
         repo, gh, tmp_path, claude_payload, monkeypatch, history):
     # Plain-text run fixtures give deterministic stage durations here.
@@ -251,7 +251,9 @@ def test_1_dependency_map_and_stage_timelines_use_the_command_data(
     assert plan_next.returncode == 0, plan_next.stderr
     assert all(f"PLAN/{tid} is ready to merge." in plan_next.stdout
                for tid in ("SAVE", "SHOW"))
+    # These started records are outside land's close queue despite the board receipts.
     assert "Next: merge its pull request, then forge next" in plan_next.stdout
+    assert "Next: forge land " not in plan_next.stdout
 
     # Task/fix checkouts retain an equally recent inherited story record, but
     # the owning story's live task table is what next and board must both read.

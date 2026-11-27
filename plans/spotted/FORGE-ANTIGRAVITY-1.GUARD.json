@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/close.py\tA conflict in the skills file can discard client entries because close restores the default branch file before sync. The open Antigravity reads task owns close.py.",
+      "kind": "bug",
+      "path": "src/forge/close.py",
+      "line": 770,
+      "text": "A conflict in the skills file can discard client entries because close restores the default branch file before sync. The open Antigravity reads task owns close.py.",
+      "from": "worker",
+      "item": "FORGE-ANTIGRAVITY-1/GUARD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/githooks.py\tInclude the existing manifest when identifying sync output\tFORGE-ANTIGRAVITY-1/GUARD",
+      "kind": "bug",
+      "path": "src/forge/githooks.py",
+      "line": 108,
+      "text": "Include the existing manifest when identifying sync output",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/GUARD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/githooks.py\tPreserve client entries when close resolves a manifest conflict\tFORGE-ANTIGRAVITY-1/GUARD",
+      "kind": "bug",
+      "path": "src/forge/githooks.py",
+      "line": 108,
+      "text": "Preserve client entries when close resolves a manifest conflict",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/GUARD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_antigravity_guard.py\tTest: register Forge skills when no manifest exists\tFORGE-ANTIGRAVITY-1/GUARD",
+      "kind": "bug",
+      "path": "tests/test_antigravity_guard.py",
+      "line": 115,
+      "text": "Test: register Forge skills when no manifest exists",
+      "from": "blocking",
+      "item": "FORGE-ANTIGRAVITY-1/GUARD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/githooks.py\tNot done: they always run with Forge's block on destructive commands and with the skills Forge ships",
+      "kind": "edge",
+      "path": "src/forge/githooks.py",
+      "line": 98,
+      "text": "Not done: they always run with Forge's block on destructive commands and with the skills Forge ships",
+      "from": "review",
+      "item": "FORGE-ANTIGRAVITY-1/GUARD",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

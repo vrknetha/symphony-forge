@@ -104,12 +104,16 @@ def test_2_each_round_records_worker_tests_review_and_ci_times(env, monkeypatch,
         worked = repo.forge('work', item)
         assert worked.returncode == 0, worked.stderr
         assert 'asks it once' in worked.stdout
+        proof_key = 'Done when' if family == 'claude' else '1'
+        repo.git('commit', '--allow-empty', '-q', '-m', 'Record the worker timing proof', '-m',
+                 f'Proof list:\n- {proof_key}: check: synthetic worker timing fixture', cwd=where)
         closed = repo.forge('close', item)
         assert closed.returncode == 0, closed.stderr
     timings = records(repo, 'timings.jsonl')
-    assert [(row['round'], row['step'], row['outcome']) for row in timings] == [
+    # Close runs tests and review side by side, so their rows can end in either order.
+    assert sorted((row['round'], row['step'], row['outcome']) for row in timings) == [
         (number, step, outcome) for number in (1, 2) for step, outcome in
-        [('worker round', 'completed'), ('test run', 'passed'), ('review', 'clean')]]
+        [('review', 'clean'), ('test run', 'passed'), ('worker round', 'completed')]]
     for row in timings:
         assert row['item'] == item
         assert row['seconds'] > 0

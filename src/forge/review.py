@@ -8,7 +8,6 @@ line carries the reviewer's Gain, Work and Harm scores (see score.py).
 from __future__ import annotations
 
 import ast
-import collections
 import contextlib
 import hashlib
 import json
@@ -25,7 +24,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import Any
 
-from forge import autoreview, docskip, machine, repo, score, spotted
+from forge import autoreview, docskip, machine, noise, proof, repo, roles, score, spotted
 from forge.task import branch_item, sections
 
 # The helper Forge runs: the upstream commit its installer stamps in the skill's .upstream-sha.
@@ -111,13 +110,14 @@ def task(top: Path, item: str, commit: str | None = None) -> tuple[str, dict[str
 
 def fingerprint(commit: str, item: str, top: Path, state: dict[str, Any], base: str,
                 reviewed_level: str | None = None, findings: list[Any] | None = None, *,
-                branch_diff: bool = False) -> str:
+                branch_diff: bool = False, diff_base: str | None = None) -> str:
     """What a clean review covers: changed product files, every file the review's findings cite
     (the recorded review's unless findings is given), the item's story doc and roadmap entry, its
     fix contract when applicable, and the worker's functional check. Read through git so a pull
-    request's head is only ever data."""
+    request's head is only ever data. The review level is read at base; diff_base, when given, sets
+    where the diff starts."""
     base, commit = repo.resolve_commit(top, base), repo.resolve_commit(top, commit)
-    ancestor = repo.git("merge-base", base, commit, cwd=top)
+    ancestor = repo.git("merge-base", repo.resolve_commit(top, diff_base) if diff_base else base, commit, cwd=top)
     changed = repo.git("diff", "--name-only", "-z", "--no-renames", ancestor, commit,
                        cwd=top).split("\0")
     named = str(state.get("done_when", ""))  # a file the Done-when names is never bookkeeping
@@ -159,16 +159,15 @@ def fingerprint(commit: str, item: str, top: Path, state: dict[str, Any], base: 
             parts.append(task(top, item)[0])
     else:
         parts = [str(state.get("why", "")), str(state.get("done_when", ""))]
-    parts.append(commit_paragraph(top, base, "Functional check:", commit))
-    if branch_diff and (approach := before_coding(top, base, commit)):
+    parts.append(commit_paragraph(top, ancestor, "Functional check:", commit))
+    if branch_diff and (approach := before_coding(top, ancestor, commit)):
         parts.append(approach)
-    if branch_diff and (proof := commit_paragraph(top, base, "Proof list:", commit)):
+    if branch_diff and (proof := commit_paragraph(top, ancestor, "Proof list:", commit)):
         parts.append(proof)
     saved_level = reviewed_level or (state.get("review") or {}).get("blocking_level", "P1")
     if saved_level == "P0":
         parts.append("P0-only prototype review")
-        # Full reviews remain sufficient; only a light review can lose its allowance.
-        if blocking_level(top, item, state, base, commit) != saved_level:
+        if blocking_level(top, item, state, base, commit, diff_base) != saved_level:
             parts.append("The recorded review level is no longer allowed")
     for part in parts:
         digest.update(b"\0" + part.encode("utf-8"))
@@ -176,14 +175,14 @@ def fingerprint(commit: str, item: str, top: Path, state: dict[str, Any], base: 
 
 
 def blocking_level(top: Path, item: str, state: dict[str, Any], base: str,
-                   commit: str = "HEAD") -> str:
+                   commit: str = "HEAD", docs_base: str | None = None) -> str:
     """Docs/assets and unsigned client prototype fixes get a light review."""
-    if docskip.only_docs(top, base, DOC_EXCLUDES, head=commit):
-        return "P0"
     if ("/" in item or state.get("kind") != "fix" or
             state.get("allow_large") != "Prototype before sign-off"):
-        return "P1"
-    return "P0" if repo.is_prototype(top, refs=(base, commit)) else "P1"
+        return "P0" if docskip.only_docs(top, docs_base or base, DOC_EXCLUDES, head=commit) else "P1"
+    from forge import story  # story imports review indirectly
+    # A prototype fix is light only before sign-off, on the base, the head or the default branch.
+    return "P0" if repo.is_prototype(top, refs=(base, commit, story.landed_ref(top))) else "P1"
 
 
 def blocking(result: dict[str, Any]) -> list[tuple[int, dict[str, Any]]]:
@@ -283,8 +282,8 @@ def stop_question(top: Path, item: str, state: dict[str, Any], *, accept: str = 
 def instructions(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                  base: str, previous: dict[str, Any], tested: str, prototype: bool = False) -> str:
     """The plain review instructions for this task or fix, from templates/review.md."""
-    from forge import story, worker  # story imports review indirectly
-    design_text = ""
+    from forge import antigravity, story, worker  # story imports review indirectly
+    doc_text = ""
     user_facing = state.get("fix_kind") == "ui"
     text = (Path(__file__).parent / "templates" / "review.md").read_text(encoding="utf-8")
     parts = re.split(r"^<!-- ([a-z-]+) -->\r?\n", text, flags=re.M)
@@ -303,10 +302,21 @@ def instructions(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any
               "accepted": _accepted(top, item, history),
               "test_run": tested,
               "before_coding": before_coding(top, base) or "missing",
-              "proof_list": proof_list(top, base) or "missing"}
+              "proof_list": proof.proof_list(top, base) or "missing",
+              "proof_checked": (
+                  proof.CI_DOCS_ONLY + " No test result is claimed for these names."
+                  if repo.test_place(cfg) == "ci" and "tests" in cfg["checks"] and docs_only(top, base) else
+                  "When its test run finishes, close refuses a Done-when line with no test, a named "
+                  "test that is not on the branch, and a named pytest test that did not run, failed "
+                  "or was skipped; that run may still be going while you read. For Vitest and "
+                  "Playwright names close checks only that the test is on the branch, so judge "
+                  "from the pull request's checks whether they ran and passed."
+                  if repo.test_place(cfg) == "local" or "tests" in cfg["checks"] else
+                  "Close checks only that each Done-when line names a test on the branch. Forge "
+                  "sees no test results here, so judge from the pull request's checks whether each "
+                  "named test ran and passed.")}
     if "/" in item:
         doc_text, doc, row = task(top, item)
-        design_text = doc_text
         user_facing = row.get("user-facing", "").lower() in ("yes", "true")
         parsed = story.parse(doc_text)
         covers = {int(n) for n in re.findall(r"\d+", row.get("covers", ""))}
@@ -332,9 +342,10 @@ def instructions(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any
         if not cfg["interfaces"] and not state.get("allow_large"):
             chosen.insert(1, "promote")
     has_web = any((top / path / "package.json").is_file() for path in ("apps/web", "web", "frontend"))
-    chosen += (["screens"] if cfg["repo"] == "client" and has_web else []) + ["app-rules"]
-    values["design_context"], owned_design = worker.design_context(top, design_text, user_facing)
-    chosen.append("design-context")
+    chosen += (["screens"] if cfg["repo"] == "client" and has_web else []) + ["app-rules", "design-context"]
+    values["design_context"], owned_design = (antigravity.review_design_context(
+        top, cfg, values.get("changes", ""), user_facing) if cfg.get("reviews") == "antigravity"
+        else worker.design_context(top, doc_text, user_facing, review_base=previous.get("commit") or base))
     if owned_design:
         values["design_folder"] = owned_design
         chosen.append("design-screens")
@@ -380,15 +391,26 @@ def close_test(top: Path, base: str, *, closing: bool = True, head: str = "HEAD"
 
 # Close shows these fasttest lines, which a later runner's output can push out of the tail.
 GAP = "No local test names "
-RENDERED = ("Rendered problem: ", "Rendered check: ")  # close never cuts these; the dot reporter's marks can come before one
+RENDERED = ("Rendered problem: ", "Rendered check: ", "Done-when proof:")  # close never cuts these
+
+
+def pull_request_branch(top: Path) -> str:
+    """The checked-out branch; a detached CI checkout has the pull request's own branch. A name only
+    the environment holds, as in a test that runs inside CI, names no item of this repo and is not used."""
+    ref = os.environ.get("GITHUB_HEAD_REF", "")
+    return repo.current_branch(top) or (ref if branch_item(ref, top) else "")
 
 
 def test_run(top: Path, command: str, base: str, *, always: bool = False,
              closing: bool = True) -> tuple[int, str]:
     """Run or skip tests; report a bounded tail, all failed tests and the full log path."""
     command = repo.grouped(top, command)
-    branch = repo.current_branch(top) or "HEAD"  # Pull-request CI checks out a detached HEAD.
+    branch = pull_request_branch(top) or "HEAD"
     item = (branch_item(branch, top) or (branch, {}))[0]
+    proof_base = base
+    if closing:
+        _, recorded_base = proof._proof(top, item, "HEAD")
+        proof_base = recorded_base or base
     start, clock = repo.now(), time.monotonic()
     outcome = "skipped"
     results = results_path(top)
@@ -399,25 +421,58 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
     # Close empties the results once, before the command; each pytest in it only appends.
     results.unlink(missing_ok=True)
     try:
+        if closing and repo.test_place(repo.config(top)) == "local":
+            passed, lines = proof.check(top, item, proof_base, "", ran=False)
+            if not passed:
+                return 1, "\n".join(lines)
+            if lines:
+                print("\n".join(lines), flush=True)
         if not command:
-            return 0, ("Sample-data mode skips tests and CI." if repo.sample_data(top)
-                       else "forge.toml names no test command, so close ran none.")
+            valid, lines = proof.check(top, item, proof_base, "") if closing else (True, [])
+            return int(not valid), "\n".join([
+                "Sample-data mode skips tests and CI." if repo.sample_data(top)
+                else "forge.toml names no test command, so close ran none.", *lines])
         # Worker tests always run; close skips documentation before it enters the test lane.
         if not always and docs_only(top, base):
             said = DOCS_ONLY.format(command=command)
-            return 0, said
+            valid, lines = (proof.check(top, item, proof_base, "")
+                            if closing and repo.test_place(repo.config(top)) == "local" else (True, []))
+            return int(not valid), "\n".join([said, *lines])
         from forge import records  # imports review indirectly
 
-        passed = None if always else passed_record(top, command)
+        dirty = (proof.uncommitted(top) if closing and branch_item(branch, top) and not repo.sample_data(top)
+                 and repo.test_place(repo.config(top)) == "local" else [])
+        if dirty:
+            return 1, "\n".join([
+                "Done-when proof: The checkout has uncommitted changes, so this run did not test the "
+                "committed code.", *(f"Done-when proof: {path} is not committed." for path in dirty),
+                "Done-when proof: Commit it, delete it, or add it to .gitignore if it is test output, "
+                "then close again."])
+        passed = None if always else passed_record(top, command, base=proof_base)
         skipped = SKIPPED.format(command=command)
         if passed and passed.exists():
             results.write_text(passed.read_text("utf-8"), "utf-8")
+            if closing:
+                valid, lines = proof.check(top, item, proof_base, results.read_text("utf-8"))
+                if valid:
+                    valid, lines = proof.replay(top, item, proof_base)
+                if not valid:
+                    return 1, "\n".join(lines)
+                skipped = "\n".join([skipped, *lines])
             return 0, skipped
         entry = machine.join("test", top, item, None, None)
         preload_folder = tempfile.TemporaryDirectory(prefix="forge-node-")
         try:
             if passed and passed.exists():  # the close this one waited for passed the same files
                 results.write_text(passed.read_text("utf-8"), "utf-8")
+                if closing:
+                    valid, lines = proof.check(top, item, proof_base, results.read_text("utf-8"))
+                    if valid:
+                        machine.leave(entry)  # the old-code run asks for a place of its own
+                        valid, lines = proof.replay(top, item, proof_base)
+                    if not valid:
+                        return 1, "\n".join(lines)
+                    skipped = "\n".join([skipped, *lines])
                 return 0, skipped
             from forge import fasttest
 
@@ -429,6 +484,8 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
             hook.mkdir(exist_ok=True)
             (hook / "_forge_test_results.py").write_text(fasttest.RESULTS, "utf-8")
             env.update(FORGE_TEST_RESULTS=str(results),
+                       FORGE_TEST_REPO=str(top),
+                       PYTHONDONTWRITEBYTECODE="1",
                        PYTHONPATH=os.pathsep.join([str(hook), os.environ.get("PYTHONPATH", "")]),
                        PYTEST_PLUGINS=",".join(filter(None, [os.environ.get("PYTEST_PLUGINS"),
                                                              "_forge_test_results"])))
@@ -464,9 +521,9 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
                     history.append(done.stdout)
                     if not closing or attempt or done.returncode == 0:
                         break
-                    if any(json.loads(line[len(fasttest.INVOCATION_HEADER):]).get("interrupted")
+                    if any(json.loads(line[len(fasttest.INVOCATION_HEADER):]).get("product_failure")
                            for line in evidence.splitlines() if line.startswith(fasttest.INVOCATION_HEADER)):
-                        break  # Retrying only failed files would hide unfinished tests after a crash.
+                        break  # A failed assertion, setup or collection needs a repair, not a retry.
                     failed = sorted({node.split("::", 1)[0] for status, node in
                                      re.findall(r"^(failed|error) (.+)$", evidence, re.M)})
                     if not failed or fasttest.INVOCATION_HEADER not in evidence:
@@ -483,6 +540,11 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
                     history.append("Flaky test files: " + ", ".join(flaky) +
                                    ". They passed on the one retry.\n")
                 done = subprocess.CompletedProcess(command, done.returncode, "".join(history))
+                if closing:
+                    valid, lines = proof.check(top, item, proof_base,
+                                              results.read_text("utf-8") if results.is_file() else "")
+                    done = subprocess.CompletedProcess(command, done.returncode or int(not valid),
+                                                       done.stdout + "\n" + "\n".join(lines))
                 outcome = ran["outcome"] = "passed" if done.returncode == 0 else "failed"
             if product and product == records.tested_product(top):
                 evidence = results.read_text("utf-8") if results.is_file() else done.stdout
@@ -495,11 +557,14 @@ def test_run(top: Path, command: str, base: str, *, always: bool = False,
         finally:
             preload_folder.cleanup()
             machine.leave(entry)
+        if closing and done.returncode == 0 and os.environ.get("FORGE_GROUP", "1") == "1":
+            valid, lines = proof.replay(top, item, proof_base)  # after this run's place is free
+            done = subprocess.CompletedProcess(command, int(not valid), done.stdout + "\n" + "\n".join(lines))
         out = [line.rstrip() for line in done.stdout.splitlines()]
         shown = {n for n, line in enumerate(out) if any(mark in line for mark in RENDERED)}
         picked = sorted(({i for n, line in enumerate(out) if "skip" in line.lower()
                           for i in (n - 1, n) if i >= 0} | set(range(max(0, len(out) - 30), len(out)))
-                         | {n for n, line in enumerate(out) if line.startswith(GAP)}) - shown)
+                         | {n for n, line in enumerate(out) if line.startswith((GAP, "Done-when proof:"))}) - shown)
         lines = [out[i] for i in picked]
         if len(lines) > 80:  # the tail is the last 30 picked; the earliest skip lines fill the rest
             lines = [*lines[:50], f"({len(lines) - 80} skip lines cut here)", *lines[-30:]]
@@ -534,16 +599,20 @@ SKIPPED = ("`{command}` already passed on this machine on these same committed f
            "not run it again.")
 
 
-def passed_record(top: Path, command: str) -> Path | None:
+def passed_record(top: Path, command: str, *, base: str | None = None) -> Path | None:
     """Where this machine records that `command` passed on HEAD's committed files, Forge's own
     records aside (a review commit changes nothing the tests read). None when an uncommitted edit or
     untracked file could change the result, so such a run is never recorded or skipped."""
-    if repo.git("status", "--porcelain", cwd=top):
+    if proof.uncommitted(top):
         return None
     listing = repo.git("ls-tree", "-r", "-z", "--full-tree", "HEAD", cwd=top).split("\0")
     files = [entry for entry in listing if not entry.partition("\t")[2].startswith(".factory/")]
+    if base is None:
+        base = repo.git("merge-base", "HEAD", f"origin/{repo.default_branch(top)}", cwd=top)
     key = hashlib.sha256("\0".join([command, os.environ.get("FORGE_GROUP", "1"),
-                                   os.environ.get("FORGE_GROUPS", "1"), *files]).encode("utf-8")).hexdigest()
+                                   os.environ.get("FORGE_GROUPS", "1"),
+                                   commit_paragraph(top, base, "Proof list:"),
+                                   *files]).encode("utf-8")).hexdigest()
     return machine._repos_file().parent / "passed-tests" / key
 
 
@@ -627,7 +696,7 @@ def _settled(history: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
         for key in earlier - current:
             settled.setdefault(key, "fixed: absent from a later review")
         for finding in score.open_findings(result):
-            if finding.get("required_done_when"):
+            if finding.get("required_done_when") and not str(finding.get("follow_up", "")).startswith("Split into"):
                 continue
             if (outcome := score.bar(score.of(finding))) in ("follow-up", "live with"):
                 settled.setdefault(score.identity(finding["file"], finding["title"]), f"known: below the bar ({outcome})")
@@ -648,9 +717,10 @@ def _settled(history: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
     return {names[key]: reason for key, reason in settled.items()}
 
 
-def _cited_changed(top: Path, history: list[dict[str, Any]], key: tuple[str, str], head: str) -> bool:
-    """Whether git's diff from the commit of the newest own (not carried) dismissal to head touches
-    the line its `file:line` cites; a line only shifted by edits elsewhere counts as unchanged."""
+def _cited_changed(top: Path, history: list[dict[str, Any]], key: tuple[str, str], head: str,
+                   current: dict[str, Any] | None = None) -> bool:
+    """Whether dismissal evidence changed; a current P0 must also match its original location.
+    A line only shifted by edits elsewhere counts as unchanged."""
     cited = None
     for result in history:
         for dismissal in result.get("dismissals", []):
@@ -658,10 +728,13 @@ def _cited_changed(top: Path, history: list[dict[str, Any]], key: tuple[str, str
             where = re.fullmatch(r"(.+):(\d+)", (dismissal["because"].split() or [""])[0])
             if (where and score.identity(finding["file"], finding["title"]) == key
                     and not dismissal.get("accepted") and not dismissal.get("carried")):
-                cited = (result["commit"], where[1], int(where[2]))
+                cited = (result["commit"], where[1], int(where[2]), finding["file"], finding["line"])
     if not cited:
-        return False  # no cited line to compare: the dismissal stands, as before
-    commit, path, number = cited
+        return current is not None  # a P0 needs recorded evidence; legacy dismissals stay as before
+    commit, path, number, file, line = cited
+    if current is not None and (current["file"], current["line"]) != (file, line):
+        return True
+    targets = {(path, number)} | ({(file, line)} if current is not None else set())
     # A Windows checkout can change CRLF to LF without changing the cited evidence.
     diff = repo.run("git", "diff", "--ignore-cr-at-eol", "-U0", "-M", commit, head, cwd=top)
     if diff.returncode:
@@ -672,13 +745,13 @@ def _cited_changed(top: Path, history: list[dict[str, Any]], key: tuple[str, str
             old, header = "", True
         elif header and line.startswith("--- "):
             old = line[6:] if line.startswith("--- a/") else ""
-        elif header and line == "+++ /dev/null" and old == path:
+        elif header and line == "+++ /dev/null" and any(old == path for path, _ in targets):
             return True  # the cited file was deleted
         elif header and line.startswith("@@"):
             header = False
-        if not header and old == path and (hunk := re.match(r"@@ -(\d+)(?:,(\d+))? ", line)):
+        if not header and (hunk := re.match(r"@@ -(\d+)(?:,(\d+))? ", line)):
             first, count = int(hunk[1]), int(hunk[2] or 1)
-            if first <= number < first + count:
+            if any(old == path and first <= number < first + count for path, number in targets):
                 return True
     return False
 
@@ -707,86 +780,11 @@ def commit_paragraph(top: Path, base: str, label: str, head: str = "HEAD") -> st
     return ""
 
 
-# A test file a proof list names, with an optional pytest node after it.
-# A parameter id runs to its closing bracket, commas and all.
-TEST_NAME = re.compile(r"(?<![\w/.-])(?:[\w.-]+/)*(?:test_[\w-]*|[\w-]+_test)\.py"
-                       r"(?:::(?:[^\s,;`\[]+|\[[^\]]*\])+)?")
-
-
-RESULT_WORDS = ("passed", "failed", "error", "skipped", "xfail", "xpass")
-
-
 def results_path(top: Path) -> Path:
     """Where Forge's pytest hook writes this branch's last test run's per-test results."""
-    branch = repo.current_branch(top)
+    branch = pull_request_branch(top)
     item = (branch_item(branch, top) or (branch, {}))[0]
     return repo.forge_dir(top) / f"test-results-{item.replace('/', '-')}.txt"
-
-
-def _ran(name: str, node: str) -> bool:
-    """A reported pytest node is the named test, or inside the named file or class. A name with a
-    parameter id matches only that case. Node IDs can be relative to a test folder, so a name may
-    end with the node."""
-    parts = (node if "[" in name else re.sub(r"\[.*", "", node)).split("::")
-    return any(name == part or name.endswith("/" + part)
-               for part in ("::".join(parts[:i]) for i in range(1, len(parts) + 1)))
-
-
-def proof_list(top: Path, base: str, report: str | None = None) -> str:
-    """The proof list close writes from the worker's mapping of Done-when items to tests. It keeps
-    the worker's words and puts each named test's result from close's run (`report`) next to it;
-    a test the run did not run becomes `not run`. Before the run it names only the tests the
-    branch has. A line or test close cannot match to its run's pytest results is `not checked`."""
-    from forge import fasttest  # fasttest imports review in forge test
-
-    command = close_test(top, base)
-    passed, results = passed_record(top, command) if command else None, results_path(top)
-    if passed and passed.is_file():  # a cached passing run's per-test results, if pytest ran
-        report = passed.read_text("utf-8")
-    elif report is not None:
-        report = results.read_text("utf-8") if results.is_file() else ""
-    worst = {}  # one result per test: the worst of its phases, so a failed teardown is an error
-    for outcome, node in re.findall(r"^(\w+) (.+)$", report or "", re.M):
-        worst[node] = max(worst.get(node, outcome), outcome,
-                          key=lambda word: {"error": 2, "failed": 1}.get(word, 0))
-    ran = [(outcome, node) for node, outcome in worst.items()]
-
-    proof = commit_paragraph(top, base, "Proof list:")
-    # Classifying the diff cannot change a proof list that names no tests.
-    ran_none = bool(TEST_NAME.search(proof)) and (not command or docs_only(top, base))
-
-    def result(found: re.Match) -> str:  # the worker's words stay; a name gains its result
-        name = found[0].rstrip(".:)")
-        path, _, test = name.partition("::")
-        case = re.sub(r"\[.*", "", test.rsplit("::", 1)[-1])
-        source = (top / path).read_text("utf-8", "replace") if (top / path).is_file() else ""
-        matches = [(outcome, node) for outcome, node in ran if _ran(name, node)]
-        if not source or case and not re.search(rf"\b{re.escape(case)}\b", source):
-            said = "not run"
-        elif ran_none and fasttest.RESULTS_HEADER not in (report or ""):
-            said = "not run (close ran no tests for this change)"
-        elif report is None:
-            said = f"{name} (in the branch; close's test run gives its result)"
-        elif fasttest.RESULTS_HEADER not in report:  # another runner, or no run
-            said = f"{name} (not checked)"
-        elif len(matches) == 1 and matches[0][1].rsplit("::", 1)[-1] == name.rsplit("::", 1)[-1]:
-            # the named test itself; a name without its parameter id counts its cases
-            said = f"{name} ({matches[0][0]} in close's run)"
-        elif matches:  # a file, class or parametrized test: count the cases that ran
-            counts = collections.Counter(outcome for outcome, _ in matches)
-            said = f"{name} ({', '.join(f'{counts[word]} {word}' for word in RESULT_WORDS if counts[word])}" \
-                   " in close's run)"
-        else:
-            said = "not run"  # a list never names a test close did not run
-        return said + found[0][len(name):]
-
-    lines = []
-    for number, line in enumerate(proof.splitlines()):
-        if not TEST_NAME.search(line):  # close cannot match a line without pytest names to its run
-            lines.append(line if number == 0 or not line.strip() else f"{line} (not checked)")
-            continue
-        lines.append(TEST_NAME.sub(result, line))
-    return "\n".join(lines)
 
 
 def _bullets(items: Any) -> str:
@@ -839,16 +837,9 @@ def round_number(top: Path, item: str, state: dict[str, Any]) -> int | None:
     return max([finished, *recorded]) + 1
 
 
-def require_engine(cfg: dict[str, Any]) -> str:
-    """Select the review program and refuse a missing single-tool engine before any writes."""
-    tool = cfg["tools"]
-    if tool == "both":
-        return "codex" if shutil.which(os.environ.get("CODEX_BIN") or "codex") else "claude"
-    program = (os.environ.get("CODEX_BIN") or "codex") if tool == "codex" else "claude"
-    if not shutil.which(program):
-        repo.refuse(repo.REFUSALS["tool_missing"], tool=tool,
-                    name="Codex" if tool == "codex" else "Claude Code")
-    return tool
+def require_engine(cfg: dict[str, Any], state: dict[str, Any], item: str) -> str:
+    """Select the review family and check it before close changes state."""
+    return roles.review_family(cfg, state.get("worker"), item)
 
 
 def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
@@ -856,8 +847,9 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
         signoff_prompt: str = "", light: bool = False, tested: str = "",
         images: set[str] | None = None, only: set[str] | None = None) -> dict[str, Any]:
     """Review the branch head once, retrying once when a run doesn't finish. Returns the result."""
-    selected_engine = require_engine(cfg)
-    from forge import design, records, story  # story imports review indirectly
+    engine = require_engine(
+        {**cfg, "reviews": ""} if signoff_prompt and cfg.get("reviews") == "antigravity" else cfg, state, item)
+    from forge import antigravity, design, records, story  # story imports review indirectly
     prototype = (light and not signoff_prompt and state.get("kind") == "fix"
                  and repo.is_prototype(top, cfg, (base, "HEAD")) and design.working_build(top, base))
     prompt = signoff_prompt or instructions(top, item, state, cfg, base, previous, tested, prototype)
@@ -877,14 +869,17 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                    and (images is None or Path(name).suffix.lower() not in design.IMAGES
                         or name in images)]
     _sweep()
-    with tempfile.TemporaryDirectory(prefix="forge-review-", ignore_cleanup_errors=True) as folder:
+    with (tempfile.TemporaryDirectory(prefix="forge-review-", ignore_cleanup_errors=True) as folder,
+          antigravity.clean_git(Path(folder)) if engine == "antigravity" else contextlib.nullcontext() as hooks):
         tmp = Path(folder)
         tree, out = tmp / "tree", tmp / "review.json"
         saved = repo.forge_dir(top) / f"review-{item.replace('/', '-')}.json"
         saved.unlink(missing_ok=True)
         # Git's transport avoids copying an object store while another close changes it.
-        repo.git("clone", "-q", "--no-local", "--no-checkout", str(top), str(tree), cwd=top)
-        repo.git("checkout", "-q", "--detach", head, cwd=tree)
+        repo.git("clone", "-q", "--no-local", str(top), str(tree), cwd=top)
+        if hooks is not None:
+            repo.git("config", "--local", "core.hooksPath", str(hooks), cwd=tree)
+            repo.git("config", "--local", "core.fsmonitor", "false", cwd=tree)
         if signoff_prompt:
             if only is not None:
                 review_base = repo.git("commit-tree", EMPTY_TREE, "-m", "Empty product review base",
@@ -949,7 +944,14 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                 merged_base = repo.git("merge-base", base, "HEAD", cwd=tree)
                 if repo.git("merge-base", base, review_base, cwd=tree) != merged_base:
                     review_base = merged_base
-        prompt += _hide_generated(tree, repo.git("merge-base", review_base, "HEAD", cwd=tree), "HEAD")
+        # Original commit IDs reuse the source checkout's immutable merge-base result.
+        review_start = (repo.git("merge-base", review_base, "HEAD", cwd=tree) if signoff_prompt
+                        else conflict_base or repo.git("merge-base", review_base, head, cwd=top))
+        summary, filtered_base = autoreview.hide_generated(
+            tree, review_start, "HEAD",
+            source=None if signoff_prompt else top, source_head="" if signoff_prompt else head)
+        prompt += summary
+        review_base = filtered_base or review_base
         # The worker brief's standards page, as rules; a prompt file keeps it out of argv.
         rules = block.split("<!-- standards -->\n", 1)[1].split("\n<!-- ", 1)[0]
         # The branch may track this path, even as a link out of the tree: drop it unfollowed,
@@ -960,40 +962,49 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                        prompt + "\n\n" + string.Template(rules).substitute(
                            standards=(Path(__file__).parent / "standards.md").read_text(
                                encoding="utf-8").strip()))
-        engine = selected_engine
         argv = [sys.executable, str(helper()), "--mode", "branch", "--base", review_base,
-                "--engine", engine,
+                "--engine", "claude" if engine == "antigravity" else engine,
                 "--max-priority", "P3",  # the P0-only level applies after scoring
                 "--prompt-file", STANDARDS,
                 "--json-output", str(out)]
-        model = repo.models(cfg, "review", engine)
-        if prototype:
+        model = repo.models(cfg, "light_review" if light and engine == "antigravity" else "review", engine)
+        if prototype and engine != "antigravity":
             chosen = repo.models(cfg, "light_review", engine)
             model = {**model, **chosen, "effort": chosen.get("effort") or "medium"}
-        if model.get("model"):
-            argv += ["--model", f"{engine}={model['model']}"]
-        if effort := model.get("effort"):
-            argv += ["--thinking", f"{engine}={effort}"]
-        launcher = _launcher(tmp / "bin", tree, engine)
-        if launcher:
-            argv += [f"--{engine}-bin", str(launcher)]
-        if signoff_prompt or (os.name == "nt" and launcher):
-            argv[1:1] = [str(Path(__file__).with_name("review_process.py")),
-                         str(launcher) if os.name == "nt" and launcher else "",
-                         "parallel" if signoff_prompt else "serial"]
+        env = launcher = None
+        if engine == "antigravity":
+            argv += ["--claude-bin", sys.executable]
+            env = {**os.environ, "FORGE_REVIEW_ENGINE": engine,
+                   "FORGE_REVIEW_CONTEXT": json.dumps({
+                       "top": str(top), "item": item, "spent": str(tmp / SPENT),
+                       "model": model.get("model") or "default", "effort": model.get("effort") or "",
+                   })}
+        else:
+            if model.get("model"):
+                argv += ["--model", f"{engine}={model['model']}"]
+            if effort := model.get("effort"):
+                argv += ["--thinking", f"{engine}={effort}"]
+            launcher = _launcher(tmp / "bin", tree, engine)
+            if launcher:
+                argv += [f"--{engine}-bin", str(launcher)]
+        argv[1:1] = [str(Path(__file__).with_name("review_process.py")),
+                     str(tree),
+                     str(launcher) if os.name == "nt" and launcher else "",
+                     "parallel" if signoff_prompt else "serial"]
         with machine.agent_slot(top, "review", item):
             attempt, delay = 1, 30
             while attempt <= (1 if signoff_prompt else 2):
                 with repo.record_run(top, item, "review", family=engine) as ran:
                     findings, reason = autoreview.attempt(argv, tree, out, selected, top, item, ran["run_id"],
-                                                         strict=bool(signoff_prompt))
+                                                         strict=bool(signoff_prompt), env=env)
                     if out.is_file():
                         shutil.copyfile(out, saved)
                     ran["outcome"] = "failed" if reason else "completed"
                     ran.update(selected, **autoreview.spent(tmp / SPENT))
                 if not reason:
                     break
-                if re.search(r"\b429\b|rate limit|too many requests|usage limit|usage_limit_reached", reason, re.I):
+                if (not (engine == "antigravity" and reason.startswith(antigravity.REVIEW_TOOL_REFUSED))
+                        and re.search(r"\b429\b|rate limit|too many requests|usage limit|usage_limit_reached", reason, re.I)):
                     print(f"Review service rate limit. Waiting {delay} seconds before trying again.",
                           file=sys.stderr)
                     time.sleep(delay)
@@ -1006,11 +1017,21 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                 print(f"Raw Autoreview output: {saved}", file=sys.stderr)
             if not signoff_prompt:
                 repo.refuse(REFUSALS["failed"], reason=reason, item=item)
+        if not signoff_prompt:
+            autoreview.migration_floor(findings, top, f"origin/{repo.default_branch(top)}", head)
         result = {"findings": findings, "blocking_level": "P0" if light else "P1"}
         if not signoff_prompt or item == "client-signoff":
+            history_priority = score.severity if signoff_prompt else score.priority
             history = state["signoff_history"] if signoff_prompt else _history(top, item, base, previous, state=state)
             settled = {score.identity(*key): reason for key, reason in
                        _settled(history).items()}
+            # A settlement never covers a finding more serious than the settled ones (by scored priority).
+            ceiling = {}
+            for old in history:
+                gone = {d["finding"] for d in old.get("dismissals", [])}
+                for n, e in enumerate(old.get("findings", []), 1):
+                    if n in gone or e.get("follow_up") or not score.holds(e):
+                        ceiling[key] = min(ceiling.get(key := score.identity(e["file"], e["title"]), "P9"), history_priority(e))
             if item == "client-signoff":
                 # The owner accepts the limitation in this version of the file,
                 # independent of the next reviewer's wording. Edits reopen it.
@@ -1033,13 +1054,19 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                         settled[score.identity(finding["file"], finding["title"])] = accepted_reason
                     elif finding["priority"] == "P0":
                         settled.pop(score.identity(finding["file"], finding["title"]), None)
-            findings = [finding for finding in findings if not settled.get(
+            findings = [finding for finding in findings if history_priority(finding) == "P0" or not settled.get(
                 score.identity(finding["file"], finding["title"]), "").startswith("fixed:")]
+            if not signoff_prompt:
+                autoreview.repair_findings(findings, previous, history)
+                findings = noise.drop(top, item, findings, previous)
             result.update(findings=findings, dismissals=[
                 {"finding": number, "because": settlement.removeprefix("dismissed because "), "carried": True}
                 for number, finding in enumerate(findings, 1)
                 if (settlement := settled.get(key := score.identity(finding["file"], finding["title"]), ""))
-                and not (settlement.startswith("dismissed because ") and _cited_changed(top, history, key, head))])
+                and (history_priority(finding) != "P0" or settlement.startswith("dismissed because "))
+                and (history_priority(finding) == "P0" or history_priority(finding) >= ceiling.get(key, ""))
+                and not (settlement.startswith("dismissed because ") and _cited_changed(
+                    top, history, key, head, finding if history_priority(finding) == "P0" else None))])
             if not signoff_prompt:
                 bound_review(top, item, state, result)
         serious = blocking(result)
@@ -1047,7 +1074,7 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
             review_round=round_number(top, item, state),
             outcome="failed" if reason else "blocked" if serious else "clean",
             findings=None if reason else [{"title": finding["title"],
-                                          "priority": finding["priority"] if signoff_prompt else score.priority(finding),
+                                          "priority": finding["priority"],
                                           "file": finding["file"]} for finding in findings])
         if signoff_prompt:
             if reason:
@@ -1071,34 +1098,30 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
 def bound_review(top: Path, item: str, state: dict[str, Any], result: dict[str, Any],
                  commit: str | None = None) -> bool:
     """Classify new and saved findings against the item's approved work."""
-    from forge import story
-
     findings = result.get("findings", [])
     if not findings:
         return False
 
-    def sentence(text: str) -> str:
-        text = re.sub(r"^\d+[.)]\s*", "", text.replace("**", "").replace("`", "").strip())
-        return " ".join(text.casefold().split()).rstrip(".").strip('"\u201c\u201d\u2018\u2019\'').rstrip(".")
-
-    approved = set()
-    if "/" in item:
-        text, _, row = task(top, item, commit)
-        doc = story.parse(text)
-        covers = {int(n) for n in re.findall(r"\d+", row.get("covers", ""))}
-        approved = {sentence(doc["done"][n]) for n in covers if n in doc["done"]}
+    approved = noise.approved(top, item, commit)
     changed = False
     settings = repo.review_settings(top)
     kinds = {kind.strip().casefold() for kind in settings.get("always_block", [])}
     minimum = settings.get("added_work_min_gain", 3)
     for finding in findings:
-        title = re.sub(r"^\[P[0-3]\]\s*", "", finding["title"])
+        if score.holds(finding, "P0"):
+            if finding.pop("follow_up", None):
+                changed = True
+            continue
+        if finding.get("follow_up") in (autoreview.REPAIR_FOLLOWUP, score.PENDING):
+            continue
+        title = re.sub(r"^\[P[0-3]\]\s*", "", finding["title"].strip())
         missed = re.match(r"Not done\s*:\s*(.*)", title, re.I)
         approved_missed = missed and ("/" not in item or any(
-            item and sentence(missed[1]).startswith(item) for item in approved))
+            item and noise.sentence(missed[1]).startswith(item) for item in approved))
         must = score.MUST.match(title)
-        if approved_missed or (must and must[1].strip().casefold() in kinds):
-            if not finding.get("required_done_when") or finding.get("follow_up"):
+        raised = missed and any(p.search(finding["body"]) for p, _ in score.FLOORS[:2])
+        if approved_missed or raised or (must and must[1].strip().casefold() in kinds):
+            if not finding.get("required_done_when") or not str(finding.get("follow_up") or "Split into").startswith("Split into"):
                 finding["required_done_when"] = True
                 finding.pop("follow_up", None)
                 changed = True
@@ -1119,7 +1142,9 @@ def bound_review(top: Path, item: str, state: dict[str, Any], result: dict[str, 
             finding["follow_up"] = reason
             changed = True
     kept = [d for d in result.get("dismissals", []) if not (
-        not d.get("accepted") and d["because"].startswith("known:")
+        d.get("carried") and score.holds(findings[d["finding"] - 1], "P0")
+        and d["because"].startswith(("known:", "fixed:", "accepted by the owner:")) or
+        not d.get("accepted") and d["because"].startswith("known:") and not d["because"].startswith("known: Split into")
         and (findings[d["finding"] - 1].get("required_done_when")
              or (d["because"].startswith("known: " + score.ADDED_WORK_REASON)
                  and not findings[d["finding"] - 1].get("follow_up"))))]
@@ -1143,30 +1168,6 @@ def declines(top: Path, base: str, result: dict[str, Any]) -> bool:
             finding["follow_up"] = score.DECLINED + reason
             changed = True
     return changed
-
-
-def _hide_generated(tree: Path, start: str, head: str) -> str:
-    """Put changed binary and linguist-generated files back as they were at start in the review
-    tree, so their contents stay out of the reviewed diff.
-    Returns the lines naming those files with their changed-line counts, or "" when there are none."""
-    counts = {row[2]: row[:2] for record in repo.git(
-        "diff", "--numstat", "-z", "--no-renames", start, head, cwd=tree).split("\0")
-        if len(row := record.split("\t", 2)) == 3}
-    attrs = repo.run("git", "check-attr", "--stdin", "-z", "linguist-generated", cwd=tree,
-                     input="\0".join(counts)).stdout.split("\0")
-    marked = {path for path, value in zip(attrs[::3], attrs[2::3]) if value in ("set", "true")}
-    generated = [path for path, count in counts.items() if path in marked or "-" in count]
-    if not generated:
-        return ""
-    repo.git("restore", f"--source={start}", "--staged", "--", *generated, cwd=tree)
-    snapshot = repo.git("commit-tree", repo.git("write-tree", cwd=tree), "-p", head,
-                        "-m", "Branch head without generated files' contents", cwd=tree)
-    repo.git("checkout", "-q", "-f", "--detach", snapshot, cwd=tree)
-    return ("\n\n## Generated files\n\nEach listed change is committed at the real branch head with the listed line counts. "
-            "The review tree only restores each file to the branch start to keep its contents out of "
-            "the diff. A missing or untracked copy in the review tree is not a finding:\n"
-            + _bullets(f"{path}: {counts[path][0]} added, {counts[path][1]} removed"
-                       for path in generated))
 
 
 def _launcher(folder: Path, tree: Path, engine: str) -> Path | None:

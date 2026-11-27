@@ -35,10 +35,11 @@ def _ready(env):
     return item, where
 
 
-def _merge_at_github(env, local_commit=None, item="tidy-readme"):
+def _merge_at_github(env, local_commit=None, item="tidy-readme", branch=None):
     """The gh edge performs a squash in the fixture's bare remote, as GitHub would."""
     stub = GH_STUB.format(python=sys.executable)
-    head = env.repo.git("rev-parse", f"fix/{item}")
+    branch = branch or f"fix/{item}"
+    head = env.repo.git("rev-parse", branch)
     code = '''import json, pathlib, subprocess, sys
 here = pathlib.Path(__file__).resolve().parent
 if sys.argv[1:3] == ["pr", "view"] and (here / "github-merged").exists():
@@ -70,13 +71,14 @@ if sys.argv[1:3] == ["pr", "merge"]:
         sys.exit(1)
     subprocess.run(["git", "merge", "--squash", "FETCH_HEAD"], cwd=checkout, check=True,
                    capture_output=True)
-    subprocess.run(["git", "commit", "-q", "-m", args[args.index("--subject") + 1]],
+    subprocess.run(["git", "commit", "--allow-empty", "-q", "-m", args[args.index("--subject") + 1]],
                    cwd=checkout, check=True)
     subprocess.run(["git", "push", "-q", "origin", "main"], cwd=checkout, check=True)
     (here / "github-merged").write_text("merged", encoding="utf-8")
     sys.exit(0)
 '''.replace("REMOTE", repr(env.repo.git("remote", "get-url", "origin"))).replace("MERGED_OID", repr(head)).replace(
-    "LOCAL_COMMIT", repr(str(local_commit)) if local_commit else "None")
+    "LOCAL_COMMIT", repr(str(local_commit)) if local_commit else "None").replace(
+    "fix/tidy-readme", branch)
     if item != "tidy-readme":
         code = code.replace("fix/tidy-readme", f"fix/{item}").replace("github-merge", f"github-{item}-merge")
     _install(env.repo.bin, "gh", "#!" + sys.executable + "\n" + code + stub.split("\n", 1)[1])
@@ -167,16 +169,22 @@ def test_4_merge_refuses_a_changed_head_and_checks_the_recorded_head(env):
         "headRefName": "fix/tidy-readme", "title": "Tidy readme", "isDraft": False,
         "body": published_body}))
     env.checks([run("tests", "failure"), run("forge-pr-check")])
-    before_checks = len(env.gh_calls("api"))
+    endpoint = f"repos/{{owner}}/{{repo}}/commits/{head}"
+    check_runs_path = f"{endpoint}/check-runs?per_page=100"
+    statuses_path = f"{endpoint}/status?per_page=100"
+    before_check_runs = len(env.gh_calls("api", path=check_runs_path))
+    before_statuses = len(env.gh_calls("api", path=statuses_path))
     red = env.repo.forge("merge", item)
     assert red.stderr == (f"Checks failed on the pull request: tests.\n"
                           f"Next: forge work {item}\n")
-    lookups = env.gh_calls("api")[before_checks:]
-    endpoint = f"repos/{{owner}}/{{repo}}/commits/{head}"
+    check_runs = env.gh_calls("api", path=check_runs_path)
+    statuses = env.gh_calls("api", path=statuses_path)
+    assert len(check_runs) == before_check_runs + 1
+    assert len(statuses) == before_statuses + 1
     assert ["api", "--paginate", "--jq", ".check_runs[]",
-            f"{endpoint}/check-runs?per_page=100"] in lookups
+            check_runs_path] in check_runs
     assert ["api", "--paginate", "--jq", ".statuses[]",
-            f"{endpoint}/status?per_page=100"] in lookups
+            statuses_path] in statuses
     assert not env.gh_calls("pr", "merge")
     env.checks(GREEN)
     env.gh.respond("pr", "merge", stderr="merge queue refused the request\n", exit=1)
@@ -250,8 +258,7 @@ def _check_dirty_merge(
     legacy = env.repo.forge("next")
     safe = re.fullmatch(r"[a-zA-Z0-9_@%+=:,./-]+", str(where))
     quoted = str(where) if safe else f'"{where}"' if os.name == "nt" else shlex.quote(str(where))
-    # Cleanup advice precedes next's final build-count summary.
-    assert legacy.stdout.splitlines()[-2] == f"Next: git worktree remove {quoted}"
+    assert f"Next: git worktree remove {quoted}" in legacy.stdout.splitlines()
 
 
 def _check_later_local_commit(env):

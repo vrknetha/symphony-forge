@@ -33,10 +33,10 @@ STORY = "FIX-MERGE-RETESTS-COMBINED-CHANGE"
     (False, "dirty-untracked", True), (True, "dirty-unstaged", True),
     (False, "late-test", True), (False, "no-wait", True), (True, "late-test", True),
     (False, "review", True), (True, "review", True),
-    (True, "no-wait", True),
+    (True, "no-wait", True), (False, "proof-history", True),
 ], ids=["new-red", "adopted-red", "fallback-green", "dirty-unstaged",
         "dirty-staged", "dirty-untracked", "adopted-dirty", "late-test", "no-wait", "adopted-late",
-        "review-new", "review-adopted", "adopted-no-wait"])
+        "review-new", "review-adopted", "adopted-no-wait", "proof-history"])
 def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previous, case, fast):
     _client(env, tmp_path, previous, fast_test=False)
     env.repo.git("fetch", "-q", "origin", "main")
@@ -59,6 +59,8 @@ def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previ
     # fallback contract; app-test CI routing is owned by test_merge_uses_ci_tests.
     config = config.replace('checks = ["tests", "forge-pr-check"]',
                             'checks = ["forge-pr-check"]')
+    if case == "proof-history":
+        config = config.replace('test_place = "ci"', 'test_place = "local"')
     if fast:
         config = 'fast_test = ' + json.dumps(command + ' {base}') + '\n' + config
     env.commit(setup, "forge.toml", config)
@@ -85,17 +87,29 @@ def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previ
     env.repo.git("fetch", "-q", "origin", "main")
     app = "print('hello')\n" + ("\n\nLIMIT = 0\n" if case == "review" else "")
     item, where = env.start_fix({"left.txt": "1\n", "app.py": app})
+    if case == "proof-history":
+        # The existing merge cases have synthetic check entries. This case needs
+        # the fix's real pytest proof after the retest base becomes its old head.
+        env.repo.git("commit", "--allow-empty", "-qm", "Name the combined-limit test",
+                     "-m", "Proof list:\n- Done when: tests/test_limits.py::test_combined_limit (reuse)",
+                     cwd=where)
     env.open_pr("")
     closed = env.close(item)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     reviews = len(env.review_calls())
     original = env.repo.git("rev-parse", "HEAD", cwd=where)
-    assert not log.exists()  # CI owns close; merge must explicitly enter the test lane.
+    if case == "proof-history":
+        assert len(log.read_text("utf-8").splitlines()) == 1
+        log.unlink()
+    else:
+        assert not log.exists()  # CI owns close; merge must explicitly enter the test lane.
     env.repo.git("clone", "-q", remote, str(other))
     if case == "review":
         env.commit(other, "app.py", "print('original')\n\n\nLIMIT = 1\n")
     else:
-        env.commit(other, "right.txt" if case == "red" or case.startswith("dirty") else "other.txt", "1\n")
+        env.commit(other, "right.txt" if case == "red" or case.startswith("dirty") else "other.txt", "1\n",
+                   "Another task\n\nProof list:\n- 1: check: The incoming value is present."
+                   if case == "proof-history" else "Another change lands")
     env.repo.git("push", "-q", "origin", "main", cwd=other)
     advanced = env.repo.git("rev-parse", "main", cwd=remote)
     _github_moves_default(env, False, "CLEAN")
@@ -125,7 +139,7 @@ def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previ
         stub = (env.repo.bin / "gh").read_text("utf-8")
         _install(env.repo.bin, "gh", stub.replace("args = sys.argv[1:]", (
             "args = sys.argv[1:]\n"
-            "if args[:1] == ['api'] and '.check_runs[]' in args:\n"
+            "if args[-1].endswith('/check-runs?per_page=100'):\n"
             "    (here / 'ci-polled').write_text('CI is still queued', encoding='utf-8')\n"
             "    sys.stderr.write('CI is still queued\\n')\n"
             "    sys.exit(1)"), 1))
@@ -136,7 +150,10 @@ def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previ
             env.repo.git("add", "left.txt", cwd=where)
         before = env.repo.git("rev-parse", "HEAD", cwd=where)
 
-    before_checks = len(env.gh_calls("api"))
+    original_check_runs_path = f"repos/{{owner}}/{{repo}}/commits/{original}/check-runs?per_page=100"
+    original_status_path = f"repos/{{owner}}/{{repo}}/commits/{original}/status?per_page=100"
+    before_original_check_runs = len(env.gh_calls("api", path=original_check_runs_path))
+    before_original_status = len(env.gh_calls("api", path=original_status_path))
     merged = env.repo.forge("merge", item)
 
     if case.startswith("dirty"):
@@ -179,8 +196,9 @@ def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previ
         published = attempts[0][attempts[0].index("--match-head-commit") + 1]
         if case == "review":
             assert published != original
-            assert ["api", "--paginate", "--jq", ".check_runs[]",
-                    f"repos/{{owner}}/{{repo}}/commits/{published}/check-runs?per_page=100"] in env.gh_calls("api")[before_checks:]
+            check_runs_path = f"repos/{{owner}}/{{repo}}/commits/{published}/check-runs?per_page=100"
+            assert ["api", "--paginate", "--jq", ".check_runs[]", check_runs_path
+                    ] in env.gh_calls("api", path=check_runs_path)
             # A records-only commit carries the review over the tested merge.
             assert set(env.repo.git("diff", "--name-only", head, published).splitlines()) <= {
                 ".factory/fixes/tidy-readme.json"}
@@ -188,4 +206,5 @@ def test_1_merge_retests_combined_change_and_names_failures(env, tmp_path, previ
             assert len(env.review_calls()) == reviews
         else:
             assert published == original
-            assert not env.gh_calls("api")[before_checks:]
+            assert len(env.gh_calls("api", path=original_check_runs_path)) == before_original_check_runs
+            assert len(env.gh_calls("api", path=original_status_path)) == before_original_status

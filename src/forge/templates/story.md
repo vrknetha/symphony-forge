@@ -20,7 +20,8 @@ id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small chan
 screens that add no screen and change no flow, use Design: none (<why>) instead.
 Remove this comment and omit
 the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id and a new plan approval.
+these exact files. A folder edit needs its new tree id. Before the first approval it needs a new read;
+after it, a design part's redraw that changes only that id keeps the approval; any other edit needs a new one.
 The rule starts with the next plan read and approval. Plans approved without a Design line
 before this rule keep their existing approval. -->
 $design

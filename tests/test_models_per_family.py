@@ -11,7 +11,7 @@ from pathlib import Path
 import shutil
 
 from test_close import ROOT, env  # noqa: F401  (env is a fixture)
-from test_codex_worker import QUIET, _codex_repo, _lines, _sent, sdk_data  # noqa: F401  (sdk_data is a fixture)
+from test_codex_worker import BUILDER_CONFIG, _codex_repo, _lines, _sent, sdk_data  # noqa: F401  (sdk_data is a fixture)
 from test_fix_reviews_always_run_on_codex_so_a_team_wi import _claude_only
 from test_worker import calls as claude_calls, install_claude
 
@@ -51,7 +51,7 @@ def test_1_a_per_family_table_gives_each_family_its_own_entry(repo, monkeypatch,
     build = f"[models.build.codex]\n{NOVA}\n[models.build.claude]\n{OPUS}"
 
     _work(repo, folder, "codex", build)
-    assert _sent(calls, "thread/start")[-1]["config"] == {**QUIET, "features.multi_agent": True,
+    assert _sent(calls, "thread/start")[-1]["config"] == {**BUILDER_CONFIG, "features.multi_agent": True,
                                                           "model": "gpt-6-nova",
                                                           "model_reasoning_effort": "high"}
     monkeypatch.setenv("CODEX_THREAD_ID", "thr-test-coordinator")
@@ -65,7 +65,7 @@ def test_2_a_single_entry_is_used_by_its_own_family(repo, monkeypatch, sdk_data,
     claude = install_claude(repo)
 
     _work(repo, folder, "codex", f"[models.build]\n{NOVA}")
-    assert _sent(calls, "thread/start")[-1]["config"] == {**QUIET, "features.multi_agent": True,
+    assert _sent(calls, "thread/start")[-1]["config"] == {**BUILDER_CONFIG, "features.multi_agent": True,
                                                           "model": "gpt-6-nova",
                                                           "model_reasoning_effort": "high"}
     monkeypatch.setenv("CODEX_THREAD_ID", "thr-test-coordinator")
@@ -86,7 +86,7 @@ def test_3_a_single_entry_asked_for_by_the_other_family_gives_the_default_model(
     assert [line["kind"] for line in _lines(repo.path / ".git" / "forge" / "threads" / "task"
                                             / "BOARD" / "PAGE.log")] == ["Build", "Build"]
     assert _sent(calls, "thread/start")[-1]["config"] == {
-        **QUIET, "features.multi_agent": True, "model": "gpt-6.1-sol", "model_reasoning_effort": "low"}
+        **BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6.2-sol", "model_reasoning_effort": "low"}
     monkeypatch.setenv("CODEX_THREAD_ID", "thr-test-coordinator")
     monkeypatch.delenv("CLAUDECODE")
     _work(repo, _plain_part(repo), "claude", f"[models.build]\n{NOVA}", "BOARD/HELP")

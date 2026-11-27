@@ -89,7 +89,7 @@ def _worker_merges_upgrade(env, upgraded):
 root = Path({json.dumps(env.repo.path.as_posix())})
 if (root / "forge.toml").read_text("utf-8") != {json.dumps(upgraded)}:
     (root / "forge.toml").write_text({json.dumps(upgraded)}, encoding="utf-8")
-    for args in (["add", "forge.toml"], ["commit", "-q", "-m", "Upgrade Forge"],
+    for args in (["add", "forge.toml"], ["commit", "--allow-empty", "-q", "-m", "Upgrade Forge"],
                  ["push", "-q", "origin", "main"]):
         subprocess.run(["git", "-C", str(root), *args], check=True,
                        stdin=subprocess.DEVNULL, timeout=60)
@@ -121,7 +121,7 @@ def test_1_running_command_continues_under_the_pin_merged_from_upgraded_default(
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, target)
         env.repo.git("add", "-A")
-        env.repo.git("commit", "-q", "-m", "Repo adopted on the earlier release")
+        env.repo.git("commit", "--allow-empty", "-q", "-m", "Repo adopted on the earlier release")
     original = (env.repo.path / "forge.toml").read_text("utf-8")
     original = re.sub(r'version = "[^"]+"', 'version = "v1.2.2"', original)
     original = original.replace('workers = "codex"', 'workers = "claude"')
@@ -188,7 +188,7 @@ def test_1_running_command_continues_under_the_pin_merged_from_upgraded_default(
         sync_dispatch, dispatch = dispatches
         # Conflict regeneration uses the new release's files, keeping the repo's hooks.
         assert sync_dispatch["args"][:10] == ["run", "--isolated", "--no-project", "--with",
-            f"git+https://github.com/knacklabs/symphony-forge@{current}",
+            f"symphony-forge=={current.removeprefix('v')}",
             "--python", sys.executable, "python", "-I", "-c"]
         assert Path(sync_dispatch["cwd"]) == where
         # Full sync used to install hooks here. File-only regeneration must leave this
@@ -197,12 +197,13 @@ def test_1_running_command_continues_under_the_pin_merged_from_upgraded_default(
                                   "hooks", cwd=where))
         assert not (hooks / "pre-commit").exists()
         assert not (hooks / "pre-push").exists()
-        assert (where / guide).read_text("utf-8") == (
-            ROOT / "src" / "forge" / "templates" / "skill.md").read_text("utf-8")
+        template = (ROOT / "src" / "forge" / "templates" / "skill.md").read_text("utf-8").rstrip("\n")
+        committed = (ROOT / ".claude/skills/forge/SKILL.md").read_text("utf-8")  # plus known issues
+        assert (where / guide).read_text("utf-8") == template + committed[len(template):]
     else:
         [dispatch] = dispatches
     assert dispatch["args"] == ["tool", "run", "--from",
-        f"git+https://github.com/knacklabs/symphony-forge@{current}", "forge", command, ITEM]
+        f"symphony-forge=={current.removeprefix('v')}", "forge", command, ITEM]
     assert Path(dispatch["cwd"]) == where
 
 
@@ -238,7 +239,7 @@ def test_2_land_keeps_its_one_fix_round_limit_after_the_worker_changes_the_pin(
     [dispatch] = [json.loads(line) for line in
                   (env.repo.bin / "uv-calls.jsonl").read_text("utf-8").splitlines()]
     assert dispatch["args"] == ["tool", "run", "--from",
-        f"git+https://github.com/knacklabs/symphony-forge@{current}", "forge", "land", ITEM]
+        f"symphony-forge=={current.removeprefix('v')}", "forge", "land", ITEM]
     assert Path(dispatch["cwd"]) == where
 
 
@@ -274,11 +275,11 @@ def test_3_close_continues_the_current_human_accept_choice_under_changed_pin(
     [dispatch] = [json.loads(line) for line in
                   (env.repo.bin / "uv-calls.jsonl").read_text("utf-8").splitlines()]
     assert dispatch["args"] == ["tool", "run", "--from",
-        f"git+https://github.com/knacklabs/symphony-forge@{current}", "forge", *args]
+        f"symphony-forge=={current.removeprefix('v')}", "forge", *args]
     assert Path(dispatch["cwd"]) == where
 
     _install(env.repo.bin, "forge", FORGE_SHIM.format(python=sys.executable,
                                                      src=(ROOT / "src").as_posix()))
     replayed = env.repo.forge(*args, cwd=where)
     assert replayed.returncode == 1
-    assert "Record the human's choice only on a stopped review loop" in replayed.stderr
+    assert "already recorded" in replayed.stderr

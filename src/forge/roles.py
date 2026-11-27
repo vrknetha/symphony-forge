@@ -1,13 +1,15 @@
 """Forge's subagent roles for both hosts, from forge.toml and the host's built-in defaults.
 
 A Codex role whose kind's model belongs to the other family inherits the session's model.
-Claude planning uses grill, diagnostics use Opus, and implementation uses its worker settings.
+Claude planning uses grill, diagnostics use Sonnet at high effort, and implementation uses its worker settings.
 Roles set no tools or permission mode: they inherit the session's.
 """
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 from pathlib import Path
 from typing import Any
 
@@ -68,8 +70,48 @@ ROLES = {
 }
 
 
-def _family(model: str) -> str:
+def model_family(model: str) -> str:
+    if model.startswith("gemini"):
+        return "antigravity"
     return "claude" if re.match(r"claude|opus|sonnet|haiku|fable", model) else "codex"
+
+
+def review_family(cfg: dict[str, Any], built_by: str | None, item: str) -> str:
+    """Select this repo's reviewer and keep a family from reviewing its own build."""
+    selected = cfg.get("reviews")
+    codex_bin = os.environ.get("CODEX_BIN") or "codex"
+    if not selected and cfg["tools"] == "both":
+        return "codex" if shutil.which(codex_bin) else "claude"
+    family = selected or cfg["tools"]
+    name = {"claude": "Claude Code", "codex": "Codex", "antigravity": "Antigravity"}[family]
+    if selected and family == built_by:
+        repo.refuse((f"{name} built {item}, so Forge will not let {name} review it.",
+                     "ask the owner, then set reviews in forge.toml to another family"))
+    if family == "antigravity":
+        from forge import antigravity
+        if message := antigravity.problem():
+            repo.refuse((message, antigravity.INSTALL))
+    elif not shutil.which(codex_bin if family == "codex" else "claude"):
+        if not selected:
+            repo.refuse(repo.REFUSALS["tool_missing"], tool=family, name=name)
+        repo.refuse(repo.REFUSALS["missing_tool"], tool=name)
+    return family
+
+
+def read_family(cfg: dict[str, Any], here: str, recorded: str) -> tuple[str, bool]:
+    from forge import claude_sdk, codex
+
+    configured = cfg.get("reviews")
+    if configured == "antigravity":
+        return configured, False
+    installed = {"claude": here == "claude" or not claude_sdk.sdk_problem(),
+                 "codex": here == "codex" or codex.installed()}
+    gone = recorded in installed and not installed[recorded]
+    other = "claude" if here == "codex" else "codex"
+    # Both keeps the earlier reader while it is installed.
+    reader = (cfg["tools"] if cfg["tools"] != "both" else
+              recorded if recorded in installed and not gone else other if installed[other] else here)
+    return configured or reader, gone
 
 
 def _chosen(cfg: dict[str, Any], kind: str, family: str, building: bool = False) -> tuple[str, str]:
@@ -78,8 +120,10 @@ def _chosen(cfg: dict[str, Any], kind: str, family: str, building: bool = False)
     if building and kind == "design":  # the frontend role builds on the design model
         entry = repo.design_models(cfg, family)
         return entry["model"], "max" if family == "claude" and entry["effort"] == "ultra" else entry["effort"]
-    if kind == "explore" and kind not in models:
-        kind = "lite"
+    if kind == "explore":
+        entry = repo.worker_models(cfg, kind, family)
+        effort = entry["effort"]
+        return entry["model"], "max" if family == "claude" and effort == "ultra" else effort
     if family == "claude":
         entry = (repo.CLAUDE_GRILL_DEFAULT if kind == "review" else
                  repo.models(cfg, "grill", family) if kind in ("design", "grill") else
@@ -96,7 +140,7 @@ def _chosen(cfg: dict[str, Any], kind: str, family: str, building: bool = False)
         entry = entry.get(family, {})
     model, effort = entry.get("model", ""), entry.get("effort", "")
     # A per-family entry is already the host's own; a single entry names one model for both hosts.
-    return (model if model and (per_family or _family(model) == family) else ""), effort
+    return (model if model and (per_family or model_family(model) == family) else ""), effort
 
 
 def subagent_defaults(cfg: dict[str, Any]) -> dict[str, str]:

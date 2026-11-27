@@ -58,8 +58,12 @@ def older(env, prs, name):
     published(env, prs)
 
 
-@pytest.mark.parametrize("case", ["waits", "blocking-problems", "size-warning"])
-@pytest.mark.parametrize("previous", [False, True], ids=["new-client", "earlier-adoption"])
+# The earlier-adoption case is the only one that reads a legacy record: an earlier release's worker
+# answered a question without recording its end, and a later worker round followed.
+@pytest.mark.parametrize("previous,case", [
+    (False, "waits"), (False, "blocking-problems"), (False, "size-warning"), (True, "waits")],
+    ids=["new-client-waits", "new-client-blocking-problems", "new-client-size-warning",
+         "earlier-adoption-waits"])
 def test_2_needs_you_lists_every_wait_oldest_first_on_every_machine(env, monkeypatch, previous, case):
     client(env, previous)
     conftest._install(env.repo.bin, "claude", READER.format(python=sys.executable))
@@ -68,7 +72,9 @@ def test_2_needs_you_lists_every_wait_oldest_first_on_every_machine(env, monkeyp
         blocking_problems(env)
         return
     toml = env.repo.path / "forge.toml"
-    env.commit(env.repo.path, "forge.toml", toml.read_text("utf-8")
+    config = re.sub(r"(?m)^task_review_rounds\s*=.*(?:\r?\n|$)", "",
+                    toml.read_text("utf-8"))
+    env.commit(env.repo.path, "forge.toml", "task_review_rounds = 1\n" + config
                + 'models.lite = { model = "sonnet", effort = "medium" }\n')
     env.repo.git("push", "-q", "origin", "main")
     if case == "size-warning":

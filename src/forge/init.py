@@ -10,7 +10,7 @@ import subprocess
 from pathlib import Path
 from typing import Any, NoReturn
 
-from forge import __version__, githooks, repo, story, sync
+from forge import __version__, antigravity, githooks, repo, story, sync
 
 COMMANDS = [{
     # False: init checks the pin itself, after adoption lists a forge.toml Forge didn't write.
@@ -76,7 +76,7 @@ NODE_TEST = "[ ! -f package.json ] || (npm ci && npm test)"
 # Implementation, cold-read and review models for each host.
 MODELS = """
 [models.build.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "low"
 
 [models.build.claude]
@@ -86,7 +86,7 @@ subagents = "claude-haiku-5-5"
 subagent_effort = "high"
 
 [models.fix.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "low"
 
 [models.fix.claude]
@@ -96,7 +96,7 @@ subagents = "claude-haiku-5-5"
 subagent_effort = "high"
 
 [models.lite.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "low"
 subagents = "gpt-6-luna"
 subagent_effort = "max"
@@ -108,7 +108,7 @@ subagents = "claude-haiku-5-5"
 subagent_effort = "high"
 
 [models.explore.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.1-terra"
 effort = "medium"
 subagents = "gpt-6-luna"
 subagent_effort = "max"
@@ -116,6 +116,10 @@ subagent_effort = "max"
 [models.explore.claude]
 model = "claude-haiku-5-5"
 effort = "high"
+
+[models.explore.antigravity]
+model = "gemini-4-neon"
+effort = "low"
 
 [models.grill.codex]
 model = "gpt-6.1-terra"
@@ -142,7 +146,7 @@ model = "claude-sonnet-5-5"
 effort = "xhigh"
 
 [models.design.codex]
-model = "gpt-6.1-sol"
+model = "gpt-6.2-sol"
 effort = "high"
 
 """
@@ -180,12 +184,19 @@ def signed_in(tool: str, top: Path | None = None) -> bool | None:
 def _settings(stage: str, test_place: str, test: str, checks: list[str], interfaces: list[str],
               merge: str = "", runner: str = "ubuntu-24.04", fast_test: str = "") -> str:
     claude, codex = signed_in("claude"), signed_in("codex")
-    workers = 'workers = "split"\n'
+    installed = antigravity.version()
+    if not antigravity.problem(installed):
+        print(f"Antigravity {installed} is installed. Ask your agent if you want it to "
+              "build or review; forge doctor checks its sign-in.")
+    workers = 'workers = "claude"\n'  # Claude builds; reviews and cold reads go to Codex when it is there
     if claude is True and codex is False:
         workers = 'tools = "claude"\nworkers = "claude"\n'
         print("Only Claude is signed in. Forge uses Claude for all work.")
+    elif claude is False and codex is True:
+        workers = 'tools = "codex"\nworkers = "codex"\n'
+        print("Only Codex is signed in. Forge uses Codex for all work.")
     elif claude is False and codex is False:
-        print("Sign in to Claude or Codex before you start work. Forge keeps split workers.")
+        print("Sign in to Claude or Codex before you start work. Forge keeps Claude as the worker.")
     return ("# Forge's settings. Your coding agent keeps this file: ask it to change a setting or "
             "upgrade Forge.\n"
             f'version = "v{__version__}"\nrepo = "client"\nstage = "{stage}"\n'
@@ -486,4 +497,6 @@ def _adopt(top: Path, args: argparse.Namespace) -> None:
           f"{default} is unchanged until its pull request merges.")
     print(f"After that pull request merges, forge close {ADOPT_ITEM} turns on branch protection "
           f"for {default}, keeping its existing rules.")
+    from forge import quicktest  # imported here because quicktest imports init
+    quicktest.combined_note(path, repo.config(path))
     print(f"Next: your tests in {path}, then forge close {ADOPT_ITEM}")

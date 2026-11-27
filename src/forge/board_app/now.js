@@ -10,9 +10,9 @@ const STAGE_OF = {
   reviewing: 'review', 'waiting for checks': 'review', hotspot: 'review',
   ready: 'ready', merged: 'merged', done: 'merged',
 };
-const VERB = { approval: 'Approve', 'worker question': 'Answer', merge: 'Merge' }; // every other wait: Decide
+const VERB = { approval: 'Approve', 'worker question': 'Answer', merge: 'Merge', 'failed run': 'Fix', 'checks failed': 'Fix' }; // every other wait: Decide
 const KINDS = [['all', 'All'], ['task', 'Story parts'], ['fix', 'Fixes']];
-const RUN = { work: 'Building', worker: 'Building', review: 'Reviewing', read: 'Reading the plan', test: 'Testing' };
+const RUN = { work: 'Building', worker: 'Building', review: 'Reviewing', read: 'Reading the plan', test: 'Testing', ask: 'Answering a question' };
 const CARDS = 4; // per stage, then "and N more"
 const STORIES = 5;
 const ASKS = 3;
@@ -53,12 +53,6 @@ function hours(seconds) {
   return `${+(seconds / 86400).toFixed(1)} d`;
 }
 
-function median(values) {
-  const sorted = [...values].sort((a, b) => a - b);
-  const middle = sorted.length >> 1;
-  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
-}
-
 // Everything the screen shows, for the Team view or only the viewer's items in the Me view.
 function facts(snapshot) {
   const viewer = Board.view === 'me' ? snapshot.viewer || '' : null;
@@ -91,10 +85,11 @@ function facts(snapshot) {
   const ids = new Set([...stories.filter(mine), ...cards].map((row) => row.id));
   return {
     viewer, stages, signoff: snapshot.signoff || { line: '', open: [] },
-    asks: snapshot.team.needs_you.filter((ask) => viewer === null || ids.has(ask.id)),
+    asks: snapshot.team.needs_you.filter((ask) => viewer === null || ask.kind === 'run' || ids.has(ask.id)), // a failed run has no owner
     merged: viewer === null ? (kind === 'all' ? counted.parts + counted.fixes : counted[kind === 'task' ? 'parts' : 'fixes'])
       : recent.length,
-    median: timed.length ? hours(median(timed.map((row) => row.total_seconds))) : 'unknown',
+    dailyMedian: snapshot.daily_start_to_merge?.[Board.view === 'me' ? 'me' : 'team']?.[kind]?.line
+      || 'No measured merges today (UTC)',
     waiting: total && waitingKnown ? `${+(100 * waited / total).toFixed(1)}%` : 'unknown',
     red: cards.filter((row) => row.gates?.ci?.status === 'red' && STAGE_OF[row.stage] !== 'merged').length,
     stories: maps.filter((map) => !['done', 'needs a spec'].includes(map.stage))
@@ -110,11 +105,13 @@ function open(item) {
 
 function card(row, focus = `card:${row.id}`) {
   const note = row.stage === 'Can start now' ? 'can start' : row.stage === 'checks failed' ? 'checks failed' : null;
+  const idle = row.stalled && typeof row.idle_seconds === 'number' ? `idle ${hours(row.idle_seconds)}` : null;
   return el('button', { type: 'button', class: 'chip', 'data-tone': STAGE_OF[row.stage] || 'planned',
     'data-stage': row.stage, 'data-focus': focus, onclick: open(row) },
-  el('span', { class: 'chip-title' }, row.title),
+  el('span', { class: 'chip-title', title: row.title }, row.title),
   el('span', { class: 'chip-meta' }, el('span', { class: 'key' }, row.kind === 'fix' ? 'Fix' : key(row.id)),
-    note && el('span', { class: 'now-tag', 'data-note': note }, note)));
+    note && el('span', { class: 'now-tag', 'data-note': note }, note),
+    idle && el('span', { class: 'now-tag', 'data-note': 'idle' }, idle)));
 }
 
 function more(name, title, entries, shown) {
@@ -124,12 +121,18 @@ function more(name, title, entries, shown) {
   `and ${entries.length - shown} more`);
 }
 
+// A failed full test run has no item to open: its row says whether a fix is under way and opens the run on GitHub.
+// The run's address is in the row's drawing (data-url), so a newer failed run with the same words replaces the row.
 function ask(entry) {
   const verb = VERB[entry.reason] || 'Decide';
-  return el('button', { type: 'button', class: 'ask', 'data-focus': `ask:${entry.id}:${entry.reason}`, onclick: open(entry) },
-    el('span', { class: 'ask-head' }, el('span', { class: 'verb' }, verb),
-      el('span', { class: 'key' }, entry.kind === 'fix' ? 'Fix' : key(entry.id))),
-    el('span', { class: 'ask-title' }, entry.title));
+  const run = entry.kind === 'run';
+  const place = run ? (entry.fixing ? 'Fix in progress' : 'Full test run') : entry.kind === 'fix' ? 'Fix' : key(entry.id);
+  return el('button', { type: 'button', class: 'ask', 'data-focus': `ask:${entry.id}:${entry.reason}`,
+    'data-url': run && entry.url,
+    onclick: run && entry.url ? () => window.open(entry.url, '_blank', 'noopener') : open(entry) },
+    el('span', { class: 'ask-head' }, el('span', { class: 'verb' }, verb), el('span', { class: 'key' }, place)),
+    el('span', { class: 'ask-title', title: entry.title }, entry.title),
+    entry.reason === 'checks failed' && el('span', { class: 'ask-why' }, entry.detail));
 }
 
 function strip(shown) {
@@ -164,7 +167,7 @@ function stage([name, title], shown) {
   if (name === 'merged') {
     return el('section', { class: 'stage', 'aria-label': title }, head,
       rows.length ? el('ul', { class: 'done' }, rows.slice(0, MERGED).map((row) => el('li', {},
-        el('button', { type: 'button', 'data-focus': `card:${row.id}`, onclick: open(row) }, row.title))))
+        el('button', { type: 'button', title: row.title, 'data-focus': `card:${row.id}`, onclick: open(row) }, row.title))))
         : el('p', { class: 'note' }, 'None.'),
       more(name, title, rows, MERGED));
   }
@@ -176,23 +179,23 @@ function stage([name, title], shown) {
 
 function story(map) {
   return el('li', {}, el('button', { type: 'button', class: 'story', 'data-focus': `story:${map.id}`, onclick: open(map) },
-    el('span', { class: 'story-title' }, map.title),
+    el('span', { class: 'story-title', title: map.title }, map.title),
     el('span', { class: 'parts', role: 'img',
       'aria-label': `${map.parts.filter((part) => part.status === 'Merged').length} of ${map.parts.length} parts merged` }, map.parts.map((part) =>
       el('span', { 'data-status': part.status }))),
     el('span', { class: 'chip-meta' }, el('span', { class: 'key' }, map.id),
-      el('span', { class: 'owner' }, map.owner ? `@${map.owner.replace(/^@/, '')}` : 'unknown'))));
+      el('span', { class: 'owner' }, map.owner ? `@${map.owner.replace(/^@/, '')}` : 'No owner yet'))));
 }
 
 function rail(shown) {
   if (shown.viewer !== null) {
-    return el('section', { class: 'rail', 'aria-label': 'Live' }, el('h2', {}, 'Live'),
+    return el('section', { class: 'rail', 'aria-label': 'Live', tabindex: '0', 'data-focus': 'rail' }, el('h2', {}, 'Live'),
       shown.runs.length ? el('ul', { class: 'runs' }, shown.runs.map((run) => el('li', {},
-        el('span', { class: 'story-title' }, run.title || 'unknown'),
+        el('span', { class: 'story-title', title: run.title }, run.title || 'unknown'),
         el('span', { class: 'chip-meta' }, RUN[run.kind] || 'Running'))))
         : el('p', { class: 'note' }, 'Nothing runs on this laptop now.'));
   }
-  return el('section', { class: 'rail', 'aria-label': 'Stories' }, el('h2', {}, 'Stories'),
+  return el('section', { class: 'rail', 'aria-label': 'Stories', tabindex: '0', 'data-focus': 'rail' }, el('h2', {}, 'Stories'),
     shown.stories.length ? el('ul', { class: 'stories' }, shown.stories.slice(0, STORIES).map(story))
       : el('p', { class: 'note' }, 'No story is building. A story shows here once it is approved.'),
     more('stories', 'Stories', shown.stories, STORIES));
@@ -202,7 +205,7 @@ function figures(shown) {
   const figure = (value, words, tone) => el('p', { 'data-tone': tone }, el('strong', {}, String(value)), ' ', words);
   return el('section', { class: 'now-figures', 'aria-label': 'Figures' },
     figure(shown.merged, 'merged, 7 days'),
-    figure(shown.median, 'median item'),
+    el('p', {}, shown.dailyMedian),
     figure(shown.waiting, 'waiting on people', 'needs-you'),
     figure(shown.red, 'red checks', shown.red ? 'stuck' : null));
 }
@@ -220,8 +223,8 @@ function full(shown) {
   return panel;
 }
 
-function refocus(name) {
-  document.querySelector(`[data-focus="${CSS.escape(name)}"]`)?.focus();
+function refocus(name, options) {
+  document.querySelector(`[data-focus="${CSS.escape(name)}"]`)?.focus(options);
 }
 
 let last = [];
@@ -239,7 +242,7 @@ function render(main, snapshot) {
         el('div', { class: 'stages' }, STAGES.map((entry) => stage(entry, shown)))),
       full(shown) || rail(shown)),
     figures(shown));
-  main.replaceChildren(screen);
+  Board.show(screen);
   if (opening) refocus('list');
-  else if (focused) refocus(focused);
+  else if (focused && document.activeElement?.dataset?.focus !== focused) refocus(focused, { preventScroll: true }); // a redraw replaced it
 }

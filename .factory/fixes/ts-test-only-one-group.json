@@ -1,0 +1,164 @@
+{
+  "base": "49482cc424deacb5293e499a187e010038173b7b",
+  "branch": "fix/ts-test-only-one-group",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a20148-1ebf-7402-9f8f-ae3ca0a882a9",
+    "head": null,
+    "start": "be2cd937a06d01e967cbb7c15f7821ee4474be3c"
+  },
+  "done_when": "A pull request that changes only JavaScript or TypeScript test files (such as *.test.ts and *.spec.ts) runs one CI test group with those tests, as a docs-only change does, and a change to any other code keeps today's group choice; new repos get it at init and existing repos on upgrade and forge sync",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "javascript_tests() in src/forge/templates/review-tests.py",
+      "file": "src/forge/templates/review-tests.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 79,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Security: Prevent test discovery from forging the CI result",
+      "work": 2
+    },
+    {
+      "area": "javascript_tests() in src/forge/templates/review-tests.py",
+      "file": "src/forge/templates/review-tests.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 79,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Prepare direct test runners before CI discovery",
+      "work": 2
+    },
+    {
+      "area": "small_change() in src/forge/templates/review-tests.py",
+      "file": "src/forge/templates/review-tests.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 138,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Exclude Forge records when choosing one group",
+      "work": 2
+    },
+    {
+      "area": "javascript_tests() in src/forge/templates/review-tests.py",
+      "file": "src/forge/templates/review-tests.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 74,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted on 22 Nov 2026 as a known issue: a change test command that filters tests by name in its long form or in Vitest config can leave a changed test file with no run tests in the one group",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Check that Vitest selects tests within each listed file",
+      "work": 2
+    },
+    {
+      "area": "test_1_javascript_test_changes_choose_one_group() in tests/test_javascript_test_changes_choose_one_group.py",
+      "file": "tests/test_javascript_test_changes_choose_one_group.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 36,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: test_1_javascript_test_changes_choose_one_group",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "39d508e7d6764e5c4fafe655515ce906666f9d6844436a33f40d220d87da23a7",
+    "changed": "4e449affe6ca1a1416199bbc8c4adcf87486c5a431fdc30cde31398a213f3a19",
+    "commit": "0d34ebf6cf616a20ab4fce039fe70c334d6f95e6",
+    "dismissals": [],
+    "findings": [],
+    "id": "32961082-4300-4b4b-b6b6-1ea2303f3619",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-22T03:23:22.076280+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-22T03:23:51.493000+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T03:40:51.175068+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T04:37:52.282172+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T04:52:25.006320+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T04:52:25.023615+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-22T04:53:25.613130+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-22T06:01:21.232953+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T06:09:23.698266+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-22T06:20:54.072998+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-22T06:27:18.998053+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-22T04:52:25.023615+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/templates/review-tests.py",
+    "reason": "Owner accepted on 22 Nov 2026 as a known issue: a change test command that filters tests by name in its long form or in Vitest config can leave a changed test file with no run tests in the one group",
+    "wait_id": "b95ca3c5-dd3b-4797-9535-12f39e4f26c8",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "6cc2ce91-5a0a-474f-9de5-ced4ff87b7f4",
+    "head": "df5cfa8f8faff30cfbe87e43dba86e95982e8b87",
+    "keys": {},
+    "round": 3
+  },
+  "why": "In a TypeScript app, a pull request that changes only test files still runs every CI test group, because the CI group choice recognises only Python test file names",
+  "worker": "codex"
+}

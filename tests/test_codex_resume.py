@@ -22,18 +22,17 @@ import pytest
 
 from conftest import _install
 from test_codex_record import _crash, _down, _saved
-from test_codex_worker import (NOW, QUIET, SOL, _codex_repo, _lines, _sent, _stub, _toml,  # noqa: F401
+from test_codex_worker import (BUILDER_CONFIG, NOW, SOL, _codex_repo, _lines, _sent, _stub, _toml,  # noqa: F401
                                sdk_data)
 from test_task import DOC, story
 
 STORY = "FORGE-WARM-1"
 FIX = {**SOL, "effort": "high"}
 MODELS = {"build": SOL, "fix": FIX, "lite": {"model": "gpt-6-sol", "effort": "low"}}
-# What [models.fix] becomes on the continued conversation: Codex's own names for those settings.
-FIX_CONFIG = {**QUIET, "features.multi_agent": True, "model": "gpt-6-sol", "model_reasoning_effort": "high",
+# Start settings for a fresh conversation on the fix model.
+FIX_CONFIG = {**BUILDER_CONFIG, "features.multi_agent": True, "model": "gpt-6-sol", "model_reasoning_effort": "high",
               "agents.default_subagent_model": "gpt-6-luna",
               "agents.default_subagent_reasoning_effort": "max"}
-LARGE = 200 * 1024
 
 RESUMING = r'''
 import json, os, pathlib, subprocess, sys, time
@@ -68,14 +67,14 @@ def send(**message):
 
 def thread(id, saved):
     turns = [{"id": turn, "items": [], "status": status} for turn, status in saved["turns"].items()]
-    return {"id": id, "cliVersion": "0.159.2", "createdAt": 0, "updatedAt": 0, "cwd": saved["cwd"],
+    return {"id": id, "cliVersion": "0.171.0", "createdAt": 0, "updatedAt": 0, "cwd": saved["cwd"],
             "ephemeral": False, "modelProvider": "openai", "preview": "", "sessionId": "stub",
             "source": "appServer", "status": {"type": "idle"}, "turns": turns}
 
 
 def main():
     if sys.argv[1:] == ["--version"]:
-        print("codex-cli 0.159.2")
+        print("codex-cli 0.171.0")
         return
     log(pid=os.getpid(), args=sys.argv[1:])
     for line in sys.stdin:
@@ -85,8 +84,8 @@ def main():
         if method is None or "id" not in message:
             continue
         if method == "initialize":
-            send(id=message["id"], result={"userAgent": "codex_app_server/0.159.2",
-                                           "serverInfo": {"name": "codex", "version": "0.159.2"}})
+            send(id=message["id"], result={"userAgent": "codex_app_server/0.171.0",
+                                           "serverInfo": {"name": "codex", "version": "0.171.0"}})
             continue
         if method == "hooks/list":  # no project hook waits for trust here
             send(id=message["id"], result={"data": []})
@@ -249,8 +248,12 @@ def _continued_context(repo, monkeypatch, sdk_data):
     # The round leaves the edits above uncommitted, so a second turn on the same conversation
     # asks the worker to commit them.
     resume, nudge = _sent(calls, "thread/resume")
-    assert (resume["threadId"], resume["config"]) == ("thr-stub-1", FIX_CONFIG)
+    resume_config = {key: value for key, value in FIX_CONFIG.items()
+                     if key != "model_reasoning_effort"}
+    assert (resume["threadId"], resume["config"]) == ("thr-stub-1", resume_config)
     assert nudge["threadId"] == "thr-stub-1"
+    assert "model_reasoning_effort" not in nudge["config"]
+    assert [turn["effort"] for turn in _sent(calls, "turn/start")[-2:]] == ["high", "high"]
     assert (resume["sandbox"], resume["approvalPolicy"]) == ("danger-full-access", "on-request")
     assert Path(resume["cwd"]).resolve() == folder.resolve()
     # The chat is named on start and keeps that name when this fix round resumes it.
@@ -258,15 +261,17 @@ def _continued_context(repo, monkeypatch, sdk_data):
     assert "stub codex: turn-stub-2 on thr-stub-1" in fixed.stdout
 
     # The old contract repeated the whole brief and the worker's own commit. A continued
-    # conversation now gets the findings and changes since its last turn ended.
+    # conversation now gets findings, commit subjects and file names without patch text.
     text = _sent(calls, "turn/start")[-2]["input"][0]["text"]
     assert "The earlier brief in this conversation still applies." in text
     assert "You are the worker." not in text
     assert "- P1 Archived stories are missing (web/board.py:12): Show them too." in text
     assert f"The new commits:\n\n{commits}\n" in text
-    assert "Add the notes" in text and "+First notes" in text
-    assert "Build the page" not in text and "+BUILT = True" not in text
-    assert "+Edited after the turn" in text and "+NEW_FILE = True" in text
+    assert "Add the notes" in text
+    assert "Build the page" not in text and "built.py" not in text
+    assert {"A\tnotes.md", "M\tREADME.md", "A\tweb/new.py"} <= set(text.splitlines())
+    for patch_text in ("diff --git", "First notes", "Edited after the turn", "NEW_FILE = True"):
+        assert patch_text not in text
     assert "IGNORED CONTENT" not in text and "secret.log" not in text
     # Git's own index is left as it was: the new file is still untracked.
     assert "?? web/" in repo.git("status", "--porcelain", cwd=folder).splitlines()
@@ -279,20 +284,10 @@ def _continued_context(repo, monkeypatch, sdk_data):
         # A repair round wants Fast; this stub reports no tier back.
         "model": "gpt-6-sol", "effort": "high", "fast_wanted": True, "requested_tier": "priority",
         "tier": None}
-    repo.git("add", "-A", cwd=folder)
-    repo.git("commit", "-qm", "Keep the edits", cwd=folder)
-
-    # A very large change is listed by file instead of shown in full.
-    (folder / "big.txt").write_text("big line\n" * (LARGE // 9 + 1), encoding="utf-8")
-    assert repo.forge("work", "BOARD/PAGE").returncode == 0
-    text = _sent(calls, "turn/start")[-2]["input"][0]["text"]  # the last one is the commit nudge
-    assert "big line" not in text
-    assert "big.txt" in text and "web/new.py" in text and "README.md" in text
-    (folder / "big.txt").unlink()
 
 
 def _rewritten_history(repo, monkeypatch, sdk_data):
-    # Rewriting the branch keeps its chat and sends the changed contents to the next turn.
+    # Rewriting the branch keeps its chat and lists the changed file for the next turn.
     folder, calls, turns = _resuming(repo, monkeypatch, sdk_data)
     monkeypatch.setenv("STUB_CODEX_COMMIT", "built.py")
     assert repo.forge("work", "BOARD/PAGE").returncode == 0
@@ -309,7 +304,8 @@ def _rewritten_history(repo, monkeypatch, sdk_data):
     assert len(_sent(calls, "thread/start")) == 1
     assert _sent(calls, "thread/resume")[-1]["threadId"] == first
     assert _lines(turns)[-1]["continued"] is True
-    assert "BUILT = 2" in _text(calls)
+    assert "M\tbuilt.py" in _text(calls).splitlines()
+    assert "BUILT = 2" not in _text(calls)
     # With none of those, the next call continues the conversation again.
     assert repo.forge("work", "BOARD/PAGE").returncode == 0
     assert _lines(turns)[-1]["continued"] is True

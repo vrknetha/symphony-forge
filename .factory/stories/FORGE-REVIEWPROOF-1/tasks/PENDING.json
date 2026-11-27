@@ -1,0 +1,83 @@
+{
+  "branch": "task/FORGE-REVIEWPROOF-1-PENDING",
+  "known": [
+    {
+      "area": "test_1_pending_after_merge_does_not_block_and_lists_check_and_owner() in tests/test_review_pending_after_merge.py",
+      "file": "tests/test_review_pending_after_merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 33,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: 1: tests/test_review_pending_after_merge.py::test_1_pending_after_merge_does_not_block_and_lists_check_and_owner",
+      "work": 1
+    },
+    {
+      "area": "test_2_pending_after_merge_carries_across_rounds_and_stays_out_of_stop_accept_and_spotted() in tests/test_review_pending_after_merge.py",
+      "file": "tests/test_review_pending_after_merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 92,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: 2: tests/test_review_pending_after_merge.py::test_2_pending_after_merge_carries_across_rounds_and_stays_out_of_stop_accept_and_spotted",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "d85f3dc6f1a128e80eebd0745b89141c229e5408e6ed145554d3cb2923e0e677",
+    "changed": "be3992eb80492e5b825a83852652d8dadd6806f190978da59450c50b5f5f37e0",
+    "commit": "60ceb8d82f79bd947123f540c8f5ae248c10121c",
+    "dismissals": [],
+    "findings": [],
+    "id": "3c7ca72c-19dd-4ec0-b0db-9c8448b1ca66",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-26T19:42:30.850695+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T19:42:43.792719+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T19:55:06.472123+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T19:55:26.040775+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T19:59:38.407952+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T01:55:57.621638+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T01:58:42.788831+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "23e1f93e-3e6a-453b-a30a-734de620e19c",
+    "head": "19c9f163b9dfea56958f66dac851543e8efd9155",
+    "keys": {},
+    "round": 2
+  },
+  "worker": "antigravity"
+}

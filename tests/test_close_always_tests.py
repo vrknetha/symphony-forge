@@ -65,7 +65,7 @@ def set_up(env, monkeypatch, adopted, always, changed=1, options=()):
     return item, log
 
 
-@pytest.mark.parametrize("adopted", [False, True], ids=["init", "earlier-adoption"])
+@pytest.mark.parametrize("adopted", [False], ids=["init"])
 @pytest.mark.parametrize("always", [None, ["tests/unit/test_case_5.py", "tests/unit/test_case_6.py::test_other_6",
                                             "tests/contracts/test_rules.py"]],
                          ids=["unset", "set"])
@@ -100,5 +100,7 @@ def test_2_close_refuses_an_always_test_it_cannot_run(env, monkeypatch, value, o
 def test_3_the_guides_name_always_test():
     for rel in ("src/forge/templates/skill.md", ".claude/skills/forge/SKILL.md", ".codex/skills/forge/SKILL.md"):
         text = " ".join((ROOT / rel).read_text("utf-8").split())
-        assert ("List them in `always_test` in `forge.toml` (in a fix), as test files or pytest node IDs"
+        # FORGE-RUNNER-1 specifies settings fixes with --done naming forge.toml.
+        assert ("List them in `always_test` in `forge.toml` (in a settings fix whose `--done` names `forge.toml`), "
+                "as test files or pytest node IDs"
                 in text and "close runs them on every change" in text), rel

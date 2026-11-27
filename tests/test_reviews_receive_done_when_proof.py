@@ -9,8 +9,8 @@ from test_setup import _fresh_client
 from test_worker import calls, install_claude
 
 STORY = "FIX-REVIEWS-FIND-MISSING-CASES-TWO-OR-THREE"
-WORKER_RULE = "each Done-when item you cover and every detail next to the test or check that proves it, or marked `missing`"
-NAMES_RULE = "Name each test by its pytest node ID or file and write no test results"
+WORKER_RULE = "each covered item has a numbered line"
+NAMES_RULE = "Write no test results: close refuses an item with no test, a named test that is not on the branch, and a named pytest test that did not run, failed or was skipped"
 REVIEW_RULE = "Check every entry against the code and its named proof, including every Done-when detail"
 
 
@@ -32,7 +32,7 @@ def test_1_clients_receive_proof_list_instructions(repo, gh, tmp_path, monkeypat
         shutil.copytree(Path(__file__).parent / "fixtures/adopted-v1.2.2/client",
                         repo.path, dirs_exist_ok=True)
         repo.git("add", "-A")
-        repo.git("commit", "-q", "-m", "Adopt on an earlier release")
+        repo.git("commit", "--allow-empty", "-q", "-m", "Adopt on an earlier release")
         repo.git("push", "-q", "origin", "main")
         client = repo.path
     else:
@@ -47,7 +47,7 @@ def test_1_clients_receive_proof_list_instructions(repo, gh, tmp_path, monkeypat
     if adopted:
         config.write_text(text, encoding="utf-8")
         repo.git("add", "-A", cwd=client)
-        repo.git("commit", "-q", "-m", "Use the installed Forge", cwd=client)
+        repo.git("commit", "--allow-empty", "-q", "-m", "Use the installed Forge", cwd=client)
         repo.git("push", "-q", "origin", "main", cwd=client)
     made = repo.forge("fix", "start", "Check proof guidance", "--done", "Proof is listed",
                       "--kind", "mechanical", cwd=client)
@@ -65,7 +65,7 @@ def test_1_clients_receive_proof_list_instructions(repo, gh, tmp_path, monkeypat
         assert NAMES_RULE in skill
         assert REVIEW_RULE in skill
     repo.git("add", "-A", cwd=where)
-    repo.git("commit", "-q", "-m", "Configure proof guidance", cwd=where)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Configure proof guidance", cwd=where)
     built = repo.forge("work", "check-proof-guidance", cwd=where)
     assert built.returncode == 0, built.stdout + built.stderr
     brief = flat(calls(log)[-1]["brief"])
@@ -84,7 +84,7 @@ def test_2_close_delivers_the_whole_proof_list_to_pr_and_first_review(env, kind)
             (env.repo.path / "plans/SHOP.md").read_text("utf-8"))
     label = "Proof list (run on this commit with -n 2: 3 passed):" if kind == "task-worded-label" else "Proof list:"
     proof = label + "\n- Greeting, including returning readers: the greeting check passed\n- Empty greeting: missing"
-    env.repo.git("commit", "--allow-empty", "-q", "-m", "List the proof", "-m", proof, cwd=where)
+    env.repo.git("commit", "--allow-empty", "--allow-empty", "-q", "-m", "List the proof", "-m", proof, cwd=where)
     closed = env.close(item)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     assert len(env.review_calls()) == 1
@@ -95,13 +95,13 @@ def test_2_close_delivers_the_whole_proof_list_to_pr_and_first_review(env, kind)
     assert checked(proof) in body(env.gh_calls("pr", "create")[-1])
     # An empty proof-only commit changes the review input even when the code stays identical.
     changed = proof.replace("Empty greeting: missing", "Empty greeting: the empty greeting check passed")
-    env.repo.git("commit", "--allow-empty", "-q", "-m", "Complete the proof", "-m", changed, cwd=where)
+    env.repo.git("commit", "--allow-empty", "--allow-empty", "-q", "-m", "Complete the proof", "-m", changed, cwd=where)
     assert env.close(item).returncode == 0
     assert len(env.review_calls()) == 2
     assert checked(changed) in env.prompt()
     # The old contract dropped the list when the latest commit had no label.
     # Close now retains the newest list and reuses the review when nothing changed.
-    env.repo.git("commit", "--allow-empty", "-q", "-m", "Work without proof", cwd=where)
+    env.repo.git("commit", "--allow-empty", "--allow-empty", "-q", "-m", "Work without proof", cwd=where)
     assert env.close(item).returncode == 0
     assert len(env.review_calls()) == 2
     assert checked(changed) in env.prompt()

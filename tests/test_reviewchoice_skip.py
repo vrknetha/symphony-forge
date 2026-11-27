@@ -190,9 +190,12 @@ def _later_change_gets_full_review(env):
     stale = env.repo.forge("next")
     assert stale.returncode == 0, stale.stderr
     assert f"The fix {item} is ready to merge." not in stale.stdout
-    env.reviews(CLEAN)
+    defect = finding("P1", "The later change loses the greeting")
+    env.reviews(blocked(defect))
     reviewed = env.close(item)
-    assert reviewed.returncode == 0, reviewed.stdout + reviewed.stderr
+    assert reviewed.returncode == 1, reviewed.stdout + reviewed.stderr
+    assert defect["title"] in reviewed.stderr
+    assert "Advice that does not block the merge:" not in reviewed.stdout
     assert len(env.review_calls()) == 1
     _assert_full_review(env, where)
     assert "Review: skipped by" not in body(env.gh_calls("pr", "edit")[-1])
@@ -224,7 +227,8 @@ def _missing_tool_skip(env, monkeypatch):
     env.repo.git("push", "-q", "origin", "main")
     for name in ("codex", "codex.cmd"):
         (env.repo.bin / name).unlink(missing_ok=True)
-    monkeypatch.delenv("CODEX_BIN", raising=False)
+    # A developer's own codex on PATH must not count as installed.
+    monkeypatch.setenv("CODEX_BIN", "codex-is-not-installed")
     item, where = env.start_fix()
     closed = _skip(env, item)
     assert closed.returncode == 0, closed.stdout + closed.stderr
@@ -242,6 +246,10 @@ def _missing_tool_skip(env, monkeypatch):
 def _blocked_history(env, tmp_path, resolution, adopted=False):
     if adopted:
         setup_adopted_client(env, True)
+    # This skip-history contract needs a stopped review, so select a one-round limit.
+    config = (env.repo.path / "forge.toml").read_text("utf-8")
+    env.commit(env.repo.path, "forge.toml", "task_review_rounds = 1\n" + config)
+    env.repo.git("push", "-q", "origin", "main")
     item, where = env.start_fix()
     branch = "fix/tidy-readme"
     stale = None
@@ -257,7 +265,8 @@ def _blocked_history(env, tmp_path, resolution, adopted=False):
             local_tip = env.commit(clone_path, "local.py", "print('local work')\n")
     env.reviews(blocked(finding("P1", "Not done: The readme opens with a greeting")))
     first = env.close(item)
-    assert first.returncode == 1
+    assert first.returncode == 1, first.stdout + first.stderr
+    assert "reached the round limit with open findings" in first.stderr
     env.open_pr(body(env.gh_calls("pr", "create")[-1]), draft=True)
     head = env.repo.git("rev-parse", "HEAD", cwd=where)
     direct = _skip(env, item)
@@ -266,7 +275,7 @@ def _blocked_history(env, tmp_path, resolution, adopted=False):
     assert env.repo.git("rev-parse", "HEAD", cwd=where) == head
     assert len(env.review_calls()) == 1
     if resolution in ("worker-clean", "stale-clone", "diverged-clone"):
-        # A fix has one review round. The owner records another round before the worker repairs it.
+        # At the configured limit, the owner records another round before the worker repairs it.
         more = env.close(item, "--resolve", "more", "--reason", "Repair the greeting")
         assert more.returncode == 0, more.stdout + more.stderr
         env.commit(where, "app.py", "print('the greeting is now present')\n")
@@ -366,7 +375,8 @@ def _ready_and_board(env):
     board = env.repo.forge("board", "--json")
     assert next_step.returncode == 0, next_step.stderr
     assert f"The fix {item} is ready to merge." in next_step.stdout
-    assert f"Next: forge merge {item}" in next_step.stdout
+    # Both closed fixes stay ready, including the human's review skip, in one batch.
+    assert f"Next: forge land {clean_item} {item}" in next_step.stdout
     assert f"The fix {clean_item} is ready to merge." in next_step.stdout
     assert board.returncode == 0, board.stderr
     data = json.loads(board.stdout)

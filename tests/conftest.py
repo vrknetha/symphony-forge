@@ -5,7 +5,6 @@ human reads and the calls the stubs recorded (spec criterion 4).
 """
 from __future__ import annotations
 
-import faulthandler
 import json
 import os
 import re
@@ -29,27 +28,6 @@ import _pytest.tmpdir
 ROOT = Path(__file__).resolve().parents[1]
 REAL_UV = shutil.which("uv")  # Capture before any test adds a command stub to PATH.
 REAL_CODEX_HOME = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
-
-_deadline_log = None
-
-
-def pytest_configure(config: pytest.Config) -> None:
-    """Windows CI needs a native deadline even outside the per-test timeout."""
-    global _deadline_log
-    seconds = float(os.environ.get("PYTEST_SESSION_DEADLINE") or "0")
-    if not seconds:
-        return
-    # Keep a descriptor outside pytest capture: a stuck capture flush must not hide
-    # the stacks or prevent the native watchdog from terminating the process.
-    _deadline_log = os.fdopen(os.dup(sys.stderr.fileno()), "w", encoding="utf-8")
-    if hasattr(config, "workerinput"):
-        seconds -= min(60, seconds / 2)  # Workers dump before the controller exits.
-    faulthandler.dump_traceback_later(seconds, file=_deadline_log, exit=True)
-
-
-def pytest_runtest_logstart(nodeid: str, location: tuple) -> None:
-    if _deadline_log is not None:
-        print(f"Test started: {nodeid}", file=_deadline_log, flush=True)
 
 IDLE_MACHINE = """from forge import machine
 machine.memory = lambda: dict(total_bytes=16_000_000_000, available_bytes=8_000_000_000)
@@ -106,13 +84,19 @@ from json_log import append_json
 here = pathlib.Path(__file__).resolve().parent
 args = sys.argv[1:]
 append_json(here / "gh-calls.jsonl", args)
+if "query=@-" in args:
+    append_json(here / "gh-queries.jsonl", sys.stdin.read())
 if "--body-file" in args:  # the body as sent: the next call may rewrite the same file
     path = args[args.index("--body-file") + 1]
     body = sys.stdin.read() if path == "-" else pathlib.Path(path).read_text("utf-8")
     append_json(here / "gh-bodies.jsonl", body)
 responses = here / "gh-responses.json"
-for rule in reversed(json.loads(responses.read_text("utf-8")) if responses.exists() else []):
+rules = json.loads(responses.read_text("utf-8")) if responses.exists() else []
+for rule in reversed(rules):
     if args[:len(rule["args"])] == rule["args"]:
+        if rule.get("then"):  # answers for the next calls, in order; the last one repeats
+            rule["stdout"] = rule["then"].pop(0) if len(rule["then"]) > 1 else rule["then"][0]
+            responses.write_text(json.dumps(rules))
         sys.stdout.write(rule["stdout"])
         sys.stderr.write(rule["stderr"])
         sys.exit(rule["exit"])
@@ -185,7 +169,7 @@ def _cached_sdk(env: Path, pin: str):
                     fcntl.flock(lock, fcntl.LOCK_UN)
 
 
-def _claude_sdk_env(data: Path, pin: str = "0.2.161") -> None:
+def _claude_sdk_env(data: Path, pin: str = "0.2.187") -> None:
     """The Claude Agent SDK's separate Python environment under this XDG_DATA_HOME."""
     env = data / "forge" / "claude-sdk" / f"claude-agent-sdk-{pin}"
     with _cached_sdk(env, pin) as build:
@@ -196,7 +180,7 @@ def _claude_sdk_env(data: Path, pin: str = "0.2.161") -> None:
 
 def _install_claude_sdk(bin_dir: Path, data: Path) -> None:
     """A separate Python environment, with only the SDK's external edge replaced."""
-    pin = "0.2.161"
+    pin = "0.2.187"
     _claude_sdk_env(data, pin)
     package = bin_dir / "claude_agent_sdk"
     package.mkdir(exist_ok=True)
@@ -205,6 +189,49 @@ def _install_claude_sdk(bin_dir: Path, data: Path) -> None:
     metadata.mkdir(exist_ok=True)
     (metadata / "METADATA").write_text(
         f"Metadata-Version: 2.1\nName: claude-agent-sdk\nVersion: {pin}\n", encoding="utf-8")
+
+
+PROGRAM = """import os
+import shutil
+from pathlib import Path
+
+
+def bundled_codex_path():
+    return Path(os.environ.get("CODEX_BIN") or shutil.which("codex-app-server"))
+"""
+
+
+@pytest.fixture(scope="session")
+def sdk_data(pytestconfig: pytest.Config) -> Path:
+    """An XDG_DATA_HOME holding Forge's SDK environment: the pinned SDK and the libraries its
+    METADATA requires, but not its Codex program. Built once, then kept in pytest's cache."""
+    PIN = "0.171.0"
+    uv = REAL_UV
+    if uv is None:
+        pytest.skip("uv is missing, so the Codex SDK test environment can't be built")
+    data = pytestconfig.cache.mkdir(f"codex-sdk-{PIN}-sync")
+    # Forge checks both SDKs under one XDG_DATA_HOME, and many tests point it here directly.
+    _claude_sdk_env(data)
+    env = data / "forge" / "codex-sdk" / f"openai-codex-{PIN}"
+    with _cached_sdk(env, PIN) as build:
+        if build is None:
+            return data
+        python = build / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+        # The cache outlives repo fixtures and their private uv Python install homes.
+        subprocess.run([uv, "venv", "-q", "--python", sys.executable, str(build)], check=True)
+        subprocess.run([uv, "pip", "install", "-q", "--python", str(python), "--no-deps",
+                        f"openai-codex=={PIN}"], check=True)
+        site = Path(subprocess.run([python, "-c", "import sysconfig; print(sysconfig.get_path('purelib'))"],
+                                   capture_output=True, text=True, check=True).stdout.strip())
+        metadata = (next(site.glob("openai_codex-*.dist-info")) / "METADATA").read_text(encoding="utf-8")
+        needs = [line.split(":", 1)[1].strip() for line in metadata.splitlines()
+                 if line.startswith("Requires-Dist:") and "openai-codex-cli-bin" not in line]
+        subprocess.run([uv, "pip", "install", "-q", "--python", str(python), *needs], check=True)
+        (site / "codex_cli_bin.py").write_text(PROGRAM, encoding="utf-8")
+        info = site / f"openai_codex_cli_bin-{PIN}.dist-info"
+        info.mkdir()
+        (info / "METADATA").write_text(f"Name: openai-codex-cli-bin\nVersion: {PIN}\n", encoding="utf-8")
+    return data
 
 
 T = TypeVar("T")
@@ -331,6 +358,13 @@ class Repo:
         path.write_text(text, encoding="utf-8")
         return path
 
+    def pypi(self, *answers: str | int) -> None:
+        (self.bin / "pypi-responses.json").write_text(json.dumps(answers), encoding="utf-8")
+
+    def pypi_calls(self) -> list[float]:
+        log = self.bin / "pypi-calls.jsonl"
+        return [json.loads(line) for line in log.read_text("utf-8").splitlines()] if log.exists() else []
+
 
 class StubGh:
     """Tell the stub gh what to answer, and read back the calls it got."""
@@ -344,10 +378,16 @@ class StubGh:
         rules.append({"args": list(args), "stdout": stdout, "stderr": stderr, "exit": exit})
         self.responses.write_text(json.dumps(rules), encoding="utf-8")
 
-    def calls(self) -> list[list[str]]:
+    def calls(self, *prefix: str, path: str | None = None,
+              query: str | None = None) -> list[list[str]]:
         if not self.log.exists():
             return []
-        return [json.loads(line) for line in self.log.read_text("utf-8").splitlines()]
+        calls = [json.loads(line) for line in self.log.read_text("utf-8").splitlines()]
+        # Keep tests tied to the route or query they own, not GitHub call order.
+        return [call for call in calls
+                if call[:len(prefix)] == list(prefix)
+                and (path is None or any(path in arg for arg in call))
+                and (query is None or any(query in arg for arg in call))]
 
 
 @pytest.fixture(autouse=True)
@@ -355,6 +395,7 @@ def isolated_forge_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     # Every Forge subprocess must write its per-machine repo list inside this test's temp folder.
     monkeypatch.setenv("APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME",
                        str(tmp_path / "config"))
+    monkeypatch.setenv("FORGE_TEST_ROOT", str(tmp_path.resolve()))
 
 
 def _left(tmp_path: Path) -> list[str]:
@@ -447,7 +488,8 @@ def pytest_sessionfinish(session: pytest.Session) -> None:
 #   A Codex round would run as the session's own subagent, so a test that builds on Codex through
 #   the kit says so with the `claude_session` fixture; a test that needs no session deletes both.
 # - No Forge run around it: every FORGE_ variable (worker marker, test budget, pinned release,
-#   checkout forwarding, waits) is unset; a test that needs one sets it. FORGE_LIVE_CODEX stays:
+#   checkout forwarding, waits) is unset, then CI polling defaults to 0.01 seconds for tests.
+#   Interval and controlled-clock tests select their own value. FORGE_LIVE_CODEX stays:
 #   it is the real-Codex opt-in, set only by the codex-smoke workflow.
 # - No tool overrides: CODEX_BIN, CLAUDE_BIN and AUTOREVIEW are unset; a stub sets its own.
 # - No outer git: every GIT_ variable is unset (they leak in when tests run inside a git hook);
@@ -461,13 +503,19 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     # The checkout launcher exposes src through PYTHONPATH; clients and released tools must not.
     monkeypatch.delenv("PYTHONPATH", raising=False)
     for name in list(os.environ):
-        if name.startswith(("GIT_", "FORGE_")) and name != "FORGE_LIVE_CODEX" or name in (
+        if name.startswith(("GIT_", "FORGE_")) and name not in ("FORGE_LIVE_CODEX", "FORGE_TEST_ROOT") or name in (
                 "CLAUDECODE", "CODEX_BIN", "CLAUDE_BIN", "AUTOREVIEW"):
             monkeypatch.delenv(name)
+    # Set this after isolation, which would remove a session-level FORGE_ default.
+    # Autouse covers commands in tests that do not use the repo fixture too.
+    monkeypatch.setenv("FORGE_CHECKS_POLL", "0.01")
+    monkeypatch.setenv("FORGE_NO_RUNNER", "1")
     # cmd.exe expands %CI% in a .cmd stub's arguments, case-insensitively: git's
     # --format=%x00%cI%x00 would reach git as %x00truex00 on CI runners.
     monkeypatch.delenv("CI", raising=False)
     monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    # Workflow fixtures choose their own attempt; a host CI retry is not a client retry.
+    monkeypatch.delenv("GITHUB_RUN_ATTEMPT", raising=False)
     monkeypatch.setenv("CODEX_THREAD_ID", "thr-test-coordinator")
 
 
@@ -510,27 +558,54 @@ def empty_claude_sdk(tmp_path_factory: pytest.TempPathFactory) -> Path:
 def fake_clock(repo, tmp_path, monkeypatch, request):
     """Advance sleeps without waiting; Forge and its gh children share elapsed time.
 
-    An indirect parameter can jump the 15-second check polls across queue boundaries.
+    An indirect parameter can jump the 60-second check polls across queue boundaries.
     Subprocess deadlines and OS wait polling retain real time.
     """
+    monkeypatch.setenv("FORGE_CHECKS_POLL", "60")
     folder = tmp_path / "clock"
     folder.mkdir()
     offset = folder / "elapsed"
     offset.write_text("0", encoding="utf-8")
-    (folder / "sitecustomize.py").write_text(f'''import subprocess, time
+    (folder / "sitecustomize.py").write_text(f'''import os, subprocess, threading, time
 from pathlib import Path
 from types import SimpleNamespace
 subprocess.time = SimpleNamespace(sleep=time.sleep)
 real = time.monotonic
 offset = Path({offset.as_posix()!r})
-poll_seconds = {getattr(request, "param", 15)!r}
+poll_seconds = {getattr(request, "param", None)!r}
+poll_interval = float(os.environ.get("FORGE_CHECKS_POLL", "60"))
 
 def monotonic():
-    return real() + float(offset.read_text("utf-8"))
+    for _ in range(20):
+        try:
+            text = offset.read_text("utf-8").strip()
+            if text:
+                return real() + float(text)
+        except (OSError, ValueError):
+            pass
+    return real()
 
 def sleep(seconds):
-    seconds = poll_seconds if seconds == 15 else seconds
-    offset.write_text(str(float(offset.read_text("utf-8")) + seconds), encoding="utf-8")
+    seconds = poll_seconds if poll_seconds is not None and seconds == poll_interval else seconds
+    current = 0.0
+    for _ in range(20):
+        try:
+            text = offset.read_text("utf-8").strip()
+            if text:
+                current = float(text)
+                break
+        except (OSError, ValueError):
+            pass
+    tmp = offset.with_name(f"elapsed.{{os.getpid()}}.{{threading.get_ident()}}.tmp")
+    tmp.write_text(str(current + seconds), encoding="utf-8")
+    for _ in range(20):
+        try:
+            os.replace(tmp, offset)
+            break
+        except PermissionError:
+            pass
+    else:
+        tmp.unlink(missing_ok=True)
 
 time.sleep = sleep
 time.monotonic = monotonic
@@ -540,7 +615,7 @@ time.monotonic = monotonic
 
 @pytest.fixture
 def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, seed_repo: Path,
-         empty_claude_sdk: Path) -> Repo:
+         empty_claude_sdk: Path, sdk_data: Path) -> Repo:
     # A launcher's marker and test budget, again: a module fixture may set them as a launcher would.
     monkeypatch.delenv("FORGE_WORKER", raising=False)
     monkeypatch.delenv("FORGE_TEST_CPUS", raising=False)
@@ -556,7 +631,11 @@ def repo(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, seed_repo: Path,
     bin_dir = tmp_path / "bin"
     bin_dir.mkdir()
     shutil.copyfile(ROOT / "tests/stubs/json_log.py", bin_dir / "json_log.py")
-    _install(bin_dir, "forge", FORGE_SHIM.format(python=sys.executable, src=str(ROOT / "src")))
+    forge = FORGE_SHIM.format(python=sys.executable, src=str(ROOT / "src"))
+    _install(bin_dir, "forge", forge.replace("from forge.cli import main",
+             "if sys.argv[1:2] in (['next'], ['upgrade']):\n    import forge_test_pypi\n"
+             "from forge.cli import main"))
+    shutil.copyfile(ROOT / "tests/stubs/pypi.py", bin_dir / "forge_test_pypi.py")
     _install(bin_dir, "gh", GH_STUB.format(python=sys.executable))
     # Sync manages Claude's user-scope plugins. Never let a command test touch
     # the developer's real plugin install or contact its marketplace.
@@ -570,12 +649,23 @@ elif args == ["plugin", "marketplace", "list", "--json"]:
 elif args == ["plugin", "list", "--json"]:
     print('[{{"id":"forge@forge","scope":"user","enabled":true,"version":"1.2.6"}}]')
 ''')
-    monkeypatch.setenv("PATH", f"{bin_dir}{os.pathsep}{os.environ['PATH']}")
+    # forge upgrade updates the Codex CLI. Its stub sits in its own folder, outside any
+    # installer's folder, so a test that drops "folders with a codex" from PATH keeps bin_dir.
+    codex_dir = tmp_path / "codex-bin"
+    codex_dir.mkdir()
+    _install(codex_dir, "codex", f'#!{sys.executable}\nprint("codex-cli 0.1.0")\n')
+    monkeypatch.setenv("PATH", os.pathsep.join([str(bin_dir), str(codex_dir), os.environ["PATH"]]))
     data = tmp_path / "data"
     monkeypatch.setenv("XDG_DATA_HOME", str(data))
     # Preserve the venv's interpreter links, but copy all writable SDK files.
     # Direct SDK setup/recovery callers still use _claude_sdk_env's fresh-build path.
     shutil.copytree(empty_claude_sdk, data, symlinks=True)
+    # Copy only the published environment. Other pytest workers can still have
+    # temporary builds beside it, which disappear when their publisher finishes.
+    codex_relative = Path("forge/codex-sdk/openai-codex-0.171.0")
+    shutil.copytree(sdk_data / codex_relative, data / codex_relative, symlinks=True)
+    _install(bin_dir, "codex-app-server",
+             (ROOT / "tests/stubs/codex-app-server").read_text(encoding="utf-8"))
     _install_claude_sdk(bin_dir, data)
     monkeypatch.setenv("PYTHONPATH", str(bin_dir) + os.pathsep + os.environ.get("PYTHONPATH", ""))
     # Host hooks find forge through uv's tool folders, so those name this one too.
@@ -650,3 +740,11 @@ def codex_payload(repo: Repo) -> Builder:
             payload["turn_id"] = uuid.uuid4().hex
         return payload
     return build
+
+
+def assert_next_follows(report: str, advice: str, next_line: str) -> None:
+    """The report has the advice line, with the Next line right after it; position in the report is free."""
+    lines = report.splitlines()
+    at = [i for i, line in enumerate(lines) if line == advice]
+    assert at, report
+    assert lines[at[0] + 1:at[0] + 2] == [next_line], report

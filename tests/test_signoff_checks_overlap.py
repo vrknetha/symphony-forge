@@ -25,6 +25,9 @@ def run_reviewer(args, repo, prompt, changed_paths, required, evidence=None):
                    input=str(prompt), text=True, capture_output=True, check=True)
     return prompt
 
+def validate_report(report, repo, *args):
+    assert report['findings'] == []
+
 # The pinned helper's pass interface and serial scheduling.
 def run_review_passes(args, reviewers, repo, prompts, changed_paths, evidence=None):
     args.review_usage = reviewers[0].review_usage = []

@@ -14,12 +14,15 @@ and the Rules below, and leave the flow and the approval steps to the agent coor
    Never ask the human whether it is a story or a fix.
 2. A plan gets rounds of cold read (`forge read <KEY>`) until no notes block building, then one
    approval from the human.
-3. Each task runs in its own branch and worktree: `forge task start <KEY>/<TASK>`, then
-   `forge work <KEY>/<TASK>`.
-4. `forge close <item>` closes it when the tests pass and the review finds no serious problem.
+3. After approval (or `forge fix start`), Forge's background runner starts each ready part, builds
+   and checks it through `forge land`, merges it when `merge = "agent"` (or polls until a person
+   merges), removes finished folders, and ends when nothing is left to do. You do not need to start
+   each part, start each fix build, or watch background runs; answer notices and builders' questions.
+4. `forge close <item>` closes an item by hand when needed, when tests pass and review finds no
+   serious problem.
 5. The human merges unless the default branch's `forge.toml` has `merge = "agent"`.
-   Then, once close says Ready, the agent runs `forge merge <item>`. The story's last task merge
-   records it done, using `--outcome "<outcome>"` or its title. Use `forge story done` on an
+   Then, once close says Ready, the agent or runner runs `forge merge <item>`. The story's last task
+   merge records it done, using `--outcome "<outcome>"` or its title. Use `forge story done` on an
    existing work branch only to change that outcome later; it opens no separate pull request.
 
 ### The lanes
@@ -84,11 +87,12 @@ Do not install Mainline or start OAuth sign-in for those requests. An explicit r
 - Never make anything sound more certain or more finished than it is. Keep numbers, uncertainty
   and status (planned, in progress, done) exact. A correlation stays a correlation, and a plan
   stays a plan.
-- A story is approved through Plan Mode: exit Plan Mode with the text of the story doc that
-  `forge next` names, unchanged, as the plan: from its title down to `## For the builders`, or the
-  whole doc when it has no such heading. The approval matches its "What changes for you" and
-  "Done when" sections exactly, so a summary or a rewrite records nothing, and an edit below
-  `## For the builders` needs no new approval. There is no other approval step.
+- Show the story doc that `forge next` names, unchanged, from its title down to
+  `## For the builders`. Show the whole doc if it has no such heading. In Claude Code, exit Plan
+  Mode with that text as the plan. In Codex, ask the owner to type the approval line from
+  `forge next`. A Codex chat already in Plan Mode can use the question from `forge next`.
+  The approval matches "What changes for you" and "Done when" exactly. An edit below
+  `## For the builders` needs no new approval.
 - Run long `forge work` runs in the background and keep watching them.
 - When Forge itself misbehaves (a wrong or confusing message, a refusal that shouldn't happen, a
   crash, a command that reports success but did nothing, generated files that contradict each
@@ -111,17 +115,27 @@ change is dogfooded on Forge itself before clients get it.
 - Every change says what a new client repo and an existing client repo each get.
 - Forge's own principles and its own test policies (such as the real-Codex tests) live here, not in
   the shared standards.
+- Each release bump adds src/forge/release-notes/v<version>.md for everything merged since the
+  previous release, and merges last before the cut. Write each line for an agent that must act on
+  it: what changed, and what the agent or owner now does differently. Each known issue starts with
+  a short bold title, says what happens, and ends with Workaround: <what to do>, or Workaround:
+  none; <what to expect>. When a release fixes an earlier known issue, list that issue's bold
+  title, unchanged, under Fixed known issues. Leave out Forge's own tests and work, and name no
+  client. Before tagging, run .github/release-notes-check.py on the cut commit.
 
 ## Review rules
 
 - Report as P1 any screen, page, route table or app shell that a change adds under `src/forge/templates/starter` or `src/forge/templates/starter-python`.
-- A change to Forge says what a new client repo (init or adoption) and an existing client repo (on
-  upgrade to the new release) each get. Each rule keeps its full cases on a new repo plus at least
-  one case on an existing repo adopted on an earlier release. Keep more existing-repo cases only
-  where Forge takes a different path for it. Report a change that covers only one side, or only
-  Forge's own repo, as P1. Report extra existing-repo cases that repeat the new-repo path as a
-  deletion candidate, not a gap. A release's version bump changes no behaviour and needs no new
-  upgrade test.
+- A change to Forge says what a new client repo (init or adoption of a live app) and an existing
+  client repo (on upgrade to the new release) each get. Each ordinary rule is tested on a new repo
+  only; do not add a second case on a repo adopted on an earlier release. Tests whose subject is
+  behaviour that exists only for older releases (old record readers and movers, the run of a pinned
+  release, repairs of older releases' files, forge migrate) stay with that behaviour. The suite keeps
+  one test of the upgrade from an earlier release to the installed release
+  (`tests/test_upgrade_to_installed_release.py`); a change that must convert a record during the
+  upgrade extends that test. Report as P1 a change that does not say what each repo gets. Report a
+  new earlier-adopted case of an ordinary rule as a deletion candidate. A release's version bump
+  changes no behaviour and needs no new upgrade test.
 - A change to what a coordinator or worker should do or can use (a command, an option, a setting,
   a step in the flow) updates `src/forge/templates/skill.md` or the worker brief
   (`src/forge/templates/brief.md`) in the same change. Report a missing update as P1.
@@ -168,9 +182,8 @@ These govern Forge itself. Each has a check: an acceptance criterion, a CI check
   This step also applies in CI test mode. Fix failures in the same round, rerun
   the failed checks, and commit the repairs. These existing checks cover duplicate
   rule labels, tests with no rule, and files over 1,200 lines.
-- Each rule keeps its full cases on a new repo plus at least one earlier-adopted repo case.
-  Keep more adopted-repo cases only where Forge takes a different path for it. In a test audit,
-  report extra adopted-repo cases that repeat the new-repo path as deletion candidates, not gaps.
+- Each ordinary rule is tested on a new repo. Tests of older-release behaviour stay with that
+  behaviour. The suite has one upgrade test, from an earlier release to the installed release.
 - Tests run the forge command and never import forge.
 - A test that calls a real Codex model runs only when FORGE_LIVE_CODEX=1 (the codex-smoke workflow
   sets it); don't set it in local runs.

@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/ask.py\tNot done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.\tFORGE-ASKFAMILY-1/FAMILY",
+      "kind": "bug",
+      "path": "src/forge/ask.py",
+      "line": 61,
+      "text": "Not done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "from": "blocking",
+      "item": "FORGE-ASKFAMILY-1/FAMILY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/claude_turn.py\tDisputed keep 12: User hooks still run during Claude's read-only turn\tFORGE-ASKFAMILY-1/FAMILY",
+      "kind": "bug",
+      "path": "src/forge/claude_turn.py",
+      "line": 40,
+      "text": "Disputed keep 12: User hooks still run during Claude's read-only turn",
+      "from": "blocking",
+      "item": "FORGE-ASKFAMILY-1/FAMILY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/claude_turn.py\tNot done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.\tFORGE-ASKFAMILY-1/FAMILY",
+      "kind": "bug",
+      "path": "src/forge/claude_turn.py",
+      "line": 41,
+      "text": "Not done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "from": "blocking",
+      "item": "FORGE-ASKFAMILY-1/FAMILY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_ask_command.py\tTest: Each family's answer is recorded after the command waits for an agent place\tFORGE-ASKFAMILY-1/FAMILY",
+      "kind": "bug",
+      "path": "tests/test_ask_command.py",
+      "line": 144,
+      "text": "Test: Each family's answer is recorded after the command waits for an agent place",
+      "from": "blocking",
+      "item": "FORGE-ASKFAMILY-1/FAMILY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_ask_command.py\tTest: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.\tFORGE-ASKFAMILY-1/FAMILY",
+      "kind": "bug",
+      "path": "tests/test_ask_command.py",
+      "line": 255,
+      "text": "Test: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "from": "blocking",
+      "item": "FORGE-ASKFAMILY-1/FAMILY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_ask_command.py\tTest: `--model` takes precedence over `[models.ask]`, and `[models.ask]` can hold a model for each family.\tFORGE-ASKFAMILY-1/FAMILY",
+      "kind": "bug",
+      "path": "tests/test_ask_command.py",
+      "line": 180,
+      "text": "Test: `--model` takes precedence over `[models.ask]`, and `[models.ask]` can hold a model for each family.",
+      "from": "blocking",
+      "item": "FORGE-ASKFAMILY-1/FAMILY",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/ask.py\tNot done: A `gpt-` model asks Codex, a `claude-` model asks Claude and a `gemini-` model asks Gemini",
+      "kind": "edge",
+      "path": "src/forge/ask.py",
+      "line": 71,
+      "text": "Not done: A `gpt-` model asks Codex, a `claude-` model asks Claude and a `gemini-` model asks Gemini",
+      "from": "review",
+      "item": "FORGE-ASKFAMILY-1/FAMILY",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

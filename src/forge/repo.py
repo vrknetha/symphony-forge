@@ -52,7 +52,7 @@ REFUSALS = {
                   "move {key} to forge.toml in a fix, or take it out of forge.local.toml"),
     "pin": (
         "Forge {installed} is installed, but this repo pins {pinned}.",
-        "uv tool install git+https://github.com/knacklabs/symphony-forge@{pinned}",
+        "uv tool install symphony-forge=={package_version}",
     ),
     "pin_elsewhere": ("{item} is checked out in {folder}, which pins Forge {installed}; "
                       "this folder pins {pinned}.", "cd {folder}, then forge {words} {item}"),
@@ -287,7 +287,11 @@ def run(*args: str, cwd: str | os.PathLike[str] | None = None,
                 snapshots[args] = done
             return done
         return snapshots[args]
-    done = _github_read(args, execute) if args[0] == "gh" else execute()
+    if args[0] == "gh":
+        from forge import github
+        done = github.read(args, lambda: github.run(args, execute, cwd))
+    else:
+        done = execute()
     if args[:3] == ("gh", "pr", "merge") and not done.returncode:
         # Merges must show at once; other pull request changes wait for the minute cache.
         (forge_dir(cwd) / "prs-cache.json").unlink(missing_ok=True)
@@ -341,57 +345,9 @@ def resolve_commit(top: Path, ref: str) -> str:
         "rev-parse", "--verify", f"{ref}~0", cwd=top)
 
 
-def _github_read(args: tuple[str, ...], execute) -> subprocess.CompletedProcess[str]:
-    """Retry reads only: replaying a write after an unreadable receipt could duplicate it."""
-    api = args[1:2] == ("api",)
-    read = (args[1:3] in (("pr", "list"), ("pr", "view"), ("pr", "checks"),
-                         ("run", "list"), ("run", "view"),
-                         ("release", "list"), ("release", "view")))
-    if api:
-        # gh infers POST from fields; our GraphQL query is a read despite that POST.
-        read = (not any(flag in args for flag in ("-f", "-F", "--field", "--raw-field", "--input"))
-                or ("graphql" in args and any(re.match(r"query=\s*(?:\{|query\b)", arg)
-                                              for arg in args)))
-        if "--method" in args or "-X" in args:
-            flag = "--method" if "--method" in args else "-X"
-            read = args[args.index(flag) + 1].upper() == "GET"
-    if not read:
-        return execute()
-    jq = args[args.index("--jq") + 1] if "--jq" in args else None
-    structured = api or "--json" in args
-    for pause in (1, 2, 4, None):
-        done = execute()
-        said = done.stderr + done.stdout
-        if done.returncode and re.search(r"\bHTTP\s+(?:401|403|404)\b", said, re.I):
-            return done
-        unreadable = False
-        if structured and done.returncode == 0:
-            text = done.stdout.strip()
-            try:
-                if ((jq is None and api and "--paginate" in args and "--slurp" not in args)
-                        or (jq is not None and jq.endswith("[]"))):
-                    decoder = json.JSONDecoder()
-                    while text:
-                        _, end = decoder.raw_decode(text)
-                        text = text[end:].lstrip()
-                elif jq is None:
-                    json.loads(text)
-                else:
-                    unreadable = text.startswith("<")
-            except ValueError:
-                unreadable = True
-        transient = unreadable or (structured and (done.stdout.lstrip().startswith("<")
-                                                   or done.stderr.lstrip().startswith("<"))) or (done.returncode and (
-            re.search(r"\bHTTP\s+5\d\d\b", said, re.I)
-            or re.search(r"\bunexpected EOF\b|\binvalid character\b", said, re.I)
-            or "looking for beginning of value" in said
-            or "unexpected end of JSON input" in said))
-        if not transient:
-            return done
-        if pause is None:
-            return subprocess.CompletedProcess(done.args, 1, "",
-                                               REFUSALS["no_github"][0] + "\n")
-        time.sleep(pause)
+# Short network outages, as git and gh print them; the queue (land.py) starts a change again on them too.
+NETWORK = ("Could not resolve host", "i/o timeout", "Connection timed out", "Connection reset",
+           "error connecting to")
 
 
 def quote(argument: object) -> str:
@@ -416,15 +372,27 @@ def generated_files(top: Path, paths: list[str], head: str = "") -> set[str]:
     if not paths:
         return set()
     with tempfile.TemporaryDirectory() as folder:
-        env = dict(os.environ)
+        env, cached = None, ("--cached",)
         if head:
-            env["GIT_INDEX_FILE"] = str(Path(folder) / "index")
-            git("read-tree", head, cwd=top, env=env)
-        attrs = run("git", "check-attr", "--cached", "--stdin", "-z", "linguist-generated",
+            # Git 2.39 has no check-attr --source. Give its parser only the attributes,
+            # with an empty index so missing attributes cannot fall back to this checkout.
+            attributes = {(parent / ".gitattributes").as_posix()
+                          for path in paths for parent in Path(path).parents}
+            for spec, data in blob_bytes(top, [f"{head}:{path}" for path in attributes]).items():
+                target = Path(folder) / spec.partition(":")[2]
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(data)
+            dot = top / ".git"
+            gitdir = (top / dot.read_text(encoding="utf-8").strip().removeprefix("gitdir: ")
+                      if dot.is_file() else dot).resolve()
+            env = {**os.environ, "GIT_DIR": str(gitdir), "GIT_WORK_TREE": folder,
+                   "GIT_INDEX_FILE": str(Path(folder) / "index")}
+            cached = ()
+        attrs = run("git", "check-attr", *cached, "--stdin", "-z", "linguist-generated",
                     cwd=top, env=env, input="\0".join(paths))
-        attrs.check_returncode()
-        values = attrs.stdout.split("\0")
-        return {path for path, value in zip(values[::3], values[2::3]) if value in ("set", "true")}
+    attrs.check_returncode()
+    values = attrs.stdout.split("\0")
+    return {path for path, value in zip(values[::3], values[2::3]) if value in ("set", "true")}
 
 
 def commit_log(top: Path, base: str, head: str = "HEAD") -> list[tuple[str, str, list[str]]]:
@@ -466,6 +434,11 @@ def current_branch(cwd: str | os.PathLike[str] | None = None) -> str:
     return git("branch", "--show-current", cwd=cwd)
 
 
+def replayed_tags(branch: str) -> str:
+    """The refspec for the pre-replay heads that earlier reviews of `branch` cite."""
+    return f"+refs/tags/forge-replayed/{branch}/*:refs/tags/forge-replayed/{branch}/*"
+
+
 def default_branch(cwd: str | os.PathLike[str] | None = None) -> str:
     # ponytail: origin/HEAD, else "main". A remote-less repo on another name needs origin/HEAD set.
     done = command_fact("default branch", cwd, lambda: run(
@@ -487,10 +460,11 @@ def work_log(top: Path, item: str) -> Path:
 
 
 def record_timing(top: Path, item: str, step: str, start: str, clock: float,
-                  outcome: str, model: dict[str, str] | None = None) -> None:
+                  outcome: str, model: dict[str, str] | None = None, *, worker_round: int | None = None) -> None:
     """Append a best-effort timing in the shared, uncommitted Git directory."""
-    line = {"item": item, "round": (read_state(item, top) or {}).get("round", 0),
-            "step": step, "start": start,
+    if worker_round is None:
+        worker_round = (read_state(item, top) or {}).get("round", 0)
+    line = {"item": item, "round": worker_round, "step": step, "start": start,
             "seconds": round(time.monotonic() - clock, 3), "outcome": outcome}
     if model:
         line.update({key: model[key] for key in ("model", "effort") if key in model})
@@ -504,8 +478,9 @@ def record_timing(top: Path, item: str, step: str, start: str, clock: float,
 def record_event(top: Path, item: str, event: str, **fields: Any) -> str:
     """Write an occurrence once; consumers use its random id, never its text or timestamp."""
     identity = str(uuid.uuid4())
-    line = {"id": identity, "item": item, "event": event, "at": now(),
-            "round": (read_state(item, top) or {}).get("round", 0), **fields}
+    if "round" not in fields:
+        fields["round"] = (read_state(item, top) or {}).get("round", 0)
+    line = {"id": identity, "item": item, "event": event, "at": now(), **fields}
     from forge import event_log
     event_log.append(top, line)
     return identity
@@ -576,7 +551,7 @@ def record_run(top: Path, item: str, kind: str, **fields: Any):
     """Keep starts and ends even for a run entirely between two board refreshes."""
     identity = record_event(top, item, "run start", kind=kind, **fields)
     result = {"outcome": "failed", "run_id": identity,
-              **{key: fields[key] for key in ("model", "effort") if fields.get(key)}}
+              **{key: fields[key] for key in ("family", "model", "effort") if fields.get(key)}}
     if "round" in fields:
         result["round"] = fields["round"]
     try:
@@ -587,22 +562,24 @@ def record_run(top: Path, item: str, kind: str, **fields: Any):
 
 # --- forge.toml, the pin and the roadmap -----------------------------------------------
 
-# ponytail: stop_default only loads settings from earlier releases; stops always wait for the owner.
-KEYS = {"version": str, "repo": str, "stage": str, "workers": str, "tools": str, "test": str, "fast_test": str,
+# ponytail: stop_default only loads settings from earlier releases; it no longer chooses a stop action.
+KEYS = {"version": str, "repo": str, "stage": str, "workers": str, "reviews": str, "tools": str, "test": str, "fast_test": str,
         "signoff": str, "sample_data": bool, "runner": str, "test_runner": str, "codex_fast": str, "stop_default": str,
-        "merge": str, "stack": str, "test_place": str, "checks": list, "interfaces": list,
+        "merge": str, "stack": str, "auto_more_round": bool, "test_place": str, "checks": list, "interfaces": list,
         "always_test": list, "groups": int, "models": dict, "full_suite_workflow": str,
-        "added_work_min_gain": int, "always_block": list, "cold_read_rounds": int, "task_review_rounds": int}
+        "added_work_min_gain": int, "always_block": list, "cold_read_rounds": int, "task_review_rounds": int, "boxes": str}
 # A client repo without a stage counts as live: prototype rules never reach an app by default.
 DEFAULTS = {"repo": "client", "stage": "live", "workers": "codex", "tools": "both", "test": "", "fast_test": "",
             "signoff": "", "runner": "ubuntu-24.04", "test_runner": "", "codex_fast": "off",
             "stop_default": "narrow", "merge": "human", "stack": "on", "checks": [], "interfaces": [], "always_test": [],
-            "models": {}, "cold_read_rounds": 2, "task_review_rounds": 2}
+            "models": {}, "cold_read_rounds": 2, "task_review_rounds": 2, "auto_more_round": False, "boxes": "off"}
 # ponytail: retain stop_default's old values so existing forge.toml files still load.
+FAMILIES = ("codex", "claude", "antigravity")
 CHOICES = {"repo": ("client", "forge-source"), "stage": ("live", "prototype"),
-           "workers": ("claude", "codex", "split"), "tools": ("both", "claude", "codex"), "merge": ("agent", "human"),
+           "workers": (*FAMILIES, "split"), "reviews": FAMILIES,
+           "tools": ("both", "claude", "codex"), "merge": ("agent", "human"),
            "codex_fast": ("needed", "off", "always"), "stop_default": ("narrow", "off"), "stack": ("on", "off"),
-           "test_place": ("ci", "local")}
+           "test_place": ("ci", "local"), "boxes": ("off", "ssh")}
 # signoff pins the client's sign-off record: a decision directly under docs/decisions whose slug
 # ends in client-signoff, as `forge decision new` names it and the old Forge accepted it.
 SIGNOFF = re.compile(r"docs/decisions/[0-9]{4,}-[a-z0-9-]*client-signoff\.md")
@@ -612,16 +589,20 @@ VERSION = re.compile(r"v?[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.]+)?")
 # effort is optional); build, fix, lite and explore may add their subagents' model and effort,
 # as a pair.
 # The cold read and design work have one entry per family.
-KINDS = ("build", "fix", "lite", "explore", "grill", "design", "review", "light_review")
+KINDS = ("build", "fix", "lite", "explore", "grill", "design", "review", "light_review", "ask")
 SUBAGENTS = ("subagents", "subagent_effort")
-FAMILIES = ("codex", "claude")
 # A worker's models when forge.toml has no entry for its family, so Forge always names them.
 WORKER_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "low"},
-                   "codex": {"model": "gpt-6.1-sol", "effort": "low"}}
+                   "codex": {"model": "gpt-6.2-sol", "effort": "low"},
+                   "antigravity": {"model": "default", "effort": "low"}}
 DESIGN_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "xhigh"},
-                   "codex": {"model": "gpt-6.1-sol", "effort": "high"}}
-CLAUDE_GRILL_DEFAULT = {"model": "claude-opus-5-5", "effort": "high"}
-TOP_EFFORT = {"codex": "high", "claude": "xhigh"}
+                   "codex": {"model": "gpt-6.2-sol", "effort": "high"},
+                   "antigravity": {"model": "default", "effort": "high"}}
+EXPLORE_DEFAULTS = {"claude": {"model": "claude-haiku-5-5", "effort": "high"},
+                    "codex": {"model": "gpt-6.1-terra", "effort": "medium"},
+                    "antigravity": {"model": "gemini-4-neon", "effort": "low"}}
+CLAUDE_GRILL_DEFAULT = {"model": "claude-sonnet-5-5", "effort": "high"}
+TOP_EFFORT = {"codex": "high", "claude": "xhigh", "antigravity": "high"}
 SUBAGENT_DEFAULT = {"model": "claude-haiku-5-5", "effort": "high"}
 
 
@@ -712,15 +693,16 @@ def _with_local(cfg: dict[str, Any], top: Path) -> dict[str, Any]:
     return {**cfg, **data, "models": {**cfg["models"], **data.get("models", {})}, "local": data, "shared": cfg}
 
 
-def default_config(top: Path) -> dict[str, Any]:
-    """Fetch and read only the default branch's config for merge permission and checks."""
+def default_config(top: Path, at: str | None = None) -> dict[str, Any]:
+    """Fetch, then read the default branch's config; `at` (a fetched ref) makes no network call."""
     default = default_branch(top)
-    if not command_fact("fetched origin", top, dict).get("all"):
+    if not at and not command_fact("fetched origin", top, dict).get("all"):
         command_fact(("fetch default", default), top, lambda: git("fetch", "-q", "origin", default, cwd=top))
-    found = run("git", "show", f"origin/{default}:forge.toml", cwd=top)
+    ref = at or f"origin/{default}"
+    found = run("git", "show", f"{ref}:forge.toml", cwd=top)
     if found.returncode:
         refuse(REFUSALS["no_config"])
-    return _sample_settings(top, _config_text(found.stdout), f"origin/{default}")
+    return _sample_settings(top, _config_text(found.stdout), ref)
 
 
 def review_settings(top: Path) -> dict[str, Any]:
@@ -789,18 +771,16 @@ def ready_path(item: str, top: Path) -> Path:
 
 
 def models(cfg: dict[str, Any], kind: str, family: str) -> dict[str, str]:
-    """One kind's entry for a family ("codex" or "claude") from forge.toml's [models] table: its
-    own entry, or a single entry whose model is that family's; Claude plan reads default to
-    Opus at high effort, and other missing entries return {}."""
-    if kind == "explore" and kind not in cfg.get("models", {}):
-        kind = "lite"
+    """One kind's entry for a family from forge.toml's [models] table: its own entry or a single
+    entry for that family. Explore and Claude plan reads have their own defaults."""
     chosen = cfg.get("models", {}).get(kind) or {}
+    fallback = EXPLORE_DEFAULTS[family] if kind == "explore" else {}
     if "model" not in chosen:
         return chosen.get(family) or (CLAUDE_GRILL_DEFAULT
-                                     if kind == "grill" and family == "claude" else {})
-    # ponytail: gpt models are Codex's and every other model Claude's; name the family's entry
-    # when another Codex model family arrives.
-    return chosen if chosen["model"].startswith("gpt") == (family == "codex") else {}
+                                     if kind == "grill" and family == "claude" else fallback)
+    model = chosen["model"]
+    owner = "codex" if model.startswith("gpt") else "antigravity" if model.startswith("gemini") else "claude"
+    return chosen if owner == family else fallback
 
 
 def user_facing(cfg: dict[str, Any], row: dict[str, str]) -> bool:
@@ -830,7 +810,7 @@ def worker(cfg: dict[str, Any], kind: str, design: bool,
     chosen = design_models(cfg, family) if design else worker_models(cfg, kind, family)
     why = ("the owner chose it for this item" if tool else f"tools = {family}"
            + (", with the design model as it is user-facing" if design else "")
-           if cfg["tools"] != "both" else
+           if cfg["tools"] != "both" and family != "antigravity" else
            ("it is user-facing" if design else "it isn't user-facing") + " (workers = split)"
            if cfg["workers"] == "split" else f"workers = {family}"
            + (", with the design model as it is user-facing" if design else ""))
@@ -839,6 +819,8 @@ def worker(cfg: dict[str, Any], kind: str, design: bool,
 
 def worker_family(cfg: dict[str, Any], design: bool) -> str:
     """Which tool runs work: one tool overrides workers; split sends design work to Claude."""
+    if cfg["workers"] == "antigravity":
+        return "antigravity"
     return (cfg["tools"] if cfg["tools"] != "both" else
             cfg["workers"] if cfg["workers"] != "split" else "claude" if design else "codex")
 
@@ -849,7 +831,7 @@ def setting_sources(cfg: dict[str, Any], kind: str, design: bool) -> str:
     local = cfg.get("local")
     if local is None:
         return ""  # ponytail: no local file means forge.toml set them all, so output stays as it was
-    kind = "design" if design else "lite" if kind == "explore" and "explore" not in cfg["models"] else kind
+    kind = "design" if design else kind
     files: dict[str, list[str]] = {LOCAL: [], "forge.toml": [], "built-in default": []}
     for key in ("tools", "workers"):
         files[LOCAL if key in local else "forge.toml"].append(f"{key} = {cfg[key]}")
@@ -860,7 +842,8 @@ def setting_sources(cfg: dict[str, Any], kind: str, design: bool) -> str:
 def model_source(cfg: dict[str, Any], kind: str, family: str) -> str:
     """Where a worker's models for this kind come from. A local [models.<kind>] replaces the whole
     kind, so without an entry for this worker Forge's built-in default applies, as forge work does."""
-    if not models(cfg, kind, family):
+    entry = models(cfg, kind, family)
+    if not entry or (kind == "explore" and entry is EXPLORE_DEFAULTS[family]):
         return "built-in default"
     return LOCAL if kind in cfg.get("local", {}).get("models", {}) else "forge.toml"
 
@@ -874,6 +857,8 @@ def coordinator() -> str | None:
 
 def route(cfg: dict[str, Any], tool: str, *, command: str, item: str) -> str:
     """A round runs natively in its coordinating app, otherwise through the tool's kit."""
+    if os.environ.get("FORGE_RUNNER") == "1":
+        return "kit"
     here = coordinator()
     if cfg["tools"] != "both" and here is None:
         refuse(REFUSALS["no_session"], command=command, item=item)
@@ -896,7 +881,7 @@ def _models_problem(table: Any) -> str:
         per_family = kind in ("grill", "design") or any(family in chosen for family in FAMILIES)
         wrong = [key for key in chosen if key not in FAMILIES] if per_family else []
         if wrong:
-            return (f"models.{kind} has one entry per family, codex and claude, "
+            return (f"models.{kind} has one entry per family, codex, claude and antigravity, "
                     f"so it can't set {wrong[0]}")
         entries = ({f"{kind}.{family}": entry for family, entry in chosen.items()}
                    if per_family else {kind: chosen})
@@ -904,11 +889,15 @@ def _models_problem(table: Any) -> str:
             if not isinstance(entry, dict):
                 return f"models.{name} must be a table"
             for key, value in entry.items():
-                if key not in ("model", "effort", *(SUBAGENTS if kind in ("build", "fix", "lite", "explore") else ())):
+                helpers = SUBAGENTS if kind in ("build", "fix", "lite", "explore") and not name.endswith(".antigravity") else ()
+                if key not in ("model", "effort", *helpers):
                     return f"models.{name} can't set {key}"
                 if not isinstance(value, str):
                     return f"models.{name}.{key} must be a string"
-            for key in ("model",) if kind in ("review", "light_review") else ("model", "effort"):
+            required = ("model",) if kind in ("review", "light_review") else ("model", "effort")
+            if name in ("review.antigravity", "light_review.antigravity") and "effort" in entry:
+                required = ()
+            for key in required:
                 if key not in entry:
                     return f"models.{name} has no {key}"
             if (SUBAGENTS[0] in entry) != (SUBAGENTS[1] in entry):
@@ -959,6 +948,8 @@ def check_pin(cwd: str | os.PathLike[str] | None = None, item: str = "", words: 
     On the default branch a newer Forge runs while an upgrade fix waits: the default branch as last
     fetched still pins an older one, and a fix worktree pins the installed one.
     """
+    from forge import github
+    github.wait_for_reset = words in ("close", "merge", "land")
     if words == "work":
         from forge.worker import prepare
         prepare(item)  # Merge the default before even the release pin reads settings.
@@ -1011,7 +1002,7 @@ def check_pin(cwd: str | os.PathLike[str] | None = None, item: str = "", words: 
         print(f"Forge v{__version__} is installed, but this repo pins v{pinned}, so v{pinned} runs "
               f"through uv.{advice}", file=sys.stderr)
         sys.exit(run_release(f"v{pinned}", sys.argv[1:], cwd))
-    refuse(REFUSALS["pin"], installed=f"v{__version__}", pinned=f"v{pinned}")
+    refuse(REFUSALS["pin"], installed=f"v{__version__}", pinned=f"v{pinned}", package_version=pinned)
 
 
 def resume_pin(top: Path, previous: str, rounds: int | None = None, *, accepted: bool = False,
@@ -1026,6 +1017,12 @@ def resume_pin(top: Path, previous: str, rounds: int | None = None, *, accepted:
         os.environ["FORGE_LAND_ROUNDS"] = str(rounds)
     if accepted:
         os.environ["FORGE_CLOSE_ACCEPTED"] = "1"
+    # Release any held per-item land lock before the replacement release acquires it.
+    from forge import land
+    land._release_lock()
+    # The selected release can remove this checkout. A waiting parent must not
+    # hold its current directory open on Windows; children still start in top.
+    os.chdir(forge_dir(top).parent.parent)
     if before and (status := run_release(release, before, top)):
         sys.exit(status)
     sys.exit(run_release(release, sys.argv[1:], top))
@@ -1035,14 +1032,12 @@ def run_release(release: str, args: list[str], cwd: str | os.PathLike[str] | Non
     """Run a Forge release's `forge <args>` through uv in cwd, its output streamed; its exit code."""
     return subprocess.run(
         [shutil.which("uv") or "uv", "tool", "run", "--from",
-         f"git+https://github.com/knacklabs/symphony-forge@{release}", "forge", *args],
+         f"symphony-forge=={release.removeprefix('v')}", "forge", *args],
         cwd=cwd, env={**uv_env(), "FORGE_PINNED_RUN": release}).returncode
 
 
 def uv_env() -> dict[str, str]:
-    """This environment for uv, without a git hook's repository: uv fetches a git+ source with
-    its own `git init` and `git reset --hard`, which would turn this repo bare or overwrite its
-    index. The program uv starts finds the repository from its folder."""
+    """Keep a git hook's repository variables out of uv and the Forge it starts."""
     return {key: value for key, value in os.environ.items()
             if key not in ("GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR", "GIT_INDEX_FILE")}
 
@@ -1149,6 +1144,8 @@ def write_state(item: str, data: dict[str, Any], top: Path | None = None) -> str
     """Write an item's state in a checkout on a work branch. Returns the repo-relative path."""
     top = top or root()
     _work_branch(top)
+    from forge import time_records
+    time_records.date_transitions(data, read_state(item, top) or {})
     rel = state_path(item)
     path = top / rel
     path.parent.mkdir(parents=True, exist_ok=True)

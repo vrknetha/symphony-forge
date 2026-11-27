@@ -25,7 +25,7 @@ REFUSALS = {
 ROUTES = {
     "init": "init", "sync": "sync", "doctor": "doctor", "test": "fasttest",
     "migrate": "migrate", "upgrade": "upgrade", "next": "nextstep", "board": "board", "lanes": "machine", "stop": "machine",
-    "start": "intake", "story drop": "intake", "story new": "story", "story done": "story", "read": "story", "assign": "task",
+    "start": "intake", "ask": "ask", "story drop": "intake", "story new": "story", "story done": "story", "read": "story", "assign": "task",
     "task start": "task", "task feature": "feature", "task feature-check": "feature_remove", "fix start": "task", "fix drop": "task", "fix allow-large": "task", "fix amend": "task",
     "work": "worker", "handback": "native", "close": "close", "merge": "merge", "land": "land",
     "spec save": "records", "spec confirm": "records", "spec measure": "records",
@@ -144,8 +144,12 @@ def _run(argv: list[str] | None, holding: contextlib.ExitStack) -> int:
         # The user-scoped mod follows installed Forge; repo adapters follow its pin.
         from forge.sync import install_mod
         install_mod(repo.root())
+    if args.words == "close" and getattr(args, "show", False):  # reads the saved review only, so no pin check
+        from forge import review_skip
+        return review_skip.show(args)
     if args.changes and not args.words.startswith("hook "):
-        repo.check_pin(item=getattr(args, "item", None) or "", words=args.words)
+        named = getattr(args, "item", None) or ""
+        repo.check_pin(item=named if isinstance(named, str) else (named[0] if named else ""), words=args.words)
     module, name = args.handler.split(":")
     try:
         function = getattr(importlib.import_module(f"forge.{module}"), name, None)
@@ -155,10 +159,18 @@ def _run(argv: list[str] | None, holding: contextlib.ExitStack) -> int:
         function = None
     if function is None:
         repo.refuse(REFUSALS["not_built"], command=args.words)
+    wake_runner = args.words != "test" and (
+        not args.words.startswith("hook ") or args.words in ("hook approval", "hook context"))
+    if wake_runner:
+        from forge import runner
+        runner.record_install(Path.cwd())
     try:
         result = function(args) or 0
         if result == 0 and args.words in ("init", "migrate", "sync", "next") and not getattr(args, "dry_run", False):
             machine.remember(Path.cwd())
+        if result == 0 and wake_runner:
+            from forge import runner
+            runner.wake(Path.cwd())
         return result
     except subprocess.CalledProcessError as exc:
         # A git (or gh) failure the command didn't expect: show what the tool said.

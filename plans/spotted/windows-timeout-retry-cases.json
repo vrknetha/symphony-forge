@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_grouped_full_run_retries_failed_files.py\tGate: Grouped retry proofs do not check the unfinished sibling\trerun-only-infra-errors",
+      "kind": "bug",
+      "path": "tests/test_grouped_full_run_retries_failed_files.py",
+      "line": 64,
+      "text": "Gate: Grouped retry proofs do not check the unfinished sibling",
+      "from": "blocking",
+      "item": "rerun-only-infra-errors",
+      "status": "done",
+      "closed_by": "windows-timeout-retry-cases"
+    },
+    {
+      "key": "bug\ttests/test_grouped_full_run_retries_failed_files.py\tNot done: Windows timeout cases and forge-next.yml jobs lack passing branch results\twindows-timeout-retry-cases",
+      "kind": "bug",
+      "path": "tests/test_grouped_full_run_retries_failed_files.py",
+      "line": 55,
+      "text": "Not done: Windows timeout cases and forge-next.yml jobs lack passing branch results",
+      "from": "blocking",
+      "item": "windows-timeout-retry-cases",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

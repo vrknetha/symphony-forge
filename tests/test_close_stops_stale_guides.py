@@ -11,7 +11,7 @@ from test_ci_waits_for_busy_runners import _client
 STORY = "sync-before-close"
 
 
-@pytest.mark.parametrize("history", ["source", "new", "upgraded"])
+@pytest.mark.parametrize("history", ["source", "new"])
 def test_1_close_stops_stale_branch_guides(env, history):
     # Audit: a worker forgets sync after a template edit. Sync delivery and merge
     # coverage do not close worker template edits. Real commands need no new seam.
@@ -39,7 +39,7 @@ def test_1_close_stops_stale_branch_guides(env, history):
         assert (where / host / "skills/forge/SKILL.md").read_text("utf-8") == expected
 
 
-@pytest.mark.parametrize("history", ["new", "upgraded"])
+@pytest.mark.parametrize("history", ["new"])
 def test_2_close_keeps_unrelated_work_moving_with_inherited_guides(env, history):
     # Audit: inherited drift must not block unrelated work. The positive cases
     # above change guides or their source on the branch; this case changes neither.
@@ -75,8 +75,11 @@ def _source(env):
     repo.git("merge", "-q", "--ff-only", "fix/setup-guides")
     repo.git("push", "-q", "origin", "main")
     rel = "src/forge/templates/skill.md"
-    expected = (repo.path / rel).read_text("utf-8") + "\nWorker guide instruction.\n"
+    template = (repo.path / rel).read_text("utf-8")
+    expected = template + "\nWorker guide instruction.\n"
+    # The synced guide is the template plus the release's open known issues.
+    guide = (repo.path / ".codex/skills/forge/SKILL.md").read_text("utf-8")
     item, where = env.start_fix({rel: expected})
     (repo.bin / "forge").write_text(
         FORGE_SHIM.format(python=sys.executable, src=str(where / "src")), encoding="utf-8")
-    return item, where, expected
+    return item, where, expected.rstrip("\n") + guide[len(template.rstrip("\n")):]

@@ -12,71 +12,12 @@ from test_fix_agent_runs_wait_in_line import _other_repo, _until
 from test_lanes_agents import finish, hold_agents, make_work, start, lane_adapter, sdk_data  # noqa: F401
 from test_lanes_tests import accepted, configure, reap, release_server  # noqa: F401
 from test_story import DOC, worktree
-from test_mod_plugin import HOST, node_run, packaged_mod  # noqa: F401
 
 STORY = "FORGE-MOD-1-MACHINE"
 
 
-def check_machine_fixture_and_headless(repo, packaged_mod, tmp_path, data, scenario):
-    # Native mount tests use this exact fixture. Compare its field names against
-    # real lanes and the board's shared producer contract, then consume the real
-    # commands through the packaged /forge entry point (not a renderer helper).
-    result = node_run(tmp_path, HOST + f"""
-const mod = await import({json.dumps((packaged_mod / 'hooks/register.ts').as_uri())});
-const samples = await import({json.dumps((packaged_mod / 'hooks/machine.fixture.ts').as_uri())});
-const api = {{
-  session: {{cwd: async () => {json.dumps(str(repo.path))}}},
-  clock: {{now: async () => Date.now(), every: () => ({{cancel(){{}}}})}},
-  command: {{register: async () => {{}}}}, ui: {{invalidate(){{}}, open: async () => ({{isPlaced:false}})}},
-  process: {{run: async (argv, init) => {{
-    try {{return {{exitCode:0, stderr:'', stdout:execFileSync({json.dumps(sys.executable)},
-      [{json.dumps(str(repo.bin / 'forge'))}, ...argv.slice(1)],
-      {{cwd:init.cwd, encoding:'utf8', timeout:init.timeoutMs}})}}}}
-    catch (e) {{return {{exitCode:e.status ?? 1, stdout:String(e.stdout ?? ''), stderr:String(e.stderr ?? '')}}}}
-  }}}},
-}};
-mod.register(on);
-await fire('session.start', {{cwd:{json.dumps(str(repo.path))}, isInteractive:false, surface:'mobile'}}, api);
-const reply = await fire('command.run', {{command:'forge'}}, api);
-console.log(JSON.stringify({{lanes:samples.fixture(), board:samples.boardFixture(), text:reply.text}}));
-""")
-
-    def fields(example, producer, path=()):
-        # Windows records no load average; only this documented field is nullable.
-        if path == ("machine", "load") and producer is None:
-            return
-        if isinstance(example, dict):
-            assert isinstance(producer, dict)
-            for key, value in example.items():
-                assert key in producer, f"Native fixture invents {key}"
-                fields(value, producer[key], (*path, key))
-        elif isinstance(example, list) and example:
-            assert isinstance(producer, list) and producer, "Native fixture has no producer example"
-            for value in example:
-                fields(value, producer[0], path)
-
-    # Every native row must use its lane's real command fields, including the
-    # running test's reported progress. Later board items and events count too.
-    if scenario == "release":
-        fields(result["lanes"], data)
-        shared = json.loads((ROOT / "tests/fixtures/board.json").read_text("utf-8"))
-        board_contract = {**shared["board"], "events": shared["live"]["events"],
-                          "items": [{**shared["board"]["items"][0], **shared["live"]}]}
-        fields(result["board"], board_contract)
-    machine = result["text"].split("Machine ·", 1)[1]
-    assert "Current first" in machine
-    if scenario == "release":
-        assert "Current third" in machine and "Older second" not in machine and "waiting #2" in machine
-    else:
-        assert "waiting #1" in machine
-        for title in ("Shoppers can save a basket", "Save baskets"):
-            line = next(line for line in machine.splitlines() if title in line)
-            assert "round " not in line and " · claude" not in line and " · codex" not in line
-        assert "BASKET SAVE" not in machine
-
-
 @pytest.mark.parametrize("scenario", ["release", "foreign"])
-def test_6_machine_tab_lanes_report_release_rows_and_keep_other_release_admission(env, tmp_path, monkeypatch, lane_adapter, packaged_mod, release_server, scenario):
+def test_6_machine_tab_lanes_report_release_rows_and_keep_other_release_admission(env, tmp_path, monkeypatch, lane_adapter, release_server, scenario):
     # A read starts outside the agent budget; only work rounds wait for a place.
     # Existing board tests do not exercise the plugin's lanes command or release
     # filtering. Real work commands produce every row; only the model edge waits.
@@ -162,8 +103,10 @@ def test_6_machine_tab_lanes_report_release_rows_and_keep_other_release_admissio
         assert data["machine"]["load"] is None or len(data["machine"]["load"]) == 3
         rows = data["agents"]["entries"]
         if scenario == "release":
-            assert [row["item"] for row in rows] == [items[0][0], items[2][0]]
-            assert [row["place"] for row in rows] == [0, 2]
+            # The older release's row shows too: it holds a place in the same line.
+            assert [row["item"] for row in rows] == [items[0][0], items[1][0], items[2][0]]
+            assert [row["place"] for row in rows] == [0, 1, 2]
+            assert rows[1]["version"] == "0.0.0" and rows[1]["repo_name"] == other.path.name
         else:
             # The read runs beside the first worker, while the foreign task still waits.
             assert [row["item"] for row in rows] == [items[0][0], "SHOP", "BASKET/SAVE"]
@@ -172,12 +115,13 @@ def test_6_machine_tab_lanes_report_release_rows_and_keep_other_release_admissio
                 ("SHOP", "Shoppers can save a basket"), ("BASKET/SAVE", "Save baskets")]
             for row in rows[1:]:
                 assert row["repo_root"] == foreign.path.resolve().as_posix()
-                # Admission records carry the known worker round; the reader's
-                # round and unavailable tool/step metadata stay unknown.
-                assert row["round"] == (1 if row["item"] == "BASKET/SAVE" else None)
-                assert "tool" not in row and "step" not in row
+                # Admission records carry the known worker round and the reader's round (the pane
+                # shows plan reads with it); unavailable tool metadata stays unknown; Forge sees no
+                # step of a read or a task that waits.
+                assert row["round"] == 1
+                assert "tool" not in row and row["step"] is None
         assert len({row["id"] for row in rows}) == len(rows)
-        for row in rows[:2 if scenario == "release" else 1]:
+        for row in ([rows[0], rows[2]] if scenario == "release" else rows[:1]):
             assert row["repo_name"] == repo.path.name
             assert row["repo_root"] == repo.path.resolve().as_posix()
             assert row["checkout_root"] == worktree(repo, "fix/" + row["item"]).resolve().as_posix()
@@ -203,22 +147,20 @@ def test_6_machine_tab_lanes_report_release_rows_and_keep_other_release_admissio
                    "Forge to report the client test's completed result")
             data = view()
             assert data["tests"]["entries"][0]["progress"] == {"done": 1, "total": 2}
-            check_machine_fixture_and_headless(repo, packaged_mod, tmp_path, data, scenario)
             connection.sendall(b"x")
             assert test_run.wait(timeout=30) == 0, test_output.read_text("utf-8")
-        else:
-            check_machine_fixture_and_headless(repo, packaged_mod, tmp_path, data, scenario)
         assert rows[1 if scenario == "release" else 2]["output_path"] is None
         assert rows[0]["output_path"], "Running agents publish their existing live output"
         assert f"forge work {items[0][0]}" in Path(rows[0]["output_path"]).read_text("utf-8")
         if scenario == "release":
             (repo.bin / f"go-{items[0][1]}").touch()
             _until(lambda: (repo.bin / f"started-{items[1][1]}").exists(), "older release admitted")
-            _until(lambda: len(view()["agents"]["entries"]) == 1, "finished entry removed")
-            assert view()["agents"]["entries"][0]["place"] == 1
+            _until(lambda: len(view()["agents"]["entries"]) == 2, "finished entry removed")
+            assert [row["place"] for row in view()["agents"]["entries"]] == [0, 1]
             assert not (repo.bin / f"started-{items[2][1]}").exists()
             (repo.bin / f"go-{items[1][1]}").touch()
             _until(lambda: (repo.bin / f"started-{items[2][1]}").exists(), "current release admitted")
+            _until(lambda: len(view()["agents"]["entries"]) == 1, "older release entry removed")
             assert view()["agents"]["entries"][0]["place"] == 0
     finally:
         reap(test_processes, server, connections)

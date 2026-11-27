@@ -3,6 +3,7 @@ import contextlib
 import csv
 import json
 import os
+import re
 import sys
 import time
 import uuid
@@ -24,8 +25,10 @@ _WAIT_REASONS = {
 
 COMMANDS = [{"words": "lanes", "run": "lanes", "changes_state": False,
     "help": "Show this release's machine-wide runs", "position": 60,
-    "args": [(("--json",), {"action": "store_true"})],
-    "listing": "| `forge lanes --json` | Runs on this machine from repos on this Forge release |"},
+    "args": [(("--json",), {"action": "store_true"}),
+             (("--box",), {"choices": ["setup", "off"], "help": "Set up or turn off your own Linux machine"}),
+             (("--host",), {"metavar": "NAME"}), (("--yes",), {"action": "store_true"})],
+    "listing": "| `forge lanes --json` | Runs on this machine from every repo, and the items that wait for the person; `--box setup --host <name>` sets up your own Linux machine for Codex rounds, `--box off` turns it off |"},
     {"words": "stop", "run": "stop", "changes_state": False,
     "help": "Stop a running or waiting run (only a person)", "position": 61,
     "args": [(("item",), {"nargs": "?"}), (("--repo",), {"metavar": "ROOT"}),
@@ -198,7 +201,38 @@ def _place(run: dict[str, Any], lane: list[dict[str, Any]], size: int) -> int:
     return 1 + sum(not _admitted(row) for row in lane[:lane.index(run)])
 
 
-def join(kind: str, repo: Path, item: str | None, model: str | None, effort: str | None) -> dict[str, Any]:
+def _title(path: Path, item: str | None, state: dict[str, Any], read: bool = False, target: bool = False) -> str | None:
+    """An item's plain name: a fix's why, a story's title, a part's name from its plan.
+    A read's `target` that is a decision or spec read by name takes the document's heading, even
+    when a fix has the same short name."""
+    from forge import repo as repository
+
+    match = repository.ITEM.fullmatch(item) if item else None
+    if not match:
+        return None
+    title = state.get("why") if match["fix"] else state.get("title")
+    named = target and not match["key"]
+    if named or match["task"] or (not title and read):
+        from forge import task
+
+        # A read can also be of a decision: its heading is its name.
+        doc = path / "plans" / f"{match['key']}.md" if match["key"] else path / "docs" / "specs" / f"{item}.md"
+        if not match["key"]:
+            from forge import records
+
+            # A short decision name reads its numbered file, so the title looks there too.
+            with contextlib.suppress(repository.Refused):
+                doc = records.read_path(path, item)
+        if doc.is_file():
+            sections = task.sections(doc.read_text(encoding="utf-8"))
+            heading = (task.rows(sections).get(match["task"], {}).get("Name")
+                       if match["task"] else sections.get("#"))
+            title = heading or title if named else heading
+    return title
+
+
+def join(kind: str, repo: Path, item: str | None, model: str | None, effort: str | None,
+         read_round: int | None = None) -> dict[str, Any]:
     """Join a lane; finishing rounds and prerequisites go first, FIFO within each group.
 
     Reviews and plan reads take no place from anyone else, but every run
@@ -208,9 +242,9 @@ def join(kind: str, repo: Path, item: str | None, model: str | None, effort: str
     me = codex.identity(os.getpid()) or {"pid": os.getpid()}
     root = main_checkout(repo)
     unblocks = bool(kind != "test" and item and "/" in item and _unblocks(repo, item))
-    title = None
     round_number = None
     near_end = False
+    state: dict[str, Any] = {}
     if item and (match := repository.ITEM.fullmatch(item)):
         state = repository.read_state(item, repo) or {}
         round_number = state.get("round", 0 if kind in ("test", "review") else None)
@@ -218,24 +252,17 @@ def join(kind: str, repo: Path, item: str | None, model: str | None, effort: str
             round_number = (round_number + 1 if isinstance(round_number, int)
                             else 1 if state.get("status") == "started" else None)
             near_end = bool(state.get("tests") or (round_number and round_number > 1))
-        title = state.get("why") if match["fix"] else state.get("title")
-        if match["task"] or (not title and kind == "read"):
-            from forge import task
-
-            doc = (repo / "plans" / f"{match['key']}.md" if match["key"] else
-                   repo / "docs" / "specs" / f"{item}.md")
-            if doc.is_file():
-                sections = task.sections(doc.read_text(encoding="utf-8"))
-                title = (task.rows(sections).get(match["task"], {}).get("Name")
-                         if match["task"] else sections.get("#"))
+    title = _title(repo, item, state, kind == "read", kind == "read") or ("A question" if kind == "ask" else None)
     entry = {"id": str(uuid.uuid4()), "version": __version__, "kind": kind, "repo_root": root.as_posix(),
              "checkout_root": repo.resolve().as_posix(),
              "repo_name": root.name, "item": item, "title": title, "model": model, "effort": effort,
              "joined_at": repository.now(), "started_at": None, "process": me, "forge": me,
-             "agent": None, "round": round_number, "unblocks": unblocks, "near_end": near_end,
+             "agent": None, "round": read_round or round_number, "unblocks": unblocks, "near_end": near_end,
              "output_path": None, "progress": None, "free": kind in ("read", "review")}
     if kind == "test":
         entry["processes"] = 0
+        # A test run's output goes here once it starts; the pane's Open output reads it.
+        entry["output_path"] = (repository.forge_dir(repo) / f"test-{entry['id']}.log").as_posix()
     with _queue() as runs:
         runs.append(entry)
         if kind == "test":
@@ -333,7 +360,9 @@ def started(entry: dict[str, Any] | int, pid: int | None = None) -> None:
     with _queue() as runs:
         for run in runs:
             if run["id"] == entry["id"]:
-                run.update(entry, process=process, agent=process, started_at=repo.now())
+                at = repo.now()
+                run.update(entry, process=process, agent=process, started_at=at,
+                           first_started_at=run.get("first_started_at") or at)
                 entry.update(run)
                 return
     # Stop may win between admission and spawning. Do not leave a cancelled child running.
@@ -377,10 +406,10 @@ def entries() -> list[dict[str, Any]]:
 
 @contextlib.contextmanager
 def agent_slot(top: Path, kind: str, item: str | None = None, model: str | None = None,
-               effort: str | None = None) -> Iterator[dict[str, Any]]:
+               effort: str | None = None, read_round: int | None = None) -> Iterator[dict[str, Any]]:
     """A single command has one active agent entry, shared by its model launches."""
     global _agent_entry
-    entry = _agent_entry = join(kind, top, item, model, effort)
+    entry = _agent_entry = join(kind, top, item, model, effort, read_round)
     try:
         yield entry
     finally:
@@ -424,21 +453,129 @@ def view() -> dict[str, Any]:
             for name, size in (("agents", half_cores(runners)), ("tests", test_slots(runners)))}
 
 
+def _step(run: dict[str, Any], live: dict[tuple[str, str], str]) -> str | None:
+    """What the run's builder does now, as `editing <file name>`; Forge shows no other step."""
+    step = live.get((run["repo_root"], str(run["item"])))
+    return step if run["kind"] == "work" and not run["waiting"] and step else None
+
+
+def _live_steps(runs: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
+    """The newest recorded file step of each item's live run, read from the live progress files."""
+    found: dict[tuple[str, str], tuple[str, str]] = {}
+    for root in {run["repo_root"] for run in runs if run["kind"] == "work" and run.get("item")}:
+        try:
+            files = (Path(root) / ".git" / "forge" / "progress").glob("*.json")
+            for file in files:
+                event = json.loads(file.read_text(encoding="utf-8")).get("progress") or {}
+                step = event.get("step")
+                if isinstance(step, str) and (match := re.fullmatch(r"editing (.+)", step)):
+                    key, at = (root, str(event.get("item"))), str(event.get("at"))
+                    if key not in found or at > found[key][0]:
+                        name = re.split(r"[\\/]", match[1])[-1]
+                        found[key] = (at, f"editing {name}")
+        except (OSError, ValueError, AttributeError, CalledProcessError):
+            continue
+    return {key: step for key, (_, step) in found.items()}
+
+
+def _item_of(branch: str, path: Path) -> str | None:
+    """The item a checked-out branch carries, from its name."""
+    if branch.startswith(("fix/", "story/")):
+        return branch.split("/", 1)[1]
+    if branch == "forge/migrate-v1":
+        return "migrate-v1"
+    name = branch.removeprefix("task/")
+    for at in ((n for n, char in enumerate(name) if char == "-") if name != branch else ()):
+        if (path / ".factory/stories" / name[:at] / "tasks" / f"{name[at + 1:]}.json").is_file():
+            return f"{name[:at]}/{name[at + 1:]}"
+    return None
+
+
+def _worktrees(root: Path) -> dict[str, Path]:
+    """Each checked-out branch and its folder, read from the repo's .git files: no process starts."""
+    found: dict[str, Path] = {}
+    heads = [(root / ".git" / "HEAD", root)]
+    for folder in (root / ".git" / "worktrees").glob("*"):
+        with contextlib.suppress(OSError):
+            heads.append((folder / "HEAD", Path((folder / "gitdir").read_text(encoding="utf-8").strip()).parent))
+    for head, path in heads:
+        with contextlib.suppress(OSError):
+            ref = head.read_text(encoding="utf-8").strip()
+            if ref.startswith("ref: refs/heads/") and path.is_dir():
+                found[ref.removeprefix("ref: refs/heads/")] = path
+    return found
+
+
+def needs_you(building: set[tuple[str, str]]) -> list[dict[str, str]]:
+    """Items on this laptop that wait for a person: a worker's open question, a stop that waits
+    for the owner's choice, or a cold read stopped at its round limit. An item with a build round
+    that runs or waits is left out. Only files on this laptop are read."""
+    from forge import codex, story
+
+    found: dict[tuple[str, str], dict[str, str]] = {}
+    for root in remembered():
+        try:
+            for branch, path in _worktrees(root).items():
+                item = _item_of(branch, path)
+                state = repo.read_state(item, path) if item else None
+                if not item or not state or state.get("status") == "dropped" or (root.as_posix(), item) in building:
+                    continue
+                stop = state.get("stop") or {}
+                if branch.startswith("story/"):
+                    notes = path / "plans" / f"{item}.read.md"
+                    record, findings = story._record(notes.read_text(encoding="utf-8") if notes.is_file() else "")
+                    waits = story.stopped(record, findings, repo.config(path)["cold_read_rounds"])
+                else:
+                    waits = bool(codex._json(root / ".git" / "forge" / "threads" / ("task" if "/" in item else "fix") / f"{item}.json").get("question")
+                                 or stop and not stop.get("choice"))
+                if waits:
+                    found[(root.as_posix(), item)] = {"title": _title(path, item, state, True) or item,
+                                                      "repo_name": root.name, "repo_root": root.as_posix()}
+        except (OSError, CalledProcessError, repo.Refused):
+            continue
+    return list(found.values())
+
+
+def _pressed(agents: list[dict[str, Any]]) -> bool:
+    """Whether a new build or review must wait: memory under the floor, the machine's load at its
+    limit, or an agent run that waits for its place. A test that waits for the test lane does not count."""
+    reading = memory()
+    free = reading["available_bytes"]
+    busy = _load_per_core()
+    return bool(free is not None and free < memory_floor(reading) or busy is not None and busy >= LOAD_LIMIT
+                or any(run["waiting"] and not run.get("suspended_by") for run in agents))
+
+
 def lanes(args: Any) -> int:
-    """Show this release, while older runs still count towards queue admission."""
+    """Show every release's runs, while all of them count towards queue admission."""
+    if args.host and args.box != "setup":
+        raise repo.Refused("Use --host only with --box setup.", "forge lanes --box setup --host <name>")
+    if args.yes and args.box != "off":
+        raise repo.Refused("Use --yes only with --box off.", "forge lanes --box off")
+    if args.box:
+        from forge import box
+        return box.command(repo.root(), args)
     result = view()
     now = datetime.fromisoformat(repo.now())
+    live = _live_steps([run for lane in result.values() for run in lane["entries"]])
     for name, lane in result.items():
         rows = []
         counted = [run for run in lane["entries"] if name == "tests" or not run.get("free")]
         for run in lane["entries"]:
-            if run.get("version") != __version__:
-                continue
             run["place"] = _place(run, counted, lane["size"])
-            at = run["started_at"] or run["joined_at"]
+            if not run.get("joined_at"):  # an earlier release's entry that has no start or item to show
+                continue
+            run["waiting"] = not _admitted(run)
+            run["step"] = _step(run, live)
+            run["first_started_at"] = run.get("first_started_at") or run["started_at"]
+            at = run["first_started_at"] or run["joined_at"]
             run["elapsed"] = max(0, (now - datetime.fromisoformat(at)).total_seconds())
             rows.append(run)
         lane["entries"] = rows
+    runs = [run for name in ("agents", "tests") for run in result[name]["entries"]]
+    result.update(needs_you=needs_you({(run["repo_root"], run["item"]) for run in runs
+                                       if run["kind"] == "work"}),
+                  busy=_pressed(result["agents"]["entries"]))
     result.update(version=__version__, machine={**load(), "cores":
                   getattr(os, "process_cpu_count", os.cpu_count)()})
     if args.json:
@@ -494,12 +631,19 @@ def load() -> dict[str, Any]:
 
 def stop(args: Any) -> int:
     """A person cancels waiting entries or ends verified process trees before freeing places."""
-    from forge import codex, native
+    from forge import board, codex, native, stops
     if os.environ.get("FORGE_WORKER"):
         raise repo.Refused("Only a person can run forge stop; ask the person to stop the run.", "")
     if bool(args.entry_id) == bool(args.item) or (args.entry_id and args.repo):
         raise repo.Refused("Name an item with optional --repo, or use --id alone.", "")
     root = main_checkout(Path(args.repo).resolve() if args.repo else repo.root()) if args.item else None
+    targets: list[tuple[Path, str]] = []
+    # Pre-validate live check waits outside _queue() because board.active_runs may read _queue().
+    if root and args.item and repo.ITEM.fullmatch(args.item):
+        for entry in board.active_runs(root, args.item):
+            process = entry.get("process")
+            if process and codex._alive(process) is not False and ("started" not in process or codex._alive(process) is None):
+                raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
     with _queue() as runs:
         selected = [run for run in runs if run["id"] == args.entry_id or
                     (root and run["repo_root"] == root.as_posix() and run["item"] == args.item)]
@@ -510,6 +654,24 @@ def stop(args: Any) -> int:
             process = run["process"]
             if (run.get("agent") or run["started_at"]) and ("started" not in process or codex._alive(process) is None):
                 raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
+        if not selected and root and repo.ITEM.fullmatch(args.item):
+            for kind in ("Build", "Grill"):
+                lock = codex._item_file(root, args.item, ".lock", kind)
+                if lock.exists():
+                    owner = codex._json(lock)
+                    if "started" not in owner or codex._alive(owner) is None:
+                        raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
+        for run in selected:
+            if run.get("item"):
+                pair = (Path(run["repo_root"]), run["item"])
+                if pair not in targets:
+                    targets.append(pair)
+        if root and args.item and repo.ITEM.fullmatch(args.item):
+            pair = (root, args.item)
+            if pair not in targets:
+                targets.append(pair)
+        for target_root, target_item in targets:
+            stops.add(target_root, target_item)
         for run in selected:
             if run.get("native"):
                 continue
@@ -522,12 +684,29 @@ def stop(args: Any) -> int:
     held = [run for run in selected if run.get("native")]
     for run in held:
         native.cancel(run)
+    stopped_wait = False
+    for target_root, target_item in targets:
+        live_waits = []
+        for entry in board.active_runs(target_root, target_item):
+            process = entry.get("process")
+            if not process:
+                continue
+            alive = codex._alive(process)
+            if alive is False:
+                continue
+            if "started" not in process or alive is None:
+                raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
+            live_waits.append(process)
+        for process in live_waits:
+            if not codex._stop(process, False):
+                raise repo.Refused("Forge could not confirm the run stopped; its place is still held.", "")
+            stopped_wait = True
     cleared = False
     if not selected and root and repo.ITEM.fullmatch(args.item):
         for kind in ("Build", "Grill"):
             cleared = _clear_item_lock(root, args.item, kind) or cleared
     print("Stopped Forge's hold; stop the subagent in your session too." if held else
-          "Stopped the run." if selected or cleared else "There is nothing to stop.")
+          "Stopped the run." if selected or stopped_wait or cleared else "There is nothing to stop.")
     return 0
 
 

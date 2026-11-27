@@ -40,6 +40,8 @@ def test_4_round_line_and_run_records_show_effort_and_round(
         "print('intentional round history failure')\nraise SystemExit(1)\n", encoding="utf-8")
     first = repo.forge("work", item)
     assert first.returncode == 0, first.stdout + first.stderr
+    repo.git("commit", "--allow-empty", "-q", "-m", "Record the round history proof", "-m",
+             "Proof list:\n- 1: check: synthetic round history fixture", cwd=folder)
     closed = env.close(item)
     assert closed.returncode == 1, closed.stdout + closed.stderr
     assert "intentional round history failure" in closed.stdout

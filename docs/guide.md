@@ -9,7 +9,7 @@ inside Forge and goes into every worker's brief. How Forge behaves is set by its
 ## Install
 
 You need git, the GitHub CLI (`gh`, signed in with `gh auth login`), `uv`, and the agent your
-repo uses: Claude Code, Codex, or both for split workers. Either agent can coordinate the work;
+repo uses: Claude Code, Codex, or both (new repos: Claude builds, and code reviews use Codex). Either agent can coordinate the work;
 with one tool selected, that tool reads plans. With both selected, the first read uses the other
 installed tool, or the coordinator's tool if the other is unavailable. Later reads keep that
 reader while available. A native read uses a separate `reader` subagent.
@@ -17,7 +17,7 @@ reader while available. A native read uses a separate `reader` subagent.
 Install the release a repo pins (uv brings Python 3.11 or later if you don't have it):
 
 ```
-uv tool install git+https://github.com/knacklabs/symphony-forge@v1.2.38
+uv tool install symphony-forge==1.2.50
 ```
 
 `forge --version` prints the installed version. Each repo pins its release in `forge.toml`, and
@@ -346,8 +346,9 @@ A prototype without the sample-data mark also needs its strict whole-product rev
    and this repeats until a round finds nothing.
 4. The human approves once, and sees only the top of the story doc: from its title down to
    `## For the builders`, or the whole doc when it has no such heading. In Claude Code, exit
-   Plan Mode with that part as the plan; in Codex, show it, then ask the approval question
-   `forge next` gives. The approval binds "What changes for you" and "Done when", so tightening
+   Plan Mode with that part as the plan. In Codex, show it and ask the owner to type the
+   `approve <KEY> <code>` line from `forge next`. In Codex Plan Mode, you can use the question
+   from `forge next`. The approval binds "What changes for you" and "Done when", so tightening
    the details, tasks or notes below needs no new approval. Do this from one main chat for
    stories in every Forge repo this machine has used, including its worktrees. Forge remembers
    those repos automatically. `forge hook approval` records the approval in the story's repo.
@@ -360,8 +361,13 @@ A prototype without the sample-data mark also needs its strict whole-product rev
 6. Run `forge land --all` in the background in place of closing and merging by hand. It takes
    every task and fix in close, starts them oldest first, several at a time up to the machine's
    agent places, and merges each one when it passes, where the repo allows agent merges. A change
-   not yet ready that changes a file an older change in the run also changes waits for it. Only
-   one run works in a repo at a time. A change that needs a worker or you stops alone; the run
+   not yet ready that changes a file an older change in the run also changes waits for it. Where
+   the agent merges and CI runs the tests (`tests` is a required check), two to five ready changes
+   are tested together once on a temporary draft pull request, then merge in order with no new run
+   of their own; a change that clashes, builds on an unmerged change, changes `forge.toml`, was ready
+   before the default branch changed it or has no ready record of its own stays out and merges one
+   at a time.
+   Only one run works in a repo at a time. A change that needs a worker or you stops alone; the run
    ends with `Merged (n): ... · Ready to merge (n): ... · Needs you (n): ...` and each stopped
    change's reason and next step. A failed check whose log names none of the change's files
    runs again once. Where a human merges, the run merges nothing and lists the ready changes
@@ -402,7 +408,7 @@ build, fix or lite kind has no Claude entry, Forge uses `claude-sonnet-5-5` at l
 Claude plan reads default to `claude-opus-5-5` at high effort, including when Claude is the only
 installed tool. Claude planner and architect roles use that plan-read entry; debugger,
 security and performance use Opus 5.5 at high effort. Codex build, fix and lite workers with
-no entry use Forge's `gpt-6.1-sol` at low effort; Codex design uses its design default.
+no entry use Forge's `gpt-6.2-sol` at low effort; Codex design uses its design default.
 Ask your agent to change these settings in a fix.
 
 `forge init` writes low effort for Codex and Claude build, fix and lite.
@@ -450,7 +456,7 @@ uses its selected tool's design entry: `[models.design.codex]` on Codex and
 `claude-sonnet-5-5` at xhigh effort. With `tools = "both"` and `workers = "split"`, the
 fallback applies only to Claude design rounds run through its kit. If the `claude` command
 is missing, or Claude fails before changing the checkout,
-Forge uses `[models.design.codex]` instead: `gpt-6.1-sol` at high effort by default. Forge prints
+Forge uses `[models.design.codex]` instead: `gpt-6.2-sol` at high effort by default. Forge prints
 and logs the fallback reason. If Claude changed the checkout before failing, Forge reports the
 failure without a Codex retry. When Claude Code coordinates without the SDK, design work runs as
 its native `frontend` subagent; a failed native round gets no automatic Codex retry.
@@ -484,6 +490,8 @@ If that round fails or is interrupted, answer again with `--note`; the question 
 
 For a quick read-only question about this checkout, hand it to the session's `explorer`
 subagent role. It uses the explore entry in `forge.toml`; no separate Forge command is needed.
+To ask Codex itself (for example a stronger model), run `forge ask "<question>" [--model <model>]`.
+It runs one read-only turn in an agent place and prints the answer.
 
 New repos get explore on Claude with `claude-haiku-5-5` at high effort and on Codex with the
 initial lite settings. Upgrading and syncing an existing repo preserves its settings: without
@@ -565,8 +573,7 @@ and retries it once after a failure. The command runs the configured test comman
 shell as a local close on Windows. Use `pwsh -File "<path>"` to run a PowerShell script. A second
 failure fails the check; Linux and Mac run it once, and the trusted `forge-pr-check` gate keeps
 its command. New clients get this at init; existing clients get it after upgrading Forge and
-running `forge sync`. Forge's own Windows full-suite job instead reruns each failed pytest test
-once and gives the known slow tests longer timeouts on Windows.
+running `forge sync`.
 Close runs the full related-test selection, even when it covers more than a third of the Python
 test files. Shared test inputs select every test. Bare
 `forge test` keeps worker runs bounded: when the pytest selection would cover more than a third
@@ -641,7 +648,7 @@ run. The board and `forge next` read the outcome from git. Existing done records
 To correct an outcome later, run `forge story done <KEY> "<outcome>"` on an existing work branch;
 the correction ships with that branch's pull request, and the command opens no separate one.
 
-## Hand over
+## Hand over to another machine or person
 
 1. **Push everything.** In each worktree, commit and push. Through an ordinary fix, copy
    new decisions and lessons from `.git/forge/handoff.md` into `docs/handover.md`, and merge it.
@@ -674,25 +681,76 @@ fix. Close's last line says who merges, as described in Merging a ready item. Wh
 refuses, follow its `Next:` line; running it again picks up where it stopped.
 If the machine's lanes still have runs, the command names them and asks you to wait.
 
-A repo pinned to a release older than the command upgrades once with
-`uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge upgrade vX.Y.Z`.
+If your installed Forge is too old to run `forge upgrade`, use the install and upgrade
+commands in [Recovering upgrades from the retired GitHub repository](#recovering-upgrades-from-the-retired-github-repository).
+
+### Recovering upgrades from the retired GitHub repository
+
+If the default branch's `.github/workflows/forge.yml` still installs Forge from the retired
+GitHub repository, the review check fails before it can review an upgrade pull request.
+GitHub runs this check using the workflow it already trusts on the default branch.
+
+1. Choose a published Forge release newer than the repo's pin that includes the switch to PyPI.
+   Install it first, then run the upgrade. Use the same version in both commands.
+
+   ```bash
+   uv tool install --force symphony-forge==X.Y.Z
+   forge upgrade vX.Y.Z
+   ```
+
+   The upgrade opens a pull request even if the old pin has no PyPI package. The installed Forge
+   stays on PATH after the upgrade command exits.
+2. The repository owner reviews the exact pull request commit. Check that only the pin,
+   Forge-generated files and Forge records changed, that the new workflow installs from
+   PyPI, and that all other required checks pass. Confirm the Forge review check failed
+   because the retired install source is unavailable. If the pull request is a draft,
+   mark it ready after review.
+3. Pause other merges. In GitHub, open **Settings → Branches** and edit the protection rule
+   for the default branch. Record the source configured for `forge-pr-check`, then temporarily
+   remove only that check from the required list. If it is the sole required status check,
+   turn off the status check requirement for this merge. Keep the pull request requirement,
+   approvals, any other required checks and administrator protection in place. Merge only
+   the reviewed upgrade pull request. Immediately restore `forge-pr-check` with its original
+   source and settings, even if the merge fails.
+4. Check that the next pull request gets a green `forge-pr-check` from the upgraded default
+   branch. If another work branch still pins an unpublished release, merge the upgraded
+   default branch into it.
 
 ## Releasing Forge
 
 For Forge's maintainers:
 
-1. In a fix, set `__version__` in `src/forge/__init__.py` to the new version (without the `v`),
-   close it and merge it.
-2. Start one Linux full run with `gh workflow run forge.yml --ref main`.
-   Confirm it is green. This workflow posts the full-run status that sign-off and release read.
-   Start the Windows platform run with `gh workflow run forge-next.yml --ref main`.
-   Confirm it is green before you tag the release.
-3. Tag the merge commit `vX.Y.Z` and push the tag: `git tag vX.Y.Z <merge commit>`, then
-   `git push origin vX.Y.Z`. Check the tag's tree matches the default branch with
-   `git diff --quiet vX.Y.Z origin/main`.
-   The tag push runs the Windows checks again or reuses passed proof for the same tree.
+Cut one release a day at 05:00 UTC from the newest main commit whose Linux full run passed.
+Freeze the contents at the cut. Only a fix without which the
+release is unsafe or its checks cannot pass may join; later work waits for the next day.
+Publish within 30 minutes of the cut, without a separate owner yes.
+Skip the day when nothing merged since the last release or main is red.
+Hold merges from the cut until you push the tag and check the installed version.
+
+1. In a fix, set `__version__` in `src/forge/__init__.py` to the new version (without the `v`)
+   and add `src/forge/release-notes/v<version>.md` for everything merged since the previous
+   release. Merge it last: the cut commit is this fix's merge commit. A fix that must join the
+   release after it (a fix without which the release is unsafe) also updates that notes file.
+2. Before the cut, reuse the passed nightly run on the bump's merge commit (or the last joining fix's).
+   If the Linux full run is missing, start it with `gh workflow run forge.yml --ref main`.
+   The Linux full run must pass before the cut.
+   At 05:00 UTC, select the bump's merge commit (or the last joining fix's), once its Linux full
+   run passes. Record its full SHA (commit identifier) as the cut commit. It must contain the new version.
+   If current main is ahead of that commit, skip the day: the release gate requires current main.
+   Reuse the passed nightly run on that exact commit. Do not start it again.
+   The Linux workflow posts the full-run status that sign-off and release read.
+   If an essential fix must join, repeat the Linux full run and record its tested commit before the tag.
+3. Before you create the tag, run `uv run --frozen --python 3.11 python
+   .github/release-notes-check.py vX.Y.Z <full cut SHA>`. When it fails, do not tag: add the
+   missing change to the notes in a fix, merge it, and use its merge commit as the cut.
+   Tag the exact cut commit with `git tag vX.Y.Z <full cut SHA>`, then `git push origin vX.Y.Z`.
+   Use the recorded full SHA, never `origin/main`. Check the tag's tree against the cut with
+   `git diff --quiet vX.Y.Z <full cut SHA>`.
+   The tag push runs the plugin checks or reuses passed proof for the same tree.
    Confirm that run is green too.
-4. Install from the tag and check that `forge --version` prints `vX.Y.Z`.
+4. Install from the tag and check that `forge --version` prints `vX.Y.Z`. Then allow merges again.
+   Publish the GitHub release from the cut commit's notes file, not the local one:
+   `git show <full cut SHA>:src/forge/release-notes/vX.Y.Z.md | gh release create vX.Y.Z --notes-file -`.
 5. Score the release. Nothing else starts this, a pull request never does, and it never holds the
    release. Use Claude only, in your own Claude Code session. Use no model whose id contains
    `fable` or `astra`.
@@ -700,7 +758,7 @@ For Forge's maintainers:
      remote, so in the scratch folder make the app as `app` and a local bare repo as its remote:
      `git init -b main app`, `git init --bare -b main origin.git`, `git -C app remote add origin ../origin.git`.
      Run `forge init` in `app` from the tag:
-     `uvx --from git+https://github.com/knacklabs/symphony-forge@vX.Y.Z forge init --starter react --actions no`.
+     `uvx --from symphony-forge==X.Y.Z forge init --starter react --actions no`.
      Init sets up the app and pushes its first commit to that remote, then stops with "Forge cannot identify
      a GitHub repository from origin". That is expected for this folder; the app is ready.
    - Start a `general-purpose` subagent, not the `worker` role. Set its model to the one in

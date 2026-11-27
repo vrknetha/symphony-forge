@@ -270,8 +270,10 @@ Windows checklist:
   persistent failures still fail; never retry assertions or whole tests.
 - Tests build their own data with factories, own that data, don't depend on order, and never sleep.
   A skipped test names the reason next to it.
-- Client tests create their data through the app's API on a fresh database per run, with no shared
-  seed or direct database inserts.
+- Client tests use a fresh database per run. Direct database inserts are allowed only for one
+  initial base seed per worker. All other test setup goes through the app's real APIs, including
+  admin APIs, user APIs and webhooks. Use a test-only route only for what no real API can do,
+  such as moving the clock, and say why in the helper.
 - Playwright retries are zero; fix intermittent failures by waiting for real app state, never by
   adding a fixed sleep.
 - New and changed flows get browser tests now; an untouched old flow gets one when a story first

@@ -30,7 +30,7 @@ def delivered(repo, gh, tmp_path, request):
         config.write_text(config.read_text("utf-8").replace(
             'version = "v1.2.2"', f'version = "{_version(repo)}"'), encoding="utf-8")
         repo.git("add", "-A", cwd=client)
-        repo.git("commit", "-q", "-m", "Upgrade the earlier client", cwd=client)
+        repo.git("commit", "--allow-empty", "-q", "-m", "Upgrade the earlier client", cwd=client)
         repo.git("push", "-q", "origin", "main", cwd=client)
     started = repo.forge("fix", "start", "Check prodgap guidance", "--done",
                          "The gap guidance is delivered", "--kind", "mechanical", cwd=client)
@@ -48,7 +48,7 @@ def delivered(repo, gh, tmp_path, request):
         'workers = "split"', 'workers = "claude"').replace(
         'workers = "codex"', 'workers = "claude"'), encoding="utf-8")
     repo.git("add", "-A", cwd=client)
-    repo.git("commit", "-q", "-m", "Use the delivered guidance", cwd=client)
+    repo.git("commit", "--allow-empty", "-q", "-m", "Use the delivered guidance", cwd=client)
     worked = repo.forge("work", "check-prodgap-guidance", cwd=client)
     assert worked.returncode == 0, worked.stdout + worked.stderr
     brief = " ".join(calls(log)[-1]["brief"].split())
@@ -60,8 +60,9 @@ def delivered(repo, gh, tmp_path, request):
 AFTER_SIGN_OFF = (
     "After sign-off, read `Before production` in `forge next`.",
     "First check what is already in progress, so no line is started twice.",
+    # FORGE-RUNNER-1 turns sample_data off via a settings fix whose --done names forge.toml.
     "Leave sample data by the existing step: settle the `Personal data` answer, set the test command "
-    "and checks, then the coordinator turns `sample_data` off.",
+    "and checks, then start a settings fix whose `--done` names `forge.toml` to turn `sample_data` off.",
     'For the light-review line and the "Demo only" line, start one normal change with '
     '`forge start "<your sentence>"`.',
     "Take the work from the row's Say text, but write your own sentence.",

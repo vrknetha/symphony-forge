@@ -45,19 +45,27 @@ round can start even when the coordinating session stays open.
 This applies to runs Forge launched. A handed-out native run has no process tree, so
 `forge stop` frees its hold and the coordinator stops the subagent in its session.
 
-In Claude Code's Forge pane, the Machine tab shows this release's agents and test lane across
-repos, who waits next, local item gates, and machine load when the OS provides it. Desktop draws
-an agent tree; narrow terminals use a list. Select a run, press `o` for its last 200 output lines
-or `s` to ask the person whether to stop that exact run. A run that ends or is replaced during
-confirmation is not stopped. Press `l` to show or hide recent events. The spinner names this
-session's place in line. `/forge` includes the machine summary where panes cannot draw.
 Lanes record each item's title when it joins, so other repos' stories and tasks keep their
-plain names in rows, selectors and stop confirmation. Only this repo's board adds tool,
-round, current step and gates.
-`forge lanes --json` supplies the Machine tab; other releases still count towards admission but
-are left out of its rows. New repos receive the mod on setup; existing repos receive it on
-upgrade and `forge sync`. An unreadable output or a failed refresh is explained in the pane;
-failed refreshes keep the last rows. The mod adds no background work or dependencies.
+plain names in rows and in the stop confirmation.
+In Claude Code, `/forge` opens a live pane of this laptop's runs: builds, tests and reviews in
+the order Forge took them in, each with its round and time. A line above them says if an item
+needs the person. The pane has two buttons for the selected run: `Open output`, and `Stop run`,
+which asks the person first and is not offered for a build that runs as a subagent of the
+session. The desktop app (Claude Code 2.1.299 or later) draws meters, cards and the last three
+output lines; the terminal draws plain lines. Where no pane can show, `/forge` answers with the same lines as text.
+`forge lanes --json` is the one read the pane makes, every 3 seconds while it is open. Its rows show every release's runs;
+an entry that an old release wrote with no start or item is left out. Each row has `step`
+(`editing <file name>` for a build whose step Forge knows), `waiting` (true until the run holds
+its place; a build that lent its place to its tests waits), `first_started_at` and `elapsed`.
+`elapsed` counts a wait from joining the line and a started run from its first start, so a
+commit nudge does not reset it. A review row has an `output_path` that already holds the
+review tool's lines while it runs. The top level adds `busy` (a run waits for a free place) and
+`needs_you`, a list of `{title, repo_name, repo_root}`: items on this laptop, in any
+remembered repo, that wait for the person (a worker question, a stop that waits for the owner's
+choice, or a cold read stopped at its round limit) and have no build round that runs or
+waits. It reads only files on this laptop. New repos receive the mod on setup; existing repos receive it on
+upgrade and `forge sync`. When Forge does not answer in time (0.3 s; 0.6 s on Windows), the pane keeps
+its last rows and adds a line that says how old they are. The mod adds no background work or dependencies.
 
 `forge board` opens the board as a live page on this computer: a server on 127.0.0.1 at a free
 port, with a per-run token in the page address that every request must carry, so no other computer
@@ -68,11 +76,11 @@ only the rows whose inputs changed and fetches from GitHub at most once a minute
 `--out <path>` writes every item's facts as JSON instead,
 finished ones included.
 
-`forge board --json` and `forge next --json` print JSON for the Claude Code mod and
-other readers. The usual commands still print text. Both views
-include `version` (the running Forge release) and `repo_root` (the resolved main
+`forge board --json` prints JSON for the Claude Code mod and
+other readers. The usual commands still print text. The view
+includes `version` (the running Forge release) and `repo_root` (the resolved main
 worktree path, shared by the repo's worktrees).
-`forge next --json` uses the same 60-second GitHub cache as `forge board --json`, while text
+`forge board --json` uses a 60-second GitHub cache, while text
 `forge next` reads GitHub live.
 Pull request creates, edits and draft changes keep this shared cache. They show within a minute.
 Merges clear it at once. Each command fetches the default branch's settings at most once.
@@ -119,14 +127,16 @@ Both are null without GitHub, and a week capped at 1,000 results is null.
 `team.needs_you` lists every item that waits on a person, oldest first, each with its `reason`,
 `since` and `waited_seconds`: `approval` (a plan waiting for approval), `review loop` (a review
 loop or stuck-worker choice), `worker question`, `conflict` (a merge conflict close stopped on),
-`merge` (a ready pull request a human merges) and `blocked plan`, with the question or the
+`merge` (a ready pull request a human merges), `blocked plan` and `failed run` (the latest full
+test run on the default branch failed: `kind` is `run`, `id` is `run:<workflow file>`, `url` opens the
+run on GitHub, and `fixing` is true while an open fix names that run), with the question or the
 problem `forge next` reports in `detail`. Close and `forge work` publish
 these waits to the pull request, so every machine lists the same ones; answer a worker question
 with `forge work <item> --note` on any machine. `team.blocked` lists started parts and fixes
 idle 24 hours or more (`stalled`) and the unfinished part the most unfinished parts wait on
 (`blocks the most`), longest first, each
 with `detail` and `seconds`. `team.sentence` counts both. Ask the human about each Needs you
-item as `forge next` words it.
+item as `forge next` words it. For a `failed run`, start the fix that `forge next` names; do not ask the human.
 Active parts and fixes show recorded
 Build, Tests, Review, CI and Merge times for their current round, with the current stage
 marked. Missing times remain unknown. New clients get this at init; earlier adopted clients
@@ -177,7 +187,8 @@ provide live worker and reader metadata; completed timing durations supply stage
 times. Values remain null where the producer has not recorded them.
 
 `time_breakdown` separates building, own tests, reviewing, fixing findings, waiting for CI,
-waiting in line, waiting for the owner and nothing running. Overlapping steps count once:
+waiting in line and waiting for the owner. Time without a recorded activity stays unmeasured.
+The legacy `nothing_running` field stays null for new observations. Overlapping steps count once:
 tests and recorded waits come out of the enclosing worker's time. `rounds` retains each round's
 plain `line`, its finding titles, priorities and files, and its new and repeated finding counts.
 Round lines number review attempts; the row's current `round` still identifies its worker turn.
@@ -190,8 +201,14 @@ An earlier release's failed CI timing without an explicit result also stays unkn
 Old records are not filled in with guessed findings, durations or zeroes. A known original start
 can give an elapsed total even when some earlier activity is unknown; that unknown time is not
 called idle and the known breakdown need not add up to the elapsed total. Gaps between legacy
-timings stay unknown until complete activity recording begins. Earlier run and question events
+timings stay unknown, including gaps after newer activity records. Earlier run and question events
 do not establish completeness; historical questions without a recorded end stay unknown.
+How it went also shows timestamps for holds, owner decisions, waits and resumed work.
+The first recorded start survives commit rewrites and a fix moved into a story and its first part.
+The first part also keeps the fix's recorded work and reviews. Upgrade repairs earlier published
+starts and labels old compacted gaps as unmeasured time. Close refreshes How it went when it sees
+a human merge. An agent merge refreshes it after GitHub confirms the merge. Both use GitHub's
+merge time, so a later observation does not extend the final wait.
 
 Quote the item's round lines when explaining a long run, then quote the relevant breakdown
 categories rather than adding overlapping stage timers. The board page shows these same
@@ -268,35 +285,25 @@ Use each board row's next step for that item, never another
 item's step. Machine views do not grant approval or permission to merge.
 
 The shared mod contract fixture is `tests/fixtures/board.json`; command coverage
-in `tests/test_machine_views.py` checks both views against it.
+in `tests/test_machine_views.py` checks the board view against it.
 
 ## Claude Code plugin core
 
-The Claude Code mod reads Forge's machine views, runs `forge` commands and draws;
-it never edits repo files or replaces the commands' approval and merge rules.
-All its consumers share one snapshot. On load, then every 10 seconds, one refresh
-runs `forge next --json` and `forge lanes --json` together. The next output also
-supplies the board rows, so the pane reads them once per refresh.
-If that Forge has no lanes command, lane data is absent. A due refresh is skipped
-while the previous one runs, rather than queued. There is no extra fetch on `/forge`.
-Drawing ticks advance live timers every second without fetching state.
-
-A failed or malformed refresh, or a command taking over 60 seconds, keeps the
-last good rows and adds a dim `Couldn't refresh: <first line of the error>`.
-It retries on the next tick. Only a non-zero command result containing
-`unrecognized arguments: --json` shows
-`This repo's Forge is too old for the pane: upgrade Forge here.`
-Other failures use the normal refresh error. The board command owns the
-60-second GitHub checks cache described above; a check changing without a local
-edit appears on the next refresh after that cache expires. Unknown checks stay
-unknown, including when GitHub is unreachable.
+The Claude Code mod reads `forge lanes --json`, runs `forge` commands and draws; it never
+edits repo files or replaces the commands' approval and merge rules. While the pane is open it
+reads every 3 seconds and redraws each second; a closed pane reads nothing. The read gets 0.3 s
+(0.6 s on Windows). A read that fails or is late keeps the last rows and adds
+`Last update <age> ago. Forge did not answer.`; with no earlier answer the pane says only
+`Forge did not answer.` An older Forge with no lanes command fails the same way. The pane never
+says that nothing is running before Forge has answered once.
 
 ## Installing the mod
 
 `forge sync` installs or updates the mod from Forge's latest release at user scope,
 one per machine, independently of each repo's pinned Forge version. It needs
-Claude Code v2.1.287 or newer on PATH. When the marketplace is missing, sync runs
-`claude plugin marketplace add knacklabs/symphony-forge`, then always runs
+Claude Code v2.1.287 or newer on PATH. Sync replaces the disabled user marketplace
+and reinstalls the mod. When the marketplace is missing, sync runs
+`claude plugin marketplace add vrknetha/symphony-forge`, then always runs
 `claude plugin marketplace update forge`. It runs
 `claude plugin install forge@forge --scope user` for a new user install, or
 `claude plugin update forge@forge --scope user` for an existing one.
@@ -310,9 +317,7 @@ older than v2.1.287 and keeps exit status 0. In a running session, use
 no plugins; use the `forge` command there.
 
 The mod runs `forge` from PATH with argv and no shell, in the session's repo root.
-It does not change the repo's pin. If the pane or strip says that repo's Forge is
-too old, upgrade Forge in that repo; other refresh errors follow the core's retry
-behaviour above. Sessions without the mod keep using the commands as today.
+It does not change the repo's pin. If the pane says that Forge did not answer, check that repo's Forge and upgrade it there. Sessions without the mod keep using the commands as today.
 
 ## Approving with the pane
 
@@ -322,58 +327,3 @@ names, following Planning a story in [the guide](SKILL.md#planning-a-story). The
 checks are unchanged. Plan Mode remains the approval path in Claude Code, Codex,
 the VS Code chat panel and sessions without the mod; installing the mod changes
 no approval rule.
-
-## The pane and strip
-
-Type `/forge` at any width, including 80 columns, to open and focus the pane.
-The mod requests it at interactive session start too; Claude Code places it
-automatically at 144 columns, or 110 after the person has opened it once.
-The strip below that wide-screen threshold ends with `/forge for the board`.
-The pane's Board tab, on the terminal and the Desktop app's Code tab alike, opens
-with one summary line, such as `3 in progress · 1 needs you · 2 stuck · go-live Oct 20`.
-Each part shows only when the board's `team` fact behind it is known and not zero; when
-none of them applies, the line counts the rows the tab shows in its own group words instead,
-such as `1 moving · 2 ready to merge · 3 waiting`; an empty board says only `Nothing in progress.`. An older Forge with no `team` shows no summary line. Below it come the board's
-own sentence (`team.sentence`) and its labelled totals, one line per kind, such as
-`Fixes — Done: 0; Ready to merge: 0; In progress: 1; To do: 0`, words built from
-`team.counts`. Groups follow in this order, each only when it has items, and each in the board's own
-order: NEEDS YOU (one row per `team.needs_you` entry, oldest first, with how long it has waited,
-such as `waiting 3h`), STUCK (one row per `team.blocked` entry with its reason in words and its
-age, such as `1 unfinished part waits on it · 2d`, and the longest stall in days), MOVING (the board's In progress, `team.in_progress`, except what is ready to merge;
-a running item shows its current stage and how long, such as `Review running · 12 min`),
-READY TO MERGE (the rest of `team.in_progress`, each saying Ready to merge, with the checks in words when known, and its merge
-step; an item merged from another machine shows `forge next`'s line naming who merges it), then a
-folded count of the work waiting or not started (planned stories and fixes not started), opened with a native button to the same rows. Each item shows its plain title, the story key small
-beside it, one line of state in words and, where there is something to do, its next step
-(`next.step`) after `→`. At most five rows show per group, then `and N more · forge board for all`.
-An older Forge without the `team` lists draws the same groups from each row's `needs_person`,
-stalled, running and ready flags, and shows no sentence or totals.
-Outside those totals, the pane never shows zero counts, unknown times, raw timestamps, priority codes or
-dismissed counts; findings read `Review found 3 problems`. Dates are short (`Oct 5`) or
-relative (`12 min`, `8 days`), and every time rounds as the board's do (`2m`, never `1m 30s`). Stage chains, round lines and the time breakdown stay on
-the board page. An empty board says `Nothing in progress.` `/forge` always returns the
-same lines as text, as well as opening the pane. Where mods draw nothing (the VS Code
-chat panel, `claude -p` and Remote Control from a phone or claude.ai), that text is the
-status reply. It uses the last completed snapshot, including any refresh error. Until a
-first refresh succeeds, the pane, the strip and `/forge` say `Loading Forge…`, or
-`Couldn't refresh: <first line of the error>` once that refresh failed.
-
-The strip above the prompt uses at most three lines. Its first line shows
-`Agents N/M (W waiting) · Tests N/M (K waiting) · <running item or idle> · 1: <next command>`.
-It also shows a recorded current worker step. The other lines show up to two active items
-from this repo, each with Build → Tests → Review → CI → Merge, its round and total
-time. A third active item replaces the last line with `+N more · /forge for all`.
-Finished stages show ✓ and their duration, the current stage ● and a live timer,
-and failed stages ✗ in red. Unreached stages have only their name; skipped tests
-show `Tests –`. Symbols carry the meaning without colour. The total uses the elapsed-time
-snapshot, which includes live and idle time without counting concurrent stages
-twice. At widths under 80 columns it is one line: running and waiting counts, the first
-active item's current stage and time, its total and the next step; without lane data,
-the first line is only the next step; the narrow strip has no item or lane summary.
-
-Press `1` on an empty prompt when Claude is idle to run the displayed next command
-as the user. Before submitting, the mod re-reads `forge next --json`: if the command
-changed it redraws and runs nothing. A failed re-read submits nothing and toasts
-`Couldn't check the next step: <reason>`; a failed submit toasts
-`Couldn't run the next step: <reason>`. A null command or busy Claude has no hotkey
-and shows the plain next-step line instead. Typing into a nonempty prompt stays typing.

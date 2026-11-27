@@ -90,6 +90,8 @@ def _close_and_squash_repair(repo, gh, tmp_path, queue, repair, repair_branch):
     gh.respond("pr", "ready")
     default_head = repo.git("rev-parse", "origin/main", cwd=repair)
     item = repair_branch.removeprefix("fix/")
+    repo.git("commit", "--allow-empty", "-q", "-m", "Record the repair fixture proof", "-m",
+             "Proof list:\n- Done when: check: The sign-off repair is complete", cwd=repair)
     closed = repo.forge("close", item, cwd=repair)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     repo.git("merge-base", "--is-ancestor", default_head, "HEAD", cwd=repair)

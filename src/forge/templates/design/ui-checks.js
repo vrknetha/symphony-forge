@@ -47,6 +47,48 @@ async function check(files) {
     const spacing = /\b(?:p[xytrbl]?|m[xytrblse]?|gap(?:-[xy])?|space-[xy])-\[-?(?:\d+(?:\.\d+)?|\.\d+)(?:px|r?em|[sld]?v[wh]|vmin|vmax|ch|ex|cm|mm|in|pt|pc|%)?\]/g;
     for (const match of text.matchAll(spacing)) report('spacing-scale', match.index, `Use the spacing scale instead of ${match[0]}.`);
 
+    // The owner's design rules that code can see. They apply to app screens: files under apps/ or
+    // libs/ that are not email templates. A saved design canvas (docs/design/) is not a screen.
+    const screen = /^(?:apps|libs)\//.test(slash(file)) && !/mail/i.test(slash(file));
+    const owner = (rule, pattern, message, keep = () => true) => {
+      if (screen) for (const match of text.matchAll(pattern)) if (keep(match)) report(rule, match.index, message);
+    };
+    // Class names sit in class="…", className={…} or a cn(…)/clsx(…)/cva(…) call. Words in text do not.
+    const classes = [...text.matchAll(/\bclass(?:Name)?\s*=\s*(?:"[^"]*"|'[^']*'|\{(?:[^{}]|\{[^{}]*\})*\})|\b(?:cn|clsx|cva|twMerge)\((?:[^()]|\([^()]*\))*\)/g)]
+      .map(match => [match.index, match.index + match[0].length]);
+    // A theme value (--name: #hex inside :root, .dark or @theme) is where a hex colour belongs.
+    const theme = index => {
+      const before = text.slice(0, index), open = before.lastIndexOf('{');
+      const start = Math.max(before.lastIndexOf('}', open), before.lastIndexOf(';', open), before.lastIndexOf('{', open - 1));
+      return open > before.lastIndexOf('}') && /^(?::root|\.dark|@theme(?: inline)?)$/.test(before.slice(start + 1, open).trim());
+    };
+    const ms = (number, unit) => parseFloat(number) * (unit === 's' ? 1000 : 1);
+    const hex = '#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})\\b(?!-)';
+    const heavy = weight => weight === undefined || /^bold/.test(weight) || +weight >= 600;
+    owner('bold-text', /\bfont-(?:bold|semibold|extrabold|black)\b|\bfont-\[(\d+)\]|font-?[wW]eight\s*:\s*['"`]?(bold|bolder|\d+)\b/g,
+      'Use regular or medium weight, never bold.', match => heavy(match[1] ?? match[2]));
+    owner('all-caps', /\btext-?[tT]ransform\s*:\s*['"`]?uppercase\b|(?<![\w-])uppercase(?![\w-])/g,
+      'Write in sentence case, never all caps.',
+      match => match[0] !== 'uppercase' || classes.some(([from, to]) => match.index >= from && match.index < to));
+    owner('bg-gradient', /\bbg-(?:gradient|linear|radial|conic)\b|\b(?:linear|radial|conic)-gradient\s*\(/g,
+      'Use a flat colour from the theme, never a gradient.');
+    // A colour value follows a colour or custom property (color: #fff, fill="#fff") or sits in a Tailwind
+    // value (bg-[#fff]). A link such as href="#feed" or text such as "Order #1234" is not a colour.
+    owner('raw-hex', new RegExp(`(--[\\w-]+|[\\w-]*(?:color|background|border|shadow|fill|stroke|outline)[\\w-]*)['"]?\\s*[:=]\\s*` +
+      `[{'"\`]*[^;{}'"\`\\n]*?(?<![\\w&/#-]|url\\(['"]?)${hex}|-\\[[^\\]\\s]*${hex}`, 'gi'),
+    'Use a semantic theme token, never a hex value.', match => !(match[1]?.startsWith('--') && theme(match.index)));
+    // Only a duration counts, not a delay: in a transition or animation shorthand the first time of each
+    // comma-separated item is its duration; every time in a duration property is one.
+    owner('slow-motion', /\bduration-(\d+)\b|\bduration-\[(\d*\.?\d+)(ms|s)\]|\b(?:transition|animation)(-?[dD]uration)?\s*:\s*['"`]?([^;}\n'"`]*)|\.animate\s*\((?:[^()]|\([^()]*\))*?\bduration\s*:\s*(\d+)/g,
+      'Keep motion under 300 ms.', match => {
+        if (match[1]) return +match[1] >= 300;
+        if (match[2]) return ms(match[2], match[3]) >= 300;
+        if (match[6]) return +match[6] >= 300;
+        const items = match[4] ? [match[5]] : match[5].replace(/\([^)]*\)/g, '').split(',');
+        return items.some(item => [...item.matchAll(/(\d*\.?\d+)(ms|s)\b/g)].slice(0, match[4] ? Infinity : 1)
+          .some(time => ms(time[1], time[2]) >= 300));
+      });
+
     const html = /\.html$/i.test(file);
     const shell = html ? /<aside\b/i.exec(text) :
       /\.(tsx|jsx)$/i.test(file) ? /<SidebarProvider\b/.exec(text) : null;

@@ -19,6 +19,7 @@ import pytest
 
 from conftest import _install, patient
 from test_close import env  # noqa: F401
+from test_doctor_fix import _prs
 from test_setup import _autoreview, _executable, _fresh_client, _stub_forge, _version
 from test_setup import doctor_sdks, sdk_data  # noqa: F401
 
@@ -53,6 +54,7 @@ def _a_later_doctor_repair_gets_its_own_close_review(env, monkeypatch):
     old_head = repo.git("rev-parse", old_branch)
     env.gh.respond("pr", "list", "--head", old_branch, stdout=json.dumps(
         [{"number": 7, "state": "MERGED", "headRefOid": old_head, "body": "", "isDraft": False}]))
+    _prs(env.gh, (old_branch, old_head, "MERGED"))
     monkeypatch.setenv("FORGE_NOW", "2026-10-04T09:01:00+00:00")
 
     cleaned = repo.forge("doctor", "--fix")
@@ -122,10 +124,10 @@ def _land(repo, client: Path, message: str, edit, forge: bool = False) -> str:
         if forge:
             toml.write_text(_pin(pinned, "v0.0.1"), encoding="utf-8")
         repo.git("add", "-A", cwd=clone)
-        repo.git("commit", "-q", "-m", message, cwd=clone)
+        repo.git("commit", "--allow-empty", "-q", "-m", message, cwd=clone)
         if forge:
             toml.write_text(pinned, encoding="utf-8")
-            repo.git("commit", "-q", "-am", "Pin the installed Forge again", cwd=clone)
+            repo.git("commit", "--allow-empty", "-q", "-am", "Pin the installed Forge again", cwd=clone)
         repo.git("push", "-q", "origin", "HEAD:main", cwd=clone)
     repo.git("pull", "-q", "--ff-only", "origin", "main", cwd=client)
     return repo.git("rev-parse", "HEAD", cwd=client)
@@ -259,7 +261,8 @@ def _doctor_fix_cleanup_follows_its_pull_request(repo, gh, tmp_path, monkeypatch
     _old_hosts(repo, client)
     started = repo.forge("doctor", "--fix", cwd=client)
     assert "- Fixed: wrote 2 of Forge's files in fix forge-files-20261004-0900.\n" in started.stdout
-    folder = _folder_of(repo, client, "fix/forge-files-20261004-0900")
+    branch = "fix/forge-files-20261004-0900"
+    folder = _folder_of(repo, client, branch)
     # A tracked lockfile change alone qualifies finished worktrees for cleanup.
     _set(folder, "uv.lock", "version = 2\n")
     before = _status(repo, folder)
@@ -267,10 +270,12 @@ def _doctor_fix_cleanup_follows_its_pull_request(repo, gh, tmp_path, monkeypatch
                 for path in folder.rglob("*") if path.is_file()}
     main = _status(repo, client)
     trees = repo.git("worktree", "list", "--porcelain", cwd=client)
-    gh.respond("pr", "list", "--head", "fix/forge-files-20261004-0900", stdout=json.dumps(
+    gh.respond("pr", "list", "--head", branch, stdout=json.dumps(
         [{"headRefOid": before[0], "state": state}]))
+    _prs(gh, (branch, before[0], state))
 
     if state == "CLOSED":
+        repo.git("push", "-q", "origin", branch, cwd=client)
         monkeypatch.setenv("FORGE_NOW", "2026-10-04T09:01:00+00:00")
     done = repo.forge("doctor", "--fix", cwd=client)
     if state == "CLOSED":
@@ -668,9 +673,9 @@ def _a_local_commit_that_moves_the_pin_on_a_fix_branch_is_held_back(repo, gh, tm
     pinned = toml.read_text(encoding="utf-8")
     _set(folder, SKILL, "Our skill\n")
     toml.write_text(_pin(pinned, "v0.0.1"), encoding="utf-8")
-    repo.git("commit", "-q", "-am", "Move the pin and the skill", cwd=folder)
+    repo.git("commit", "--allow-empty", "-q", "-am", "Move the pin and the skill", cwd=folder)
     toml.write_text(pinned, encoding="utf-8")
-    repo.git("commit", "-q", "-am", "Pin back", cwd=folder)
+    repo.git("commit", "--allow-empty", "-q", "-am", "Pin back", cwd=folder)
     done = repo.forge("doctor", "--fix", cwd=folder)
     assert _held(SKILL, "was changed by hand (Move the pin and the skill)") in done.stdout, done.stdout
     assert (folder / SKILL).read_text(encoding="utf-8") == "Our skill\n"
@@ -806,7 +811,7 @@ def _an_existing_app_adopted_on_v1_2_2_is_repaired(repo, gh, tmp_path, monkeypat
                     dirs_exist_ok=True)
     assert 'version = "v1.2.2"' in (client / "forge.toml").read_text(encoding="utf-8")
     repo.git("add", "-A")
-    repo.git("commit", "-qm", "Adopt Forge")
+    repo.git("commit", "--allow-empty", "-qm", "Adopt Forge")
     repo.git("push", "-q", "origin", "main")
     _land(repo, client, "Upgrade Forge", lambda folder: _set(
         folder, "forge.toml", _pin((folder / "forge.toml").read_text(encoding="utf-8"),

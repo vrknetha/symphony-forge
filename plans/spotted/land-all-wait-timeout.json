@@ -1,0 +1,180 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/github.py\tDisputed keep floor of one poll per second: fast polls can exhaust the quota\tland-all-wait-timeout",
+      "kind": "bug",
+      "path": "src/forge/github.py",
+      "line": 111,
+      "text": "Disputed keep floor of one poll per second: fast polls can exhaust the quota",
+      "from": "blocking",
+      "item": "land-all-wait-timeout",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/github.py\tGate: proof list\tland-all-wait-timeout",
+      "kind": "bug",
+      "path": "src/forge/github.py",
+      "line": 111,
+      "text": "Gate: proof list",
+      "from": "blocking",
+      "item": "land-all-wait-timeout",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tGate: force the train and change pull-request number collision\ttrain-tests-run-out-of-time",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 100,
+      "text": "Gate: force the train and change pull-request number collision",
+      "from": "blocking",
+      "item": "train-tests-run-out-of-time",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tLinux CI reports that the first close finished before the second close started.",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 337,
+      "text": "Linux CI reports that the first close finished before the second close started.",
+      "from": "worker",
+      "item": "windows-ci-speed",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tNot done: The scheduled forge-next run passes every Windows full-suite group on main, and each failing test passes on Windows for the real\u539f\u56e0\twindows-nightly-red",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 146,
+      "text": "Not done: The scheduled forge-next run passes every Windows full-suite group on main, and each failing test passes on Windows for the real\u539f\u56e0",
+      "from": "blocking",
+      "item": "windows-nightly-red",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tNot done: test_1 proves concurrent closes\tFORGE-QUEUE-1/QUEUE",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 194,
+      "text": "Not done: test_1 proves concurrent closes",
+      "from": "blocking",
+      "item": "FORGE-QUEUE-1/QUEUE",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tNot done: test_1 proves the closes start oldest first\tFORGE-QUEUE-1/QUEUE",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 285,
+      "text": "Not done: test_1 proves the closes start oldest first",
+      "from": "blocking",
+      "item": "FORGE-QUEUE-1/QUEUE",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tNot done: test_1 proves the selection and start-order details\tFORGE-QUEUE-1/QUEUE",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 270,
+      "text": "Not done: test_1 proves the selection and start-order details",
+      "from": "blocking",
+      "item": "FORGE-QUEUE-1/QUEUE",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tNot done: test_4 proves the later default and worker-stuck stops\tFORGE-QUEUE-1/QUEUE",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 354,
+      "text": "Not done: test_4 proves the later default and worker-stuck stops",
+      "from": "blocking",
+      "item": "FORGE-QUEUE-1/QUEUE",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tThe adopted queue cases time out during load admission and one leaves processes for teardown to collect.",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 337,
+      "text": "The adopted queue cases time out during load admission and one leaves processes for teardown to collect.",
+      "from": "worker",
+      "item": "windows-platform-subset",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tThe baseline profiling run failed when a concurrent merge moved the default branch again, while the after run passed.",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 323,
+      "text": "The baseline profiling run failed when a concurrent merge moved the default branch again, while the after run passed.",
+      "from": "worker",
+      "item": "tests-copy-seed-repo",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tThe fake GitHub command cannot read a pull request JSON file during concurrent land commands.",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 50,
+      "text": "The fake GitHub command cannot read a pull request JSON file during concurrent land commands.",
+      "from": "worker",
+      "item": "windows-test-fixes-2",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tThe queue test failed in CI but passed in focused branch and main runs; its cause remains unknown.",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 359,
+      "text": "The queue test failed in CI but passed in focused branch and main runs; its cause remains unknown.",
+      "from": "worker",
+      "item": "no-placeholder-fixes-2",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "bug\ttests/test_queue_land_all.py\tThe queue test failed in CI when its fake GitHub command read pull-request JSON, while the isolated case and full file passed locally.",
+      "kind": "bug",
+      "path": "tests/test_queue_land_all.py",
+      "line": 55,
+      "text": "The queue test failed in CI when its fake GitHub command read pull-request JSON, while the isolated case and full file passed locally.",
+      "from": "worker",
+      "item": "playwright-tests-skill",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "edge\ttests/test_queue_land_all.py\tConcurrent stub writes can expose incomplete pull request JSON to readers.",
+      "kind": "edge",
+      "path": "tests/test_queue_land_all.py",
+      "line": 66,
+      "text": "Concurrent stub writes can expose incomplete pull request JSON to readers.",
+      "from": "worker",
+      "item": "FORGE-BOARD-3/RELEASES",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    },
+    {
+      "key": "edge\ttests/test_queue_land_all.py\tOther land queue tests use the same parent-only host load fixture.",
+      "kind": "edge",
+      "path": "tests/test_queue_land_all.py",
+      "line": 159,
+      "text": "Other land queue tests use the same parent-only host load fixture.",
+      "from": "worker",
+      "item": "land-frees-ci-slots",
+      "status": "done",
+      "closed_by": "land-all-wait-timeout"
+    }
+  ]
+}

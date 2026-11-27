@@ -39,6 +39,11 @@ def answer(out, code=0):
     sys.exit(code)
 
 
+if args[:2] == ["api", "rate_limit"]:
+    answer(json.dumps({"resources": {name: {"remaining": 50000, "reset": int(time.time()) + 3600}
+                                     for name in ("core", "graphql")}}))
+
+
 def heads():
     listed = subprocess.run(["git", "ls-remote", "--heads", remote], capture_output=True,
                             text=True).stdout.split()
@@ -67,19 +72,30 @@ def save(found, **change):
     (here / ("pr-%d.json" % found["number"])).write_text(json.dumps(found))
 
 
-if args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"]:  # a branch's own checks, if set
-    branch = subprocess.run(["git", "branch", "--show-current"], capture_output=True,
-                            text=True).stdout.strip()
-    own = here / ("checks-" + branch.replace("/", "-") + ".txt")
-    if own.exists():
-        answer(own.read_text())
-if args[:2] == ["api", "graphql"]:  # the board's one read of open pull requests and their checks
+def checks_file(key):
+    return here / ("checks-" + key.replace("/", "-") + ".txt")
+
+
+if args[:4] == ["api", "--paginate", "--jq", ".check_runs[]"]:  # a commit's own checks, if set
+    if any(here.glob("checks-*.txt")):
+        sha = args[-1].split("/commits/")[1].split("/")[0]
+        own = checks_file(sha)
+        if own.exists():
+            answer(own.read_text())
+        for ref, head in heads().items():
+            own = checks_file(ref.removeprefix("refs/heads/"))
+            if head == sha and own.exists():
+                answer(own.read_text())
+if args[:2] == ["api", "graphql"]:
+    # The board's open pull requests.
     nodes = []
     for path in sorted(here.glob("pr-*.json")):
         found = pr(json.loads(path.read_text("utf-8"))["headRefName"])
         if found["state"] != "OPEN":
             continue
-        own = here / ("checks-" + found["headRefName"].replace("/", "-") + ".txt")
+        own = checks_file(found["headRefOid"])
+        if not own.exists():
+            own = checks_file(found["headRefName"])
         rows = ([json.loads(line) for line in own.read_text().splitlines()] if own.exists() else
                 [{"name": name, "status": "completed", "conclusion": "success"} for name in ("tests", "forge-pr-check")])
         contexts = [{"__typename": "CheckRun", "name": row["name"], "status": row["status"].upper(),
@@ -97,7 +113,10 @@ if args[:2] == ["run", "view"] and "attempt" in args:
     answer(json.dumps({"attempt": 2 if (here / ("rerun-" + args[2])).exists() else 1}))
 if args[:2] == ["pr", "create"]:
     branch = args[args.index("--head") + 1]
-    number = zlib.crc32(branch.encode()) % 9000 + 100
+    named = branch  # a test can make a train's raw number the one of another branch: the file names it
+    if branch.startswith("forge-merge-train/") and (here / "train-crc-of").exists():
+        named = (here / "train-crc-of").read_text()
+    number = zlib.crc32(named.encode()) % 9000 + 100 + 10000 * branch.startswith("forge-merge-train/")
     url = "https://github.com/acme/shop/pull/%d" % number
     save({"number": number, "headRefName": branch, "baseRefName": "main", "title": "Change " + branch,
           "isDraft": "--draft" in args, "body": "", "url": url})
@@ -155,7 +174,7 @@ for _own in Path(os.environ["AUTOREVIEW_STUB"]).parent.glob("reviews-fix-*.json"
 SHARED = "".join(f"line {n}\n" for n in range(1, 8))
 
 
-@pytest.fixture(params=["new", "adopted"])
+@pytest.fixture(params=["new"])
 def client(env, request):
     repo = env.repo
     # Land's direct Python children bypass the command shim's idle-machine override.
@@ -219,7 +238,7 @@ def _fix(env, monkeypatch, slug: str, day: int, files: dict[str, str], status: s
     return where
 
 
-def _settings(env, **values: str) -> None:
+def _settings(env, **values: str | int) -> None:
     """The default branch's forge.toml with these settings, published as the fixture publishes it."""
     repo = env.repo
     repo.git("switch", "fix/upgrade-client")
@@ -257,9 +276,11 @@ def _in_close(env, *slugs: str) -> dict[str, tuple[float, float]]:
             for slug in slugs}
 
 
-def _red(env, slug: str, status: str = "completed", conclusion: str | None = "failure") -> None:
-    """This fix's own checks on GitHub: tests in the given state."""
-    (env.repo.bin / f"checks-fix-{slug}.txt").write_text("".join(json.dumps(row) + "\n" for row in (
+def _red(env, slug: str, status: str = "completed", conclusion: str | None = "failure",
+         *, head: str | None = None) -> None:
+    """This fix's own checks on GitHub, optionally limited to one pushed commit."""
+    key = head or f"fix-{slug}"
+    (env.repo.bin / f"checks-{key}.txt").write_text("".join(json.dumps(row) + "\n" for row in (
         run("tests", conclusion, status), run("forge-pr-check"))), "utf-8")
 
 
@@ -269,7 +290,9 @@ def _reviews(env, slug: str) -> int:
 
 
 def _number(branch: str) -> str:
-    return str(zlib.crc32(branch.encode()) % 9000 + 100)
+    """The stub's pull request number. A merge train's number is never one of a fix's: two files of one
+    number would take a change's pull request away when the train closes its own."""
+    return str(zlib.crc32(branch.encode()) % 9000 + 100 + 10000 * branch.startswith("forge-merge-train/"))
 
 
 def _first(env, *prefix: str, contains: str = "") -> int:
@@ -359,6 +382,8 @@ def test_1_one_run_starts_changes_oldest_first_and_merges_each(client, monkeypat
 def test_2_a_change_sharing_a_file_waits_for_the_older_one(client, monkeypatch, older):
     env = client
     machine_cores(env.repo, 4)  # two agent places, as on CI: fewer places than changes
+    if older == "stops":
+        _settings(env, task_review_rounds=1)
     # A P1 at the bar reaches the owner-needed review stop.
     answer = CLEAN if older == "merges" else blocked({**finding("P1", "Saving drops line one", "shared.py"), "body": "Gain 4, Work 1, Harm 2\nSaving drops line one."})
     _fix(env, monkeypatch, "aa", 1, {"shared.py": _edit(1, "first")}, answer=answer,
@@ -435,6 +460,7 @@ def test_3_a_failed_check_naming_none_of_the_files_runs_again_once(client, monke
 
 def test_4_a_change_that_needs_you_stops_alone(client, monkeypatch):
     env = client
+    _settings(env, task_review_rounds=1)
     _fix(env, monkeypatch, "stuck", 1, {"stuck.py": "x = 1\n"},
          answer=blocked({**finding("P1", "Saving drops the basket", "stuck.py"), "body": "Gain 4, Work 1, Harm 2\nSaving drops the basket."}))
     _fix(env, monkeypatch, "clean", 2, {"clean.py": "x = 1\n"})

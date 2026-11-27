@@ -214,7 +214,8 @@ sys.exit(2 if findings else 0)
                "<aside><button>Menu</button></aside><main><h1>Admin</h1></main>\n")
     env.commit(where, css,
                ".title { background: linear-gradient(red, blue); background-clip: text; color: transparent; }\n"
-               "/* impeccable-disable gradient-text -- Keep the client's brand colors */\n")
+               "/* impeccable-disable gradient-text -- Keep the client's brand colors */\n"
+               "/* forge-ui-ignore bg-gradient: Keep the client's brand gradient */\n")
     waived = close()
     assert waived.returncode == 0, waived.stdout + waived.stderr
 

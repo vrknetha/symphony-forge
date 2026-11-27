@@ -1,0 +1,92 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/release_notes.py\tNot done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (prerelease)\tFORGE-RELNOTES-1/SHOW",
+      "kind": "bug",
+      "path": "src/forge/release_notes.py",
+      "line": 112,
+      "text": "Not done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (prerelease)",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/SHOW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/release_notes.py\tNot done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (stale marker)\tFORGE-RELNOTES-1/SHOW",
+      "kind": "bug",
+      "path": "src/forge/release_notes.py",
+      "line": 116,
+      "text": "Not done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (stale marker)",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/SHOW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/release_notes.py\tNot done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (unreadable)\tFORGE-RELNOTES-1/SHOW",
+      "kind": "bug",
+      "path": "src/forge/release_notes.py",
+      "line": 131,
+      "text": "Not done: After an upgrade, Forge's next-step report shows the same changes once to the agent, and not again on later runs. (unreadable)",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/SHOW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/release_notes.py\tNot done: After an upgrade, the output lists the changes of every release between the old and the new version.\tFORGE-RELNOTES-1/SHOW",
+      "kind": "bug",
+      "path": "src/forge/release_notes.py",
+      "line": 95,
+      "text": "Not done: After an upgrade, the output lists the changes of every release between the old and the new version.",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/SHOW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_release_notes.py\tGate: tests/test_release_notes.py::test_2_upgrade_lists_the_changes_of_every_release_between\tFORGE-RELNOTES-1/SHOW",
+      "kind": "bug",
+      "path": "tests/test_release_notes.py",
+      "line": 143,
+      "text": "Gate: tests/test_release_notes.py::test_2_upgrade_lists_the_changes_of_every_release_between",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/SHOW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_release_notes.py\tGate: tests/test_release_notes.py::test_3_next_shows_the_changes_once_after_an_upgrade\tFORGE-RELNOTES-1/SHOW",
+      "kind": "bug",
+      "path": "tests/test_release_notes.py",
+      "line": 179,
+      "text": "Gate: tests/test_release_notes.py::test_3_next_shows_the_changes_once_after_an_upgrade",
+      "from": "blocking",
+      "item": "FORGE-RELNOTES-1/SHOW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/release_notes.py\tFollow-up: Avoid a false notes error during live-app adoption",
+      "kind": "edge",
+      "path": "src/forge/release_notes.py",
+      "line": 124,
+      "text": "Follow-up: Avoid a false notes error during live-app adoption",
+      "from": "review",
+      "item": "FORGE-RELNOTES-1/SHOW",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "simplify\tsrc/forge/release_notes.py\tSimpler: missing approach record \u2192 the three before-coding lines",
+      "kind": "simplify",
+      "path": "src/forge/release_notes.py",
+      "line": 74,
+      "text": "Simpler: missing approach record \u2192 the three before-coding lines",
+      "from": "review",
+      "item": "FORGE-RELNOTES-1/SHOW",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

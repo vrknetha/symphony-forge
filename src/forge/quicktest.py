@@ -26,25 +26,89 @@ def group_warning(top: Path, cfg: dict[str, Any]) -> str:
     return ""
 
 
+NPM_VALUE_OPTIONS = ("--package", "-p", "--workspace", "-w", "--cache", "--prefix", "--registry",
+                     "--userconfig", "--globalconfig")
+
+
 def _npm_runner_index(words: list[str]) -> int:
     index = 2
     while index < len(words) and words[index].startswith("-"):
         if words[index] == "--":
             return index + 1
-        index += 2 if words[index] in ("--package", "-p", "--workspace", "-w", "--cache",
-                                      "--prefix", "--registry", "--userconfig", "--globalconfig") else 1
+        index += 2 if words[index] in NPM_VALUE_OPTIONS else 1
     return index
 
 
-def test_parts(top: Path, command: str) -> list[tuple[str, str, str]]:
-    """Classify the same runner and setup parts for advice and Python-only execution."""
+def _scripts(top: Path) -> dict[str, str]:
     package = top / "package.json"
-    scripts = json.loads(package.read_text("utf-8")).get("scripts", {}) if package.is_file() else {}
+    return json.loads(package.read_text("utf-8")).get("scripts", {}) if package.is_file() else {}
+
+
+# Programs that only start another program, and the one word after Playwright or Cypress that runs tests.
+LAUNCHERS = {"npx", "npm", "pnpm", "yarn", "bun", "bunx", "corepack", "exec", "dlx", "cross-env"}
+BROWSER_RUNNERS = {"playwright": "test", "cypress": "run"}
+SHELL_OPERATORS = re.compile(r"""\\.|'[^']*'|"(?:\\.|[^"\\])*"|[<>]&(?:\d+|-)|(?P<operator>[&;|]+)""")
+
+
+def _operators(command: str):
+    return (match for match in SHELL_OPERATORS.finditer(command) if match["operator"])
+
+
+def _steps(command: str, operators: set[str]) -> list[str]:
+    parts = []
+    start = 0
+    for match in _operators(command):
+        if match["operator"] in operators:
+            parts.append(command[start:match.start()])
+            start = match.end()
+    return [*parts, command[start:]]
+
+
+def _browser_step(part: str, scripts: dict[str, str]) -> bool:
+    """Is this step one Playwright or Cypress run, direct or as the only command of a package script?
+
+    A step or script that chains commands (&& ; | &), or a script that has a pre or post script
+    (npm runs those with it), does more than the browser run, so it is not one."""
+    if next(_operators(part), None):
+        return False
+    try:
+        words = shlex.split(part)
+        if words[:1] == ["corepack"]:
+            words = words[1:]
+        if words[:1] in (["npm"], ["pnpm"], ["yarn"], ["bun"]):
+            script = words[2] if len(words) > 2 and words[1] in ("run", "run-script") else (
+                words[1] if len(words) > 1 else "")
+            body = scripts.get(script)
+            if body is not None:
+                if next(_operators(body), None) or f"pre{script}" in scripts or f"post{script}" in scripts:
+                    return False
+                words = shlex.split(body)
+    except ValueError:
+        return False
+    if {"vitest", "jest"}.intersection(words):
+        return False
+    rest = iter(enumerate(words))
+    for index, word in rest:
+        if word.startswith("-"):  # a launcher option; an option's value is not a program
+            if word in NPM_VALUE_OPTIONS:
+                next(rest, None)
+            continue
+        name = word.replace("\\", "/").rsplit("/", 1)[-1]
+        if name in BROWSER_RUNNERS and words[index + 1:index + 2] == [BROWSER_RUNNERS[name]]:
+            return True
+        if name not in LAUNCHERS and "=" not in name:
+            return False  # another program, such as a lint step or a script runner
+    return False
+
+
+def test_parts(top: Path, command: str, *, classify_browser: bool = True) -> list[tuple[str, str, str]]:
+    """Classify the same runner and setup parts for advice and Python-only execution."""
+    scripts = _scripts(top)
     parts = []
     if command == init.NODE_TEST:
         command = command.partition("(")[2][:-1]
     # ponytail: recognize straight && pipelines and Forge's Node wrapper; adapt other shell flows in the agent.
-    for part in command.split("&&"):
+    for part in _steps(command, {"&&"}):
         part = part.strip()
         try:
             words = shlex.split(part)
@@ -70,12 +134,47 @@ def test_parts(top: Path, command: str) -> list[tuple[str, str, str]]:
             kind = "python"
         elif words and words[0] in ("npm", "pnpm", "yarn", "bun") and len(words) > 1 and words[1] in ("ci", "install"):
             kind = "node-install"
+        elif classify_browser and kind not in ("vitest", "jest") and _browser_step(part, scripts):
+            kind = "browser"
         parts.append((kind, part, passthrough))
     return parts
 
 
+def _combined_script(top: Path, command: str) -> str:
+    """The first package script in the command whose body chains steps, or empty."""
+    if command == init.NODE_TEST:  # Forge's generated wrapper: look inside it
+        command = command.partition("(")[2][:-1]
+    try:
+        scripts = _scripts(top)
+        operators = {"&&", "||", ";", "|"}
+        for part in _steps(command, operators):
+            words = shlex.split(part)
+            if words[:1] == ["corepack"]:
+                words = words[1:]
+            if not words or words[0] not in ("npm", "pnpm", "yarn", "bun"):
+                continue
+            # `npm ci` and `npm install` are not package scripts, even when a script has that name.
+            if len(words) < 2 or words[1] in ("ci", "install"):
+                continue
+            name = words[2] if words[1] in ("run", "run-script") and len(words) > 2 else words[1]
+            # An operator inside quotes, such as a test name "a|b", is part of one step.
+            if any(match["operator"] in operators for match in _operators(scripts.get(name, ""))):
+                return name
+    except (OSError, ValueError, AttributeError):
+        pass  # no readable package scripts: skip this advice instead of crashing sync or setup
+    return ""
+
+
+def combined_note(top: Path, cfg: dict[str, Any]) -> None:
+    """One line for a combined test script with no fast_test; Forge suggests no command for it."""
+    if not cfg["fast_test"] and (script := _combined_script(top, cfg["test"])):
+        print(f'The test setting runs the combined script "{script}", so Forge cannot limit its tests '
+              "to the change. Write a fast_test for this repo as the Forge guide says, then ask the owner.",
+              flush=True)
+
+
 def suggest(top: Path, cfg: dict[str, Any]) -> None:
-    if cfg["fast_test"]:
+    if cfg["fast_test"] or _combined_script(top, cfg["test"]):  # combined_note names that case
         return
     python = any((top / marker).is_file() for marker in
                  ("pyproject.toml", "pytest.ini", "setup.py", "requirements.txt"))

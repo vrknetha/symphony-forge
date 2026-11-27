@@ -1,8 +1,10 @@
-"""Test-only CI selects one Linux group and only changed Windows platform files.
+"""Test-only CI preserves own shards and selects changed Windows platform files.
 
 Test-audit: This protects CI's executable classification contract. Static matrices
 previously allocated every group. Picker tests cover execution, but do not cover
 the CI outputs that choose runners. No production seam or fake decides selection.
+The custom-command rule now keeps every configured group for commands with their
+own sharding flags, including test-only changes; earlier it collapsed these to one.
 """
 import json
 import os
@@ -27,7 +29,8 @@ def test_1_test_only_pull_requests_select_changed_files(repo, gh, tmp_path, adop
               else _new_client(repo, gh, tmp_path, "client"))
     if not adopted:
         _branch(repo, client, "ci-selection")
-    _settings(client, test=json.dumps(Path(sys.executable).as_posix()) + " -m pytest tests -q")
+    _settings(client, test=json.dumps(Path(sys.executable).as_posix())
+              + " -m pytest tests -q --splits {groups} --group {group}")
     ignore = client / ".gitignore"
     ignore.write_text((ignore.read_text("utf-8") if ignore.exists() else "")
                       + "\n__pycache__/\n", encoding="utf-8")
@@ -82,29 +85,19 @@ def test_1_test_only_pull_requests_select_changed_files(repo, gh, tmp_path, adop
         pr_job = _jobs(workflow)["tests"]
         if adopted:
             groups = re.search(r"^        group: (.+)$", pr_job, re.M)[1]
-            groups = groups.replace("needs.docs-check.outputs.test-only", "github.test_only")
-            selected_groups = expression(groups, test_only=values["test-only"])
+            groups = groups.replace("needs.docs-check.outputs.one-group", "github.one_group")
+            selected_groups = expression(groups, one_group=values["one-group"])
         else:
             # New clients now run one PR job without a matrix. Never read the
             # nightly matrix as a substitute for the PR's group selection.
             assert "strategy:" not in pr_job
             assert "FORGE_GROUP: '1'" in pr_job and "FORGE_GROUPS: '1'" in pr_job
             selected_groups = [1]
-        assert selected_groups == (list(range(1, 7)) if adopted and shared else [1])
-        windows = (ROOT / ".github/workflows/forge-next.yml").read_text("utf-8")
-        matrix = re.search(r"include: >-\n(.+?)\n    runs-on:", windows, re.S)[1]
-        rows = expression(" ".join(matrix.splitlines()), test_only=values["test-only"])
-        assert rows == ([{"os": "windows-latest", "group": group, "groups": 5}
-                         for group in range(1, 6)] if shared else
-                        [{"os": "windows-latest", "group": 1, "groups": 1}])
+        # This command owns its sharding flags, so CI keeps all configured groups.
+        assert selected_groups == (list(range(1, 7)) if adopted else [1])
         # The emitted one-group decision uses the real picker, which must never
         # collect the deliberately failing unrelated file.
         selected = repo.forge("test", "--pytest", base, cwd=client)
         assert selected.returncode == 0, selected.stdout + selected.stderr
         assert ("2 passed" if shared else "1 passed") in selected.stdout
         repo.git("revert", "--no-edit", "HEAD", cwd=client)
-
-    # Forge keeps installer coverage on unmarked test-only pull requests.
-    assert "needs.selection.outputs.run-windows != 'false'" not in windows
-    assert "ConvertFrom-Json $env:PLATFORM_FILES" in windows
-    assert "'tests/test_installers_explain_docker_start.py' | Sort-Object -Unique" in windows

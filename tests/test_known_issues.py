@@ -67,7 +67,7 @@ def kept_history(unsynced_up, monkeypatch, request):
     head = env.commit(where, path, json.dumps(state), f"Review of {item}: clean")
     repo.git("push", "-q", "origin", head + ":refs/pull/11/head")
     repo.git("merge", "-q", "--squash", branch)
-    repo.git("commit", "-qm", "Readers see a greeting")
+    repo.git("commit", "--allow-empty", "-qm", "Readers see a greeting")
     repo.git("worktree", "remove", where.as_posix())
     repo.git("branch", "-D", branch)
     # A current persisted list is authoritative even when no review survives.
@@ -135,11 +135,10 @@ def test_4_board_lists_kept_review_problems_since_adoption(kept_history):
         assert row["reason"], row
 
 
-def test_14_board_reads_each_merged_pull_request_once(kept_history, monkeypatch, tmp_path, request):
+def test_14_board_reads_each_merged_pull_request_once(kept_history, monkeypatch, tmp_path):
     # A minute-cache regression would preserve the JSON but repeat every network
     # fetch. Trace real Git to observe that distinct board-refresh contract.
     repo, _, _ = kept_history
-    previous = request.node.callspec.params["kept_history"]
     fetches = []
     for seconds in (0, 86401):
         trace = tmp_path / f"git-{seconds}.jsonl"
@@ -151,10 +150,9 @@ def test_14_board_reads_each_merged_pull_request_once(kept_history, monkeypatch,
         fetches.append([event["argv"] for event in events if event.get("event") == "start"
                         and "fetch" in event.get("argv", [])
                         and "refs/pull/11/head" in event["argv"]])
-    # Upgrade now fills the adopted repo before its first board read. A new
-    # repo still fetches on demand. Expiring the aggregate must never refetch
-    # either repo's immutable pull-request evidence.
-    assert len(fetches[0]) == (0 if previous else 1), fetches
+    # Both new and upgraded repos fetch old review evidence on demand. Expiring
+    # the aggregate must never refetch immutable pull-request evidence.
+    assert len(fetches[0]) == 1, fetches
     assert fetches[1] == [], fetches
 
 
@@ -176,7 +174,7 @@ def test_16_board_refresh_uses_the_current_saved_list(kept_history, monkeypatch)
     def publish(message):
         repo.write(path, json.dumps(state))
         repo.git("add", path)
-        repo.git("commit", "-q", "-m", message)
+        repo.git("commit", "--allow-empty", "-q", "-m", message)
         repo.git("switch", "-q", "main")
         repo.git("merge", "-q", "--ff-only", branch)
         repo.git("--git-dir", repo.git("remote", "get-url", "origin"), "fetch", "-q",

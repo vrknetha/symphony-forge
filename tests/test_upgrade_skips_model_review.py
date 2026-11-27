@@ -62,11 +62,15 @@ def test_1_pure_upgrade_skips_review_and_extra_edit_gets_one(unsynced_up, adopte
     assert len(up.env.review_calls()) == 1, closed.stdout + closed.stderr
 
 
-@pytest.mark.parametrize("case", ["starter-pnpm", "new-client-npm", "adopted-pnpm"])
+@pytest.mark.parametrize("case", ["starter-pnpm", "new-client-npm", "adopted-pnpm", "adopted-nested-pnpm", "adopted-nested-pnpm-engines"])
 def test_2_pure_upgrade_in_a_repo_with_a_lockfile_skips_review(unsynced_up, case):
     # The workflow Forge writes caches by the lockfile, so the check must render it the same way.
     up = _ready(unsynced_up, case.startswith("adopted"), *(["--starter"] if "starter" in case else []))
-    if "npm" in case:
+    if "nested" in case:
+        up.on_main("web/pnpm-lock.yaml", "lockfileVersion: '6.0'\n")
+        if "engines" in case:
+            up.on_main("web/package.json", '{"engines": {"pnpm": "^9.1.0"}}\n')
+    elif "npm" in case:
         up.on_main("package.json", '{"name": "app", "version": "1.0.0"}\n')
         up.on_main("package-lock.json", '{"lockfileVersion": 3}\n')
     elif "adopted" in case:
@@ -77,8 +81,13 @@ def test_2_pure_upgrade_in_a_repo_with_a_lockfile_skips_review(unsynced_up, case
     upgraded = up.run(RELEASE)
 
     assert upgraded.returncode == 0, upgraded.stdout + upgraded.stderr
-    assert re.search(r"pnpm-lock\.yaml|cache-dependency-path: package-lock\.json",
-                     up.show(".github/workflows/forge.yml"))
+    if "nested" in case:
+        want = '"^9.1.0"' if "engines" in case else '"8"'
+        assert f"uses: pnpm/action-setup@v4\n        if: steps.parent-tests.outputs.reuse != 'true'\n        with:\n          version: {want}\n" \
+            in up.show(".github/workflows/forge.yml")
+    else:
+        assert re.search(r"pnpm-lock\.yaml|cache-dependency-path: package-lock\.json",
+                         up.show(".github/workflows/forge.yml"))
     assert up.env.review_calls() == []
 
 
@@ -138,16 +147,16 @@ def test_4_a_fix_that_forge_upgrade_did_not_make_gets_a_review(env, name, why):
 def test_5_an_earlier_blocking_finding_is_not_replaced_by_the_mechanical_result(unsynced_up):
     up = _ready(unsynced_up, False)
     assert up.run(RELEASE).returncode == 0
-    # A hand edit gets a review that blocks and stops for the owner's choice. Its finding names a
+    # A hand edit gets a blocked review and another worker round. Its finding names a
     # file that is not in the tree, so the review leaves no spotted record behind in the diff.
     _hand_edit(up)
     up.env.reviews(blocked({**finding("P1", "The note is wrong", "docs/missing.md"),
                             "body": "Gain 4, Work 1, Harm 2\nThe note is wrong."}), CLEAN)
-    stopped = up.repo.forge("close", NAME, cwd=up.folder)
-    assert len(up.env.review_calls()) == 1, stopped.stdout + stopped.stderr
-    chosen = up.repo.forge("close", NAME, "--resolve", "more", "--reason", "One more round",
-                           cwd=up.folder)
-    assert chosen.returncode == 0, chosen.stdout + chosen.stderr
+    held = up.repo.forge("close", NAME, cwd=up.folder)
+    assert held.returncode == 1, held.stdout + held.stderr
+    assert len(up.env.review_calls()) == 1, held.stdout + held.stderr
+    assert "The review left serious findings open" in held.stderr
+    assert "One more round, split or accept?" not in held.stderr
 
     # The worker drops the hand edit instead of repairing the finding. The branch is a pure
     # upgrade again, but the blocker was never checked, so the model reviews once more.

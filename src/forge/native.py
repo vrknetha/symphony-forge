@@ -1,6 +1,8 @@
 """Session-owned reads use the existing item record, lock and machine lane."""
+import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -10,8 +12,9 @@ from collections.abc import Iterator
 from contextlib import contextmanager, redirect_stdout
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
-from forge import codex, machine, repo
+from forge import codex, contextsize, machine, repo
 
 COMMANDS = [{"words": "handback", "run": "handback", "changes_state": True, "position": 36,
              "help": "Record the result of a session subagent",
@@ -21,22 +24,33 @@ COMMANDS = [{"words": "handback", "run": "handback", "changes_state": True, "pos
              "listing": "| `forge handback <target>` | Records a session subagent result and frees its held place |"}]
 
 
-def session() -> dict[str, Any]:
-    """Find the host above shell/uv wrappers; its identity outlives each forge command."""
-    tool = repo.coordinator()
-    if tool is None:
-        raise repo.Refused("Run this command from the coordinating Claude Code or Codex session.", "")
+def parent_ids() -> dict[int, int]:
+    """Each running process's parent, by id."""
     if os.name == "nt":
         listed = repo.run("powershell", "-NoProfile", "-NonInteractive", "-Command",
                           "Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId "
                           "| ConvertTo-Json -Compress")
         listed.check_returncode()
-        parents = {row["ProcessId"]: row["ParentProcessId"] for row in json.loads(listed.stdout)}
-    else:
-        listed = repo.run("ps", "-axo", "pid=,ppid=")
-        listed.check_returncode()
-        parents = {int(pid): int(parent) for pid, parent in
-                   (line.split() for line in listed.stdout.splitlines())}
+        return {row["ProcessId"]: row["ParentProcessId"] for row in json.loads(listed.stdout)}
+    listed = repo.run("ps", "-axo", "pid=,ppid=")
+    listed.check_returncode()
+    return {int(pid): int(parent) for pid, parent in (line.split() for line in listed.stdout.splitlines())}
+
+
+def session_id() -> str | None:
+    """This session's id, or None in a plain terminal."""
+    try:
+        return session()["id"]
+    except repo.Refused:
+        return None
+
+
+def session() -> dict[str, Any]:
+    """Find the host above shell/uv wrappers; its identity outlives each forge command."""
+    tool = repo.coordinator()
+    if tool is None:
+        raise repo.Refused("Run this command from the coordinating Claude Code or Codex session.", "")
+    parents = parent_ids()
     pid, seen = os.getppid(), set()
     owner = node = None
     while pid > 1 and pid not in seen:
@@ -55,6 +69,145 @@ def session() -> dict[str, Any]:
         app = "Claude Code" if tool == "claude" else "Codex"
         raise repo.Refused(f"Forge cannot find the coordinating {app} session; nothing ran.", "")
     return {"id": f"{tool}:{owner['pid']}:{owner['started']}", "process": owner}
+
+
+def _coordinator_directory(chat: str) -> Path:
+    return machine._repos_file().parent / "coordinators" / hashlib.sha256(chat.encode()).hexdigest()
+
+
+def coordinator_hook() -> bool:
+    """Keep main-chat admission and exit separate from a shared host's lifetime."""
+    if sys.stdin.isatty():
+        return False
+    try:
+        payload = json.load(sys.stdin)
+    except ValueError:
+        return False
+    if not isinstance(payload, dict):
+        return False
+    event, chat = payload.get("hook_event_name"), payload.get("session_id")
+    if isinstance(chat, str) and chat and not os.environ.get("FORGE_WORKER"):
+        directory = _coordinator_directory(chat)
+        try:
+            if event == "SessionStart":
+                if payload.get("source") == "compact" and not payload.get("agent_id"):
+                    contextsize.update_warning(chat, None)
+                directory.mkdir(parents=True, exist_ok=True)
+                (directory / "started").touch()
+            elif event == "SessionEnd":
+                # shortcut: Codex retains detached chats until SessionEnd, use client presence if the host exposes it.
+                (directory / "started").unlink(missing_ok=True)
+                for path in directory.glob("*.json"):
+                    path.unlink(missing_ok=True)
+                if directory.is_dir():
+                    directory.rmdir()
+        except OSError:
+            pass  # A local warning must not break the host hook.
+    return event == "SessionEnd"
+
+
+def _coordinator_repo(top: Path) -> str:
+    origin = repo.run("git", "remote", "get-url", "origin", cwd=top).stdout.strip()
+    if not origin:
+        return str(repo._common_path(top))
+    if Path(origin).is_absolute():
+        return str(Path(origin).resolve())
+    if "://" not in origin:
+        host, colon, path = origin.partition(":")
+        if not colon:
+            return str((machine.main_checkout(top) / origin).resolve())
+        origin = f"ssh://{host}/{path}"
+    remote = urlsplit(origin)
+    if remote.scheme == "file":
+        from urllib.request import url2pathname
+
+        return str(Path(url2pathname(remote.path)).resolve())
+    port = remote.port
+    if port == {"ssh": 22, "https": 443, "http": 80, "git": 9418}.get(remote.scheme):
+        port = None
+    host = remote.hostname or ""
+    path = remote.path.strip("/").removesuffix(".git")
+    return f"{host}:{port or ''}/{path.lower() if host == 'github.com' else path}"
+
+
+def _saved_codex_coordinator(chat: str) -> bool:
+    """Recognize an open Codex chat whose start hook ran before this Forge release."""
+    try:
+        thread = uuid.UUID(chat)
+    except ValueError:
+        return False
+    home = Path(os.environ.get("CODEX_HOME") or Path.home() / ".codex")
+    # shortcut: read Codex's local metadata header until the host exposes the thread role to tools.
+    for path in (home / "sessions").glob(f"*/*/*/rollout-*-{thread}*.jsonl"):
+        try:
+            with path.open(encoding="utf-8") as transcript:
+                record = json.loads(transcript.readline())
+        except (OSError, ValueError):
+            continue
+        if not isinstance(record, dict) or record.get("type") != "session_meta":
+            continue
+        meta = record.get("payload")
+        if not isinstance(meta, dict) or meta.get("id") != chat:
+            continue
+        if meta.get("parent_thread_id") or meta.get("session_id", chat) != chat:
+            continue
+        source = meta.get("source")
+        if source in ("cli", "vscode") or (isinstance(source, dict) and isinstance(source.get("custom"), str)):
+            return True
+    return False
+
+
+def coordinator_warnings(top: Path) -> list[str]:
+    """Name other local chats that ran next for this repository and are still live."""
+    tool = repo.coordinator()
+    if tool is None or os.environ.get("FORGE_WORKER"):
+        return []
+    chat = os.environ.get("CODEX_THREAD_ID" if tool == "codex" else "CLAUDE_CODE_SESSION_ID")
+    if not chat:
+        return []
+    directory = _coordinator_directory(chat)
+    started = directory / "started"
+    # When the start hook predates this feature, check the saved role before enrolling a chat.
+    recover_start = tool == "codex" and not started.is_file()
+    try:
+        if recover_start and not _saved_codex_coordinator(chat):
+            return []
+        owner = session()["process"]
+        key = hashlib.sha256(_coordinator_repo(top).encode()).hexdigest() + ".json"
+    except (repo.Refused, OSError, ValueError, subprocess.CalledProcessError):
+        return []
+    app = "Codex" if tool == "codex" else "Claude Code"
+    name = f"{app} session {' '.join(chat.split())}"
+    process = {field: owner[field] for field in ("pid", "started")}
+    current = directory / key
+    warnings = []
+    try:
+        if tool == "claude" or recover_start:
+            directory.mkdir(parents=True, exist_ok=True)
+        if recover_start:
+            started.touch()
+        pending = tempfile.NamedTemporaryFile(dir=directory, delete=False)
+        path = Path(pending.name)
+        try:
+            with pending:
+                pending.write(json.dumps({"name": name, "process": process}).encode())
+            os.replace(path, current)
+        finally:
+            path.unlink(missing_ok=True)
+        for path in sorted(directory.parent.glob(f"*/{key}")):
+            if path == current:
+                continue
+            peer = codex._json(path)
+            if not isinstance(peer.get("process"), dict) or not isinstance(peer.get("name"), str):
+                continue
+            alive = codex._alive(peer["process"])
+            if alive is False:
+                path.unlink(missing_ok=True)
+            elif alive:
+                warnings.append(f"Warning: {peer['name']} also coordinates this repo.")
+    except OSError:
+        pass  # An unavailable local warning must not stop the next-step report.
+    return warnings
 
 
 @contextmanager
@@ -100,6 +253,11 @@ def _start(top: Path, item: str, kind: str, owner: dict[str, Any], entry: dict[s
 
 def offer(top: Path, target: str, result: dict[str, Any], prompt: str, fresh_prompt: str,
           why: str, models: dict[str, str]) -> int:
+    if "intake" in result and (kept := pending_offer(top, result["intake"])):
+        if kept[0]["session"] != session()["id"]:
+            repo.refuse(("Session {session} holds this intake, so only it can hand it back.", "forge next"), session=kept[0]["session"])
+        print(json.dumps(kept[1]))
+        return 0
     with hold(top, target, "Grill", models) as (owner, entry):
         path = codex._item_file(top, target, ".json", "Grill")
         previous = {} if "intake" in result else codex.record(top, target, "Grill").get("native") or {}
@@ -112,18 +270,37 @@ def offer(top: Path, target: str, result: dict[str, Any], prompt: str, fresh_pro
                          "start a reader in this session")
         codex._record(path, **({"claude": None} if result["reader"] == "codex" else
                               {"conversation": None, "start": None}))
-        _start(top, target, "Grill", owner, entry, result=result)
+        shown = offer_json(top, target, round_number, result, prompt, fresh_prompt, resume, reason, models)
+        _start(top, target, "Grill", owner, entry, result=result, offer=shown)
+    print(json.dumps(shown))
+    return 0
+
+
+def pending_offer(top: Path, idea: str | None = None) -> tuple[dict[str, Any], dict[str, Any]] | None:
+    """A live intake still owed its handback: its pending record and the offer first printed."""
+    for record in sorted((repo.forge_dir(top) / "threads/read").glob("intake-*.json")):
+        pending = codex._json(record).get("pending") or {}
+        if ("intake" in pending.get("result", {}) and idea in (None, pending["result"]["intake"])
+                and lock_alive(record.with_suffix(".lock")) is not False):
+            from forge import intake
+            return pending, pending.get("offer") or intake.legacy_offer(top, pending)
+    return None
+
+
+def offer_json(top: Path, target: str, round_number: int, result: dict[str, Any], prompt: str,
+                fresh_prompt: str, resume: str | None, reason: str, models: dict[str, str]) -> dict[str, Any]:
     role = "explorer" if "intake" in result else "reader"
     instruction = ("Continue the named reader with the short brief as a background subagent.\n"
                    "Start fresh with the whole brief if this session cannot reach that subagent."
                    if resume else f"Start a {role} as a background subagent with the whole brief.")
     instruction += (f"\nChange no files. Hand its final message and id back with forge handback {target} "
                     f"--round {round_number} --subagent <id> --text <message>.")
-    print(json.dumps({"target": target, "role": role, "tool": result["reader"],
-                      "checkout": top.resolve().as_posix(), **models, "round": round_number,
-                      "prompt": prompt if resume else fresh_prompt, "fresh_prompt": fresh_prompt,
-                      "subagent": resume, "reason": reason, "instruction": instruction}))
-    return 0
+    return {"target": target, "role": role, "tool": result["reader"],
+            "checkout": top.resolve().as_posix(), **models, "round": round_number,
+            "prompt": prompt if resume else fresh_prompt, "fresh_prompt": fresh_prompt,
+            "subagent": resume, "reason": reason, "instruction": instruction}
+
+
 
 
 def resumable(top: Path, item: str, owner: dict[str, Any]) -> tuple[dict[str, Any], str | None, str]:
@@ -213,6 +390,12 @@ def handback(args: Any) -> int:
         pending = codex._json(path).get("pending")
         held = codex._json(lock)
         if not pending or args.round != pending["result"]["round"]:
+            root = machine.main_checkout(top).as_posix()
+            for entry in machine.entries():
+                if (entry.get("native") and entry.get("session") == owner["id"]
+                        and entry.get("repo_root") == root and entry.get("item") == args.item
+                        and entry.get("round") == args.round):
+                    machine.leave(entry)
             raise repo.Refused("That round was stopped or replaced, so Forge recorded nothing.", "")
         if pending["session"] != owner["id"] or any(
                 held.get(key) != owner["process"][key] for key in ("pid", "started")):
@@ -243,6 +426,23 @@ def handback(args: Any) -> int:
                 codex._record(path, pending=None)
                 machine.leave(pending["entry"])
                 lock.unlink(missing_ok=True)
+
+
+def _proof_paragraph(text: str) -> str:
+    """The report's Proof list: its label through the last proof line, blank lines included."""
+    from forge import proof
+
+    lines = text.splitlines()
+    start = next((i for i, line in enumerate(lines) if line.startswith("Proof list:")), None)
+    if start is None:
+        return ""
+    end = start
+    for i in range(start + 1, len(lines)):
+        if proof.LINE.match(lines[i]) or re.match(r"\s*(?:-\s*)?check:", lines[i], re.I) or (lines[i].startswith((" ", "\t")) and i == end + 1):
+            end = i
+        elif lines[i].strip() and not lines[i].startswith((" ", "\t")):
+            break
+    return "\n".join(lines[start:end + 1]) if end > start else ""
 
 
 def _work_result(path: Path, item: str, pending: dict[str, Any], said: str, owner: dict[str, Any],
@@ -283,6 +483,16 @@ def _work_result(path: Path, item: str, pending: dict[str, Any], said: str, owne
         print(f"Send this to subagent {subagent}, then hand back again:\n"
               f"{worker.commit_nudge(top)}")
         return True
+    # Native builders report their proof in text, but close reads only commit messages.
+    from forge import proof as proof_list, review
+    report = _proof_paragraph(pending.get("said", "")) or _proof_paragraph(said)
+    if report:
+        found, base = proof_list._proof(top, item, "HEAD")
+        if not found:
+            check = review.commit_paragraph(top, base, "Functional check:")
+            # -o with no paths commits nothing from the index, so staged edits stay uncommitted.
+            repo.git("commit", "-q", "-o", "--allow-empty", "-m", "Record the proof list",
+                     "-m", "\n\n".join(filter(None, [report, check])), cwd=top)
     outcome = "completed"
     asked = worker.questions(pending.get("said", ""), said)
     identity = repo.record_event(top, item, "worker question", question=asked) if asked else None

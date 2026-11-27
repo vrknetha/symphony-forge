@@ -1,0 +1,92 @@
+{
+  "items": [
+    {
+      "key": "bug\tforge.toml\tFunctional: update the source-worker tests for Claude routing\tworkers-claude-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Functional: update the source-worker tests for Claude routing",
+      "from": "blocking",
+      "item": "workers-claude-2",
+      "status": "done",
+      "closed_by": "settings-from-main"
+    },
+    {
+      "key": "bug\tforge.toml\tGate: proof list\tworkers-claude-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Gate: proof list",
+      "from": "blocking",
+      "item": "workers-claude-2",
+      "status": "done",
+      "closed_by": "settings-from-main"
+    },
+    {
+      "key": "bug\tsrc/forge/nextstep.py\tScale: Avoid repeating a failed fetch for every worktree\tsettings-from-main",
+      "kind": "bug",
+      "path": "src/forge/nextstep.py",
+      "line": 502,
+      "text": "Scale: Avoid repeating a failed fetch for every worktree",
+      "from": "blocking",
+      "item": "settings-from-main",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/repo.py\tFunctional: Preserve effective sample-mode settings when applying local overrides\tsettings-from-main",
+      "kind": "bug",
+      "path": "src/forge/repo.py",
+      "line": 707,
+      "text": "Functional: Preserve effective sample-mode settings when applying local overrides",
+      "from": "blocking",
+      "item": "settings-from-main",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/repo.py\tNot done: forge next, forge task start and forge work take workers, tools and model settings from the default branch's forge.toml\tsettings-from-main",
+      "kind": "bug",
+      "path": "src/forge/repo.py",
+      "line": 712,
+      "text": "Not done: forge next, forge task start and forge work take workers, tools and model settings from the default branch's forge.toml",
+      "from": "blocking",
+      "item": "settings-from-main",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\tsrc/forge/worker.py\tGate: Update the shipped guidance for routing settings\tsettings-from-main",
+      "kind": "bug",
+      "path": "src/forge/worker.py",
+      "line": 173,
+      "text": "Gate: Update the shipped guidance for routing settings",
+      "from": "blocking",
+      "item": "settings-from-main",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_fix_settings_from_main.py\tGate: tests/test_fix_settings_from_main.py::test_1_a_story_part_follows_workers_changed_on_main\tsettings-from-main",
+      "kind": "bug",
+      "path": "tests/test_fix_settings_from_main.py",
+      "line": 16,
+      "text": "Gate: tests/test_fix_settings_from_main.py::test_1_a_story_part_follows_workers_changed_on_main",
+      "from": "blocking",
+      "item": "settings-from-main",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "simplify\tforge.toml\tSimpler: undocumented approach \u2192 record the three decisions",
+      "kind": "simplify",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Simpler: undocumented approach \u2192 record the three decisions",
+      "from": "review",
+      "item": "workers-claude-2",
+      "status": "done",
+      "closed_by": "settings-from-main"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "approval": {
+    "at": "2026-11-26T15:01:25.930066+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01U1Q5XrGprTxq4QUvdPuCXi",
+    "hash": "0694d43d448469c743c8cfe6fbe2825c5d0381d8b3142a2963a412e5f7456152",
+    "round": 3,
+    "runtime": "claude",
+    "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
+  },
+  "doc": "plans/FORGE-RUNNER-1.md",
+  "status": "approved",
+  "steps": [
+    {
+      "at": "2026-11-26T12:19:05.959402+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T12:45:40.899065+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T13:21:05.011287+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T15:00:23.624609+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-26T15:01:25.930235+00:00",
+      "step": "approved"
+    }
+  ],
+  "title": "Approved work keeps moving to merge without reminders",
+  "touches": 1
+}

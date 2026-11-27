@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -38,6 +39,13 @@ def calls(log: Path) -> list[dict]:
     return records
 
 
+def referenced_standards(brief: str) -> Path:
+    """Open the standards page the worker is directed to read."""
+    reference = re.search(r"(?m)^Open `([^`\n]*standards\.md)`", brief)
+    assert reference, "The brief does not tell the worker where to read the standards"
+    return Path(reference[1])
+
+
 def test_17_worker(repo, gh, monkeypatch):
     log = install_claude(repo)
     version = repo.forge("--version").stdout.split()[-1]
@@ -54,7 +62,7 @@ def test_17_worker(repo, gh, monkeypatch):
     repo.write("tests/test_help_text.py", "from web import help\n")
     repo.write("web/test_board.py", "from web import board\n")
     repo.git("add", "forge.toml", "tests", "web")
-    repo.git("commit", "-q", "-m", "Pin Forge")
+    repo.git("commit", "--allow-empty", "-q", "-m", "Pin Forge")
     repo.git("push", "-q", "origin", "main")
     story(repo)
 
@@ -84,7 +92,7 @@ def test_17_worker(repo, gh, monkeypatch):
     assert "Fix round" not in brief and "$" not in brief.split("## Standards")[0]
     standards = ROOT / "src" / "forge" / "standards.md"
     if standards.is_file():
-        assert standards.read_text(encoding="utf-8").strip() in brief
+        assert f"`{standards.as_posix()}`" in brief
     # The existing tests that name the Scope, and the shipped conventions the worker may read.
     assert ("Existing tests that name a file or folder in your Scope, which must still pass: "
             "`tests/test_old_board.py`, `web/test_board.py`.") in brief

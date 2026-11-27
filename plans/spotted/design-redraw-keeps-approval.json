@@ -1,0 +1,81 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/design.py\tAn initial approval can be recorded for a different design than the owner saw\tdesign-redraw-keeps-approval",
+      "kind": "bug",
+      "path": "src/forge/design.py",
+      "line": 109,
+      "text": "An initial approval can be recorded for a different design than the owner saw",
+      "from": "blocking",
+      "item": "design-redraw-keeps-approval",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/design.py\tNot done: A Design-shaped line in Done when is excluded from approval\tdesign-redraw-keeps-approval",
+      "kind": "bug",
+      "path": "src/forge/design.py",
+      "line": 109,
+      "text": "Not done: A Design-shaped line in Done when is excluded from approval",
+      "from": "blocking",
+      "item": "design-redraw-keeps-approval",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/design.py\tNot done: The first redraw invalidates approvals recorded before the upgrade\tdesign-redraw-keeps-approval",
+      "kind": "bug",
+      "path": "src/forge/design.py",
+      "line": 115,
+      "text": "Not done: The first redraw invalidates approvals recorded before the upgrade",
+      "from": "blocking",
+      "item": "design-redraw-keeps-approval",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/story.py\tA redraw before initial approval bypasses the cold read\tdesign-redraw-keeps-approval",
+      "kind": "bug",
+      "path": "src/forge/story.py",
+      "line": 712,
+      "text": "A redraw before initial approval bypasses the cold read",
+      "from": "blocking",
+      "item": "design-redraw-keeps-approval",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/skill.md\tNew story templates still instruct coordinators to reapprove every redraw\tdesign-redraw-keeps-approval",
+      "kind": "bug",
+      "path": "src/forge/templates/skill.md",
+      "line": 1149,
+      "text": "New story templates still instruct coordinators to reapprove every redraw",
+      "from": "blocking",
+      "item": "design-redraw-keeps-approval",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_design_redraw_keeps_approval.py\tGate: tests/test_design_redraw_keeps_approval.py::test_1_design_redraw_keeps_the_approval\tdesign-redraw-keeps-approval",
+      "kind": "bug",
+      "path": "tests/test_design_redraw_keeps_approval.py",
+      "line": 65,
+      "text": "Gate: tests/test_design_redraw_keeps_approval.py::test_1_design_redraw_keeps_the_approval",
+      "from": "blocking",
+      "item": "design-redraw-keeps-approval",
+      "status": "done",
+      "closed_by": "dismissed"
+    },
+    {
+      "key": "bug\ttests/test_design_redraw_keeps_approval.py\tNot done: A design part cannot close after redrawing its own screens\tdesign-redraw-keeps-approval",
+      "kind": "bug",
+      "path": "tests/test_design_redraw_keeps_approval.py",
+      "line": 48,
+      "text": "Not done: A design part cannot close after redrawing its own screens",
+      "from": "blocking",
+      "item": "design-redraw-keeps-approval",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

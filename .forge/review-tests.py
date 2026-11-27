@@ -1,13 +1,15 @@
-"""CI may reuse a successful ancestor workflow across close-record commits."""
+"""CI reuses a completed ancestor workflow result across close-record commits."""
 import ast
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 
@@ -28,8 +30,9 @@ def required_tests(top: Path) -> list[str]:
     return [line.strip() for line in listing.read_text("utf-8").splitlines() if line.strip()] if listing.is_file() else []
 
 
-def reads_file_relative(source: str, paths: set[str]) -> bool:
-    """Match literals in file-relative paths, not unrelated content assertions."""
+def reads_file_relative(source: str, paths: set[str], added: set[str] = frozenset()) -> bool:
+    """Match literals in file-relative paths, not unrelated content assertions. A test that
+    scans a folder tree recursively also reads a file `added` anywhere inside it."""
     if not paths or not re.search(r"\b__file__\b", source):
         return False
     try:
@@ -73,23 +76,46 @@ def reads_file_relative(source: str, paths: set[str]) -> bool:
                         roots[target.id] = components(node.value)
         if len(roots) == before:
             break
+    def suffix_of(node: ast.AST) -> str:
+        parts = components(node)
+        return posixpath.normpath("/" + posixpath.join(*parts)).lstrip("/") if parts else ""
+
+    folders, deep = set(), set()  # Folders the test lists itself; `deep` ones it scans recursively.
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            name = getattr(node.func, "id", getattr(node.func, "attr", ""))
+            listed = [node.func.value] if name in {"iterdir", "glob", "rglob"} \
+                and isinstance(node.func, ast.Attribute) else []
+            listed += node.args[:1] if name in {"listdir", "scandir", "walk", "iglob", "glob"} else []
+            pattern = any(isinstance(arg, ast.Constant) and "**" in str(arg.value) for arg in node.args)
+            for item in listed:
+                if rooted(item) and (suffix := suffix_of(item)):
+                    # A glob(path/**/x) argument names its folder before the `**`.
+                    folder, star, _ = suffix.partition("/**")
+                    folders.add(folder)
+                    if name in {"rglob", "walk"} or pattern or star:
+                        deep.add(folder)
     for node in ast.walk(tree):
         if isinstance(node, (ast.BinOp, ast.Call)) and rooted(node):
-            parts = components(node)
-            suffix = posixpath.normpath("/" + posixpath.join(*parts)).lstrip("/") if parts else ""
+            suffix = suffix_of(node)
             if suffix and any(path == suffix or path.endswith("/" + suffix) for path in paths):
                 return True
-    return False
+    return any(("/" + posixpath.dirname(path)).endswith("/" + folder)
+               or (folder in deep and ("/" + path).find("/" + folder + "/") >= 0 and path in added)
+               for folder in folders for path in paths | added)
 
 
-def test_readers(files: list[Path], picked: set[Path]) -> set[Path]:
-    """Keep every text reference, including plugin strings and scoped conftest users."""
+def test_readers(files: list[Path], picked: set[Path], root=None) -> set[Path]:
+    """Keep every text reference, including plugin strings and scoped conftest users. With a
+    `root` function, a name counts only in files under the folder it gives for the file that has
+    it; without one, a name counts in every file."""
     texts = {path: path.read_text("utf-8-sig") for path in files}
     while True:
-        names = {path.stem for path in picked}
+        names = {(path.stem, root(path) if root else None) for path in picked}
         fixtures = [path.parent for path in picked if path.name == "conftest.py"]
         expanded = picked | {path for path, text in texts.items()
-                             if any(name in text for name in names)
+                             if any(name in text for name, folder in names
+                                    if folder is None or path.is_relative_to(folder))
                              or any(path.is_relative_to(folder) for folder in fixtures)}
         if expanded == picked:
             return picked
@@ -135,6 +161,16 @@ def only_docs(top: Path, base: str, excludes: list[str], *, allow_settings: bool
         quoted = r'''(?:'[^'\r\n]*'|"[^"\r\n]*"|`[^`\r\n]*`)'''
         joined = re.compile(rf"\b(?:Path|join)\(\s*(?:__dirname\s*,\s*)?{quoted}"
                             rf"(?:\s*,\s*{quoted})*\s*\)(?:\s*/\s*{quoted})*")
+        added = set(git(*diff, "--diff-filter=A").strip("\0").split("\0"))
+        scanners = subprocess.run([shutil.which("git") or "git", "grep", "-I", "-l", "-z", "-E",
+                                   r"rglob|walk\(|\*\*", head, "--", "*.py", *excludes],
+                                  cwd=top, capture_output=True, text=True, encoding="utf-8")
+        if scanners.returncode not in (0, 1):
+            return False
+        for scanner in filter(None, scanners.stdout.split("\0")):
+            # A test that scans a folder tree reads every changed file inside it.
+            if reads_file_relative(git("show", scanner), set(changed), added):
+                return False
         for consumer in filter(None, found.stdout.split("\0")):
             folder = posixpath.dirname(consumer.partition(":")[2])
             roots = ("", top.as_posix(), posixpath.join(top.as_posix(), folder))
@@ -173,15 +209,10 @@ def api(path: str, body: dict | None = None) -> dict:
         return json.load(response)
 
 
-def api_runs(endpoint: str, sha: str) -> list[dict]:
-    """The same workflow-run list as `gh api --paginate`, for a runner without gh."""
-    runs, page = [], 1
-    while True:
-        found = api(f"{endpoint}?head_sha={sha}&per_page=100&page={page}")["workflow_runs"]
-        runs += found
-        if len(found) < 100:
-            return runs
-        page += 1
+def api_runs(endpoint: str, branch: str) -> list[dict]:
+    """Read one bounded page of this branch's workflow history without gh."""
+    query = urlencode({"branch": branch, "per_page": 30})
+    return api(f"{endpoint}?{query}")["workflow_runs"]
 
 
 def set_status(context: str, state: str, job_name: str) -> None:
@@ -193,12 +224,22 @@ def set_status(context: str, state: str, job_name: str) -> None:
          "target_url": next(job["html_url"] for job in jobs if job["name"] == job_name)})
 
 
+def javascript_tests(changed: list[str]) -> bool:
+    """Recognise test paths without loading pull-request code in the selector."""
+    return bool(changed) and all(
+        re.search(r"\.(?:test|spec)\.[jt]sx?$", name)
+        or "__tests__" in Path(name).parts and Path(name).suffix in {".js", ".jsx", ".ts", ".tsx"}
+        for name in changed)
+
+
 def test_files(top: Path, base: str, excludes: list[str], *, head: str = "HEAD") -> tuple[bool, list[str]]:
-    """Narrow CI only for existing Python test files, never shared test inputs."""
+    """Narrow CI for runnable JavaScript tests or independent Python test files."""
     paths = subprocess.run([shutil.which("git") or "git", "diff", "--name-only", "-z",
                             "--no-renames", f"{base}...{head}", "--", ".", *excludes],
                            cwd=top, check=True, capture_output=True, text=True).stdout
     changed = list(filter(None, paths.split("\0")))
+    if javascript_tests(changed):
+        return True, []
     if not changed or any(not (Path(name).name.startswith("test_") or name.endswith("_test.py"))
                           or not name.endswith(".py") or not (top / name).is_file()
                           for name in changed):
@@ -220,53 +261,172 @@ def test_files(top: Path, base: str, excludes: list[str], *, head: str = "HEAD")
     return True, platform
 
 
-def reuse() -> bool:
+def small_change(base: str, excludes: list[str], tests_only: bool) -> bool:
+    """Count selected tests, keeping shared build and selection inputs on all groups."""
+    diff = ("git", "diff", "--name-only", "-z", "--no-renames", f"{base}...HEAD")
+    changed = run(*diff).split("\0")
+    own_tests = list(filter(None, run(*diff, "--", ".", *excludes).split("\0")))
+    js_only = tests_only and javascript_tests(own_tests)
+    for name in filter(None, changed):
+        if js_only and name.startswith((".factory/", "plans/")):
+            continue
+        path = Path(name)
+        if (name.startswith((".github/workflows/", ".forge/"))
+                or path.name in {"forge.toml", "conftest.py", "package.json", "pyproject.toml",
+                                 "Pipfile", "pnpm-workspace.yaml", "nx.json", "turbo.json"}
+                or (re.search(r"(^|[.-])(lock|config)([.-]|$)", path.name)
+                    and not (js_only and path.suffix in {".js", ".jsx", ".ts", ".tsx"}))
+                or re.fullmatch(r"requirements.*\.txt|tsconfig.*\.json", path.name)):
+            return False
+    if js_only:
+        cfg = tomllib.loads(Path("forge.toml").read_text("utf-8"))
+        words = shlex.split(cfg.get("fast_test", ""))
+        # A name filter does not promise to run the changed files' tests.
+        if any(word.startswith(("--testNamePattern", "--grep", "-t", "-g")) for word in words):
+            return False
+        return any(runner in words and action in words and (
+            f"{flag}={{base}}" in words
+            or any(words[i:i + 2] == [flag, "{base}"] for i in range(len(words))))
+            for runner, action, flag in (("vitest", "run", "--changed"),
+                                         ("playwright", "test", "--only-changed")))
+    try:
+        from forge import repo
+        from forge.fasttest import always_tests, pytest_options, related
+        from forge.quicktest import test_parts
+
+        cfg = tomllib.loads(Path("forge.toml").read_text("utf-8"))
+        # Direct fast commands and mixed runners do more work than related() counts.
+        if cfg.get("fast_test") and not re.fullmatch(
+                r"(?:uv run(?: --frozen| --python [\d.]+)* )?forge test --pytest \{base\}",
+                cfg["fast_test"].strip()):
+            return False
+        parts = test_parts(Path.cwd(), cfg["test"])
+        if len(parts) != 1 or parts[0][0] != "python" or not repo.pytest_split(Path.cwd(), cfg["test"]):
+            return False
+        words = shlex.split(cfg["test"])
+        runner = next(i for i, word in enumerate(words) if Path(word).name in {"pytest", "pytest.exe"})
+        if pytest_options(words).strip():
+            return False
+        # Only explicit suite roots with understood options supply a safe count.
+        # Unknown options, including the command's own sharding, keep all groups.
+        roots, arguments = [], iter(words[runner + 1:])
+        for word in arguments:
+            if word == "-n":
+                next(arguments)
+            elif word == "-o":
+                if not next(arguments).startswith("faulthandler_timeout="):
+                    return False
+            elif re.fullmatch(r"--timeout=\d+|--timeout-method=(?:thread|signal)", word):
+                continue
+            elif word in {"-q", "-v", "-x", "--disable-warnings", "--strict-markers", "--strict-config"}:
+                continue
+            elif not word.startswith("-") and Path(word.split("::", 1)[0]).exists():
+                roots.append(Path(word.split("::", 1)[0]))
+            else:
+                return False
+        if not roots:
+            return False
+        if tests_only:
+            return True
+        picked, tests, shared, _ = related(base)
+        suite = {name for name in tests if any(Path(name) == root or Path(name).is_relative_to(root)
+                                             for root in roots)}
+        always = {name.split("::", 1)[0] for name in always_tests(Path.cwd(), cfg)}
+        selected = set(picked) & suite | always
+        return not shared and bool(suite) and len(selected) * 4 < len(suite | always)
+    except (ImportError, subprocess.CalledProcessError, ValueError, KeyError, OSError, StopIteration):
+        # The lightweight select job may not have Forge's dependencies installed.
+        return False
+
+
+def effective_proof(base: str | None, head: str) -> str:
+    """The newest Proof list after base, using close's record-only commit rule."""
+    revision = f"{base}..{head}" if base else head
+    commits = run("git", "rev-list", "--no-merges", revision).splitlines()
+    if not commits:
+        return ""
+    records = subprocess.run(
+        [shutil.which("git") or "git", "log", "--no-walk",
+         "--format=%x00%x00%H%x00m%B", "--name-only", "-z", *commits],
+        check=True, capture_output=True, text=True).stdout
+    history = {}
+    for record in records.split("\0\0"):
+        if not record:
+            continue
+        sha, message, *paths = record.lstrip("\0").split("\0", 2)
+        files = [path for path in (paths[0].removeprefix("\n").split("\0") if paths else [])
+                 if path]
+        history[sha] = (message.removeprefix("m"), files)
+    for commit in commits:
+        message, files = history[commit]
+        if files and all(path.startswith((".factory/", "plans/")) for path in files):
+            continue
+        found = re.search(r"^Proof list\b[^\n]*?:.*", message, re.M | re.S)
+        if found:
+            return found[0].strip()
+    return ""
+
+
+def reuse() -> str:
+    if int(os.environ.get("GITHUB_RUN_ATTEMPT", "1")) > 1:
+        return ""
+    if (os.environ.get("GITHUB_EVENT_NAME") == "pull_request"
+            and os.environ.get("PR_REUSE") in {"true", "false"}):
+        return (os.environ.get("PR_PARENT_CONCLUSION", "")
+                if os.environ["PR_REUSE"] == "true" else "")
+    branch = (os.environ.get("GITHUB_HEAD_REF") or os.environ.get("GITHUB_REF_NAME")
+              or run("git", "branch", "--show-current"))
+    if not branch:
+        return ""
     head = os.environ["HEAD_SHA"]
     base = os.environ.get("BASE_SHA")
     workflow = os.environ["GITHUB_WORKFLOW_REF"].split("@", 1)[0].rsplit("/", 1)[1]
     endpoint = f"repos/{os.environ['GITHUB_REPOSITORY']}/actions/workflows/{quote(workflow)}/runs"
-    while True:
-        parents = run("git", "rev-list", "--parents", "-n", "1", head).split()
-        if len(parents) != 2:
-            return False
-        head, parent = parents
-        # A push tests the branch itself. A PR also needs its current base covered.
-        if base:
-            run("git", "merge-base", "--is-ancestor", base, parent)
-        paths = run("git", "diff", "--name-only", "--no-renames", parent, head).splitlines()
-        if not paths:
-            return False
-        for path in paths:
-            if re.fullmatch(r"plans/spotted/[^/]+\.json", path):
-                continue
-            if not re.fullmatch(r"\.factory/(fixes/[^/]+|stories/[^/]+/tasks/[^/]+)\.json", path):
-                return False
-            before, after = (json.loads(run("git", "show", f"{rev}:{path}"))
-                             for rev in (parent, head))
-            if not isinstance(before, dict) or not isinstance(after, dict):
-                return False
-            if before.get("review") != after.get("review") and not isinstance(after.get("review"), dict):
-                return False
-            # Acceptance also updates known findings and can save several commits before
-            # one push. Contracts and all other state must stay identical at every step.
-            bookkeeping = {"review", "tests", "status", "steps", "flagged", "stop", "known"}
-            if ({k: v for k, v in before.items() if k not in bookkeeping}
-                    != {k: v for k, v in after.items() if k not in bookkeeping}):
-                return False
-        runs = ([json.loads(line) for line in run("gh", "api", "--paginate", "--jq",
-                                                ".workflow_runs[]", endpoint, "--method", "GET",
-                                                "-f", f"head_sha={parent}", "-f", "per_page=100").splitlines()]
-                if shutil.which("gh") else api_runs(endpoint, parent))
-        # Target-event runs check the PR but skip tests, so their success proves nothing here.
-        matching = [r for r in runs if r.get("head_sha") == parent
-                    and (r.get("event") == "push" or r.get("event") == "pull_request"
-                         and base and any(pr.get("base", {}).get("sha") == base
-                                          and pr.get("head", {}).get("sha") == parent
-                                          for pr in r.get("pull_requests", [])))]
-        latest = max(matching, key=lambda r: r["id"], default={})
-        if latest:
-            return latest.get("status") == "completed" and latest.get("conclusion") == "success"
-        head = parent
+    if not shutil.which("gh"):
+        runs = api_runs(endpoint, branch)
+    else:
+        runs = [json.loads(line) for line in run("gh", "api", "--jq", ".workflow_runs[]",
+                                                 endpoint, "--method", "GET", "--raw-field",
+                                                 f"branch={branch}", "--raw-field",
+                                                 "per_page=30").splitlines()]
+    # Target-event runs check the PR but skip tests, so their success proves nothing.
+    matching = [r for r in runs if r.get("head_sha") != head
+                and (r.get("event") == "push" or r.get("event") == "pull_request"
+                     and base and any(pr.get("base", {}).get("sha") == base
+                                      and pr.get("head", {}).get("sha") == r.get("head_sha")
+                                      for pr in r.get("pull_requests", [])))]
+    current_proof = effective_proof(base, head)
+    same_code_heads, inspected = set(), set()
+    for result in matching:
+        candidate = result.get("head_sha")
+        if not candidate or candidate in inspected:
+            continue
+        inspected.add(candidate)
+        try:
+            run("git", "merge-base", "--is-ancestor", candidate, head)
+            if base:
+                run("git", "merge-base", "--is-ancestor", base, candidate)
+        except subprocess.CalledProcessError:
+            continue
+        paths = run("git", "diff", "--name-only", "--no-renames", candidate, head).splitlines()
+        if (all(path.startswith((".factory/", "plans/spotted/")) for path in paths)
+                and effective_proof(base, candidate) == current_proof):
+            same_code_heads.add(candidate)
+    same_code = [result for result in matching if result.get("head_sha") in same_code_heads]
+    # GitHub returns a run ID's latest attempt and conclusion. An active retry means the
+    # previous completed result is not safe to reuse yet.
+    if any(result.get("status") != "completed" for result in same_code):
+        return ""
+    finished = [result for result in same_code if result.get("conclusion")]
+    latest = max(finished,
+                 key=lambda result: (result.get("updated_at") or result.get("run_started_at") or "",
+                                     int(result.get("run_attempt") or 1),
+                                     int(result.get("id") or 0)),
+                 default={})
+    if not latest:
+        return ""
+    conclusion = latest["conclusion"]
+    return conclusion if conclusion in {"success", "failure"} else ""
 
 
 if sys.argv[1:2] == ["status"]:
@@ -274,36 +434,61 @@ if sys.argv[1:2] == ["status"]:
     sys.exit()
 
 docs_only = False
+docs_tests = False
 tests_only, platform_files = False, []
+one_group = False
 records_only = "--records-only" in sys.argv[1:]
+parent_conclusion = ""
+failed_parent = False
 try:
     # Sync copies close's classifier and supplies its Git path exclusions.
     if not records_only and os.environ.get("BASE_SHA") and os.environ.get("DOCS_ONLY_EXCLUDES"):
-        # `forge test --change` widens to what a merged-in default branch brought, which one
-        # group cannot finish. Ask about the pull request's own branch, not Actions' merge result.
+        # Local test selection includes incoming merges. CI covers main separately.
+        # Ask about the pull request's own branch, not Actions' merge result.
         merged = run("git", "rev-list", "--merges",
                      f"{os.environ['BASE_SHA']}..{os.environ['HEAD_SHA']}")
         tests_only, platform_files = test_files(Path.cwd(), os.environ["BASE_SHA"],
                                                 json.loads(os.environ["DOCS_ONLY_EXCLUDES"]))
+        one_group = small_change(os.environ["BASE_SHA"],
+                                 json.loads(os.environ["DOCS_ONLY_EXCLUDES"]), tests_only)
         docs_only = only_docs(Path.cwd(), os.environ["BASE_SHA"],
                               json.loads(os.environ["DOCS_ONLY_EXCLUDES"]), allow_required=True)
         if docs_only and required_tests(Path.cwd()):
+            docs_tests = True
             docs_only, tests_only = False, True
+            one_group = True
         if merged:
-            tests_only, platform_files = False, []
+            cfg = tomllib.loads(Path("forge.toml").read_text("utf-8"))
+            place = cfg.get("test_place", "ci" if any(
+                check != "forge-pr-check" for check in cfg.get("checks", [])) else "local")
+            if place == "local":
+                tests_only, platform_files = False, []
+                one_group = False
+    parent_conclusion = "" if docs_only else reuse()
     if records_only:
-        passed = os.environ.get("GITHUB_EVENT_NAME") in {"push", "pull_request"} and reuse()
+        allowed_event = os.environ.get("GITHUB_EVENT_NAME") in {"push", "pull_request"}
+        passed = allowed_event and parent_conclusion == "success"
+        failed_parent = allowed_event and parent_conclusion == "failure"
     else:
-        passed = docs_only or reuse()
+        failed_parent = parent_conclusion == "failure"
+        passed = docs_only or parent_conclusion in {"success", "failure"}
 except (subprocess.CalledProcessError, ValueError, KeyError, TypeError, OSError, SyntaxError):
     # Missing history, unreadable records or unavailable GitHub proof runs the full suite.
+    parent_conclusion = ""
     passed = False
+    failed_parent = False
 with Path(os.environ["GITHUB_OUTPUT"]).open("a", encoding="utf-8") as output:
     output.write(f"{'records_only' if records_only else 'reuse'}={str(passed).lower()}\n")
+    output.write(f"parent-conclusion={parent_conclusion}\n")
     if docs_only:
         output.write("docs-only=true\n")
+    output.write(f"docs-tests={str(docs_tests).lower()}\n")
     output.write(f"test-only={str(tests_only).lower()}\n")
+    output.write(f"one-group={str(one_group).lower()}\n")
     output.write(f"platform-files={json.dumps(platform_files)}\n")
     output.write(f"run-windows={str(not tests_only or bool(platform_files)).lower()}\n")
-print("docs only: tests skipped" if docs_only else
+print("Earlier tests did not pass; only close records changed." if failed_parent else
+      "docs only: tests skipped" if docs_only else
       "Earlier tests passed; only close records changed." if passed else "Run the test suite.")
+if records_only and failed_parent:
+    sys.exit(1)

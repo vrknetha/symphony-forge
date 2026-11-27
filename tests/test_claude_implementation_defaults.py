@@ -3,6 +3,7 @@
 Real Forge commands own the assertions; Claude, uv and GitHub are faked at their edges.
 """
 import json
+import re
 import tomllib
 from pathlib import Path
 
@@ -11,8 +12,6 @@ from test_setup import _fresh_client
 from test_story import DOC, GRILL, new_story, setup
 from test_tools_session_hold import Session
 from test_worker import calls, install_claude
-from test_upgrade_command import (_repo_adopted_on_the_previous_release,
-                                 unsynced_up)  # noqa: F401
 from test_close import env  # noqa: F401
 
 STORY = "FIX-CLAUDE-SONNET-DEFAULT"
@@ -44,21 +43,31 @@ def test_1_init_claude_only_repo_uses_low_implementation_and_sonnet_reads(repo, 
     assert "claude-sonnet-5-5" in guide and "high" in guide
 
 
-def test_2_earlier_adopted_repo_keeps_model_pins_on_upgrade_and_gets_opt_in_notes(unsynced_up):
-    up = unsynced_up
-    _repo_adopted_on_the_previous_release(up)
-    models = tomllib.loads(up.show("forge.toml"))["models"]
+def test_2_new_repo_keeps_model_pins_on_sync_and_gets_opt_in_notes(repo, gh, tmp_path):
+    client, result = _fresh_client(repo, gh, tmp_path)
+    assert result.returncode == 0, result.stdout + result.stderr
+    settings = client / "forge.toml"
+    text = settings.read_text("utf-8")
+    for kind, model in (("grill", "opus"), ("design", "claude-opus-5-5")):
+        text, changed = re.subn(rf'(?ms)^\[models\.{kind}\.claude\]\n.*?(?=^\[|\Z)',
+                                f'[models.{kind}.claude]\nmodel = "{model}"\neffort = "high"\n\n', text)
+        assert changed == 1, kind
+    settings.write_text(text, "utf-8")
+    repo.git("checkout", "-qb", "fix/keep-model-pins", cwd=client)
+    synced = repo.forge("sync", cwd=client)
+    assert synced.returncode == 0, synced.stdout + synced.stderr
+    models = tomllib.loads(settings.read_text("utf-8"))["models"]
     assert models["grill"]["claude"] == {"model": "opus", "effort": "high"}
     assert models["design"]["claude"] == {"model": "claude-opus-5-5", "effort": "high"}
     for host in (".claude", ".codex"):
-        notes = up.show(f"{host}/skills/forge/SKILL.md")
+        notes = (client / host / "skills/forge/SKILL.md").read_text("utf-8")
         assert "claude-sonnet-5-5" in notes and "xhigh" in notes
         assert 'model = "claude-sonnet-5-5", effort = "low"' in notes
         assert 'model = "claude-sonnet-5-5", effort = "high"' in notes
         assert "Existing model entries stay unchanged" in notes
 
 
-def test_3_plan_read_with_no_claude_entry_uses_builtin_opus_high(repo, tmp_path, monkeypatch):
+def test_3_plan_read_with_no_claude_entry_uses_builtin_sonnet_high(repo, tmp_path, monkeypatch):
     setup(repo)
     shop = new_story(repo, "SHOP")
     toml = shop / "forge.toml"
@@ -76,13 +85,13 @@ def test_3_plan_read_with_no_claude_entry_uses_builtin_opus_high(repo, tmp_path,
         # The same-tool fallback uses a real session reader, with the same built-in defaults.
         offered = json.loads(result.stdout)
         assert (offered["role"], offered["tool"], offered["model"], offered["effort"]) == (
-            "reader", "claude", "claude-opus-5-5", "high")
+            "reader", "claude", "claude-sonnet-5-5", "high")
         assert Path(offered["checkout"]).resolve() == shop.resolve()
         assert calls(log) == []
         finished = owner.forge("handback", "SHOP", "--round", str(offered["round"]),
                                "--subagent", "default-reader", "--text", "No findings.")
         assert finished.returncode == 0, finished.stdout + finished.stderr
-        assert "reader: claude (claude-opus-5-5), a subagent of this Claude Code session" in (
+        assert "reader: claude (claude-sonnet-5-5), a subagent of this Claude Code session" in (
             (shop / "plans/SHOP.read.md").read_text("utf-8"))
     finally:
         owner.close()
@@ -92,7 +101,7 @@ def test_4_lite_and_fix_with_no_claude_entries_use_builtin_sonnet_low(repo):
     version = repo.forge("--version").stdout.split()[-1]
     repo.write("forge.toml", f'version = "{version}"\nworkers = "claude"\n')
     repo.git("add", "forge.toml")
-    repo.git("commit", "-qm", "Configure Claude workers")
+    repo.git("commit", "--allow-empty", "-qm", "Configure Claude workers")
     repo.git("push", "-q", "origin", "main")
     log = install_claude(repo)
     started = repo.forge("fix", "start", "Correct greeting", "--done", "Greeting is correct")

@@ -21,7 +21,6 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from textwrap import shorten
 from typing import Any
 
 from forge import __version__, approval, board_facts, board_graph, codex, machine, native, repo, review_skip, story, task
@@ -260,18 +259,19 @@ def machine_board(top: Path, history: Item | None = None, trim: bool = True, cac
         if state.get("branch") in remembered | merged_prs}}
     by_branch.update({p["headRefName"]: p for p in finished_prs})
     merged_details = {p["headRefName"]: p for p in finished_prs}
-    merged_dates = {branch: pr.get("mergedAt") for branch, pr in merged_details.items()}
     # Rows and counts must read the same published drop or restore, even with a stale worktree.
     for rel, (state, where) in list(best.items()):
         if fix := STATE.fullmatch(rel)["fix"]:
             if rel not in merged and state.get("branch") not in merged_prs:
                 state = nextstep.at_ref(top, fix, state, by_branch.get(state.get("branch")))
             best[rel] = state, where
-    dropped = {STATE.fullmatch(rel)["key"] for rel, (state, _) in best.items()
+    # A part's older worktree can hold an older story record, so any dropped copy counts.
+    dropped = {STATE.fullmatch(rel)["key"] for rel, state, _ in history["copies"]
                if rel.endswith("/story.json") and state.get("status") == "dropped"}
     promoted = {state["from_fix"] for state, _ in best.values() if state.get("from_fix")}
     best = {rel: pair for rel, pair in best.items()
-            if pair[0].get("status") != "dropped" and STATE.fullmatch(rel)["fix"] not in promoted}
+            if pair[0].get("status") != "dropped" and STATE.fullmatch(rel)["fix"] not in promoted
+            and STATE.fullmatch(rel)["key"] not in dropped}
     readiness: dict[str, Item] = {}
     person_waits: dict[str, list[Item]] = {}  # each part's and fix's waits on a person, for Needs you
     roadmap = {s["key"]: s for s in repo.roadmap(top) if s.get("status") != "superseded" and s["key"] not in dropped}
@@ -383,8 +383,6 @@ def machine_board(top: Path, history: Item | None = None, trim: bool = True, cac
             state = {**state, **completed[item], "status": "done"}
         elif kind == "task" and item.split("/")[0] in completed:
             state = {**state, "status": "merged"}
-        if kind == "fix":
-            title = shorten(title, width=70, placeholder="…")
         if kind != "story" and repo.state_path(item) in merged:
             state = {**state, "status": "merged"}
         branch = state.get("branch") or (f"task/{item.replace('/', '-')}" if kind == "task"
@@ -569,10 +567,10 @@ def machine_board(top: Path, history: Item | None = None, trim: bool = True, cac
         plan_read, assignments = story_read(read_key) if read_key else ("none", {})
         ci = {"status": {"pass": "green", "fail": "red", "running": "running"}.get(checks, "none")}
         if checks == "running":
-            starts = [c.get("startedAt") for c in _rollup(pr or {}) if _when(c.get("startedAt"))
-                      and (c.get("status") in ("QUEUED", "IN_PROGRESS", "WAITING", "PENDING", "REQUESTED")
-                           or c.get("state") in ("PENDING", "EXPECTED"))]
+            starts = [c.get("startedAt") for c in _rollup(pr or {}) if _when(c.get("startedAt")) and board_facts.busy(c)]
             ci["elapsed"] = elapsed(min(starts, key=_when)) if starts else None
+        if checks == "fail" and any(board_facts.busy(c) for c in _rollup(pr or {})):
+            ci["running"] = True  # a failed job beside a running one: the checks are not settled
         elif checks == "unknown" and any(e.get("kind") == "ci" for e in active):
             ci = {"status": "running", "elapsed": elapsed(next(e["at"] for e in active if e.get("kind") == "ci"))}
         status = ({"done": "Finished", "merged": "Finished", "planning": "Planning",
@@ -640,10 +638,10 @@ def machine_board(top: Path, history: Item | None = None, trim: bool = True, cac
                 "merged_at": finished_at if finished else None,
                 **({k: v for k, v in time_records.combined(
                     top, item, state, (pr or {}).get("body") or "", events=activity, timings=item_timings,
-                    ended_at=merged_dates.get(branch)).items()
+                    ended_at=finished_at if finished else None).items()
                     if k not in ("events", "timings", "state", "ended_at", "seen", "known", "summary")}
                    if kind != "story" or time_records.view_body((pr or {}).get("body") or "") else {}),
-                "stages": stages, "occurrences": events, "next": nextstep.machine_next(lines),
+                "stages": stages, "occurrences": events, "next": board_facts.machine_next(lines),
                 "children": []}
 
     items, children = {}, {}
@@ -676,7 +674,7 @@ def machine_board(top: Path, history: Item | None = None, trim: bool = True, cac
             items[key] = row(key, "story", title, state, where)
     for key, parts in children.items():
         if key not in items:
-            items[key] = row(key, "story", "A story with missing state", {}, landed)
+            items[key] = row(key, "story", next((s[2:] for s in _read(top, trees.get(f"story/{key}", landed), f"plans/{key}.md", history).splitlines() if s.startswith("# ")), "A story with missing state"), {}, landed)
         items[key]["children"] = parts
         running = next((part for part in parts if part["activity"]["status"] == "running"
                         or part["gates"]["ci"]["status"] == "running"), None)
@@ -694,7 +692,7 @@ def machine_board(top: Path, history: Item | None = None, trim: bool = True, cac
             if ((task.developer(spec) or owners.get(key)) and repo.state_path(f"{key}/{tid}") not in history["expired"]
                     and not any(child["id"] == f"{key}/{tid}" for child in item["children"])):
                 child = row(f"{key}/{tid}", "task", spec.get("Name") or tid, {}, landed)
-                child.update(stage="unstarted", next=nextstep.machine_next(["Next: forge next"]))
+                child.update(stage="unstarted", next=board_facts.machine_next(["Next: forge next"]))
                 item["children"].append(child)
     older_parts: dict[str, list[Item]] = {}
     older = [(rel, state, match["key"], match["task"], state.get("branch") or f"task/{match['key']}-{match['task']}")
@@ -815,6 +813,7 @@ def machine_board(top: Path, history: Item | None = None, trim: bool = True, cac
               for e in recorded if e.get("event") in (*event_lines, "worker question")][-20:]
     time_records.save_body_validation(top)
     return {"version": __version__, "repo_root": repo_root(top),
+            "daily_start_to_merge": time_records.daily_median(list(items.values()), viewer=viewer),
             **releases.collect(top, history, maps, items, tag_refs),
             "known_issues": known_issues.collect(top, {
                 "/".join(filter(None, (match["key"] or match["fix"], match["task"]))): (state, where)

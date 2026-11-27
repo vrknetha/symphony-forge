@@ -211,11 +211,13 @@ def test_3_pytest_repos_keep_six_groups_and_new_repos_start_with_one(
         "        log.write('b:' + __import__('os').environ['FORGE_GROUP'] + '\\n')\n"
         "    assert False, 'failed test b'\n",
         encoding="utf-8")
+    _git(repo, client, "add", "tests/test_b.py")
+    _git(repo, client, "commit", "-qm", "Fail the selected test")
     failed_groups = [_group(repo, client, monkeypatch, group, 2) for group in (1, 2)]
     assert sum(result.returncode != 0 for result in failed_groups) == 1
     failure = next(result for result in failed_groups if result.returncode != 0)
     assert "tests/test_b.py::test_b" in failure.stdout + failure.stderr
-    assert len(_recorded_group(receipts, "b")) - len(before_b) == 2
+    assert len(_recorded_group(receipts, "b")) - len(before_b) == 1
     assert len(_recorded_group(receipts, "a")) - len(before_a) == 1
     assert all("This group got no tests to run." not in result.stdout + result.stderr
                for result in failed_groups)
@@ -228,6 +230,8 @@ def test_3_pytest_repos_keep_six_groups_and_new_repos_start_with_one(
     (mocha_dir / "mocha.cmd").write_text("@exit /b 5\n", encoding="utf-8")
     monkeypatch.setenv("PATH", str(mocha_dir) + os.pathsep + os.environ["PATH"])
     _settings(client, test="mocha", groups=2)
+    _git(repo, client, "add", "forge.toml")
+    _git(repo, client, "commit", "-qm", "Use the non-pytest command")
     non_pytest = _group(repo, client, monkeypatch, 1, 2)
     assert non_pytest.returncode == 5
     assert "This group got no tests to run." not in non_pytest.stdout + non_pytest.stderr
@@ -265,7 +269,7 @@ def test_5_always_tests_pass_in_their_owning_group(
 
     results = {group: _group(repo, client, monkeypatch, group, 2) for group in (1, 2)}
     required_runs = _recorded_group(receipts, "b")
-    assert len(required_runs) == (2 if persistent else 1)
+    assert len(required_runs) == 1
     owner = int(required_runs[0].rsplit(":", 1)[1])
     assert {int(line.rsplit(":", 1)[1]) for line in required_runs} == {owner}
     assert [group for group, result in results.items() if result.returncode != 0] == (

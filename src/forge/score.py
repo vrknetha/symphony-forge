@@ -20,6 +20,7 @@ ADDS_WORK = re.compile(r"^[ \t]*Adds work:[ \t]*\S", re.I | re.M)
 MUST = re.compile(r"^Must:[ \t]*([^:]+):[ \t]*\S", re.I)
 ADDED_WORK_REASON = "Adds work below this repo's minimum Gain "
 DECLINED = "Declined as not worth the code: "
+PENDING = "Pending after merge"
 HOLD = ("block", "fix now")
 Scores = tuple[int, int, int]
 
@@ -30,7 +31,7 @@ def parse(text: str) -> Scores | None:
     return (int(found[2]), int(found[3]), int(found[4])) if found else None
 
 
-def normalise(title: str, body: str) -> tuple[Scores | None, str]:
+def normalise(title: str, body: str, *, migration: bool = True) -> tuple[Scores | None, str]:
     """Apply the Harm, constitution, shadcn, module tables, database and agents floors, except to work marked Later."""
     scores = parse(body)
     if not scores or title.startswith("Later:"):
@@ -43,7 +44,8 @@ def normalise(title: str, body: str) -> tuple[Scores | None, str]:
     agents = re.match(r"^(?:\d+\.[ \t]*)?(?:(?:Blocking|Advisory):[ \t]*)?Agents: ", title.strip())
     if constitution or shadcn or module_tables or database or agents:
         gain, work = max(gain, 4), min(work, 2)
-    why = next((name for pattern, name in FLOORS
+    floors = FLOORS if migration else FLOORS[:-1]
+    why = next((name for pattern, name in floors
                 if pattern.search(body if name != "migration" else f"{title}\n{body}")), "")
     line = f"Gain {gain}, Work {work}, Harm {harm}"
     if why and harm < 4:
@@ -97,7 +99,7 @@ def bar(scores: Scores | None) -> str | None:
 
 def below_added_work_minimum(finding: dict[str, Any], minimum: int) -> bool:
     """Only an unfloored fix-now finding marked as added work can use the repo's minimum."""
-    scores, body = normalise(finding["title"], finding["body"])
+    scores, body = normalise(finding["title"], finding["body"], migration=False)
     line = LINE.search(body)
     return bool(scores and scores[0] < minimum and bar(scores) == "fix now"
                 and ADDS_WORK.search(body) and line and "(floor:" not in line[0])
@@ -128,7 +130,9 @@ def of(finding: dict[str, Any]) -> Scores | None:
 
 
 def holds(finding: dict[str, Any], level: str | None = "P1") -> bool:
-    """A finding holds work by the bar (only `block` at the P0-only level), or unscored by priority."""
+    """P0 always holds; other findings use the bar, or priority when unscored."""
+    if finding.get("priority") == "P0":
+        return True
     if finding.get("follow_up") or RARE.search(finding.get("body", "")):
         return False
     outcome = bar(of(finding))
@@ -138,8 +142,13 @@ def holds(finding: dict[str, Any], level: str | None = "P1") -> bool:
 
 
 def priority(finding: dict[str, Any]) -> str:
-    """Show P0 when the score keeps this finding blocking past the round limit."""
+    """Treat score-based blockers as P0 for review history and stop rules."""
     return "P0" if holds(finding, "P0") else finding["priority"]
+
+
+def severity(finding: dict[str, Any]) -> str:
+    """The severity reported by the reviewer."""
+    return finding["priority"]
 
 
 def note_holds(note: str) -> bool:
@@ -152,12 +161,17 @@ def note_holds(note: str) -> bool:
 
 def identity(file: Any, title: Any) -> tuple[str, str]:
     title = " ".join(str(title).split()).casefold()
-    return " ".join(str(file).split()).casefold(), re.sub(r"^(?:not fixed:\s*)+", "", title)
+    return " ".join(str(file).split()).casefold(), re.sub(r"^(?:(?:\[p[0-3]\]|not fixed:)\s*)+", "", title)
+
+
+def pending(finding: dict[str, Any]) -> bool:
+    """Whether a finding is a post-merge check that never blocks."""
+    return finding.get("follow_up") == PENDING
 
 
 def open_findings(result: dict[str, Any]) -> list[dict[str, Any]]:
     dismissed = {d.get("finding") for d in result.get("dismissals", []) if isinstance(d, dict)}
-    return [f for n, f in enumerate(result.get("findings", []), 1) if n not in dismissed]
+    return [f for n, f in enumerate(result.get("findings", []), 1) if n not in dismissed and not pending(f)]
 
 
 def remember(known: list[dict[str, Any]], result: dict[str, Any], round_number: int,
@@ -168,6 +182,8 @@ def remember(known: list[dict[str, Any]], result: dict[str, Any], round_number: 
     by = {identity(e["file"], e["title"]): e for e in known}
     raised = set()
     for n, f in enumerate(result.get("findings", []), 1):
+        if pending(f):
+            continue
         raised.add(key := identity(f["file"], f["title"]))
         reason = because.get(n, f.get("follow_up", ""))
         outcome = ("follow-up" if n in accepted else

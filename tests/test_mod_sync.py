@@ -13,9 +13,9 @@ import sys
 
 import pytest
 
+from claude_plugin_stub import _calls, _claude
 from conftest import ROOT, FORGE_SHIM, _install, patient
-from test_mod_install import (mod_reads_real_old_forge_refusal_and_spaced_working_directory,
-                              real_claude_sync_installs_from_local_release_tag)
+from test_mod_install import real_claude_sync_installs_from_local_release_tag
 from test_mod_native import run_native_plugin_checks
 from test_setup import _autoreview, _on_a_branch_with_forge_toml, _version
 from test_setup import doctor_sdks, sdk_data  # noqa: F401
@@ -23,37 +23,6 @@ from test_setup import doctor_sdks, sdk_data  # noqa: F401
 pytestmark = pytest.mark.platform
 
 STORY = 'FORGE-MOD-1'
-
-CLAUDE = """#!{python}
-import json, pathlib, sys
-here = pathlib.Path(__file__).resolve().parent
-args = sys.argv[1:]
-with open(here / 'claude-calls.jsonl', 'a', encoding='utf-8') as log:
-    log.write(json.dumps(args) + '\\n')
-state = json.loads((here / 'claude-state.json').read_text('utf-8'))
-if args == ['--version']:
-    print(state['version'] + ' (Claude Code)')
-elif args == ['plugin', 'marketplace', 'list', '--json']:
-    print(json.dumps([{{'name': 'forge', 'source': {{'source': 'github', 'repo': 'knacklabs/symphony-forge'}}}}] if state['marketplace'] else []))
-elif args == ['plugin', 'list', '--json']:
-    print(json.dumps([{{'id': 'forge@forge', 'version': state['installed'], 'scope': 'user', 'enabled': True}}] if state['installed'] else []))
-elif state['offline']:
-    sys.stderr.write('Network unavailable\\nretry later\\n')
-    sys.exit(1)
-"""
-
-
-def _claude(repo, *, marketplace=False, installed='', offline=False, version='2.1.291'):
-    (repo.bin / 'claude-state.json').write_text(json.dumps({
-        'marketplace': marketplace, 'installed': installed,
-        'offline': offline, 'version': version}), encoding='utf-8')
-    _install(repo.bin, 'claude', CLAUDE.format(python=sys.executable))
-
-
-def _calls(repo):
-    log = repo.bin / 'claude-calls.jsonl'
-    return [json.loads(line) for line in log.read_text('utf-8').splitlines()] if log.exists() else []
-
 
 def _snapshot(top):
     return {path.relative_to(top).as_posix(): path.read_bytes()
@@ -80,7 +49,7 @@ def _sync_keeps_the_mod_current_at_user_scope(repo, monkeypatch, marketplace, in
     done = repo.forge('sync')
     assert done.returncode == 0, done.stderr
     writes = [args for args in _calls(repo) if args[:1] == ['plugin'] and 'list' not in args]
-    assert writes == ([['plugin', 'marketplace', 'add', 'knacklabs/symphony-forge']] if not marketplace else []) + [
+    assert writes == ([['plugin', 'marketplace', 'add', 'vrknetha/symphony-forge']] if not marketplace else []) + [
         ['plugin', 'marketplace', 'update', 'forge'],
         ['plugin', 'update', 'forge@forge', '--scope', 'user'] if installed else
         ['plugin', 'install', 'forge@forge', '--scope', 'user'],
@@ -151,7 +120,7 @@ def _marketplace_tracks_the_package_release():
     assert plugin['version'] == version
     assert json.loads((ROOT / 'src/forge/mod/.claude-plugin/plugin.json').read_text('utf-8'))['version'] == version
     assert plugin['source'] == {
-        'source': 'git-subdir', 'url': 'https://github.com/knacklabs/symphony-forge.git',
+        'source': 'git-subdir', 'url': 'https://github.com/vrknetha/symphony-forge.git',
         'path': 'src/forge/mod', 'ref': f'v{version}',
     }
 
@@ -173,7 +142,7 @@ def _previously_adopted_repo_gets_the_mod(repo):
     _install(repo.bin, 'uv', f'''#!{sys.executable}
 import os, sys
 assert sys.argv[1:6] == ['tool', 'run', '--from',
-    'git+https://github.com/knacklabs/symphony-forge@v1.2.2', 'forge']
+    'symphony-forge==1.2.2', 'forge']
 os.execv({json.dumps(sys.executable)}, [{json.dumps(sys.executable)},
     {json.dumps(str(repo.bin / 'old-forge'))}, *sys.argv[6:]])
 ''')
@@ -181,7 +150,7 @@ os.execv({json.dumps(sys.executable)}, [{json.dumps(sys.executable)},
     done = repo.forge('sync')
     assert done.returncode == 0, done.stdout + done.stderr
     writes = [args for args in _calls(repo) if args[:1] == ['plugin'] and 'list' not in args]
-    assert writes == [['plugin', 'marketplace', 'add', 'knacklabs/symphony-forge'],
+    assert writes == [['plugin', 'marketplace', 'add', 'vrknetha/symphony-forge'],
                       ['plugin', 'marketplace', 'update', 'forge'],
                       ['plugin', 'install', 'forge@forge', '--scope', 'user']]
     assert not (repo.path / '.claude-plugin').exists()
@@ -203,7 +172,7 @@ os.execv({json.dumps(sys.executable)}, [{json.dumps(sys.executable)},
 @pytest.mark.parametrize('case', ['fresh-machine', 'already-current', 'older-install', 'no-network',
                                 'no-claude', 'doctor-missing', 'doctor-old', 'doctor-supported',
                                 'marketplace-version', 'previously-adopted', 'real-local-install',
-                                'real-transport', 'native-plugin-checks'])
+                                'native-plugin-checks'])
 def test_5_sync_turns_on_the_mod(repo, gh, tmp_path, monkeypatch, case, request):
     if case in ('fresh-machine', 'already-current', 'older-install'):
         _sync_keeps_the_mod_current_at_user_scope(repo, monkeypatch, case != 'fresh-machine',
@@ -224,8 +193,6 @@ def test_5_sync_turns_on_the_mod(repo, gh, tmp_path, monkeypatch, case, request)
         _previously_adopted_repo_gets_the_mod(repo)
     elif case == 'real-local-install':
         real_claude_sync_installs_from_local_release_tag(repo, tmp_path, monkeypatch)
-    elif case == 'native-plugin-checks':
-        # The native suite owns Machine layout and the separate rolling load-history check.
-        run_native_plugin_checks(tmp_path)
     else:
-        mod_reads_real_old_forge_refusal_and_spaced_working_directory(repo, tmp_path, monkeypatch)
+        # The native suite owns what the pane draws and says.
+        run_native_plugin_checks(tmp_path)

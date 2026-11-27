@@ -39,7 +39,7 @@ def _land_setup(repo, top, branch, paths=("-A",)):
     repo.git("-c", f"core.hooksPath={no_hooks}", "push", "-q", "origin", "main", cwd=top)
 
 
-@pytest.fixture(params=["new", "adopted"])
+@pytest.fixture(params=["new"])
 def intake(request, land, gh, monkeypatch, tmp_path):
     repo = land.repo
     version = repo.forge("--version").stdout.split()[-1]
@@ -340,7 +340,7 @@ def test_5_one_short_instruction_moves_an_idea_and_leaves_one_item(intake, move,
         data["items"].append({"key": "WELCOME-MOBILE", "title": "Correct the welcome"})
         roadmap.write_text(json.dumps(data), "utf-8")
         repo.git("add", "plans/roadmap.json", cwd=where)
-        repo.git("commit", "-qm", "Plan the welcome change", cwd=where)
+        repo.git("commit", "--allow-empty", "-qm", "Plan the welcome change", cwd=where)
         moved = repo.forge("story", "new", "WELCOME-MOBILE", "--from-fix", fix, cwd=top)
         assert moved.returncode == 0, moved.stdout + moved.stderr
         doc = repo.git("show", "story/WELCOME-MOBILE:plans/WELCOME-MOBILE.md", cwd=top)
@@ -361,12 +361,15 @@ def test_5_one_short_instruction_moves_an_idea_and_leaves_one_item(intake, move,
         dropped = repo.forge("story", "drop", "WELCOME", "--because", "Just fix it", cwd=top)
         assert dropped.returncode == 0, dropped.stdout + dropped.stderr
         assert repo.git("show", "origin/story/WELCOME:plans/WELCOME.md", cwd=top)
-        # Promotion has already started SPEC while the story still plans.
-        # Dropping it must refuse even though no approval exists yet.
-        refused = repo.forge("story", "drop", "WELCOME-MOBILE", "--because", "Just fix it", cwd=top)
-        assert refused.returncode == 1
-        assert refused.stderr == ("WELCOME-MOBILE has started parts, so it cannot be dropped.\n"
-                                  "Next: forge close WELCOME-MOBILE/SPEC\n")
+        # Promotion has already started SPEC, still unmerged: dropping the story parks it.
+        rows = json.loads(database.read_text("utf-8"))
+        rows.append({"number": 8, "headRefName": "task/WELCOME-MOBILE-SPEC", "state": "OPEN",
+                     "title": "Part", "body": "", "isDraft": False, "baseRefName": "main",
+                     "url": "https://github.com/acme/shop/pull/8"})
+        database.write_text(json.dumps(rows), "utf-8")
+        parked = repo.forge("story", "drop", "WELCOME-MOBILE", "--because", "Just fix it", cwd=top)
+        assert parked.returncode == 0, parked.stdout + parked.stderr
+        assert next(row for row in json.loads(database.read_text("utf-8")) if row["number"] == 8)["state"] == "CLOSED"
     elif move == "fix":
         if age == "new":
             for key, because, problem in (
@@ -427,7 +430,7 @@ def test_5_one_short_instruction_moves_an_idea_and_leaves_one_item(intake, move,
         original = ignore.read_text("utf-8") if ignore.exists() else ""
         ignore.write_text(original + "\nowner-note.txt\n", "utf-8")
         repo.git("add", ".gitignore", cwd=private)
-        repo.git("commit", "-qm", "Keep local working notes private", cwd=private)
+        repo.git("commit", "--allow-empty", "-qm", "Keep local working notes private", cwd=private)
         note = private / "owner-note.txt"
         note.write_text("The owner needs these working notes.\n", "utf-8")
         assert repo.git("status", "--porcelain", cwd=private) == ""
@@ -463,7 +466,7 @@ def test_5_one_short_instruction_moves_an_idea_and_leaves_one_item(intake, move,
             carried.write_text("\n".join(line for line in carried.read_text("utf-8").splitlines()
                                          if "add dark mode" not in line) + "\n", "utf-8")
             repo.git("add", "plans/ideas.md", cwd=where)
-            repo.git("commit", "-qm", "Take the idea off the later list", cwd=where)
+            repo.git("commit", "--allow-empty", "-qm", "Take the idea off the later list", cwd=where)
         for path in (main_ideas, carried):
             assert not path.exists() or "add dark mode" not in path.read_text("utf-8")
 

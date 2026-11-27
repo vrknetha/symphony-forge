@@ -363,7 +363,7 @@ def test_6_third_party_contracts(env, claude_payload, codex_payload, tool):
 
         context = hooked("context", build("SessionStart"))
         assert context.returncode == 0 and context.stdout.startswith(
-            repo.forge("next").stdout.strip()), context.stdout
+            "Run forge next for the full picture."), context.stdout
         for command, code in (("rm -rf build", 2), ("ls", 0)):
             denied = hooked("deny", build("PreToolUse", "Bash", {"command": command, **EXTRA}))
             assert denied.returncode == code, (command, denied.stderr)
@@ -413,7 +413,7 @@ def test_7_same_result_on_both_hosts(repo, claude_payload, codex_payload, monkey
 
     context = through(".claude", "SessionStart", claude_payload("SessionStart"))
     assert context == through(".codex", "SessionStart", codex_payload("SessionStart"))
-    assert context[0] == 0 and "waiting for approval" in context[1]
+    assert context[0] == 0 and "Run forge next for the full picture." in context[1]
     for command, code in (("rm -rf build", 2), ("git commit --no-verify -m x", 2),
                           ("gh pr merge 7", 2), ("ls -la", 0)):
         denied = through(".claude", "PreToolUse", claude_payload("PreToolUse", "Bash",
@@ -466,7 +466,7 @@ def _not_plain(text: str) -> list[str]:
         if re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text)]
 
 
-def test_8_plain_english(env):
+def test_8_plain_english(env, monkeypatch):
     repo, gh = env.repo, env.gh
     env.commit(repo.path, "forge.toml", with_models(
         (repo.path / "forge.toml").read_text("utf-8") + 'repo = "forge-source"\n'))
@@ -498,6 +498,8 @@ def test_8_plain_english(env):
          "title": call[call.index("--title") + 1], "body": body(call),
          "mergedAt": "2026-09-25T10:00:00Z", "files": [], "statusCheckRollup": []}
         for call in creates]))
+    # The merged pull requests are from 25 September 2026; the board lists a window of recent weeks.
+    monkeypatch.setenv("FORGE_NOW", "2026-09-26T00:00:00+00:00")
     data = _facts(env)
     rows = _rows(data)
     assert rows["SHOP/T1"]["title"] == "Save a basket"
@@ -610,7 +612,8 @@ def test_9_nothing_changes_outside_a_pull_request(env, claude_payload, monkeypat
             # Valid command arguments must reach the branch guard, not a usage refusal.
             assert done.returncode == 1, done.stdout + done.stderr
             assert "Forge changes nothing on main" in done.stderr
-    # Intake holds its place outside the checkout; handback writes each draft on its own branch.
+    # The Codex coordinator runs intake through the configured Claude builder.
+    # Forge writes each draft on its own branch.
     with monkeypatch.context() as host:
         host.delenv("CLAUDECODE", raising=False)
         host.setenv("CODEX_THREAD_ID", "intake-contract-session")
@@ -628,11 +631,8 @@ def test_9_nothing_changes_outside_a_pull_request(env, claude_payload, monkeypat
                  "Problem: Shoppers lose baskets.\nDone: A saved basket returns.",
                  "story/IDEA"),
             ):
-                offered = repo.forge("start", idea)
-                assert offered.returncode == 0, offered.stdout + offered.stderr
-                pending = json.loads(offered.stdout)
-                done = repo.forge("handback", pending["target"], "--round", str(pending["round"]),
-                                  "--subagent", "idea-explorer", "--text", reply)
+                host.setenv("STUB_CLAUDE_RESULT", reply)
+                done = repo.forge("start", idea)
                 assert done.returncode == 0, done.stdout + done.stderr
                 assert repo.git("branch", "--list", branch)
             # Dropping the intake plan publishes its state without changing main.

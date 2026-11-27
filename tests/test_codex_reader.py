@@ -66,11 +66,12 @@ def test_10_the_cold_read_runs_on_the_other_family(repo, gh, monkeypatch, sdk_da
     assert repo.forge("read", "SHOP").stderr == COORDINATOR
     assert unchanged() and not stub.exists() and not claude.exists()
 
-    # Under Claude Code the reader is Codex; the grill kind has one entry per family.
+    # Under Claude Code the reader is Codex. The grill kind accepts only per-family entries,
+    # and Antigravity adds a family to the list in the refusal.
     monkeypatch.delenv("CODEX_THREAD_ID")
     toml.write_text(_toml(version, "claude", {"grill": GRILL["grill.claude"]}), encoding="utf-8")
     assert repo.forge("read", "SHOP").stderr == MODELS_REFUSAL.format(
-        "models.grill has one entry per family, codex and claude, so it can't set model")
+        "models.grill has one entry per family, codex, claude and antigravity, so it can't set model")
     toml.write_text(_toml(version, "claude", GRILL), encoding="utf-8")
     assert unchanged() and not stub.exists()
 
@@ -101,20 +102,24 @@ def test_10_the_cold_read_runs_on_the_other_family(repo, gh, monkeypatch, sdk_da
         assert ("- Stopped the Codex processes that a crashed forge read SHOP left.\n"
                 in repo.forge("doctor", cwd=shop).stdout)
         assert _down(server) and _down(saved["driver"]["pid"]) and unaccepted()
+        claude.unlink(missing_ok=True)  # doctor's sign-in check calls Claude; the read itself must not
 
     # The read: a "Grill" conversation in the story's checkout, read-only with approvals "never"
     # at its start and on its turn, on the grill kind's models. Codex's text becomes the notes.
     win = str(shop).replace("/", "\\")  # the checkout spelled with backslashes, as a Windows reader cites it
-    monkeypatch.setenv("STUB_SAY", f" see {shop.resolve()}/plans/SHOP.md, {shop}/docs/a.md and {win}\\docs\\c.md")
+    monkeypatch.setenv("STUB_CODEX_TEXT",
+                       f"1. See {shop.resolve()}/plans/SHOP.md, {shop}/docs/a.md and {win}\\docs\\c.md")
     read = repo.forge("read", "SHOP")
     assert read.returncode == 0, read.stdout + read.stderr
     starts, turns = _sent(stub, "thread/start"), _sent(stub, "turn/start")
     assert len(starts) == 1 and len(turns) == 3
-    assert all(resume["threadId"] == "thr-stub-1" for resume in _sent(stub, "thread/resume"))
+    assert all(resume["threadId"] == "thr-stub-1" and "model_reasoning_effort" not in resume["config"]
+               for resume in _sent(stub, "thread/resume"))
     assert all((start["sandbox"], start["approvalPolicy"]) == ("read-only", "never")
                and start["config"] == {**QUIET, "model": "gpt-6.1-terra", "model_reasoning_effort": "max"}
                and Path(start["cwd"]).resolve() == shop.resolve() for start in starts)
-    assert all((turn["sandboxPolicy"]["type"], turn["approvalPolicy"]) == ("readOnly", "never")
+    assert all((turn["sandboxPolicy"]["type"], turn["approvalPolicy"], turn["effort"])
+               == ("readOnly", "never", "max")
                for turn in turns)
     assert _sent(stub, "thread/name/set")[-1]["name"] == "Read · SHOP"
     written = notes.read_text("utf-8")
@@ -122,9 +127,7 @@ def test_10_the_cold_read_runs_on_the_other_family(repo, gh, monkeypatch, sdk_da
     data = doc.read_bytes()
     blob = hashlib.sha1(b"blob %d\0" % len(data) + data).hexdigest()
     assert data.decode("utf-8") in turns[-1]["input"][0]["text"]
-    for fact in (f"read_hash: {blob}", "reader: codex (gpt-6.1-terra)", f"read_at: {NOW}",
-                 '1. stub codex: built it with ' + json.dumps(
-                     {**QUIET, "model": "gpt-6.1-terra", "model_reasoning_effort": "max"}, sort_keys=True)):
+    for fact in (f"read_hash: {blob}", "reader: codex (gpt-6.1-terra)", f"read_at: {NOW}"):
         assert fact in written, written
     assert json.loads(state.read_text("utf-8"))["status"] == "read"
     turn_log = repo.path / ".git" / "forge" / "threads" / "read" / "SHOP.log"
@@ -142,7 +145,7 @@ def test_10_the_cold_read_runs_on_the_other_family(repo, gh, monkeypatch, sdk_da
 
     # Absolute paths under the checkout become repo-root paths in the notes, for either reader.
     assert str(shop.resolve()) not in written and str(shop) not in written and win not in written
-    assert "see /plans/SHOP.md, /docs/a.md and /docs/c.md" in written
+    assert "1. See /plans/SHOP.md, /docs/a.md and /docs/c.md" in written
 
     # The old contract recorded an amendment here with --amended; FORGE-READLOOP-1 removed it.
     monkeypatch.delenv("CLAUDECODE")
@@ -164,7 +167,7 @@ def test_10_the_cold_read_runs_on_the_other_family(repo, gh, monkeypatch, sdk_da
     wished = (wish / "plans" / "WISH.read.md").read_text("utf-8")
     assert "reader: claude (opus)" in wished and "see /docs/b.md" in wished
     (repo.bin / "claude-says.md").unlink()
-    monkeypatch.delenv("STUB_SAY")
+    monkeypatch.delenv("STUB_CODEX_TEXT")
     assert len(_stub(stub)) == before
 
     # forge init writes the models table, grill and design with an entry per family, and no single model key;
@@ -176,26 +179,27 @@ def test_10_the_cold_read_runs_on_the_other_family(repo, gh, monkeypatch, sdk_da
     assert "model" not in written
     # Lite keeps first fix rounds; explore now owns read-only work with separate host defaults.
     assert written["models"] == {
-        "build": {"codex": {"model": "gpt-6.1-sol", "effort": "low"},
+        "build": {"codex": {"model": "gpt-6.2-sol", "effort": "low"},
                   "claude": {"model": "claude-sonnet-5-5", "effort": "low",
                              "subagents": "claude-haiku-5-5", "subagent_effort": "high"}},
-        "fix": {"codex": {"model": "gpt-6.1-sol", "effort": "low"},
+        "fix": {"codex": {"model": "gpt-6.2-sol", "effort": "low"},
                 "claude": {"model": "claude-sonnet-5-5", "effort": "low",
                            "subagents": "claude-haiku-5-5", "subagent_effort": "high"}},
-        "lite": {"codex": {"model": "gpt-6.1-sol", "effort": "low",
+        "lite": {"codex": {"model": "gpt-6.2-sol", "effort": "low",
                            "subagents": "gpt-6-luna", "subagent_effort": "max"},
                  "claude": {"model": "claude-sonnet-5-5", "effort": "low",
                             "subagents": "claude-haiku-5-5", "subagent_effort": "high"}},
-        "explore": {"codex": {"model": "gpt-6.1-sol", "effort": "medium",
+        "explore": {"codex": {"model": "gpt-6.1-terra", "effort": "medium",
                               "subagents": "gpt-6-luna", "subagent_effort": "max"},
-                    "claude": {"model": "claude-haiku-5-5", "effort": "high"}},
+                    "claude": {"model": "claude-haiku-5-5", "effort": "high"},
+                    "antigravity": {"model": "gemini-4-neon", "effort": "low"}},
         "grill": {"codex": {"model": "gpt-6.1-terra", "effort": "max"},
                   "claude": {"model": "claude-sonnet-5-5", "effort": "high"}},
         "review": {"codex": {"model": "gpt-6.1-terra", "effort": "max"},
                    "claude": {"model": "claude-sonnet-5-5", "effort": "high"}},
         "light_review": {"codex": {"model": "gpt-6.1-terra", "effort": "max"}},
         "design": {"claude": {"model": "claude-sonnet-5-5", "effort": "xhigh"},
-                   "codex": {"model": "gpt-6.1-sol", "effort": "high"}},
+                   "codex": {"model": "gpt-6.2-sol", "effort": "high"}},
     }
     toml.write_text(f'version = "{version}"\nmodel = "opus"\n', encoding="utf-8")
     old = repo.forge("doctor", cwd=shop)

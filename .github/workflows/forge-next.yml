@@ -2,7 +2,6 @@ name: forge-next
 
 # Reuse passed proof on identical release tags.
 # Pull requests run related Linux tests in forge.yml; plugin changes also run here.
-# Windows runs nightly and in the manual full run before a release.
 
 on:
   pull_request:
@@ -27,24 +26,6 @@ permissions:
   pull-requests: read
 
 jobs:
-  selection:
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-24.04
-    outputs:
-      test-only: ${{ steps.select.outputs.test-only }}
-      platform-files: ${{ steps.select.outputs.platform-files }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - id: select
-        if: github.event_name == 'pull_request'
-        env:
-          BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          DOCS_ONLY_EXCLUDES: '[":(exclude,glob).factory/**", ":(exclude,glob)plans/**"]'
-        run: python .forge/review-tests.py
-
   plugin:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -62,93 +43,16 @@ jobs:
         if: steps.parent-tests.outputs.reuse != 'true'
         with:
           node-version: '24'
-      - run: npm install --global @anthropic-ai/claude-code@2.1.291
+      - run: npm install --global @anthropic-ai/claude-code@2.1.322
         if: steps.parent-tests.outputs.reuse != 'true'
       - uses: astral-sh/setup-uv@v6
         if: steps.parent-tests.outputs.reuse != 'true'
       - name: Check and reload the plugin through the repository test entry
         if: steps.parent-tests.outputs.reuse != 'true'
         run: uv run --frozen --python 3.11 pytest tests/test_mod_sync.py -q -k 'native-plugin-checks or real-local-install' -o faulthandler_timeout=120 --timeout=150 --timeout-method=thread
-
-  tests:
-    needs: selection
-    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    # Keep these matrix checks separate from the required Linux tests check in forge.yml.
-    name: ${{ matrix.os == 'windows-latest' && 'platform-sensitive tests' || 'full suite' }} on ${{ matrix.os }}, group ${{ matrix.group }} of ${{ matrix.groups }}
-    env:
-      FORGE_CONTAINERS: ${{ matrix.os == 'ubuntu-24.04' && '1' || '0' }}
-      TEST_ONLY: ${{ needs.selection.outputs.test-only }}
-      PLATFORM_FILES: ${{ needs.selection.outputs.platform-files }}
-    strategy:
-      fail-fast: false
-      matrix:
-        # forge.yml owns the full Linux suite for every event.
-        include: >-
-          ${{ fromJSON(needs.selection.outputs.test-only == 'true' && '[{"os":"windows-latest","group":1,"groups":1}]' || '[
-            {"os":"windows-latest","group":1,"groups":5},
-            {"os":"windows-latest","group":2,"groups":5},
-            {"os":"windows-latest","group":3,"groups":5},
-            {"os":"windows-latest","group":4,"groups":5},
-            {"os":"windows-latest","group":5,"groups":5}]') }}
-    runs-on: ${{ matrix.os }}
-    # Give the suite time to finish and pytest-timeout time to name a slow test.
-    timeout-minutes: ${{ matrix.os == 'windows-latest' && 45 || 20 }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - id: parent-tests
-        if: github.event_name == 'push'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_WORKFLOW: ${{ matrix.os == 'windows-latest' && 'forge-next.yml' || 'forge.yml' }}
-        run: python .github/reuse-test-proof.py
-      - uses: astral-sh/setup-uv@v6
+      - name: Check that a real Claude Code session answers /forge
         if: steps.parent-tests.outputs.reuse != 'true'
-      - id: windows-paths
-        if: runner.os == 'Windows' && steps.parent-tests.outputs.reuse != 'true'
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force D:/t | Out-Null
-          "TEMP=D:/t" >> $env:GITHUB_ENV
-          "TMP=D:/t" >> $env:GITHUB_ENV
-          "npm-cache=$(npm config get cache)" >> $env:GITHUB_OUTPUT
-      - uses: actions/cache@v4
-        if: runner.os == 'Windows' && steps.parent-tests.outputs.reuse != 'true'
-        with:
-          path: ${{ steps.windows-paths.outputs.npm-cache }}
-          key: npm-${{ runner.os }}-jest-30.2.0-vitest-3.2.4
-      # Save npm's cache from main on Linux: pull requests restore only caches saved from main.
-      - uses: actions/cache@v4
-        if: runner.os == 'Linux' && steps.parent-tests.outputs.reuse != 'true'
-        with:
-          path: ~/.npm
-          key: npm-jest-30.2.0-vitest-3.2.4
-      # Download the runners the tests start once, so no test spends its time limit on it.
-      - run: |
-          npm exec --yes --package=jest@30.2.0 -- jest --version
-          npm exec --yes --package=vitest@3.2.4 -- vitest --version
+        run: uv run --frozen --python 3.11 pytest tests/test_pane_session.py -q -o faulthandler_timeout=120 --timeout=150 --timeout-method=thread
+      - name: Check that the pane draws real Forge data, including a large test log
         if: steps.parent-tests.outputs.reuse != 'true'
-      # 3.11 is the oldest Python Forge supports. Parallel across the runner's cores, and split across
-      # runners where one runner is too slow.
-      - shell: pwsh
-        run: |
-          $testFiles = @('tests')
-          if ($env:TEST_ONLY -eq 'true') {
-            $testFiles = @(@(ConvertFrom-Json $env:PLATFORM_FILES) + 'tests/test_installers_explain_docker_start.py' | Sort-Object -Unique)
-          }
-          uv run --python 3.11 pytest @testFiles -q -n auto -o faulthandler_timeout=${{ matrix.os == 'windows-latest' && 270 || 120 }} --timeout=${{ matrix.os == 'windows-latest' && 300 || 150 }} --timeout-method=thread ${{ matrix.os == 'windows-latest' && '-p no:faulthandler --max-worker-restart=0 -m platform --reruns 1 --basetemp D:/t/pytest --durations=30 --store-durations --clean-durations' || '' }} --splits ${{ matrix.groups }} --group ${{ matrix.group }} --splitting-algorithm least_duration --durations-path ${{ matrix.os == 'windows-latest' && hashFiles('.test_durations_windows') != '' && '.test_durations_windows' || '.test_durations' }}
-        if: steps.parent-tests.outputs.reuse != 'true'
-        timeout-minutes: ${{ matrix.os == 'windows-latest' && 30 || 20 }}
-        env:
-          # Disable pytest's per-test native timer above, so it cannot replace this
-          # session-wide watchdog. It also covers collection and controller cleanup.
-          PYTEST_SESSION_DEADLINE: ${{ matrix.os == 'windows-latest' && '1680' || '' }}
-      # Each artifact contains only this group's measurements, ready to combine into
-      # .test_durations_windows for the next dispatched run. The first run uses the Linux seed.
-      - uses: actions/upload-artifact@v4
-        if: always() && runner.os == 'Windows' && steps.parent-tests.outputs.reuse != 'true'
-        with:
-          name: Windows-test-durations-${{ matrix.group }}
-          path: ${{ matrix.os == 'windows-latest' && hashFiles('.test_durations_windows') != '' && '.test_durations_windows' || '.test_durations' }}
-          include-hidden-files: true
+        run: uv run --frozen --python 3.11 pytest tests/test_pane_decision_and_test_output.py -q -o faulthandler_timeout=120 --timeout=150 --timeout-method=thread

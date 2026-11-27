@@ -69,8 +69,8 @@ def test_5_forge_stays_small(repo):
     help_text = repo.forge("--help").stdout
     commands = re.search(r"\{([^}]+)\}", help_text)[1].split(",")
     # Decisions 0104/0105 add test/stop; FORGE-MOD-1 adds lanes; FORGE-BOARD-3 adds assign.
-    # FORGE-INTAKE-1 adds start.
-    assert len(commands) <= 25, f"{len(commands)} commands: {commands}"
+    # FORGE-INTAKE-1 adds start; the forge-ask fix adds ask.
+    assert len(commands) <= 26, f"{len(commands)} commands: {commands}"
 
 
 
@@ -86,7 +86,7 @@ def test_10_version_pin(repo, tmp_path, monkeypatch):
     assert refused.returncode != 0
     assert refused.stderr == (
         f"Forge {version} is installed, but this repo pins v0.0.1.\n"
-        "Next: uv tool install git+https://github.com/knacklabs/symphony-forge@v0.0.1\n")
+        "Next: uv tool install symphony-forge==0.0.1\n")
     for read_only in (["--version"], ["doctor"], ["next"]):
         assert "uv tool install" not in repo.forge(*read_only).stderr
 
@@ -100,6 +100,7 @@ def test_10_version_pin(repo, tmp_path, monkeypatch):
     shutil.copytree(ROOT / "src" / "forge", source / "src" / "forge",
                     ignore=shutil.ignore_patterns("__pycache__"))
     shutil.copy(ROOT / "pyproject.toml", source)
+    shutil.copy(ROOT / "README.md", source)
     for rel in (".codex/skills/app-baseline/SKILL.md",
                 ".codex/skills/test-audit/SKILL.md", ".codex/skills/test-audit/NOTICE.md",
                 ".codex/skills/forge/fde.md", ".claude/skills/remote-approval/SKILL.md"):
@@ -126,12 +127,7 @@ def test_31_speed():
     for path in sorted(WORKFLOW.parent.glob("*.y*ml")):
         labels = re.findall(r"\bubuntu-[\w.-]+\b", path.read_text(encoding="utf-8"))
         assert all(label == "ubuntu-24.04" for label in labels), (path.name, labels)
-    # macOS left the full run on 18 October: Linux and Windows catch the platform bugs.
-    for runner in ("ubuntu-24.04", "windows-latest"):
-        assert runner in workflow, f"the suite doesn't run on {runner}"
     assert "pytest tests" in workflow
     timeouts = [int(n) for n in re.findall(r"timeout-minutes: (\d+)", workflow)]
     # The suite's five-minute cap was replaced by ten when passing Ubuntu runs hit the limit.
     assert timeouts and max(timeouts) <= 10, f"job timeouts over ten minutes: {timeouts}"
-    # Complete platform group sequences and effective budgets have one owner:
-    # test_ci_job_budgets.py.

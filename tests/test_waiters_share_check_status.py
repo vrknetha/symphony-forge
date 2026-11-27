@@ -14,7 +14,7 @@ import pytest
 
 from test_close import env  # noqa: F401
 from test_conflicting_pull_requests_stop_check_waits import client  # noqa: F401
-from test_land import BRANCH, ITEM, RUNS, _fix
+from test_land import BRANCH, ITEM, _fix
 from test_land_waits_for_check_progress import _pending
 
 STORY = "many-land-runs-each-poll-github-for-chec"
@@ -25,6 +25,11 @@ def test_1_waiters_share_one_status_read_per_minute(client, monkeypatch):
     env, sleeps, _ = client
     _fix(env, "working", worked=True)
     env.checks(_pending(1))
+    # This rule needs both commands to reach the status-cache lock. Unknown
+    # quota now permits one wait, so supply enough quota for that contention.
+    env.gh.respond("api", "rate_limit", stdout=json.dumps({"resources": {
+        name: {"remaining": 10000, "reset": int(time.time()) + 3600}
+        for name in ("core", "graphql")}}))
     monkeypatch.setenv("FORGE_CHECKS_WAIT", "0")
     clock = sleeps.parent / "sitecustomize.py"
     offset = sleeps.parent / "status-clock"
@@ -35,14 +40,17 @@ def test_1_waiters_share_one_status_read_per_minute(client, monkeypatch):
         offset.write_text(str(elapsed), encoding="utf-8")
         done = env.repo.forge("land", ITEM)
         assert done.returncode == 1, done.stdout + done.stderr
-        assert "tests is still running" in done.stderr
-        assert len(env.gh_calls(*RUNS)) == expected
-        assert len(env.gh_calls("pr", "view", BRANCH, "--json",
-                                "mergeable,headRefOid,number,headRefName")) == expected
+        # The wait now names each active matrix job instead of the tests group.
+        for runner in ("windows-latest", "ubuntu-latest"):
+            assert f"tests ({runner}) is still running" in done.stderr
+        assert len(env.gh_calls("api", path="/check-runs?")) == expected
+        assert len(env.gh_calls("pr", "view", BRANCH,
+                               query="mergeable,headRefOid,number,headRefName")) == expected
 
-    # Sequential reuse cannot reach contention or a stalled fetch. Stall only
-    # GitHub, then run two real commands: neither lock nor refusal is mocked.
-    # The stub also ends itself so broken production code cannot hang the test.
+    # Sequential reuse cannot reach contention or a stalled fetch. Because
+    # FORGE-RUNNER-1 serializes overlapping land runs on one item, hold the real
+    # shared status guard lock in a separate process to test lock contention, then
+    # stall only GitHub on a real land run to test the 60-second read timeout.
     stub = env.repo.bin / "gh"
     stub.write_text(stub.read_text(encoding="utf-8").replace(
         "args = sys.argv[1:]",
@@ -55,6 +63,28 @@ def test_1_waiters_share_one_status_read_per_minute(client, monkeypatch):
         "        threading.Event().wait(0.1)\n", 1), encoding="utf-8")
     offset.write_text("120", encoding="utf-8")
     started = env.repo.bin / "status-read-starts"
+    guards = list((env.repo.path / ".git" / "forge").glob("check-wait-*.guard"))
+    assert len(guards) == 1
+    holder_code = (
+        f"import os, pathlib, threading\n"
+        f"f = pathlib.Path({guards[0].as_posix()!r}).open('a+b')\n"
+        "if os.name == 'nt':\n"
+        "    import msvcrt; f.seek(0); msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)\n"
+        "else:\n"
+        "    import fcntl; fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)\n"
+        "print('LOCKED', flush=True)\n"
+        "threading.Event().wait(60)\n"
+    )
+    holder = subprocess.Popen([sys.executable, "-c", holder_code], stdout=subprocess.PIPE, text=True)
+    try:
+        assert holder.stdout is not None and holder.stdout.readline().strip() == "LOCKED"
+        done = env.repo.forge("land", ITEM, timeout=150 if os.name == "nt" else 30)
+        assert done.returncode == 1, done.stdout + done.stderr
+        assert "Could not get access to the shared check status" in done.stderr
+        assert not started.exists()
+    finally:
+        holder.terminate()
+        holder.wait(timeout=10)
     output, error = env.tmp / "status-reader.out", env.tmp / "status-reader.err"
     with output.open("wb") as stdout, error.open("wb") as stderr:
         first = subprocess.Popen([sys.executable, str(env.repo.bin / "forge"), "land", ITEM],
@@ -65,9 +95,6 @@ def test_1_waiters_share_one_status_read_per_minute(client, monkeypatch):
             while not started.exists() and first.poll() is None and time.monotonic() < deadline:
                 time.sleep(0.1)
             assert started.exists(), output.read_text("utf-8") + error.read_text("utf-8")
-            done = env.repo.forge("land", ITEM, timeout=150 if os.name == "nt" else 30)
-            assert done.returncode == 1, done.stdout + done.stderr
-            assert "Could not get access to the shared check status" in done.stderr
             assert started.read_text("utf-8") == "read\n"
             first.wait(timeout=90)
         finally:

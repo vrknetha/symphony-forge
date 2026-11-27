@@ -1,0 +1,174 @@
+{
+  "branch": "task/FORGE-ASKFAMILY-1-FAMILY",
+  "known": [
+    {
+      "area": "turn() in src/forge/claude_turn.py",
+      "file": "src/forge/claude_turn.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 40,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Disputed keep 12: User hooks still run during Claude's read-only turn",
+      "work": 2
+    },
+    {
+      "area": "turn() in src/forge/claude_turn.py",
+      "file": "src/forge/claude_turn.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 41,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Not done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "work": 2
+    },
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 61,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Not done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "work": 1
+    },
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 71,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A `gpt-` model asks Codex, a `claude-` model asks Claude and a `gemini-` model asks Gemini",
+      "work": 2
+    },
+    {
+      "area": "test_6_read_only_and_failures_across_families() in tests/test_ask_command.py",
+      "file": "tests/test_ask_command.py",
+      "gain": 4,
+      "harm": 4,
+      "line": 255,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "work": 2
+    },
+    {
+      "area": "test_4_model_flag_and_config_precedence_and_worktree_routing() in tests/test_ask_command.py",
+      "file": "tests/test_ask_command.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 180,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: `--model` takes precedence over `[models.ask]`, and `[models.ask]` can hold a model for each family.",
+      "work": 2
+    },
+    {
+      "area": "test_3_ask_routes_claude_and_gemini_and_records_answers() in tests/test_ask_command.py",
+      "file": "tests/test_ask_command.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 144,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Each family's answer is recorded after the command waits for an agent place",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "cf65583b31d89065e0e28af7e9c96aaaedaf2d12ef8de8e45b37e3b341cdae46",
+    "changed": "74b4a16750ce1de93d026ed2cae61f369a11bf65fce2f13890b63bc6cc7c5431",
+    "commit": "926202c0fd3f43302fc345f67e5667ac01190cd2",
+    "dismissals": [],
+    "findings": [],
+    "id": "290c0333-d217-4344-8591-a849e88a480b",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-27T13:26:04.914775+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-27T13:26:17.907797+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T16:37:16.414831+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T16:45:45.971990+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T16:46:04.208415+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T16:57:15.695091+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T16:57:15.695247+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T16:59:03.336401+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T17:04:04.157297+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T17:08:23.325269+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-27T16:57:15.695247+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "tests/test_ask_command.py",
+    "reason": "Owner chose one more round: make the test also prove the provider runs only after it gets an agent place",
+    "wait_id": "90cf735f-4718-462e-94a1-d6da1961c77a",
+    "worker_round": 3
+  },
+  "stuck": {
+    "close": "2868430a-a38c-474f-87c7-f28c068639b2",
+    "head": "6eb18681b488aac1cc7f2c8e78e95803af65798a",
+    "keys": {},
+    "round": 3
+  },
+  "worker": "antigravity"
+}

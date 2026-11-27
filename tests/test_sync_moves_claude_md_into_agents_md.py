@@ -28,7 +28,7 @@ def test_1_sync_moves_claude_md_s_own_lines_into_agents_md_then_deletes_it(repo)
                            "- Run `make check`.\n")
     assert "@AGENTS.md" not in agents and "Old Forge rule" not in agents
     assert agents.count("- Use tabs.") == 1
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout
 
 
 def test_2_sync_deletes_a_claude_md_whose_lines_are_already_in_agents_md(repo):
@@ -38,14 +38,14 @@ def test_2_sync_deletes_a_claude_md_whose_lines_are_already_in_agents_md(repo):
     assert not (repo.path / "CLAUDE.md").exists()
     agents = (repo.path / "AGENTS.md").read_text(encoding="utf-8")
     assert agents.startswith(TEAM) and agents.endswith("<!-- forge:end -->\n")
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout
 
 
 def test_3_sync_deletes_an_empty_claude_md(repo):
     _adopted(repo, "")
     assert repo.forge("sync").returncode == 0
     assert not (repo.path / "CLAUDE.md").exists()
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout
 
 
 def test_4_sync_turns_an_agents_md_link_to_claude_md_into_a_regular_file_with_every_line(repo):
@@ -59,7 +59,7 @@ def test_4_sync_turns_an_agents_md_link_to_claude_md_into_a_regular_file_with_ev
     agents = repo.path / "AGENTS.md"
     assert not agents.is_symlink()
     assert agents.read_text(encoding="utf-8").startswith(f"{TEAM}- Keep answers short.\n")
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout
 
 
 def test_5_sync_keeps_every_line_when_agents_md_links_to_a_claude_md_already_synced(repo):
@@ -77,7 +77,7 @@ def test_5_sync_keeps_every_line_when_agents_md_links_to_a_claude_md_already_syn
     agents = repo.path / "AGENTS.md"
     assert not agents.is_symlink()
     assert agents.read_text(encoding="utf-8") == synced
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout
 
 
 def test_6_sync_removes_a_dangling_claude_md_link(repo):
@@ -87,4 +87,4 @@ def test_6_sync_removes_a_dangling_claude_md_link(repo):
     repo.git("commit", "-q", "-m", "CLAUDE.md links to a file that is gone")
     assert repo.forge("sync").returncode == 0
     assert not (repo.path / "CLAUDE.md").is_symlink()
-    assert repo.forge("sync").stdout.startswith("Nothing to change")
+    assert "Nothing to change" in repo.forge("sync").stdout

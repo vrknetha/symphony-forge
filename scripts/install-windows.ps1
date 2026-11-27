@@ -1,7 +1,7 @@
 param([switch]$Check)
 
 $ErrorActionPreference = 'Stop'
-$ForgeVersion = '1.2.38'
+$ForgeVersion = '1.2.50'
 $ImpeccableUrl = 'https://github.com/pbakaus/impeccable/tree/414603bf14c7a344edb466bb1f85690c77ce8b7d/plugin/skills/impeccable'
 $EmilDesignEngUrl = 'https://github.com/emilkowalski/skills/tree/a81dbca07f2217b7103e510c0f13f8d5b017afc9/skills/emil-design-eng'
 
@@ -114,7 +114,7 @@ if (-not $forgeReady) {
     if ($Check) { Missing 'Forge' }
     else {
         Write-Output 'Installing Forge...'
-        & uv tool install --force "git+https://github.com/knacklabs/symphony-forge@v$ForgeVersion"
+        & uv tool install --force "symphony-forge==$ForgeVersion"
         if ($LASTEXITCODE -ne 0) { throw 'Forge did not install. Check the message above, then run this script again.' }
         & uv tool update-shell
         if ($LASTEXITCODE -ne 0) { throw 'Forge is installed, but its command could not be added to your PATH. Run uv tool update-shell, then open a new PowerShell window.' }

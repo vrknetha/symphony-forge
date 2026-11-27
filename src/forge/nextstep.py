@@ -17,9 +17,8 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from forge import (__version__, approval, board, board_facts, close, codex, gaps, githooks, machine, migration_warnings,
-                   journey, native, records, repo, review, spotted, story, score, task, time_records, upgrade)
-from forge.board_facts import machine_next
+from forge import (__version__, approval, board, board_facts, close, codex, contextsize, gaps, githooks, machine, migration_warnings,
+                   intake, journey, land, native, owner_choices, records, release_notes, repo, review, routing, spotted, story, score, task, time_records, upgrade)
 from forge.task import _merged, _started, can_start, developer, github_login, owner, sections, start_base, unbuilt_fix, waits_for
 from forge.task import rows as task_rows
 
@@ -27,7 +26,7 @@ COMMANDS = [
     {
         "words": "next", "run": "next_step", "changes_state": False,
         "help": "Say where things stand and give the exact next command",
-        "args": [(('--json',), {"action": "store_true", "help": "Print the machine view"})], "position": 50,
+        "args": [], "position": 50,
         "listing": "| `forge next` | Says where things stand and gives the exact next command |",
     },
     {
@@ -144,7 +143,7 @@ def signoff(top: Path, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
 @repo.command_cache(snapshot=True)
 def next_step(args: Any) -> int:
     top = repo.root()
-    from forge import fullrun
+    from forge import doctor, fullrun
 
     if (top / "forge.toml").is_file():
         try:
@@ -152,7 +151,9 @@ def next_step(args: Any) -> int:
         except repo.Refused as refusal:
             if refusal.entry == repo.REFUSALS["added_work_min_gain"]:
                 raise
-    notice = upgrade.release_notice(top) + fullrun.notices(top) if not args.json else []
+    removed = doctor.tidy_finished(top)
+    shown, version = release_notes.once(top)
+    notice = native.coordinator_warnings(top) + upgrade.release_notice(top) + fullrun.notices(top) + shown
     # Populate shared facts before concurrent readers can race on their first lookup.
     repo.forge_dir(top)
     repo.default_branch(top)
@@ -160,13 +161,12 @@ def next_step(args: Any) -> int:
     # Independent network reads overlap each other and the bulk local history.
     with ThreadPoolExecutor(max_workers=6) as pool:
         open_fields = "headRefName,headRefOid,body,url,isDraft"
-        open_read = (pool.submit(board_facts._listing, top, "open", fields=open_fields)
-                     if not args.json else None)
-        github_read = pool.submit(board_facts.prs, top, fresh=not args.json,
+        open_read = pool.submit(board_facts._listing, top, "open", fields=open_fields)
+        github_read = pool.submit(board_facts.prs, top, fresh=True,
                                   merged_fields="headRefName",
                                   open_fields=open_fields, open_read=open_read)
         def checks():
-            if open_read is not None and open_read.result() == []:
+            if open_read.result() == []:
                 return []  # A complete empty inventory has no open PR checks to read.
             return board._machine_prs(top)
         pending = {"alerts": pool.submit(_failed_schedules, top),
@@ -178,41 +178,40 @@ def next_step(args: Any) -> int:
         activity.result()
         facts = {name: future.result() for name, future in pending.items()}
     lines = warnings + _report(
-        top, history, schedules=True, numbers=not args.json, facts=facts)[0]
+        top, history, schedules=True, numbers=True, facts=facts)
     step = ([journey.step_line(top, _report_config(top, {}), history, idle=_idle(top)[0] in lines)]
-            if not args.json and (top / "forge.toml").is_file() else [])
-    print(json.dumps({**board.machine_board(top, history), "next": machine_next(lines)})
-          if args.json else "\n".join(step + notice + lines))
+            if (top / "forge.toml").is_file() else [])
+    print("\n".join(owner_choices.first(top, step + notice + lines, (facts["github"] or {}).get("open", []))))
+    if removed:
+        print(f"Removed {removed} finished folders.")
+    if version:
+        release_notes.mark(top, version)
     return 0
 
 
 def startable(top: Path) -> list[str]:
     """Parts offered by the same report as the context hook."""
-    return [line.split()[4] for line in _report(top)[0]
+    return [line.split()[4] for line in _report(top)
             if line.startswith("Next: forge task start ")]
 
 
 def context_hook(args: Any) -> int:
+    if native.coordinator_hook():
+        return 0
     top = repo.root()
-    lines, states = _report(top)
-    step = ([journey.step_line(top, _report_config(top, {}), idle=_idle(top)[0] in lines)]
-            if (top / "forge.toml").is_file() else [])
-    print("\n".join(step + lines + states))
-    notes = story.show(top, story.landed_ref(top), "docs/handover.md") or ""
-    heading = "## Decisions and lessons\n"
-    if heading in notes:
-        section = notes.split(heading, 1)[1].split("\n## ", 1)[0].rstrip()
-        print(heading + section)
+    # Short and offline: no GitHub, story history or per-worktree settings. The step line needs
+    # every story's record, so it stays in forge next.
+    print("\n".join(_hotspots(top, {}, 3) + [contextsize.handoff_hint(top) or "Run forge next for the full picture."]))
+    _, heading, notes = (story.show(top, story.landed_ref(top), "docs/handover.md") or "").partition("## Decisions and lessons\n")
+    if heading:
+        print(heading + notes.split("\n## ", 1)[0].rstrip())
     return 0
 
 
 def handoff_hook(args: Any) -> int:
     top = repo.root()
     path = repo.forge_dir(top) / "handoff.md"
-    old = path.read_text(encoding="utf-8") if path.is_file() else ""
-    heading = "## Decisions and lessons\n"
-    notes = old[old.index(heading):] if heading in old else heading
-    lines = _report(top)[0]
+    lines = _report(top)
     step = ([journey.step_line(top, _report_config(top, {}), idle=_idle(top)[0] in lines)]
             if (top / "forge.toml").is_file() else [])
     current = "\n".join(step + lines)
@@ -220,6 +219,9 @@ def handoff_hook(args: Any) -> int:
                                        prefix="handoff-", suffix=".tmp", delete=False)
     try:
         with temp:
+            old = path.read_text(encoding="utf-8") if path.is_file() else ""
+            heading = "## Decisions and lessons\n"
+            notes = old[old.index(heading):] if heading in old else heading
             temp.write(f"# Forge handoff\n\n## Current state ({repo.now()[:10]})\n\n"
                        f"{current}\n\n{notes}")
         os.replace(temp.name, path)
@@ -230,14 +232,13 @@ def handoff_hook(args: Any) -> int:
 
 def _report(top: Path, history: dict[str, Any] | None = None,
             schedules: bool = False, numbers: bool = False,
-            facts: dict[str, Any] | None = None) -> tuple[list[str], list[str]]:
-    """The lines `forge next` prints, and one state line per story and fix with its human touches."""
+            facts: dict[str, Any] | None = None) -> list[str]:
+    """The lines `forge next` prints."""
     agents = machine.view()["agents"]
     running = sum(run.get("version") == __version__ and run.get("kind") == "work"
         and not run.get("free") and not run.get("suspended_by") and bool(
             run.get("admitted") or run.get("started_at")) for run in agents["entries"])
     lines: list[str] = []
-    states: list[str] = []
     fixes: list[tuple[dict[str, Any], list[str]]] = []
     parts: list[tuple[str, dict[str, Any]]] = []
     refusals: dict[Path, str] = {}
@@ -304,8 +305,6 @@ def _report(top: Path, history: dict[str, Any] | None = None,
             unassigned_starts += [line for line, assigned in ready.items() if not assigned]
             found = [line for line in found if line not in ready or ready[line]]
         story_lines.append((not mine, found))
-        touches = state.get("touches", 0) + sum(task.get("touches", 0) for task in tasks)
-        states.append(f"{title} ({state.get('status', 'planning')}): {_touches(touches)} so far.")
     for _, found in sorted(story_lines, key=lambda entry: entry[0]):
         lines += found
     lines += unassigned_starts
@@ -327,8 +326,6 @@ def _report(top: Path, history: dict[str, Any] | None = None,
                 pinned += alert[:-1] + found
             else:
                 lines += found
-            states.append(f"The fix {name} ({state.get('status', 'started')}): "
-                          f"{_touches(state.get('touches', 0))} so far.")
     pushed = [ref.removeprefix("refs/remotes/origin/") for ref in branch_tips(top)
               if ref.startswith(("refs/remotes/origin/fix/", "refs/remotes/origin/forge/"))]
     landed = story.landed_ref(top)
@@ -349,25 +346,9 @@ def _report(top: Path, history: dict[str, Any] | None = None,
                 pinned += alert[:-1] + found
             else:
                 lines += found
-    for path in sorted(trees.values()):  # a spec's read or confirmation on any work branch
-        for notes in sorted((path / "docs" / "specs").glob("*.read.md")):
-            text = notes.read_text(encoding="utf-8")
-            spec = notes.with_name(notes.name.removesuffix(".read.md") + ".md")
-            if spec.is_file():
-                record, findings = story._record(text)  # pyright: ignore[reportPrivateUsage]
-                spec_text = spec.read_text(encoding="utf-8")
-                fields, body = story._record(spec_text)  # pyright: ignore[reportPrivateUsage]
-                config = repo.config(path) if (path / "forge.toml").is_file() else repo.DEFAULTS
-                if story.stopped(record, findings, config["cold_read_rounds"]):
-                    lines += _read_loop(spec.stem, spec_text, text, path)
-                elif (fields.get("status") == "draft" and story.passed(record, findings)
-                      and record.get("read_hash") == repo.git("hash-object", "--", str(spec), cwd=path)):
-                    title = re.search(r"^# (.+)$", body, re.M)
-                    cd = f"cd {repo.quote(str(path))} && " if path != top else ""
-                    lines += [f"{review.plain(title[1]) if title else spec.stem} is ready for confirmation.",
-                              f'Next: {cd}forge spec confirm {spec.stem} --by "<name>"']
+    lines += owner_choices.documents(top, trees)
     quiet = not lines and not pinned
-    lines = _refresh(top, trees) + (lines or ([] if pinned else _idle(top)))
+    lines = _refresh(top, trees) + (lines or ([] if pinned else _idle(top))) + intake.offer_lines(top)
     if (top / "forge.toml").is_file():
         cfg = _report_config(top, refusals)
         if cfg["repo"] == "client":
@@ -402,11 +383,24 @@ def _report(top: Path, history: dict[str, Any] | None = None,
         if not ongoing and repo.is_prototype(top, {**cfg, "stage": "prototype"}):
             lines += build
             build = []
-    return (build + _due(top, history) + pinned + [line for alert in alerts.values() for line in alert]
-            + _hotspots(top, trees) + _overlaps(top, parts + [
-                (f"The fix {state['branch'].partition('/')[2]}", state)
-                for state, _ in fixes if state.get("branch")], prs, (history or {}).get("states", {}))
-            + lines + [f"Builds running: {running} of {agents['size']}"]), states
+    item_states = dict(parts)
+    item_states.update((f"The fix {state['branch'].partition('/')[2]}", state)
+                       for state, _ in fixes if state.get("branch"))
+    report = (build + _due(top, history) + pinned + [line for alert in alerts.values() for line in alert]
+            + _hotspots(top, trees) + _overlaps(top, list(item_states.items()), prs, (history or {}).get("states", {}))
+            + lines + [f"Builds running: {running} of {agents['size']}"])
+    ready = [(index, report[index - 1].split(" is ready to merge", 1)[0].removeprefix("The fix "), line)
+             for index, line in enumerate(report) if line.startswith(("Next: forge merge ", "Next: merge "))
+             and index and " is ready to merge" in report[index - 1]]
+    ready = [(index, item, line) for index, item, line in ready
+             if at_ref(top, item, state := item_states.get(item, item_states.get(f"The fix {item}", {})),
+                       prs.get(state.get("branch", ""))).get("status") in land.IN_CLOSE]
+    if (len(ready) >= 2 and (pin := _report_config(top, refusals).get("version"))
+            and not repo._older(pin.removeprefix("v"), "1.2.43")):
+        commands = {line for _, _, line in ready}
+        report = [line for line in report if line not in commands]
+        report.insert(ready[0][0], "Next: forge land " + " ".join(item for _, item, _ in ready))
+    return report
 
 
 def _overlaps(top: Path, items: list[tuple[str, dict[str, Any]]],
@@ -435,9 +429,7 @@ def _overlaps(top: Path, items: list[tuple[str, dict[str, Any]]],
 
 def _failed_schedules(top: Path) -> dict[str, list[str]]:
     """By workflow file: each failed scheduled or manual full run, with one fix to start or continue."""
-    def clean(text: str) -> str:  # safe inside double quotes in POSIX, PowerShell and cmd
-        return " ".join(re.sub(r"[^A-Za-z0-9 .,:;/_=()-]", " ", text).split())
-    alerts = {}
+    clean, alerts = board_facts.clean, {}
     for run in board_facts.failed_schedules(top):
         key = f"({clean(run['file'])})"
         run = {**run, "workflow": f"{run['workflow']} {key}"}
@@ -446,19 +438,21 @@ def _failed_schedules(top: Path) -> dict[str, list[str]]:
         why = f"The {kind} {workflow} run fails on {branch}"
         jobs = "; ".join(clean(job) for job in run["jobs"]) or "its failed jobs"
         done = f"{jobs} of the {kind} {workflow} workflow pass again on the next {kind} run on {branch}"
-        alerts[key] = [f"The latest {kind} {run['workflow']} run on {run['branch']} failed in: "
+        mark = "Needs you: " if run["full_run"] else ""
+        alerts[key] = [f"{mark}The latest {kind} {run['workflow']} run on {run['branch']} failed in: "
                        f"{'; '.join(run['jobs']) or 'unknown jobs'}.",
                        *([f"Failing tests: {', '.join(run['tests'])}."] if run["tests"] else []),
                        f'Next: forge fix start "{why}" --done "{done}" --kind mechanical']
     return alerts
 
 
-def _hotspots(top: Path, trees: dict[str, Path]) -> list[str]:
-    """Hotspots on the default branch, unless their fix already has a worktree."""
+def _hotspots(top: Path, trees: dict[str, Path], cap: int | None = None) -> list[str]:
+    """Hotspots on the default branch, unless their fix already has a worktree. With a cap, the
+    session context names that many and points to forge next for the rest."""
     ref = story.landed_ref(top)
     try:
         items = spotted.read(top, ref)
-        old = spotted.before_signoff(top, ref) if items else set()
+        old = spotted.before_signoff(top, ref, offline=cap is not None) if items else set()
         items = [entry for entry in items if entry["key"] not in old]
     except spotted.Unreadable as problem:
         return [f"{spotted.PATH} on the default branch can't be read, so no hotspots are "
@@ -470,7 +464,7 @@ def _hotspots(top: Path, trees: dict[str, Path]) -> list[str]:
     whys = {(repo.read_state(branch.partition("/")[2], path) or {}).get("why")
             for branch, path in trees.items()
             if re.fullmatch(r"(?:fix|forge)/[a-z0-9][a-z0-9-]*", branch)}
-    lines = []
+    lines: list[list[str]] = []
     for hotspot in hotspots:
         path, count = hotspot["path"], hotspot["count"]
         why, done = spotted.fix_text(path, hotspot["texts"])
@@ -484,9 +478,12 @@ def _hotspots(top: Path, trees: dict[str, Path]) -> list[str]:
                     "web", "frontend", "components", "screens", "pages"}
                 else "backend" if suffix in {".py", ".ts", ".js", ".go", ".rs", ".java", ".rb",
                                              ".sql", ".prisma"} else "mechanical")
-        lines += [f"{path} keeps breaking: {reason}",
-                  f'Next: forge fix start "{why}" --done "{done}" --kind {kind}']
-    return lines
+        lines.append([f"{path} keeps breaking: {reason}",
+                      f'Next: forge fix start "{why}" --done "{done}" --kind {kind}'])
+    if cap is None:
+        return [line for block in lines for line in block]
+    more = f"{len(lines) - cap} more files keep breaking. Run forge next for the list."
+    return [block[0] for block in lines[:cap]] + ([more] if len(lines) > cap else [])
 
 
 def _needs_demo_address(top: Path) -> bool:
@@ -508,7 +505,7 @@ def _needs_demo_address(top: Path) -> bool:
 
 def _report_config(path: Path, refusals: dict[Path, str]) -> dict[str, Any]:
     try:
-        return repo.command_fact(("report config", path.resolve()), path, lambda: repo.config(path))
+        return repo.command_fact(("report config", path.resolve()), path, lambda: routing.routed(path, repo.config(path)))
     except repo.Refused as refusal:
         refusals[path] = str(refusal).splitlines()[0]
         return repo.DEFAULTS
@@ -761,7 +758,7 @@ def _story(top: Path, key: str, path: Path | None, text: str,
             settings = (story.show(top, base, "forge.toml") if history is None
                         else history["docs"].get(f"{base}:forge.toml"))
             try:
-                cfg = (repo._config_text(settings, top) if settings  # pyright: ignore[reportPrivateUsage]
+                cfg = (routing.routed(top, repo._config_text(settings, top), base) if settings  # pyright: ignore[reportPrivateUsage]
                        else _report_config(top, refusals))
             except repo.Refused:  # unreadable there: what forge next reads here
                 cfg = _report_config(top, refusals)
@@ -805,9 +802,7 @@ def _approval(top: Path, key: str, path: Path, title: str, digest: str,
     return [f"{title} is waiting for approval" + (f" (the last answer was not recorded: {why})." if why
                                                   else "."),
             f"Next: in Claude Code, show {shown} in Plan Mode and exit Plan Mode with it as the plan",
-            f"Next: in Codex, show {shown}, then ask request_user_input with id approve_plan_{digest}, "
-            'question "Approve this plan?", header "Approve plan" and choices "Approve plan", '
-            '"Request changes", "Stop"']
+            *approval.codex_guidance(shown, key, digest)]
 
 
 def _next_round(key: str, text: str, doc_hash: str, title: str, required: bool, doc: str, top: Path) -> list[str]:
@@ -1070,19 +1065,19 @@ def _item(item: str, label: str, state: dict[str, Any], top: Path,
         stop = state["stop"]
         if "question" in stop:
             return [f"Forge stopped {label}. Ask the human:", stop["question"],
-                    "Next: " + close.REFUSALS["stuck"][1].format(item=item)]
-        reason = "its review reached the round limit with open findings"
-        return [f"Close stopped {label}: {reason}.",
+                    f'Next: cd {repo.quote(str(path or top))} && forge fix allow-large "<reason>"' if stop.get("predicted_files")
+                    else "Next: " + close.REFUSALS["stuck"][1].format(item=item)]
+        return [f"Close stopped {label}: its review reached the round limit with open findings.",
                 review.stop_question(path or top, item, state),
                 "Next: " + close.REFUSALS["hotspot"][1].format(item=item, **stop)]
+    if question := owner_choices.worker_question(top, item, pr):
+        return [f"The worker on {label} asked a question. Ask the human:", question,
+                "Next: " + close.REFUSALS["question"][1].format(item=item)]
     if not path and status not in ("ready", "merged", "done"):  # its checkout is on another machine
         if pr or _commit(top, f"refs/remotes/origin/{state.get('branch', '')}"):
             return [f"{label} has no checkout on this machine.", f"Next: forge work {item}"]
         starter = board._starters(top).get(repo.state_path(item)) or "the person who started it"
         return [f"{label} was started by {starter} and runs on their machine."]
-    if question := codex.record(top, item).get("question"):  # close and work refuse until it is answered
-        return [f"The worker on {label} asked a question. Ask the human:", question,
-                "Next: " + close.REFUSALS["question"][1].format(item=item)]
     if receipt.get("tidied") is True:
         return []
     if status == "ready" and not path and repo.merge_setting(top) == "agent":
@@ -1160,6 +1155,16 @@ def _item(item: str, label: str, state: dict[str, Any], top: Path,
                        f"Next: {step.format(**values)}{built}"]
 
 
+def resolve_refusal(item: str, state: dict[str, Any], top: Path, stuck: bool) -> tuple[str, str]:
+    """The refusal of --resolve on an item with no open stop; its next step is the one forge next gives."""
+    stop = state.get("stop")
+    if stop and not stop.get("choice"):
+        return (close.REFUSALS["bad_choice"][0], close.REFUSALS["stuck"][1]) if stuck else close.REFUSALS["bad_choice"]
+    lines = _item(item, item, state, top, top, {}, {})
+    step = (lines[-1].removeprefix("Next: ").split("  # ")[0]) if lines else "forge next"
+    return (close.REFUSALS["chosen_already" if stop else "no_stop"][0], step)
+
+
 def _builder(item: str, state: dict[str, Any], folder: Path, refusals: dict[Path, str]) -> str:
     """The worker beside a forge work line, chosen as forge work chooses it, with where its
     settings came from, when a forge.local.toml sets any; "" otherwise."""
@@ -1191,7 +1196,3 @@ def _prs(top: Path, state: str, fields: str) -> list[dict[str, Any]]:
         return []
     return [pr for pr in prs if isinstance(pr, dict) and isinstance(pr.get("headRefName"), str)
             ] if isinstance(prs, list) else []
-
-
-def _touches(count: int) -> str:
-    return f"{count} human touch{'es' if count != 1 else ''}"

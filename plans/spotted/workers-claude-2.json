@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tforge.toml\tFunctional: update the source-worker tests for Claude routing\tworkers-claude-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Functional: update the source-worker tests for Claude routing",
+      "from": "blocking",
+      "item": "workers-claude-2",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tforge.toml\tGate: proof list\tworkers-claude-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Gate: proof list",
+      "from": "blocking",
+      "item": "workers-claude-2",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "simplify\tforge.toml\tSimpler: undocumented approach \u2192 record the three decisions",
+      "kind": "simplify",
+      "path": "forge.toml",
+      "line": 4,
+      "text": "Simpler: undocumented approach \u2192 record the three decisions",
+      "from": "review",
+      "item": "workers-claude-2",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

@@ -163,6 +163,11 @@ def test_1_a_failed_round_runs_at_top_effort_in_the_same_thread(
     assert first.returncode == 0, first.stdout + first.stderr
     if family == "claude":
         assert f"Building BOARD/HELP with Claude ({model}, {effort})" in first.stdout
+    if failure != "note":
+        # These cases test close outcomes. Give each synthetic worker commit the
+        # proof entry needed to reach that outcome.
+        repo.git("commit", "--allow-empty", "-q", "-m", "Record the covered check", "-m",
+                 "Proof list:\n- 1: check: synthetic worker fixture", cwd=folder)
     if failure == "note":
         monkeypatch.delenv("STUB_CLAUDE_RESULT" if family == "claude" else "STUB_CODEX_TEXT",
                            raising=False)
@@ -195,7 +200,7 @@ def test_1_a_failed_round_runs_at_top_effort_in_the_same_thread(
         assert retry["threadId"] == conversation
         assert (initial["config"]["model"], initial["config"]["model_reasoning_effort"]) == (
             model, effort)
-        assert (retry["config"]["model"], retry["config"]["model_reasoning_effort"]) == (
+        assert (retry["config"]["model"], _sent(log, "turn/start")[-1]["effort"]) == (
             model, expected_effort)
         for key in ("agents.default_subagent_model", "agents.default_subagent_reasoning_effort"):
             assert initial["config"][key] == retry["config"][key]
@@ -271,7 +276,8 @@ def test_3_reviews_reads_and_design_keep_their_effort(
             [call] = calls(repo.bin / "claude-sdk-calls.jsonl")
             assert call["options"]["effort"] == "medium"
     elif phase == "review":
-        env.commit(folder, "fail_test.py", "raise SystemExit(0)\n", "Repair the failed test")
+        env.commit(folder, "fail_test.py", "raise SystemExit(0)\n", "Repair the failed test\n\n"
+                   "Proof list:\n- 1: check: synthetic fixed-effort review fixture")
         closed = env.close("BOARD/HELP")
         assert closed.returncode == 0, closed.stdout + closed.stderr
         [call] = env.review_calls()
@@ -328,9 +334,10 @@ def test_5_effort_none_is_never_sent(
         efforts = [call["options"]["effort"] for call in (initial, failed)]
         assert initial["session_id"] == failed["session_id"]
     else:
-        [initial] = _sent(log, "thread/start")
-        failed = _sent(log, "thread/resume")[-1]
-        efforts = [call["config"]["model_reasoning_effort"] for call in (initial, failed)]
+        [start] = _sent(log, "thread/start")
+        assert start["config"]["model_reasoning_effort"] == "none"
+        turns = _sent(log, "turn/start")
+        efforts = [turns[0]["effort"], turns[-1]["effort"]]
     assert efforts == ["none", "xhigh" if family == "claude" else "high"]
     assert (folder / "forge.toml").read_bytes() == before
 
@@ -392,7 +399,8 @@ def test_8_native_round_names_the_requested_effort(
     (folder / "fail_test.py").write_text("print('intentional native close failure')\n"
                                          "raise SystemExit(1)\n", encoding="utf-8")
     repo.git("add", "-A", cwd=folder)
-    repo.git("commit", "-q", "-m", "Prepare a native worker round", cwd=folder)
+    repo.git("commit", "-q", "-m", "Prepare a native worker round", "-m",
+             "Proof list:\n- 1: check: synthetic native worker fixture", cwd=folder)
 
     host = Session(repo, tmp_path / f"{family}-host", host_name)
     try:

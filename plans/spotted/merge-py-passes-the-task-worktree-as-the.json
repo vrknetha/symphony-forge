@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/checks.py\tFunctional: Preserve the CI round after the task folder is removed\tmerge-py-passes-the-task-worktree-as-the",
+      "kind": "bug",
+      "path": "src/forge/checks.py",
+      "line": 163,
+      "text": "Functional: Preserve the CI round after the task folder is removed",
+      "from": "blocking",
+      "item": "merge-py-passes-the-task-worktree-as-the",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/merge.py\tGate: Existing merge-wait tests select checks from the wrong branch\tmerge-py-passes-the-task-worktree-as-the",
+      "kind": "bug",
+      "path": "src/forge/merge.py",
+      "line": 170,
+      "text": "Gate: Existing merge-wait tests select checks from the wrong branch",
+      "from": "blocking",
+      "item": "merge-py-passes-the-task-worktree-as-the",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/merge.py\tNot done: forge merge keeps waiting on checks and prints its Merged line, with its start-to-merge time, even when the task folder is removed\tmerge-py-passes-the-task-worktree-as-the",
+      "kind": "bug",
+      "path": "src/forge/merge.py",
+      "line": 184,
+      "text": "Not done: forge merge keeps waiting on checks and prints its Merged line, with its start-to-merge time, even when the task folder is removed",
+      "from": "blocking",
+      "item": "merge-py-passes-the-task-worktree-as-the",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_merge_survives_task_folder_removal.py\tTest: forge merge keeps waiting on checks and prints its Merged line, with its start-to-merge time, even when the task folder is removed\tmerge-py-passes-the-task-worktree-as-the",
+      "kind": "bug",
+      "path": "tests/test_merge_survives_task_folder_removal.py",
+      "line": 27,
+      "text": "Test: forge merge keeps waiting on checks and prints its Merged line, with its start-to-merge time, even when the task folder is removed",
+      "from": "blocking",
+      "item": "merge-py-passes-the-task-worktree-as-the",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

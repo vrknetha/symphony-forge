@@ -153,13 +153,13 @@ def test_5_check_reads_retry_without_losing_json_streams(client):
 
 
 def test_6_release_reads_retry_before_deciding_whether_to_upgrade(client):
+    # The two attempts still matter when the release index moves from GitHub to PyPI.
     version = client.repo.forge("--version").stdout.split()[-1]
-    client.gh.respond("release", "view", stdout=json.dumps({"tagName": version}))
-    bad_answers(client, 1, stderr="HTTP 502: Bad Gateway", prefix=("release", "view"))
+    client.repo.pypi(502, version.removeprefix("v"))
     done = client.repo.forge("upgrade")
     assert done.returncode == 1, done.stdout + done.stderr
     assert "already pins" in done.stderr
-    assert len(client.gh_calls("release", "view")) == 2
+    assert len(client.repo.pypi_calls()) == 2
 
 
 @pytest.mark.parametrize("client,answer,confirmation", [

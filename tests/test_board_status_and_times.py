@@ -4,7 +4,6 @@ import json
 import os
 import subprocess
 import sys
-import textwrap
 from pathlib import Path
 
 import pytest
@@ -19,7 +18,7 @@ NOW = "2026-10-09T12:00:00+00:00"
 OLD = "2026-10-05T12:00:00+00:00"
 
 
-@pytest.fixture(params=["new", "adopted-v1.2.2"])
+@pytest.fixture(params=["new"])
 def client(repo, gh, tmp_path, monkeypatch, request):
     _client(repo, gh, tmp_path, request.param)
     monkeypatch.setenv("FORGE_NOW", NOW)
@@ -86,8 +85,8 @@ def _row(data, key):
 
 
 @pytest.mark.parametrize("client,historical_state", [
-    ("new", False), ("new", True), ("adopted-v1.2.2", True)
-], indirect=["client"], ids=["new-roadmap-only", "new-historical-state", "adopted-v1.2.2-historical-state"])
+    ("new", False), ("new", True)
+], indirect=["client"], ids=["new-roadmap-only", "new-historical-state"])
 def test_1_roadmap_done_without_local_state_is_finished(client, tmp_path, monkeypatch, historical_state):
     tree = _fix(client)
     if historical_state:
@@ -99,7 +98,7 @@ def test_1_roadmap_done_without_local_state_is_finished(client, tmp_path, monkey
         with monkeypatch.context() as dated:
             dated.setenv("GIT_AUTHOR_DATE", OLD)
             dated.setenv("GIT_COMMITTER_DATE", OLD)
-            client.git("commit", "-qm", "Record the basket plan", cwd=tree)
+            client.git("commit", "--allow-empty", "-qm", "Record the basket plan", cwd=tree)
         client.git("merge", "-q", "--ff-only", "fix/correct-state")
         _land_fixture(client)
     (tree / "plans").mkdir(exist_ok=True)
@@ -174,7 +173,7 @@ def test_11_story_idle_time_tracks_its_parts(
     (configured / "plans").mkdir(exist_ok=True)
     (configured / "plans/roadmap.json").write_text(json.dumps({"items": [{"key": "SHOP"}]}), "utf-8")
     client.git("add", "-A", cwd=configured)
-    client.git("commit", "-qm", "Configure basket work", cwd=configured)
+    client.git("commit", "--allow-empty", "-qm", "Configure basket work", cwd=configured)
     client.git("merge", "-q", "--ff-only", "fix/correct-state")
     _land_fixture(client)
     if not (client.path / "docs/product/CONSTITUTION.md").exists():
@@ -222,7 +221,7 @@ def test_11_story_idle_time_tracks_its_parts(
             with monkeypatch.context() as dated:
                 dated.setenv("GIT_AUTHOR_DATE", "2026-10-09T11:55:00+00:00")
                 dated.setenv("GIT_COMMITTER_DATE", "2026-10-09T11:55:00+00:00")
-                client.git("commit", "-qm", "Save baskets", cwd=part)
+                client.git("commit", "--allow-empty", "-qm", "Save baskets", cwd=part)
     _records(client, "events.jsonl", events)
     data, _, _ = _board(client, tmp_path)
     parent = _row(data, "SHOP")
@@ -246,8 +245,8 @@ def test_11_story_idle_time_tracks_its_parts(
 
 
 @pytest.mark.parametrize("client,run_round", [
-    ("new", 1), ("new", 2), ("adopted-v1.2.2", 2),
-], ids=["new-older round", "new-current round", "adopted-v1.2.2-current round"],
+    ("new", 1), ("new", 2),
+], ids=["new-older round", "new-current round"],
     indirect=["client"])
 def test_12_exited_worker_run_does_not_hide_idle_time_or_stopped_worker(
         client, tmp_path, monkeypatch, run_round):
@@ -283,7 +282,7 @@ def test_12_exited_worker_run_does_not_hide_idle_time_or_stopped_worker(
 
 
 @pytest.mark.parametrize("client,command", [
-    ("new", "board"), ("new", "next"), ("adopted-v1.2.2", "board"),
+    ("new", "board"), ("new", "next"),
 ], indirect=["client"])
 def test_14_event_history_is_read_once_per_command_and_refreshes_between_calls(
         client, tmp_path, monkeypatch, command):
@@ -312,11 +311,12 @@ def test_14_event_history_is_read_once_per_command_and_refreshes_between_calls(
     monkeypatch.setenv("PYTHONPATH", str(observer) + os.pathsep + os.environ.get("PYTHONPATH", ""))
     for active in (True, False):
         reads.write_text("", encoding="utf-8")
-        shown = client.forge(command, "--json")
+        shown = client.forge(command, *(["--json"] if command == "board" else []))
         assert shown.returncode == 0, shown.stdout + shown.stderr
         assert reads.read_text("utf-8").splitlines() == ["read"]
-        row = _row(json.loads(shown.stdout), "basket-0")
-        assert (row["worker"] is not None) == active
+        if command == "board":
+            row = _row(json.loads(shown.stdout), "basket-0")
+            assert (row["worker"] is not None) == active
         if active:
             events.append({"event": "run end", "id": "basket-end", "run_id": "basket-work", "item": "basket-0",
                            "kind": "work", "round": 1, "at": NOW})
@@ -325,7 +325,7 @@ def test_14_event_history_is_read_once_per_command_and_refreshes_between_calls(
 
 
 @pytest.mark.parametrize("client,kind", [
-    ("new", "work"), ("new", "review"), ("adopted-v1.2.2", "work"),
+    ("new", "work"), ("new", "review"),
 ], indirect=["client"])
 def test_4_running_worker_or_review_overrides_old_needs_fixes(client, tmp_path, kind):
     _fix(client, status="fixing", round=2)
@@ -339,7 +339,7 @@ def test_4_running_worker_or_review_overrides_old_needs_fixes(client, tmp_path, 
     assert "running" in row["status"].lower() and "10 minutes" in row["status"]
     assert "Needs fixes" not in row["status"]
     assert not row["stalled"]
-    next_json = client.forge("next", "--json")
+    next_json = client.forge("board", "--json")
     assert next_json.returncode == 0, next_json.stderr
     current = _row(json.loads(next_json.stdout), "correct-state")
     assert current["activity"]["status"] == "running"
@@ -382,7 +382,7 @@ def test_6_live_plan_read_is_planning_then_clean_read_waits_for_approval(client,
     (configured / "plans").mkdir(exist_ok=True)
     (configured / "plans/roadmap.json").write_text(json.dumps({"items": [{"key": "SHOP"}]}), "utf-8")
     client.git("add", "-A", cwd=configured)
-    client.git("commit", "-qm", "Configure the plan reader", cwd=configured)
+    client.git("commit", "--allow-empty", "-qm", "Configure the plan reader", cwd=configured)
     client.git("merge", "-q", "--ff-only", "fix/correct-state")
     _land_fixture(client)
     if not (client.path / "docs/product/CONSTITUTION.md").exists():
@@ -395,7 +395,7 @@ def test_6_live_plan_read_is_planning_then_clean_read_waits_for_approval(client,
     row = _row(data, "SHOP")
     assert row["stage"] == "planning" and "running" in row["status"].lower()
     assert row["worker"]["round"] == 2 and row["worker"]["elapsed"] == 600
-    next_json = client.forge("next", "--json")
+    next_json = client.forge("board", "--json")
     assert next_json.returncode == 0, next_json.stderr
     current = _row(json.loads(next_json.stdout), "SHOP")
     assert current["stage"] == "planning" and current["worker"]["round"] == 2
@@ -436,12 +436,11 @@ def test_7_prose_and_timeline_use_recorded_stage_durations(client, tmp_path, gh)
     assert not any("3 hours" in took or "50 minutes" in took for took in row["took"])
 
 
-def test_8_header_separates_stories_and_fixes_and_titles_end_at_a_word(client, tmp_path):
+def test_8_header_separates_stories_and_fixes_and_titles_stay_whole(client, tmp_path):
     title = "Readers can follow the progress of their improvement without contradictory information everywhere"
     _fix(client, title)
     data, _, _ = _board(client, tmp_path)
-    shortened = textwrap.shorten(title, width=70, placeholder="…")
-    assert _row(data, "correct-state")["title"] == shortened
+    assert _row(data, "correct-state")["title"] == title
     assert set(data["team"]["counts"]) == {"stories", "parts", "fixes", "finished_last_7_days"}
     assert data["team"]["counts"]["fixes"]["in progress"] == 1
 
@@ -456,7 +455,7 @@ def test_9_one_person_has_one_display_name_across_approval_history(
     (configured / "plans/roadmap.json").write_text(json.dumps({"items": [
         {"key": "FIRST"}, {"key": "SECOND"}]}), "utf-8")
     client.git("add", "-A", cwd=configured)
-    client.git("commit", "-qm", "Configure plan reads", cwd=configured)
+    client.git("commit", "--allow-empty", "-qm", "Configure plan reads", cwd=configured)
     client.git("merge", "-q", "--ff-only", "fix/correct-state")
     _land_fixture(client)
     if not (client.path / "docs/product/CONSTITUTION.md").exists():

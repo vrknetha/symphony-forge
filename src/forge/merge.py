@@ -6,7 +6,7 @@ import os
 import re
 import tomllib
 from pathlib import Path
-from forge import checks, close, codex, githooks, prcheck, repo, review, story, task, time_records
+from forge import board_facts, checks, close, codex, github, githooks, prcheck, repo, review, story, task, time_records
 
 COMMANDS = [{
     "words": "merge", "run": "merge", "changes_state": False,
@@ -18,6 +18,8 @@ COMMANDS = [{
 ENABLE = "let-the-agent-merge"
 
 REFUSALS = {
+    "red_default": ("The full run {run} failed. Hold this task.",
+                    "start a fix for it and merge that fix. After the repair, start a full run by hand on the default branch to clear the hold."),
     "disabled": ("forge merge is disabled by merge = \"human\" in the default branch's forge.toml.",
                  "the repo owner runs forge merge enable in their own terminal"),
     "owner_only": ("Only the repo owner switches on agent merges, on {default}, from a terminal outside Claude Code or Codex.", "the repo owner runs forge merge enable on {default} in a terminal outside Claude Code or Codex"),
@@ -27,6 +29,8 @@ REFUSALS = {
     "not_ready": ("Forge has no clean ready record for {item}.", "forge close {item}"),
     "changed": ("The pull request's head changed since Forge recorded {item} ready.", "forge close {item}"),
     "retest_failed": ("The combined change failed its tests.\n{tests}", "forge work {item}"),
+    "train_moved": ("{default} no longer holds what the merge train tested, so {item} did not merge.",
+                    "forge land {item}"),
     "dirty_retest": ("The worktree has uncommitted changes:\n{files}",
                      "commit or set aside these changes, then forge merge {item}"),
     "base_moved": ("The default branch moved five times after the retest. Run forge merge again.",
@@ -42,12 +46,18 @@ REFUSALS = {
                       "check the branch on GitHub, then forge merge {item}"),
 }
 def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
+    github.wait_for_reset = True  # Merge intentionally skips the shared release-pin check.
     top, item = repo.root(), args.item
     if item == "enable":
         return _enable(top)
     if repo.merge_setting(top) != "agent":
         repo.refuse(REFUSALS["owner_merges" if item == ENABLE else "disabled"], item=item)
     worktree = close._worktree(item)
+    # The task folder can vanish while checks run, including the caller's checkout.
+    main_checkout = repo.forge_dir(top).parent.parent
+    if top == worktree:
+        os.chdir(main_checkout)
+    top = main_checkout
     branch = repo.current_branch(worktree)
     default = repo.default_branch(top)
     repo.git("fetch", "-q", "origin", default, cwd=top)
@@ -99,19 +109,24 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
         # A retry may already contain main. Its saved head still owns the CI wait.
         config = repo._sample_settings(worktree, repo._config_text(after or ""), head)
         item_files = set(repo.git("diff", "--name-only", "--no-renames", "-z", base, head,
-                                  cwd=worktree).split("\0")) - {""}
+                                  cwd=top).split("\0")) - {""}
         moves = 0
         combined_tested = False
+        train = getattr(args, "train", None)  # the default branch's tree that a merge train tested for this head
         while True:
             checked_default = repo.git("rev-parse", f"origin/{default}", cwd=top)
-            retested = checked_default != base
+            retested = checked_default != base and not train
             overlap = False
             ci_retest = False
             if retested:
                 default_files = set(repo.git("diff", "--name-only", "--no-renames", "-z", base,
-                                             checked_default, cwd=worktree).split("\0")) - {""}
+                                             checked_default, cwd=top).split("\0")) - {""}
                 overlap = bool(item_files & default_files)
             if retested and (not combined_tested or overlap):
+                if not worktree.exists():
+                    # A hand-deleted checkout may still be registered with Git.
+                    repo.run("git", "worktree", "remove", str(worktree), cwd=top)
+                    repo.git("worktree", "add", "-q", str(worktree), branch, cwd=top)
                 status = repo.run("git", "status", "--porcelain", "-z", "--no-renames",
                                   "--untracked-files=all", cwd=worktree)
                 status.check_returncode()
@@ -150,18 +165,18 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
                         branch_diff=review.fingerprint(head, item, worktree, state, base, branch_diff=True))
                     close._save(worktree, item, state, "Keep the review on the combined change")
                     head = repo.git("rev-parse", "HEAD", cwd=worktree)
-                    close._push(worktree, branch)
+                    checks.push_after_checks(worktree, branch)
                     receipt["commit"] = head
                     _save_ready(path, receipt)
                 else:
                     # Only the local test needs this merge. Keep GitHub's already checked head.
                     repo.git("reset", "--keep", head, cwd=worktree)
             try:
-                if (checks.required(worktree, default, head) is not None or
+                if (checks.required(worktree if worktree.exists() else top, default, head) is not None or
                         config["test_place"] == "ci" and (not retested or overlap or ci_retest)):
-                    checks.wait(worktree, item, head, config["checks"],
+                    checks.wait(top, item, head, config["checks"],
                                 branch=branch, progress=getattr(args, "wait_for_progress", False),
-                                slot=getattr(args, "check_slot", None))
+                                slot=getattr(args, "check_slot", None), command="merge", home=worktree)
             except repo.Refused as error:
                 if error.entry is not checks.REFUSALS["conflict"] or refreshed:
                     raise
@@ -173,8 +188,8 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
                             pin_before=["close", item] if not hasattr(args, "land_rounds") else None))
                 return merge(args, refreshed=True)
             completion = ["--body-file", "-"]
-            item_state = story.json_of(story.show(worktree, head, repo.state_path(item)))
-            body = close._refresh_record(worktree, item, item_state, pr)
+            item_state = story.json_of(story.show(top, head, repo.state_path(item)))
+            body = close._refresh_record(top, item, item_state, pr)
             if "/" in item:
                 key, tid = item.split("/")
                 state = story.json_of(story.show(top, head, repo.state_path(key)))
@@ -191,13 +206,20 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
             repo.git("fetch", "-q", "origin", default, cwd=top)
             if repo.merge_setting(top) != "agent":
                 repo.refuse(REFUSALS["owner_merges" if item == ENABLE else "disabled"], item=item)
-            if repo.git("rev-parse", f"origin/{default}", cwd=top) == checked_default:
-                break
+            if nightly := red(top, item=item):
+                repo.refuse(REFUSALS["red_default"], run=nightly)
+            if train or repo.git("rev-parse", f"origin/{default}", cwd=top) == checked_default:
+                break  # a train member never tests again: the check below decides
             if combined_tested:
                 moves += 1
             if moves >= 5:
                 repo.refuse(REFUSALS["base_moved"], item=item)
             base = checked_default
+        if train and repo.git("rev-parse", f"origin/{default}^{{tree}}", cwd=top) != train:
+            repo.refuse(REFUSALS["train_moved"], item=item, default=default)
+        from forge import stops
+        if stops.stopped(top, item):
+            raise repo.Refused(f"{item} was stopped; forge land {item} continues it.", f"forge land {item}")
         done = repo.run("gh", "pr", "merge", str(pr["number"]), "--squash",
                         "--subject", pr["title"], *completion, "--match-head-commit", head, cwd=top, input=body)
         after = repo.run("gh", "pr", "view", str(pr["number"]), "--json", "state", "--jq", ".state", cwd=top)
@@ -227,7 +249,12 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
                         return merge(args, refreshed=True)
             reason = (done.stderr or done.stdout or "GitHub gave no reason").strip().splitlines()[-1]
             repo.refuse(REFUSALS["merge_failed" if done.returncode else "pending"], item=item, reason=reason)
-    repo.record_event(top, item, "item finished", round=(repo.read_state(item, worktree) or {}).get("round"))
+    local = (repo.read_state(item, worktree)
+             or story.json_of(story.show(top, head, repo.state_path(item))))
+    repo.record_event(top, item, "item finished", round=local.get("round"))
+    if finished := close._pull_request(top, branch):
+        if finished.get("state") == "MERGED" and finished.get("mergedAt"):
+            close._refresh_record(top, item, local, finished)
     if "/" in item:
         children = repo.run("gh", "pr", "list", "--base", branch, "--state", "open",
                             "--limit", "1000", "--json", "number,headRefName", cwd=top)
@@ -264,10 +291,9 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
                 repo.refuse(REFUSALS["retarget"], other=other, default=default, item=item)
             if found:
                 print(f"Next: forge close {other}")
-    main_checkout = repo.forge_dir(top).parent.parent
     pending = receipt.get("pending_archives")
     if pending is None:
-        pending = sorted(_conversations(main_checkout, item))
+        pending = sorted(_conversations(top, item))
         receipt["pending_archives"] = pending
         _save_ready(path, receipt)
     if not isinstance(pending, list) or not all(isinstance(thread, str) for thread in pending):
@@ -275,7 +301,7 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
     failed_archives = []
     for thread in pending[:]:
         try:
-            archived = codex.archive(main_checkout, item, "Fix", thread)
+            archived = codex.archive(top, item, "Fix", thread)
         except Exception:
             archived = False
         if not archived:
@@ -290,6 +316,13 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
             "git", "push", f"--force-with-lease={remote_ref}:{head}", "origin", "--delete", branch, cwd=top).returncode):
         repo.refuse(REFUSALS["remote_branch"], item=item)
     repo.git("fetch", "-q", "origin", default, cwd=top)
+    ended_at = story.merged_at(top, f"origin/{default}", repo.state_path(item))
+    print(time_records.merge_line(top, item, local,
+                                  body if pr["state"] == "OPEN" else pr.get("body") or "", ended_at))
+    if not worktree.exists():
+        print(f"Merged {item}. Its worktree was already removed.")
+        path.unlink(missing_ok=True)
+        return 0
     status = repo.git("status", "--porcelain", "-z", "--no-renames", "--untracked-files=all",
                       cwd=worktree).split("\0")
     untracked = {worktree / entry[3:] for entry in status if entry.startswith("?? ")}
@@ -304,19 +337,17 @@ def merge(args: argparse.Namespace, *, refreshed: bool = False) -> int:
         print(f"Merged {item}. Its worktree at {worktree} has uncommitted local files, so Forge left it "
               f"and its local branch in place: {', '.join(kept[:3])}")
     else:
-        if top == worktree:
-            os.chdir(main_checkout)
         for shim in generated:
             shim.unlink()
         # The pull request is merged, so a failed removal is only cleanup. Git may already have
         # dropped the worktree's registration, which forge doctor needs, so the human deletes it.
-        if repo.run("git", "worktree", "remove", str(worktree), cwd=main_checkout).returncode:
+        if repo.run("git", "worktree", "remove", str(worktree), cwd=top).returncode:
             dirty = True
             print(f"Merged {item}. Forge could not fully remove its worktree at {worktree}; close any "
                   f"program using that folder, then delete the folder {worktree}.")
         else:
-            if repo.run("git", "show-ref", "--verify", f"refs/heads/{branch}", cwd=main_checkout).returncode == 0:
-                repo.git("branch", "-D", branch, cwd=main_checkout)
+            if repo.run("git", "show-ref", "--verify", f"refs/heads/{branch}", cwd=top).returncode == 0:
+                repo.git("branch", "-D", branch, cwd=top)
             print(f"Merged {item} and removed its worktree and local branch.")
     if dirty or advanced:
         receipt["tidied"] = True
@@ -397,6 +428,40 @@ def _save_ready(path: Path, receipt: dict) -> None:
     saved = path.with_suffix(".tmp")
     saved.write_text(json.dumps(receipt) + "\n", encoding="utf-8")
     os.replace(saved, path)
+
+
+def red(top: Path, *, item: str = "") -> str:
+    """Name the failed newest finished full run; fixes remain free to repair it."""
+    if item and "/" not in item:
+        return ""
+    default = repo.default_branch(top)
+    config = repo._config_text(story.show(top, f"origin/{default}", "forge.toml") or "")
+    workflow = config.get("full_suite_workflow")
+    if not workflow and repo.test_place(config) != "ci":
+        return ""
+    endpoint = f"repos/{{owner}}/{{repo}}/actions/workflows/{workflow or 'forge.yml'}/runs"
+    runs = []
+    for event in ("schedule", "workflow_dispatch"):
+        done = repo.run("gh", "api", endpoint, "--method", "GET", "--raw-field", f"event={event}",
+                        "--raw-field", f"branch={default}", "--raw-field", "per_page=20", cwd=top, timeout=60)
+        try:
+            found = json.loads(done.stdout)["workflow_runs"]
+            if done.returncode or not isinstance(found, list) or any(not isinstance(run, dict) for run in found):
+                raise ValueError
+        except (ValueError, KeyError, TypeError):
+            repo.refuse(checks.REFUSALS["not_green"], item=item,
+                        reason="GitHub did not answer: " + (done.stderr.strip() or done.stdout.strip()
+                                                           or "no readable answer").rstrip("."))
+        runs.extend(found)
+    runs.sort(key=lambda run: run.get("created_at", ""), reverse=True)
+    for run in runs:
+        if (run := board_facts.finished_full_run(top, run)) is None:
+            continue
+        if run.get("conclusion") != "failure":
+            return ""
+        name = run.get("display_title") or run.get("name") or "Full test suite"
+        return name + (f" ({run['html_url']})" if run.get("html_url") else "")
+    return ""
 
 
 def _conversations(top: Path, item: str) -> set[str]:
