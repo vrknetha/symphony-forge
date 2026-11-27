@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-27T05:39:54.258146+00:00
-seconds: 562.834
-read_hash: d34c48f3ce306c2e9fdfdead0fa5a411f3f47f8f
-round: 1
+read_at: 2026-11-27T05:55:21.676666+00:00
+seconds: 613.685
+read_hash: 28f5de422690719804054b662637dc31c9147050
+round: 2
 passed: no
-doc_seen: d34c48f3ce306c2e9fdfdead0fa5a411f3f47f8f
+doc_seen: 28f5de422690719804054b662637dc31c9147050
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 9c0cb49434536985aea8a3c26493704cdf23d015
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21b7b-ed92-75b1-8fff-6675548f2f3a
 session:
-loop_choice:
-loop_reason:
+loop_choice: accept
+loop_reason: Owner accepted; builder fixes both in its first note: commit the story record together with the owner's answer, and an answered question always gets one more write turn before the cold read
 ---
 # Cold read notes
 
@@ -121,3 +121,59 @@ Only a genuine trade-off goes to the human, as a question with options.
    
    Gain 4, Work 2, Harm 2
    Disposition: cut the three Done-when items now match one task (the restart item is joined to item 1), and the write prompt applies the cold read's own split rule instead of one part per story (Done when, Write step)
+
+## Round 2
+
+10. Blocking: Not done: item 3: answering a stop can leave the story parked.
+   
+   Raise: Not done — When a question is answered in the story checkout, [the approval hook](/src/forge/approval.py:328) updates the story record without committing it. [Resolving the read](/src/forge/story.py:199) commits the plan and notes, but not that record. The new [dirty-folder rule](/plans/FORGE-PLANQUEUE-1.md:52) then silently leaves the story alone. The planned test runs the resolve command without exercising the question hook.
+   
+   Case: normal use - the owner answers a round-limit question through the chat’s question tool.
+   
+   Gain 5, Work 3, Harm 3
+   Disposition: keep - Owner accepted; builder fixes both in its first note: commit the story record together with the owner's answer, and an answered question always gets one more write turn before the cold read
+
+11. Blocking: Not done: item 3: an owner’s answer can bypass the writer.
+   
+   Raise: Not done — [The amended prompt](/plans/FORGE-PLANQUEUE-1.md:49) can leave a complete plan with no template comments and a question in Notes. After the owner records an answer there, [the new draft test](/plans/FORGE-PLANQUEUE-1.md:48) does not select another write turn; Forge proceeds to the cold read. The answer can therefore remain in Notes without changing the behavior or tasks the owner chose.
+   
+   Case: normal use - the writer completes a draft, asks the owner to choose between two behaviors, and the owner answers.
+   
+   Gain 5, Work 3, Harm 3
+   Disposition: keep - Owner accepted; builder fixes both in its first note: commit the story record together with the owner's answer, and an answered question always gets one more write turn before the cold read
+
+12. Advisory: An added idea can reach approval without being planned into tasks.
+   
+   Raise: Functional — [Intake](/src/forge/intake.py:193) adds the new result to the top of an existing plan. If that plan has no template comments, [the amended step rule](/plans/FORGE-PLANQUEUE-1.md:48) chooses the read rather than the writer. [The parser](/src/forge/story.py:504) does not require every result to have a task, so a passing reader can leave the new result unbuilt.
+   
+   Case: normal use - Forge adds an idea to a previously approved, completed plan.
+   
+   Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+13. Advisory: Antigravity does not fall back to Claude when Codex is unavailable.
+   
+   Raise: Functional — [The plan](/plans/FORGE-PLANQUEUE-1.md:50) says the new Antigravity path tries Codex, then Claude. With no saved or configured reader, [the existing selector](/src/forge/roles.py:101) instead falls back to the reported coordinator, which the plan sets to Antigravity.
+   
+   Case: normal use - Antigravity writes a fresh plan, Claude is installed, and the Codex SDK is unavailable.
+   
+   Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+14. Advisory: A discarded read can commit a person’s unfinished notes.
+   
+   Raise: Functional — [The read step](/plans/FORGE-PLANQUEUE-1.md:50) commits the notes and story record after every exit. [A cold read discards its result](/src/forge/story.py:378) if a file changes during the read, but the proposed commit still stages the whole notes file.
+   
+   Case: normal use - a person edits the read notes while a cold read is running.
+   
+   Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+15. Advisory: The dirty-folder rule overlooks other uncommitted files.
+   
+   Raise: Plan gap — [The accepted limit](/plans/FORGE-PLANQUEUE-1.md:35) says a plan folder with uncommitted changes is left alone, but [the implementation rule](/plans/FORGE-PLANQUEUE-1.md:52) checks only the plan, read notes, and story record.
+   
+   Case: normal use - a person has uncommitted design files in the story folder.
+   
+   Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
