@@ -21,6 +21,13 @@
     "start": "b9d31df27aa582d459b81421bfcb07158b969839"
   },
   "done_when": "forge.toml sets test_place = \"local\" and checks = [\"forge-pr-check\"], so close runs only the change's related tests on this machine and waits for no GitHub test job, and the generated workflow from forge sync matches; nothing else changes",
+  "drop": {
+    "at": "2026-11-27T16:50:21.890634+00:00",
+    "because": "Its settings and workflow changes are already on main",
+    "by": "vrknetha <vrknetha@gmail.com> 1795798221 +0530",
+    "pull_request": 23,
+    "status": "fixing"
+  },
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
@@ -172,7 +179,7 @@
     "status": "clean"
   },
   "round": 3,
-  "status": "fixing",
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-26T16:10:04.316022+00:00",
@@ -212,6 +219,10 @@
       "at": "2026-11-27T03:53:59.702180+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T16:50:21.890877+00:00",
+      "step": "drop"
     }
   ],
   "stuck": {
