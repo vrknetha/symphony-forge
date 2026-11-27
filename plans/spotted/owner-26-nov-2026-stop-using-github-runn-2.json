@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\tforge.toml\tStop promising nightly coverage after switching to local tests\towner-26-nov-2026-stop-using-github-runn-2",
+      "kind": "bug",
+      "path": "forge.toml",
+      "line": 9,
+      "text": "Stop promising nightly coverage after switching to local tests",
+      "from": "blocking",
+      "item": "owner-26-nov-2026-stop-using-github-runn-2",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
