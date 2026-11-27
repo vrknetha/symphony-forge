@@ -644,27 +644,6 @@
       "order": 124
     },
     {
-      "key": "FORGE-SANDBOX-1",
-      "title": "Close runs in a Mainline sandbox when the laptop's test lane is full",
-      "spec": "docs/specs/sandbox-runs.md",
-      "status": "pending",
-      "order": 78
-    },
-    {
-      "key": "FORGE-SANDBOX-2",
-      "title": "Build rounds run in a Mainline sandbox when the laptop's agent line is full",
-      "spec": "docs/specs/sandbox-runs.md",
-      "status": "pending",
-      "order": 79
-    },
-    {
-      "key": "FORGE-SANDBOX-3",
-      "title": "A team shares sandbox places, one live team board and its credits",
-      "spec": "docs/specs/sandbox-runs.md",
-      "status": "pending",
-      "order": 80
-    },
-    {
       "key": "FORGE-SLOWTEST-1",
       "title": "Faster tests for repos with one combined test command",
       "status": "pending",
