@@ -510,7 +510,7 @@ def _loop(wake_path: Path) -> int:
                         continue
                     if key in retries and now < retries[key]:
                         continue
-                    if stops.stopped(top, item):
+                    if stops.stopped(top, item) or stops.parked(top, item, tree):
                         continue
                     if land._pending(top, item):
                         continue
