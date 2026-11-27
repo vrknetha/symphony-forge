@@ -23,19 +23,25 @@ def expression(text, **github):
 
 
 def test_2_pull_requests_keep_closes_named_checks():
-    checks = tomllib.loads((ROOT / "forge.toml").read_text(encoding="utf-8"))["checks"]
+    settings = tomllib.loads((ROOT / "forge.toml").read_text(encoding="utf-8"))
+    checks = settings["checks"]
+    place = settings.get("test_place", "ci" if any(
+        check != "forge-pr-check" for check in checks) else "local")
+    assert "forge-pr-check" in checks
     workflow = (ROOT / ".github/workflows/forge.yml").read_text(encoding="utf-8")
-    assert {"tests", "forge-pr-check"} <= set(checks)
     # The required test gate answers only to pull requests. Evaluate the emitted
     # event condition and name without fixing its syntax.
     jobs = dict(re.findall(r"^  ([\w-]+):\n(.*?)(?=^  [\w-]+:|\Z)",
                            workflow.split("\njobs:\n", 1)[1], re.M | re.S))
     for name in ("tests", "forge-pr-check"):
-        job = jobs.get("tests-passed", jobs["tests"]) if name == "tests" else jobs[name]
+        if name not in checks or (name == "tests" and place == "local"):
+            continue
+        job = (jobs.get("tests-passed", jobs["tests"]) if name == "tests" else jobs[name])
         condition = re.search(r"^    if: (.+)$", job, re.M)[1]
+        expected_event = "pull_request" if name == "tests" else "pull_request_target"
         for event in ("pull_request", "pull_request_target", "push", "schedule", "workflow_dispatch"):
-            expected = event == "pull_request" if name == "tests" else event == "pull_request_target"
-            assert bool(expression("${{ " + condition + " }}", event_name=event)) == expected
+            assert bool(expression("${{ " + condition + " }}", event_name=event)) == (
+                event == expected_event)
         if name == "tests":
             emitted_name = re.search(r"^    name: (.+)$", job, re.M)[1]
             assert expression(emitted_name, event_name="pull_request") == "tests"

@@ -21,13 +21,17 @@ def approved(top: Path, item: str, commit: str | None = None) -> set[str]:
     return {sentence(doc["done"][n]) for n in covers if n in doc["done"]}
 
 
-def drop(top: Path, item: str, findings: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def drop(top: Path, item: str, findings: list[dict[str, Any]],
+         previous: dict[str, Any] | None = None) -> list[dict[str, Any]]:
     """Drop a story task's `Not done` note on builder guidance (never a security or data-loss one)
-    and exact repeats in one round, keeping the higher priority of two repeats."""
+    and exact repeats in one round, keeping the higher priority of two repeats. Mark `After merge:`
+    findings as pending and carry earlier pending checks forward."""
     from forge import score
 
     owned, kept = approved(top, item), {}
     for finding in findings:
+        if score.identity("", finding["title"])[1].startswith("after merge:"):
+            finding = {**finding, "priority": "P2", "follow_up": score.PENDING}
         title = re.sub(r"^\[P[0-3]\]\s*", "", finding["title"].strip())
         missed = re.match(r"Not done\s*:\s*(.*)", title, re.I)
         said = sentence(missed[1]) if missed else ""
@@ -38,4 +42,11 @@ def drop(top: Path, item: str, findings: list[dict[str, Any]]) -> list[dict[str,
         key = tuple(str(finding.get(k, "")).strip() for k in ("title", "file", "line", "body"))
         if key not in kept or finding["priority"] < kept[key]["priority"]:
             kept[key] = finding
-    return list(kept.values())
+    result = list(kept.values())
+    if previous:
+        seen = {score.identity(f["file"], f["title"]) for f in result}
+        for old in previous.get("findings", []):
+            if score.pending(old) and (key := score.identity(old["file"], old["title"])) not in seen:
+                seen.add(key)
+                result.append(dict(old))
+    return result

@@ -208,7 +208,8 @@ def read(args: tuple[str, ...], execute) -> subprocess.CompletedProcess[str]:
     if not read:
         return execute()
     jq = args[args.index("--jq") + 1] if "--jq" in args else None
-    structured = api or "--json" in args
+    job_log = api and re.fullmatch(r"repos/[^/]+/[^/]+/actions/jobs/\d+/logs", args[-1])
+    structured = (api and not job_log) or "--json" in args
     for pause in (1, 2, 4, None):
         done = execute()
         said = done.stderr + done.stdout

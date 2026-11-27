@@ -47,7 +47,7 @@ def test_2_story_done_when_and_builder_sections_are_readable_after_sync(repo):
 
 def test_3_plan_framing_and_status_updates_have_one_shape_after_sync(repo):
     skill = synced_skills(repo)
-    assert "one framing line before showing a story in Plan Mode" in skill
+    assert "Use one framing line before you show the story" in skill
     assert "Approving: <title>, <n> parts, <risks>" in skill
     assert "Ready to merge (n): ... · Needs you (n): ..." in skill
 

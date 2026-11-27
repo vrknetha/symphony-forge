@@ -1,10 +1,11 @@
 """Shipped settings reach real read and close commands, including working prototypes."""
+import tomllib
 from pathlib import Path
 
 import pytest
 
 from conftest import ROOT
-from test_close import GREEN, env  # noqa: F401
+from test_close import env, run  # noqa: F401
 from test_codex_worker import _sent, sdk_data  # noqa: F401
 from test_fix_the_owner_moved_this_repo_s_workers_from import _codex
 from test_prototype_build import _accept_build_decision
@@ -35,7 +36,7 @@ def test_1_shipped_settings_run_codex_reads_and_reviews_on_terra_max(
                          "--kind", "backend")
     assert started.returncode == 0, started.stdout + started.stderr
     where = Path(started.stdout.splitlines()[0].rsplit(" in ", 1)[1])
-    if scenario == "new-docs":
+    if scenario in ("new-docs", "forge-source"):
         env.commit(where, "README.md", "Client guide.\n", "Add client guide")
     else:
         env.commit(where, "app.py", "print('demo')\n", "Build the demo")
@@ -45,13 +46,14 @@ def test_1_shipped_settings_run_codex_reads_and_reviews_on_terra_max(
     monkeypatch.setenv("CLAUDECODE", "1")
     monkeypatch.setenv("STUB_SAY", "No findings.")
     env.commit(where, "docs/specs/review-defaults.md", "# Review defaults\n\nUse the shipped models.\n",
-               "Describe the model check")
+               "Describe the model check\n\nProof list:\n- Done when: check: The review uses Terra")
     read = repo.forge("read", "review-defaults")
     assert read.returncode == 0, read.stdout + read.stderr
     [start] = _sent(log, "thread/start")
     assert start["config"]["model"] == "gpt-6.1-terra"
     assert start["config"]["model_reasoning_effort"] == "max"
-    env.checks(GREEN)
+    settings = tomllib.loads((where / "forge.toml").read_text("utf-8"))
+    env.checks([run(name) for name in settings["checks"]])
     closed = env.close("check-default-review")
     assert closed.returncode == 0, closed.stdout + closed.stderr
     [call] = env.review_calls()

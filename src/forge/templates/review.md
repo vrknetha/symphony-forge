@@ -122,7 +122,9 @@ named test: report a test whose assertions would still pass if the line were fal
 `Test: <the line>`, and a `check:` entry for an item that changes runtime behaviour the same
 way. A new test's line names the closest existing test, or none, and the outcome no existing
 test proves; a missing choice is part of `Gate: proof list`, and a new test whose outcome the
-closest test already proves is a P2 `Follow-up: duplicate test`.
+closest test already proves is a P2 `Follow-up: duplicate test`. A `check:` entry for an item
+whose proof can exist only after the merge is reported as `After merge: <the Done-when item>`,
+not as `Test:` or `Not done`.
 
 $proof_list
 
@@ -215,8 +217,9 @@ Mark each finding that asks for added work beyond the Done-when items (another c
 or flag) with a body line `Adds work: <what>; F <f> x H <h> = <p>; 2 x C = <c>`. When p is less
 than 2 x C, score its Gain 2 or less: it is a known limit and does not hold the work. A review
 keeps it in Known issues; a cold read keeps it with its disposition in the read notes. A finding
-under Security or Data loss, or one that names a migration, keeps its Harm floor and still holds
-the work. A check that a Done-when item promises is not added work: report it missing as
+under Security or Data loss keeps its Harm floor and still holds the work. A finding that
+names a migration keeps that floor when the change as a whole adds or edits a migration.
+A check that a Done-when item promises is not added work: report it missing as
 `Not done: <the item>`, which holds the work at any score. Never title an added-work finding
 `Not done`.
 
@@ -282,6 +285,12 @@ When a Done-when item's named proof is a pull request check that has not finishe
 report it as `Not done` if the check is configured to run on the pull request. Close's checks
 gate holds the merge until that check passes. A failed check or a proof with no check behind
 it is still P1 `Not done`.
+
+When a Done-when item's proof can exist only after the merge (for example the full CI run on the
+default branch, or a nightly report), do not report it as `Not done`. Title the finding
+`After merge: <the Done-when item>` and include `Check: <what to run or read>` and
+`Owner: <who>` in its body. Forge lists it under `Pending after merge:` in close output and the
+pull request, carries it across review rounds, and does not block the merge for it.
 
 ## Test audit
 A Test or Gate finding based only on a future change to a test fake or GitHub call order is
@@ -450,6 +459,8 @@ $accepted
 Score every finding on Gain, Work and Harm, each an integer from 1 to 5. The scores are your
 judgement, not measurement. Write them as one line, exactly `Gain <g>, Work <w>, Harm <h>`,
 as the first line of each finding's body, before its evidence.
+Give each finding a priority that reflects its severity for users. The score bar decides
+whether a scored finding blocks the merge, and a P0 always blocks.
 
 | Score | Gain (how much fixing helps) | Work (effort to fix) | Harm (what breaks if it goes wrong) |
 |---|---|---|---|
@@ -457,8 +468,9 @@ as the first line of each finding's body, before its evidence.
 | 3 | a Done-when item partly unmet for a named case; a test that passes with the code broken | one file and one command-level test, under an hour | client-visible behaviour change, reversible by a revert |
 | 5 | security, data loss, the main case of a Done-when item not done | a new module, a second platform or language, a migration | one-way: data, a migration, a release clients upgrade to |
 
-Harm floor: a note raised under Security or Data loss, or one that names a migration, scores
-Harm 4 or more. Forge raises a lower Harm to 4 and marks the line `(floor: <why>)`.
+Harm floor: a finding raised under Security or Data loss scores Harm 4 or more. A finding that
+names a migration has the same floor when the full change adds or edits a migration.
+Forge raises a lower Harm to 4 and marks the line `(floor: <why>)`.
 
 Examples: "Close's default test selection breaks Go repos" Gain 3, Work 4, Harm 2. "Close skips
 Jest `__tests__` folders" Gain 2, Work 2, Harm 1. "A blocked review is shown as waiting for checks
@@ -527,6 +539,8 @@ previous finding, fixed or not fixed. Return each not fixed finding with its pre
 file. The supplied base shows the diff since that commit; after a merge of the default branch,
 it shows this change's full diff against its new merge base, excluding the default branch's work.
 Read unchanged code as context. Do not start a fresh review of the whole branch or proof list.
+If an earlier finding has a migration floor and this change adds or edits no migration,
+score Harm from the evidence in that finding.
 
 Raise a new finding only when it is a P0 that happens in normal use, on any line.
 A round-one fix that breaks the main path counts as a P0; score it Harm 4 or more.

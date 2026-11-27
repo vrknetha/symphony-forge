@@ -1017,11 +1017,11 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                 print(f"Raw Autoreview output: {saved}", file=sys.stderr)
             if not signoff_prompt:
                 repo.refuse(REFUSALS["failed"], reason=reason, item=item)
+        if not signoff_prompt:
+            autoreview.migration_floor(findings, top, f"origin/{repo.default_branch(top)}", head)
         result = {"findings": findings, "blocking_level": "P0" if light else "P1"}
         if not signoff_prompt or item == "client-signoff":
-            def history_priority(finding: dict[str, Any]) -> str:
-                return finding["priority"] if signoff_prompt else score.priority(finding)
-
+            history_priority = score.severity if signoff_prompt else score.priority
             history = state["signoff_history"] if signoff_prompt else _history(top, item, base, previous, state=state)
             settled = {score.identity(*key): reason for key, reason in
                        _settled(history).items()}
@@ -1058,7 +1058,7 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
                 score.identity(finding["file"], finding["title"]), "").startswith("fixed:")]
             if not signoff_prompt:
                 autoreview.repair_findings(findings, previous, history)
-                findings = noise.drop(top, item, findings)
+                findings = noise.drop(top, item, findings, previous)
             result.update(findings=findings, dismissals=[
                 {"finding": number, "because": settlement.removeprefix("dismissed because "), "carried": True}
                 for number, finding in enumerate(findings, 1)
@@ -1074,7 +1074,7 @@ def run(top: Path, item: str, state: dict[str, Any], cfg: dict[str, Any],
             review_round=round_number(top, item, state),
             outcome="failed" if reason else "blocked" if serious else "clean",
             findings=None if reason else [{"title": finding["title"],
-                                          "priority": finding["priority"] if signoff_prompt else score.priority(finding),
+                                          "priority": finding["priority"],
                                           "file": finding["file"]} for finding in findings])
         if signoff_prompt:
             if reason:
@@ -1112,7 +1112,7 @@ def bound_review(top: Path, item: str, state: dict[str, Any], result: dict[str, 
             if finding.pop("follow_up", None):
                 changed = True
             continue
-        if finding.get("follow_up") == autoreview.REPAIR_FOLLOWUP:
+        if finding.get("follow_up") in (autoreview.REPAIR_FOLLOWUP, score.PENDING):
             continue
         title = re.sub(r"^\[P[0-3]\]\s*", "", finding["title"].strip())
         missed = re.match(r"Not done\s*:\s*(.*)", title, re.I)

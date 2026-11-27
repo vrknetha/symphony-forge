@@ -61,7 +61,7 @@ def show(args: argparse.Namespace) -> int:
         state = (f"Dismissed: {dismissed[n]}." if n in dismissed else
                  f"Follow-up: {f['follow_up']}." if f.get("follow_up") else
                  "Open: blocks the merge." if n in holding else "Open: does not block the merge.")
-        print(f"\n{n}. {score.priority(f)} {f['title']} ({f['file']}:{f['line']})\n{state}\n{f['body']}")
+        print(f"\n{n}. {score.severity(f)} {f['title']} ({f['file']}:{f['line']})\n{state}\n{f['body']}")
     return 0
 
 
