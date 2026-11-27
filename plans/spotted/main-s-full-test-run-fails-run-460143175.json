@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_runner_ends_when_idle.py\tNot done: The five named tests pass in the full test run on GitHub, each still checking its rule\tmain-s-full-test-run-fails-run-460143175",
+      "kind": "bug",
+      "path": "tests/test_runner_ends_when_idle.py",
+      "line": 56,
+      "text": "Not done: The five named tests pass in the full test run on GitHub, each still checking its rule",
+      "from": "blocking",
+      "item": "main-s-full-test-run-fails-run-460143175",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_moves_approved_work_to_merge.py\tTest: The five named tests pass in the full test run on GitHub, each still checking its rule\tmain-s-full-test-run-fails-run-460143175",
+      "kind": "bug",
+      "path": "tests/test_runner_moves_approved_work_to_merge.py",
+      "line": 599,
+      "text": "Test: The five named tests pass in the full test run on GitHub, each still checking its rule",
+      "from": "blocking",
+      "item": "main-s-full-test-run-fails-run-460143175",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

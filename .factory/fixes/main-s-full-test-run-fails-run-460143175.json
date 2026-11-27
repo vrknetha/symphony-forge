@@ -5,8 +5,79 @@
   "fix_kind": "backend",
   "fix_kind_explicit": true,
   "kind": "fix",
+  "known": [
+    {
+      "area": "test_6_runner_ends_when_idle() in tests/test_runner_ends_when_idle.py",
+      "file": "tests/test_runner_ends_when_idle.py",
+      "gain": 4,
+      "harm": 2,
+      "line": 56,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The five named tests pass in the full test run on GitHub, each still checking its rule",
+      "work": 2
+    },
+    {
+      "area": "test_1_runner_moves_approved_work_to_merge() in tests/test_runner_moves_approved_work_to_merge.py",
+      "file": "tests/test_runner_moves_approved_work_to_merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 599,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The five named tests pass in the full test run on GitHub, each still checking its rule",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "04af3ff8d66cd89325e66e38220a017ac5c6dc24083b448d9e151544f21dc0da",
+    "changed": "c4ce955ec56ce1c2b06efd849179c85c1a67c03781fa22cdbae27f8fbe6a994f",
+    "commit": "99287750b682e294f85fdbe8fdf86748697fc229",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 2, Harm 2\nRaise: Not done\nCase: normal use - a loaded GitHub runner takes longer to complete both merge scenarios.\nThe new 120-second wait starts only after the idle and human-merge phases, but the full-suite command in forge.toml:6 applies a 150-second timeout to the entire test. For example, if the earlier phases take 60 seconds and the final merge takes 95 seconds, pytest terminates the test even though the final wait has not expired. The earlier runner waits also retain their 60-second limits, so increasing only the last limit does not remove the test's dependence on machine speed.",
+        "file": "tests/test_runner_ends_when_idle.py",
+        "gain": 4,
+        "harm": 2,
+        "line": 56,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: The five named tests pass in the full test run on GitHub, each still checking its rule",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - an unmerged pull request waits for its human merger.\nThe 24-hour case waits for the runner to exit and then checks only that a 503 was logged and the ready message appeared once. It never checks how much fake time elapsed or that polling continued until the deadline. For example, changing the 24-hour limit in src/forge/runner.py:19 to 30 minutes would still satisfy both assertions, so this named proof does not establish the rule it is supposed to retain.",
+        "file": "tests/test_runner_moves_approved_work_to_merge.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 599,
+        "priority": "P1",
+        "title": "Test: The five named tests pass in the full test run on GitHub, each still checking its rule",
+        "work": 2
+      },
+      {
+        "body": "Gain 1, Work 1, Harm 1\nThe full-suite workflow runs on a schedule or manual dispatch, and src/forge/fullrun.py:83-87 requires a manual full run to use the latest default-branch commit. The final full-run proof is therefore pending after merge.\nCheck: Dispatch the full suite on the updated default branch and verify that all five named tests pass before releasing v1.2.50.\nOwner: Release coordinator.",
+        "file": "tests/test_runner_ends_when_idle.py",
+        "follow_up": "Pending after merge",
+        "gain": 1,
+        "harm": 1,
+        "line": 56,
+        "priority": "P2",
+        "title": "After merge: The five named tests pass in the full test run on GitHub, each still checking its rule",
+        "work": 1
+      }
+    ],
+    "id": "eebd63e6-ce59-4d89-8703-16f3d4d7e8db",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T14:46:15.930514+00:00",
@@ -16,6 +87,10 @@
       "at": "2026-11-27T14:46:45.948217+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T14:57:40.748631+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
