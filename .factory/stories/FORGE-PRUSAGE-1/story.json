@@ -1,6 +1,15 @@
 {
+  "approval": {
+    "at": "2026-11-27T11:11:38.635295+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01DsTP5m7MN4mLw5DFpxEyo9",
+    "hash": "7a18e9220b039e3370972555f76f0b7853d1f648f670c166dee2babb0e7b8efb",
+    "round": 2,
+    "runtime": "claude",
+    "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
+  },
   "doc": "plans/FORGE-PRUSAGE-1.md",
-  "status": "read",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-27T10:45:08.753034+00:00",
@@ -13,8 +22,12 @@
     {
       "at": "2026-11-27T11:10:33.498610+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-27T11:11:38.635643+00:00",
+      "step": "approved"
     }
   ],
   "title": "Show model use and change size in pull requests",
-  "touches": 0
+  "touches": 1
 }
