@@ -5,8 +5,68 @@
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/release-notes/v1.2.50.md",
+      "file": "src/forge/release-notes/v1.2.50.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 12,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: src/forge/release-notes/v1.2.50.md lists every client-visible change merged since v1.2.49",
+      "work": 1
+    },
+    {
+      "area": "src/forge/release-notes/v1.2.50.md",
+      "file": "src/forge/release-notes/v1.2.50.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 12,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: v1.2.50 release notes list every client-visible change",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "75b37528b854322b13439172a890b797db6ed73a03f2e73e5e4bc97ef5c43bb2",
+    "changed": "c0d88fc222826daf2df824f5f83edb00cb974bc0dc9fd3ac7a784e1139d47398",
+    "commit": "d0dd481f58febf01e4a712e8eb8a789df9d688d5",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 3, Work 1, Harm 3\nRaise: Not done: src/forge/release-notes/v1.2.50.md lists every client-visible change merged since v1.2.49 and the release notes tests pass; nothing else changes\nCase: normal use - a team upgrades, asks a code question from a different agent family, or relies on the runner to report a stopped item.\nThe notes contain material inaccuracies. Line 12 says code-question explorers follow `workers`, but `src/forge/roles.py:155-175` creates the native explorer separately for each chat host, so a Codex chat still uses its Codex explorer when `workers = \"claude\"`. Line 17 says the runner merges work, but `src/forge/repo.py:574` defaults to human merges and `src/forge/land.py:208-215` stops at a pull request. Line 18 promises desktop notices without saying Windows receives none: `src/forge/stops.py:150-152` returns without sending one. A Windows owner waiting for that notice can leave a question or merge waiting. These source details are new evidence beyond the coordinator's note that the tests passed.",
+        "file": "src/forge/release-notes/v1.2.50.md",
+        "gain": 3,
+        "harm": 3,
+        "line": 12,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: src/forge/release-notes/v1.2.50.md lists every client-visible change merged since v1.2.49",
+        "work": 1
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test: src/forge/release-notes/v1.2.50.md lists every client-visible change merged since v1.2.49 and the release notes tests pass; nothing else changes\nCase: normal use - an upgrade shows a misleading release note while the named proof passes.\nThe coordinator reported that `tests/test_release_notes.py` passed, but the proof does not establish the notes' completeness or accuracy. Its tag-push test accepts a synthetic v9.9.9 bullet, and its upgrade assertions at lines 138-155 check fixture bullets and older release files, not the v1.2.50 claims. The suite can therefore pass with the current incorrect explorer, merge, and Windows-notice statements, or with the new bullets omitted. That coverage gap is evidence the coordinator's pass-only note did not address.",
+        "file": "src/forge/release-notes/v1.2.50.md",
+        "gain": 3,
+        "harm": 3,
+        "line": 12,
+        "priority": "P1",
+        "title": "Test: v1.2.50 release notes list every client-visible change",
+        "work": 2
+      }
+    ],
+    "id": "7315e38a-406e-47ae-a1a7-31132f44b1e1",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T13:33:43.588760+00:00",
@@ -16,6 +76,10 @@
       "at": "2026-11-27T13:36:05.009033+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T13:44:02.148875+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
