@@ -631,12 +631,19 @@ def load() -> dict[str, Any]:
 
 def stop(args: Any) -> int:
     """A person cancels waiting entries or ends verified process trees before freeing places."""
-    from forge import codex, native
+    from forge import board, codex, native, stops
     if os.environ.get("FORGE_WORKER"):
         raise repo.Refused("Only a person can run forge stop; ask the person to stop the run.", "")
     if bool(args.entry_id) == bool(args.item) or (args.entry_id and args.repo):
         raise repo.Refused("Name an item with optional --repo, or use --id alone.", "")
     root = main_checkout(Path(args.repo).resolve() if args.repo else repo.root()) if args.item else None
+    targets: list[tuple[Path, str]] = []
+    # Pre-validate live check waits outside _queue() because board.active_runs may read _queue().
+    if root and args.item and repo.ITEM.fullmatch(args.item):
+        for entry in board.active_runs(root, args.item):
+            process = entry.get("process")
+            if process and codex._alive(process) is not False and ("started" not in process or codex._alive(process) is None):
+                raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
     with _queue() as runs:
         selected = [run for run in runs if run["id"] == args.entry_id or
                     (root and run["repo_root"] == root.as_posix() and run["item"] == args.item)]
@@ -647,6 +654,24 @@ def stop(args: Any) -> int:
             process = run["process"]
             if (run.get("agent") or run["started_at"]) and ("started" not in process or codex._alive(process) is None):
                 raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
+        if not selected and root and repo.ITEM.fullmatch(args.item):
+            for kind in ("Build", "Grill"):
+                lock = codex._item_file(root, args.item, ".lock", kind)
+                if lock.exists():
+                    owner = codex._json(lock)
+                    if "started" not in owner or codex._alive(owner) is None:
+                        raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
+        for run in selected:
+            if run.get("item"):
+                pair = (Path(run["repo_root"]), run["item"])
+                if pair not in targets:
+                    targets.append(pair)
+        if root and args.item and repo.ITEM.fullmatch(args.item):
+            pair = (root, args.item)
+            if pair not in targets:
+                targets.append(pair)
+        for target_root, target_item in targets:
+            stops.add(target_root, target_item)
         for run in selected:
             if run.get("native"):
                 continue
@@ -659,12 +684,29 @@ def stop(args: Any) -> int:
     held = [run for run in selected if run.get("native")]
     for run in held:
         native.cancel(run)
+    stopped_wait = False
+    for target_root, target_item in targets:
+        live_waits = []
+        for entry in board.active_runs(target_root, target_item):
+            process = entry.get("process")
+            if not process:
+                continue
+            alive = codex._alive(process)
+            if alive is False:
+                continue
+            if "started" not in process or alive is None:
+                raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
+            live_waits.append(process)
+        for process in live_waits:
+            if not codex._stop(process, False):
+                raise repo.Refused("Forge could not confirm the run stopped; its place is still held.", "")
+            stopped_wait = True
     cleared = False
     if not selected and root and repo.ITEM.fullmatch(args.item):
         for kind in ("Build", "Grill"):
             cleared = _clear_item_lock(root, args.item, kind) or cleared
     print("Stopped Forge's hold; stop the subagent in your session too." if held else
-          "Stopped the run." if selected or cleared else "There is nothing to stop.")
+          "Stopped the run." if selected or stopped_wait or cleared else "There is nothing to stop.")
     return 0
 
 

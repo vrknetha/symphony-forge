@@ -263,7 +263,8 @@ def test_7_cancelled_queued_test_publishes_its_wait_end(env):
                     pytest.fail("A Forge test process did not stop after its release signal")
 
     clock.write_text(at(20), "utf-8")
-    closed = env.close(item)
+    env.gh.respond("pr", "view", stdout=json.dumps({"url": "https://github.com/acme/shop/pull/7"}))
+    closed = env.repo.forge("land", item)
     assert closed.returncode == 0, closed.stdout + closed.stderr
     published = body(env.gh_calls("pr", "edit")[-1])
     history = published.split("## How it went", 1)[-1]

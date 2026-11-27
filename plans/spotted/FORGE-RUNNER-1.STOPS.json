@@ -1,0 +1,92 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/machine.py\tGate: Update existing tests for durable owner stops\tFORGE-RUNNER-1/STOPS",
+      "kind": "bug",
+      "path": "src/forge/machine.py",
+      "line": 661,
+      "text": "Gate: Update existing tests for durable owner stops",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/STOPS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/runner.py\tFunctional: Restore polling for parked pull requests after a restart\tFORGE-RUNNER-1/STOPS",
+      "kind": "bug",
+      "path": "src/forge/runner.py",
+      "line": 513,
+      "text": "Functional: Restore polling for parked pull requests after a restart",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/STOPS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/stops.py\tFunctional: Exclude resolved items from later summary notices\tFORGE-RUNNER-1/STOPS",
+      "kind": "bug",
+      "path": "src/forge/stops.py",
+      "line": 174,
+      "text": "Functional: Exclude resolved items from later summary notices",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/STOPS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_restart_repeats_nothing.py\tTest: A restart repeats no finished build and undoes no stop that the owner set, and the runner comes back the first time Forge is used.\tFORGE-RUNNER-1/STOPS",
+      "kind": "bug",
+      "path": "tests/test_runner_restart_repeats_nothing.py",
+      "line": 28,
+      "text": "Test: A restart repeats no finished build and undoes no stop that the owner set, and the runner comes back the first time Forge is used.",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/STOPS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_stops_one_item_and_tells_the_owner.py\tGate: The notice test must accept Windows' no-popup behavior\tFORGE-RUNNER-1/STOPS",
+      "kind": "bug",
+      "path": "tests/test_runner_stops_one_item_and_tells_the_owner.py",
+      "line": 86,
+      "text": "Gate: The notice test must accept Windows' no-popup behavior",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/STOPS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_stops_one_item_and_tells_the_owner.py\tTest: The owner gets one desktop notice when an item first needs them, with its question or pull request link\tFORGE-RUNNER-1/STOPS",
+      "kind": "bug",
+      "path": "tests/test_runner_stops_one_item_and_tells_the_owner.py",
+      "line": 55,
+      "text": "Test: The owner gets one desktop notice when an item first needs them, with its question or pull request link",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/STOPS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/stops.py\tNot done: The owner gets one desktop notice when an item first needs them, with its question or pull request link",
+      "kind": "edge",
+      "path": "src/forge/stops.py",
+      "line": 130,
+      "text": "Not done: The owner gets one desktop notice when an item first needs them, with its question or pull request link",
+      "from": "review",
+      "item": "FORGE-RUNNER-1/STOPS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\ttests/test_runner_restart_repeats_nothing.py\tFollow-up: Exercise stopping an item during its check wait",
+      "kind": "edge",
+      "path": "tests/test_runner_restart_repeats_nothing.py",
+      "line": 91,
+      "text": "Follow-up: Exercise stopping an item during its check wait",
+      "from": "review",
+      "item": "FORGE-RUNNER-1/STOPS",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
