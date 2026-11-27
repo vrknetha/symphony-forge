@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import GH_STUB, _install
+from conftest import GH_STUB, ROOT, _install
 from test_close import env  # noqa: F401
 from test_land import COMMITS, URL, _agent, land  # noqa: F401
 from test_worker import calls
@@ -110,6 +110,16 @@ if fail_view.exists() and args[:2] == ["pr", "view"] and len(args) > 2 and args[
         fail_view.write_text(f"{{n - 1}}|{{msg}}", "utf-8")
         answer("", 1, msg + "\\n")
 
+if args[:2] == ["pr", "list"] and "--head" in args:
+    branch = args[args.index("--head") + 1]
+    clock_path = pathlib.Path({clock_file!r})
+    log_path = pathlib.Path({runner_log!r})
+    item = branch.removeprefix("fix/").removeprefix("task/")
+    if (clock_path.exists() and log_path.exists()
+            and f"{{item}} is ready; a human merges" in log_path.read_text("utf-8")):
+        with open(here / "poll-reads.jsonl", "a", encoding="utf-8") as log:
+            log.write(json.dumps({{"branch": branch, "elapsed": float(clock_path.read_text("utf-8").strip())}}) + "\\n")
+
 fail_list = here / "gh-fail-pr-list"
 if fail_list.exists() and args[:2] == ["pr", "list"] and "--head" in args and args[args.index("--head") + 1] == "fix/retry-fix":
     raw = fail_list.read_text("utf-8").strip().split("|", 1)
@@ -169,7 +179,9 @@ def _install_multi_gh(env, tmp_path: Path) -> None:
     assert Path(os.environ.get("APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME", "")).resolve() == (
         tmp_path / "config").resolve()
     _install(env.repo.bin, "gh", MULTI_GH.format(
-        python=sys.executable, remote=str(tmp_path / "remote.git"), url=URL)
+        python=sys.executable, remote=str(tmp_path / "remote.git"), url=URL,
+        clock_file=(tmp_path / "clock" / "elapsed").as_posix(),
+        runner_log=(env.repo.path / ".git" / "forge" / "runner.log").as_posix())
         + GH_STUB.format(python=sys.executable).split("\n", 1)[1])
     _install_process_tracker(env, tmp_path)
 
@@ -182,10 +194,21 @@ def _mark_installed_before(tmp_path: Path, stamp: str = "2020-01-01T00:00:00+00:
 
 def _install_process_tracker(env, tmp_path: Path) -> None:
     """Record every detached runner and runner child in *.owned-process.json for crash cleanup,
-    and log every Popen call launching forge.runner so CI-skip tests are deterministic."""
+    log every Popen call launching forge.runner so CI-skip tests are deterministic, and keep
+    direct `python -c` runner/land children from stalling on host load or memory in CI."""
+    src_posix = (ROOT / "src").as_posix()
     snippet = (
         "\nimport json as _j, os as _o, pathlib as _p, subprocess as _sp, sys as _s, time as _t\n"
         f"_runner_tmp = _p.Path({tmp_path.as_posix()!r})\n"
+        "if hasattr(_o, 'getloadavg'):\n"
+        "    _o.getloadavg = lambda: (0.0, 0.0, 0.0)\n"
+        f"_forge_src = {src_posix!r}\n"
+        "if any('forge.runner' in _a or 'forge.cli' in _a for _a in getattr(_s, 'orig_argv', ())):\n"
+        "    if _forge_src not in _s.path:\n"
+        "        _s.path.insert(0, _forge_src)\n"
+        "    from forge import machine as _m\n"
+        "    _m.memory = lambda: dict(total_bytes=16_000_000_000, available_bytes=8_000_000_000)\n"
+        "    _m.busy_runners = lambda: 0\n"
         "if _s.argv[:1] == ['-c'] or _o.environ.get('FORGE_RUNNER') == '1':\n"
         "    _runner_tmp.joinpath(f'runner-{_o.getpid()}.owned-process.json').write_text(\n"
         "        _j.dumps({'pid': _o.getpid(), 'at_ns': _t.time_ns()}), encoding='utf-8')\n"
@@ -289,13 +312,14 @@ def _runner_exited(tmp_path: Path) -> bool:
     )
 
 
-def _wait_for(predicate, timeout: float = 30.0) -> None:
+def _wait_for(predicate, timeout: float = 30.0, detail=None) -> None:
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         if predicate():
             return
         time.sleep(0.05)
-    raise AssertionError("Timed out waiting for background runner condition")
+    extra = f"\n{detail()}" if detail else ""
+    raise AssertionError(f"Timed out waiting for background runner condition{extra}")
 
 
 def _runner_log(env) -> str:
@@ -378,7 +402,7 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
         monkeypatch.setenv("FORGE_CHECKS_WAIT", "999999999")
     _install_multi_gh(land, tmp_path)
     monkeypatch.setenv("FORGE_RUNNER_TICK", "30" if case == "two_part_human_merge"
-                       else "300" if case == "human_merge_stops_after_24h" else "0.05")
+                       else "1800" if case == "human_merge_stops_after_24h" else "0.05")
     monkeypatch.setenv("FORGE_NETWORK_RETRY_WAIT", "0")
 
     if case == "never_acts_outside_temp_folder":
@@ -595,7 +619,18 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
         monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
         done = land.repo.forge("fix", "start", "Stale PR", "--done", "Stops after 24h", "--slug", "retry-fix")
         assert done.returncode == 0, done.stderr
-        _wait_for(lambda: _runner_exited(tmp_path), timeout=45.0)
+        _wait_for(lambda: _runner_exited(tmp_path), timeout=60.0, detail=lambda: _runner_log(land))
+        poll_file = land.repo.bin / "poll-reads.jsonl"
+        assert poll_file.exists(), _runner_log(land)
+        poll_times = [json.loads(line)["elapsed"] for line in poll_file.read_text("utf-8").splitlines()
+                      if json.loads(line)["branch"] == "fix/retry-fix"]
+        tick = 1800.0
+        assert 46 <= len(poll_times) <= 48, len(poll_times)
+        exit_elapsed = float((tmp_path / "clock" / "elapsed").read_text("utf-8").strip())
+        # Polling begins one tick before the first poll read and stops at the 24h (86400s) deadline.
+        polling_elapsed = exit_elapsed - (poll_times[0] - tick)
+        assert 86400.0 <= polling_elapsed <= 86400.0 + tick, polling_elapsed
+        assert 86400.0 - 2 * tick <= poll_times[-1] - poll_times[0] <= 86400.0, (poll_times[0], poll_times[-1])
         log = _runner_log(land)
         assert "The requested URL returned error: 503" in log, log
         assert log.count("retry-fix is ready; a human merges") == 1, log

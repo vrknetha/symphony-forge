@@ -43,7 +43,7 @@ GUIDE = (
     "Run the command once with `{base}` set to the default branch.",
     "Tell the owner that changed-only selection follows imports, so API tests that reach the code "
     "only through a URL run only in the full test run.",
-    "Then ask the owner, and set it in `forge.toml` through a fix.",
+    "Then ask the owner, and set it in `forge.toml` through a settings fix whose `--done` names `forge.toml`.",
 )
 
 
