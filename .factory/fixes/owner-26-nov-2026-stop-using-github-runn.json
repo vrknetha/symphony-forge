@@ -171,7 +171,7 @@
     "id": "8bd32021-f6b7-4b22-b6b7-efb8f4a9df3e",
     "status": "clean"
   },
-  "round": 2,
+  "round": 3,
   "status": "fixing",
   "steps": [
     {
@@ -207,31 +207,22 @@
       "choice": "split",
       "round": 2,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T03:53:59.702180+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
-  "stop": {
-    "at": "2026-11-26T17:11:26.340264+00:00",
-    "by": "owner",
-    "choice": "split",
-    "fixes": [
-      "review-findings-split-from-owner-26-nov"
-    ],
-    "question": "Owner, 26 Nov 2026: stop using GitHub runners for tests so GitHub does is stuck. It should deliver: forge.toml sets test_place = \"local\" and checks = [\"forge-pr-check\"], so close runs only the change's related tests on this machine and waits for no GitHub test job, and the generated workflow from forge sync matches; nothing else changes\nTwo rounds in a row left close's tests failing.\nTwo rounds in a row left the open P0 functional: existing tests fail against the local workflow in .github/workflows/forge.yml.\nThe worker tried: Review of owner-26-nov-2026-stop-using-github-runn: blocked.\nChoose one: switch this item to Claude; keep Codex for one more round; or narrow or split it.",
-    "reason": "Owner chose split: first a fix that makes the tests stop assuming GitHub test jobs in this repo's workflow, then this settings change",
-    "tool": "codex",
-    "wait_id": "63196a15-52d3-4413-820e-ef4b0e58bd27",
-    "worker_round": 2
-  },
   "stuck": {
-    "close": "c7c7b9ca-e917-4822-adc0-ba96ae3f020d",
-    "head": "59e250729d43f9887b54dce5db0a219e9e28b997",
+    "close": "76fb7c6a-2c07-4a86-b052-c9a48affd392",
+    "head": "0d25384456ababac257493fcdb43ad61fa781bb7",
     "keys": {
-      "close's tests failing": 1,
-      "the open P0 functional: existing tests fail against the local workflow in .github/workflows/forge.yml": 1
+      "close's tests failing": 2
     },
-    "round": 1
+    "round": 2
   },
   "tests": "`uv run --frozen --python 3.11 forge test --pytest 28fc5fb0b49997190cd2898d91053f5184f203f3` exited with status 1 on this machine.\nDone-when proof: Forge's own settings or generated files only; no Done-when test needed.\nRunning this checkout's code in /Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/src/forge, not the installed Forge.\nRelated tests: tests/test_affected_own.py, tests/test_ci_cancels_superseded_pull_request_runs.py, tests/test_ci_hang.py, tests/test_ci_limits_pull_requests_to_linux.py, tests/test_ci_selects_own_changes_after_merge.py, tests/test_ci_skips_unneeded_pull_request_jobs.py, tests/test_claude_subagent_defaults.py, tests/test_close_names_untested_source_files.py, tests/test_codex_review_defaults.py, tests/test_custom_commands_choose_groups.py, tests/test_docs_and_assets_get_light_checks.py, tests/test_docs_only_runner_allocation.py, tests/test_fix_clients_pin_forge_v1_0_2_but_main_has_28.py, tests/test_fix_clients_pin_forge_v1_1_0_but_main_has_th.py, tests/test_fix_clone_gets_test_tools.py, tests/test_fix_gate_on_split_checks.py, tests/test_fix_old_forge_records.py, tests/test_fix_the_owner_moved_this_repo_s_workers_from.py, tests/test_javascript_test_changes_choose_one_group.py, tests/test_lanes_ci.py, tests/test_live_starter_nightly.py, tests/test_merged_default_branch_pull_requests_run_normal_groups.py, tests/test_pull_request_test_machines.py, tests/test_read_only_model_selection.py, tests/test_release_version.py, tests/test_required_tests_result.py, tests/test_round_usage_totals.py, tests/test_selected_tests_choose_groups.py, tests/test_single_group_client_tests.py, tests/test_small_change_runs_one_group.py, tests/test_subagent_roles.py, tests/test_test_only_pull_requests_select_changed_files.py, tests/test_tools_questions.py, tests/test_upgrade_to_installed_release.py, tests/test_platform_sensitive_selection.py, tests/test_tools_guide.py::test_9_synced_guides_explain_tools_and_the_session_handoff, tests/test_rules.py::test_4_one_test_per_rule, tests/test_rules.py::test_5_forge_stays_small, tests/test_split_keeps_review_findings.py, tests/test_since_7_nov_review_noise.py\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/pluggy/_callers.py\", line 139, in _multicall\n    teardown.throw(exception)\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/_pytest/helpconfig.py\", line 124, in pytest_cmdline_parse\n    config = yield\n             ^^^^^\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/pluggy/_callers.py\", line 121, in _multicall\n    res = hook_impl.function(*args)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py\", line 1232, in pytest_cmdline_parse\n    self.parse(args)\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py\", line 1586, in parse\n    self.pluginmanager.consider_env()\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py\", line 874, in consider_env\n    self._import_plugin_specs(os.environ.get(\"PYTEST_PLUGINS\"))\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py\", line 885, in _import_plugin_specs\n    self.import_plugin(import_spec)\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py\", line 920, in import_plugin\n    raise ImportError(\n  File \"/Users/ravikiranvemula/Workdir/symphony-forge-fix-owner-26-nov-2026-stop-using-github-runn/.venv/lib/python3.11/site-packages/_pytest/config/__init__.py\", line 913, in import_plugin\n    mod = importlib.import_module(importspec)\n          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/ravikiranvemula/.local/share/uv/python/cpython-3.11.11-macos-aarch64-none/lib/python3.11/importlib/__init__.py\", line 126, in import_module\n    return _bootstrap._gcd_import(name[level:], package, level)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen importlib._bootstrap>\", line 1204, in _gcd_import\n  File \"<frozen importlib._bootstrap>\", line 1176, in _find_and_load\n  File \"<frozen importlib._bootstrap>\", line 1140, in _find_and_load_unlocked\nImportError: Error importing plugin \"_forge_test_results\": No module named '_forge_test_results'\n\nFailed tests:\nTest names are not available from this test command.\nFull test log: /Users/ravikiranvemula/Workdir/symphony-forge/.git/forge/test-d4812888-d4ec-4916-83a4-a6140fdc7a23.log",
   "why": "Owner, 26 Nov 2026: stop using GitHub runners for tests so GitHub does not ban the repo again for excessive CI (today about 86 test workflow runs at 80-140 runner minutes each, 23 Docker starter smokes, 89 failing codex-smoke runs). Run tests on this machine and only the tests related to the change.",
-  "worker": "codex"
+  "worker": "antigravity"
 }
