@@ -5,8 +5,45 @@
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 3,
+      "line": 2212,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Settings-fix instructions must name forge.toml in Done-when",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "52af81072a478147bdde6f0af6a20e2cc967d81721da18e9d947b37dc6a1e5a8",
+    "changed": "8121d179bb4a19f66574a2fabd9fd63ad5ff90820e35c06bd1451badeba93901",
+    "commit": "5437eac6c85ce711546388434fc62cc3b0e2d669",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Not done\nCase: normal use - A coordinator configures grouped CI or enables Codex Fast in an existing repository.\nThe unmet Done-when is: Every coordinator-guide line that tells the coordinator to edit forge.toml in a settings fix says the fix's Done-when must name forge.toml, and the generated SKILL.md copies match.\nThe template still directs settings changes without that requirement at lines 49 and 2426\u20132429 (groups and test commands), 471\u2013472 (runner correction), 2147\u20132157 (Claude models), 2193\u20132198 (codex_fast), 2436 (shard options), 2442 (the full test command), 2489 and 2504 (fast_test), and 2546\u20132547 (post-sign-off sample_data). Both generated copies contain the same instructions. If the coordinator starts such a fix without naming the file, src/forge/task.py:205\u2013219 does not permit the settings edit, and src/forge/worker.py:467\u2013473 restores uncommitted forge.toml changes, discarding the requested edit.",
+        "file": "src/forge/templates/skill.md",
+        "gain": 4,
+        "harm": 3,
+        "line": 2212,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: Settings-fix instructions must name forge.toml in Done-when",
+        "work": 1
+      }
+    ],
+    "id": "00b1ef7b-6005-40ca-968e-a992f6b6c90b",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T11:38:07.299553+00:00",
@@ -16,6 +53,10 @@
       "at": "2026-11-27T11:38:32.259401+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T11:46:28.713012+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
