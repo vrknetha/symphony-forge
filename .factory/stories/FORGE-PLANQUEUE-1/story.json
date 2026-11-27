@@ -1,6 +1,15 @@
 {
+  "approval": {
+    "at": "2026-11-27T05:57:08.953192+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01AUrcK2Yj47kDVJ5FdVg6ge",
+    "hash": "2bb64e408c25024bc45e4df4fa11643a24d0d50d79f57db9d06ac25b9a86735d",
+    "round": 2,
+    "runtime": "claude",
+    "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
+  },
   "doc": "plans/FORGE-PLANQUEUE-1.md",
-  "status": "read",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-27T05:20:26.502834+00:00",
@@ -9,8 +18,16 @@
     {
       "at": "2026-11-27T05:39:54.292078+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-27T05:55:21.699137+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-27T05:57:08.953429+00:00",
+      "step": "approved"
     }
   ],
   "title": "Move story plans to approval without reminders",
-  "touches": 0
+  "touches": 1
 }
