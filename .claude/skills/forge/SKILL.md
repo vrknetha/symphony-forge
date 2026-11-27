@@ -69,12 +69,12 @@ handling. Count each run's files before passing `--shard`: use no more groups th
 skip only the current Vitest invocation when the job's group exceeds that count.
 Continue with the job's other test runs. Fail clearly for zero files, and place files only
 across groups in use so none is empty. Give every group its own setup. Put `{group}` and
-`{groups}` in `test` and `fast_test` through the settings fix. Add a refresh command that writes
+`{groups}` in `test` and `fast_test` through a settings fix whose `--done` names `forge.toml`. Add a refresh command that writes
 `test-timings.json` from Vitest's JSON report; commit the file through a fix. No CI job refreshes
 times or opens a pull request. Python pytest groups keep their split by recorded time.
 
 Close refuses a removed check together with other changes. Land the removal in its
-own fix that changes only `checks`, `test_place` and the generated workflow from
+own fix whose `--done` names `forge.toml` and that changes only `checks`, `test_place` and the generated workflow from
 `forge sync`. The refusal names each removed check. Merge then waits for the checks
 that the branch and default branch share. Added checks keep their usual checks.
 
@@ -456,10 +456,10 @@ it defaults to `"ubuntu-24.04"` because the starters' Playwright 1.56 browser in
 does not support Ubuntu 26.04. Sync preserves explicit runner settings.
 Optional `test_runner` selects a different label for pull-request and nightly full-suite test jobs,
 with one group or several groups. All other jobs use `runner`.
-Without `test_runner`, all jobs use `runner`. Set the label in `forge.toml`, then run `forge sync`.
+Without `test_runner`, all jobs use `runner`. Set the label in `forge.toml` in a settings fix whose `--done` names `forge.toml`, then run `forge sync`.
 For self-hosted Linux runners, initialise with
 `forge init --runner self-hosted`, or set `runner = "self-hosted"` (or a custom label) in an
-existing repo's fix, then run `forge sync`. New repos get it at init; earlier adopted repos get
+existing repo's fix whose `--done` names `forge.toml`, then run `forge sync`. New repos get it at init; earlier adopted repos get
 it after upgrading Forge and syncing. The jobs set up uv and Python, and install
 Node for Node tests, respecting version files or engines with Node 22 as the fallback.
 Close and land keep waiting while checks are queued. The wait line shows minutes observed
@@ -635,7 +635,7 @@ The run reference explains the board fields and page behaviour.
 
 A Codex build round can run on a Linux machine your team owns, reached with `ssh`. It is off in every
 repo. Offer it when Codex rounds wait for the laptop and a developer has such a machine. Turn it on
-only after the owner agrees, in a settings fix that sets `boxes = "ssh"` in `forge.toml`.
+only after the owner agrees, in a settings fix whose `--done` names `forge.toml` that sets `boxes = "ssh"` in `forge.toml`.
 
 Each developer runs `forge lanes --box setup --host <the name they give ssh>` once; later setups
 need no `--host`. Setup checks ssh, git, Forge at the repo's version and the Codex sign-in, installs the
@@ -644,7 +644,7 @@ Codex kit, and makes Forge's folder on the machine. Relay each refusal's next st
 for or handle a sign-in. A repo whose tests need ignored settings files or services the machine lacks keeps
 it off.
 
-To turn it off, a settings fix sets `boxes = "off"`, and each developer runs `forge lanes --box off`. It
+To turn it off, a settings fix whose `--done` names `forge.toml` sets `boxes = "off"`, and each developer runs `forge lanes --box off`. It
 lists what Forge's folder on the machine still holds: changes not committed, ignored files, stashes and
 commits not yet back. Show that list to the developer and offer `forge work <item>` for commits not yet
 back. Run `forge lanes --box off --yes` only after the developer agrees; it deletes the folder.
@@ -1550,7 +1550,7 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    During adoption review, name the repo's cheap whole-repo checks that read shared files without
    imports, such as rule checks, file inventories and configuration checks: changed-only selection
    can miss them. Include their pytest files or node IDs in Python `always_test`, or their commands
-   beside changed-test selection in TypeScript `fast_test`, through the normal settings fix after
+   beside changed-test selection in TypeScript `fast_test`, through a settings fix whose `--done` names `forge.toml` after
    the human agrees. Keep `test` as the full suite. New repos get this review at setup; existing
    adopted repos get this guidance on upgrade and sync, with settings changed only through that fix.
    When the pull request has a separate browser job, use this setup.
@@ -1558,8 +1558,8 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    full run, outside `fast_test`, including shared-settings changes.
    Pull request CI runs the desktop Playwright project. Nightly runs all projects.
    The pytest picker retains non-pytest steps from `test`. It does not filter out browser steps.
-   For a combined Python/browser command, use a separate non-browser `fast_test` through the
-   owner's settings fix. For example, with `test = "uv run pytest -q && npx playwright test"`,
+   For a combined Python/browser command, use a separate non-browser `fast_test` through an
+   owner's settings fix whose `--done` names `forge.toml`. For example, with `test = "uv run pytest -q && npx playwright test"`,
    use `fast_test = "uv run pytest -q"`. This runs all Python tests on pull requests and keeps
    browser tests in a separate desktop Playwright job, with all projects nightly. Keep any required install, lint, type-check and setup steps too.
    For changed-only Python selection, adapt the app's script to accept a base and omit browser
@@ -1615,7 +1615,7 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    after itself (`pre` and `post` scripts). Run the command once with `{base}` set to the
    default branch. Tell the owner that changed-only selection follows imports, so API tests
    that reach the code only through a URL run only in the full test run. Then ask the owner,
-   and set it in `forge.toml` through a fix. Forge never changes the setting itself.
+   and set it in `forge.toml` through a settings fix whose `--done` names `forge.toml`. Forge never changes the setting itself.
    A fast test that runs in pull request CI must include the tests that import the changed source
    files, split across the test groups: for example `vitest related`, `vitest run --changed {base}`,
    `jest --findRelatedTests` or `jest --changedSince {base}`, or the Python picker.
@@ -2209,7 +2209,7 @@ For a side job inside your own session, hand it to one of Forge's subagent roles
 `performance` to diagnose; `worker`, `coder`, `frontend`, `tester` and `refactorer` to build.
 The diagnosing and planning roles change no files. Building an item still goes through
 `forge work`. To change a building or planning role's model or effort, change `forge.toml`
-and run `forge sync`.
+in a settings fix whose `--done` names `forge.toml` and run `forge sync`.
 Codex roles use their host's entry when the kind has per-tool entries. With a single entry, a model
 from the other tool is omitted so the Codex role uses the session's model. Claude building
 roles use their implementation entry or Sonnet at low effort. Claude planning uses the grill
@@ -2316,7 +2316,7 @@ New repos get this guide on init; existing repos, including earlier adopted repo
 upgrade and sync. Close applies the same boundary in every repo.
 
 The owner can set added_work_min_gain to 3, 4 or 5 and always_block to a list of kinds in
-forge.toml. Record the owner's settings in a fix. They apply after it merges, from the default
+forge.toml. Record the owner's settings in a fix whose `--done` names `forge.toml`. They apply after it merges, from the default
 branch. `Adds work: <what>` marks a finding that asks for another check, retry, guard or flag.
 An unfloored fix-now finding below the minimum becomes a Known issue with its scores and reason.
 Harm 4 or more, Gain 5 and every score floor still block. `Must: <kind>: <gap>` holds a listed
