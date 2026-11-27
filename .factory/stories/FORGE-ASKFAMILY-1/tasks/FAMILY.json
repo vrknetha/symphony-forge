@@ -175,7 +175,7 @@
     "id": "75769c5c-596f-4944-bf66-e089dad6663e",
     "status": "blocked"
   },
-  "round": 2,
+  "round": 3,
   "status": "fixing",
   "steps": [
     {
@@ -195,13 +195,23 @@
     {
       "at": "2026-11-27T16:45:45.971990+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-27T16:46:04.208415+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "117b52eb409be55e7489b1e7b30e684d722b01d1",
-    "keys": {},
-    "round": null
+    "close": "c4697854-e4f8-4ebf-80e4-11dc2c56f233",
+    "head": "325318001f6df43d629c1bae127b754dbf1f72f1",
+    "keys": {
+      "the open P0 disputed keep 12: user hooks still run during claude's read-only turn in src/forge/claude_turn.py": 1,
+      "the open P0 not done: no family can change a file in the checkout, and a failed turn says why and gives a command to run again. in src/forge/ask.py": 1,
+      "the open P0 not done: no family can change a file in the checkout, and a failed turn says why and gives a command to run again. in src/forge/claude_turn.py": 1,
+      "the open P0 test: no family can change a file in the checkout, and a failed turn says why and gives a command to run again. in tests/test_ask_command.py": 1
+    },
+    "round": 2
   },
   "worker": "antigravity"
 }
