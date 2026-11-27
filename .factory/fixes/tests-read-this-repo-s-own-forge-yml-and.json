@@ -41,7 +41,7 @@
     "id": "5fa656e3-5294-4c67-91f8-2b282661ae2e",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -56,13 +56,18 @@
     {
       "at": "2026-11-27T02:32:54.746855+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-27T02:33:13.292375+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "88ade21bab082eeaaca54c8eb722c52ca126748a",
+    "close": "d2d6df28-5731-4897-9e1f-6a1136d52544",
+    "head": "4f4917ae6197e8fc56999a26ff79fc9028094170",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "Tests read this repo's own forge.yml and expect GitHub test groups, so the repo cannot switch to test_place = \"local\" (owner, 26 Nov 2026: run tests on this machine to avoid another GitHub ban).",
   "worker": "antigravity"
