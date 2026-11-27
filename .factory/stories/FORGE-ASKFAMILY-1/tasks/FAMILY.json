@@ -85,7 +85,7 @@
       "gain": 3,
       "harm": 3,
       "line": 144,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 1,
       "security": false,
@@ -95,27 +95,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "536e4931dcb215a058186951abcea63984d7bae883d9691396967565c58ce764",
-    "changed": "08bf4291aead7a140a1483fc1941e8c68c889af6ddf93679b496775039c7c8ec",
-    "commit": "2a364f75ee212a0b841681521271c9611e45708e",
+    "branch_diff": "cf65583b31d89065e0e28af7e9c96aaaedaf2d12ef8de8e45b37e3b341cdae46",
+    "changed": "74b4a16750ce1de93d026ed2cae61f369a11bf65fce2f13890b63bc6cc7c5431",
+    "commit": "926202c0fd3f43302fc345f67e5667ac01190cd2",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test \u2014 The new helper checks that the ask appears in the waiting lane, but it does not check whether the Claude or Gemini provider has already run. Moving the provider call before `agent_slot` and leaving output inside the slot would still satisfy these assertions. Case: normal use - A Claude or Gemini ask runs while every agent place is occupied, even though the test reports that it waited.",
-        "file": "tests/test_ask_command.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 139,
-        "priority": "P1",
-        "title": "Test: Each family's answer is recorded after the command waits for an agent place",
-        "work": 2
-      }
-    ],
-    "id": "8c34edea-3a4a-4e31-a813-aaf9bfce9281",
-    "status": "blocked"
+    "findings": [],
+    "id": "290c0333-d217-4344-8591-a849e88a480b",
+    "status": "clean"
   },
   "round": 4,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-27T13:26:04.914775+00:00",
@@ -160,6 +149,10 @@
       "at": "2026-11-27T17:04:04.157297+00:00",
       "round": 4,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T17:08:23.325269+00:00",
+      "step": "review"
     }
   ],
   "stop": {
