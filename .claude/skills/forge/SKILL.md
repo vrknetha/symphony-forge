@@ -232,10 +232,14 @@ the owner agrees. `forge doctor --fix` does not drop these fixes. New and upgrad
 client repos get this check from the installed Forge command.
 
 Send every new idea through `forge start "<their words>"`. Never ask the human whether it is a
-story or a fix. If the explorer prompt is lost, run the same `forge start "<idea>"` again, or read `forge next`: both print
-the prompt and handback command again (only the session that holds it can hand back). When the answer is a fix, run its `forge land <fix>` in the background and watch it.
+story or a fix. Forge uses the same tool as a non-design build. If that tool matches this
+session, run the explorer and hand back its reply as instructed. Otherwise, Forge runs the
+explorer and acts on its reply directly. If a prompt for this session is lost, run the same
+`forge start "<idea>"` again or read `forge next` to see the prompt and handback command.
+Only the session that holds the prompt can hand back. When the answer is a fix, run its
+`forge land <fix>` in the background and watch it.
 For an idea that extends an existing story, the explorer can return that story's key with
-`Lane: plan`. Handback reuses its branch and worktree and adds to its plan. Read the revised plan
+`Lane: plan`. Forge reuses its branch and worktree and adds to its plan. Read the revised plan
 before approval.
 
 The human approves stories and chooses between options. In a client repo before the default
@@ -582,9 +586,8 @@ preservation review, merge, cleanup and rollback. Follow it in order.
 
 ## Waiting or stopped runs
 
-Keep one coordinator chat active for the same work. Hand over to a fresh chat at
-20 to 30% of the context window, at a quiet moment after a merge or while CI runs.
-Never go past 40%. Before starting a round that needs `forge handback`, leave enough
+Keep one coordinator chat active for the same work. When the hook reports more than half of the context window, hand over at a quiet moment after a merge or while CI runs.
+Before starting a round that needs `forge handback`, leave enough
 context to finish it. Before you switch chats, finish any such rounds, including
 native plan reads and builds, and run their printed `forge handback` commands in
 the original chat. Give the next chat the current item, any work still running and
@@ -649,10 +652,17 @@ still load it yourself whenever you need it.
 a compaction. Before each compaction Forge rewrites its current-state part from `forge next` and
 keeps everything under `## Decisions and lessons`. Add one line there at each milestone: a story
 approved, a task merged, a decision the owner made, a lesson learned or a mistake you won't
-repeat. After a compaction or in a new session, read it first. The scratch file stays local and is
-never committed. At hand over, copy its settled notes to `docs/handover.md` through a fix.
+repeat. After a compaction or in a new session, read it first, then run `forge next`.
+The scratch file stays local and is never committed.
 
-## Hand over
+At the next quiet moment after the context warning, or when the owner asks, run
+`forge hook handoff` to refresh the note. Under `## Decisions and lessons`, add one
+line per open decision, lesson and log path for your own background jobs. Add a log
+path when the job starts. If the note does not exist, run `forge hook handoff` first.
+Then tell the owner to clear the chat in one plain line. In Claude, use `/clear`.
+In Codex, start a new chat.
+
+## Hand over to another machine or person
 
 1. **Push everything.** In each worktree, commit and push. Through an ordinary fix, copy
    new decisions and lessons from `.git/forge/handoff.md` into `docs/handover.md`, and merge it.
@@ -1793,18 +1803,28 @@ there are no findings, ignoring other note lines. A numbered or bulleted blockin
 needs a disposition and another round.
 
 Handle cold-read rounds yourself: amend the plan and write dispositions.
-Once a read is clean, before Plan Mode approval, list the choices you made alone answering
+Once a read is clean, before approval, list the choices you made alone answering
 notes in all rounds: each amendment that picked a behaviour, a limit, a refusal or a scope cut.
 Grill the human one question at a time, with your recommendation first.
 Record each answer in the plan, then ask for approval. Plain factual corrections need no question.
 
-Use one framing line before showing a story in Plan Mode:
+Use one framing line before you show the story:
 `Approving: <title>, <n> parts, <risks>`.
 
 The owner approves only the top of the story doc. Show it from its title down to
-`## For the builders`, unchanged, in Plan Mode and exit Plan Mode with that part as the plan; in
-Codex, show the same part, then ask the approval question `forge next` gives. A doc with no
-`## For the builders` heading is shown whole. The approval binds "What changes for you" and
+`## For the builders`, unchanged. Show the whole doc if it has no such heading. In Claude Code,
+exit Plan Mode with that text as the plan. In Codex, ask the owner to type the
+`approve <KEY> <code>` line from `forge next`. Only the owner's own reply counts. If Codex is
+already in Plan Mode, you can ask the question from `forge next` instead.
+
+After the owner types the line, run `forge next`. If the code no longer matches, show the current
+text and give the owner its new line. If the story still waits and Forge gives no reason, ask the
+owner to review and trust the new hook with `/hooks` in Codex. Codex skips a new hook until the
+owner trusts it. Forge trusts hooks only in the threads it starts. Check that the installed Forge
+version matches the version the repo pins. New repos get this hook at setup. Existing repos get it
+on upgrade, with no settings change.
+
+The approval binds "What changes for you" and
 "Done when", so tightening anything below `## For the builders` needs no new approval, while
 changing a result or "What changes for you" does. Once a round of cold read has passed, an edit only
 below `## For the builders` needs no new round either, and `forge read` refuses to run one; an
@@ -1965,6 +1985,13 @@ the default branch contains, and fixes whose records are already on the default 
 No command retires a started part: to replace one, close its pull request and delete its branch locally and on origin, then start the replacement.
 
 ## Cold read findings
+
+Close and the pull request show each finding's reviewer-assigned severity and say if it blocks the merge.
+An `After merge:` finding is a post-merge check: it does not block the merge, stays listed under
+`Pending after merge:` with its check and owner across review rounds, and is run by its owner after merge.
+The migration Harm floor applies when the change adds or edits a migration across its commits.
+Close asks the reviewer to score an open finding again if an old review applied that floor
+to a change without a migration addition or edit.
 
 **Settled findings stay settled.** Readers and reviewers receive all earlier rounds' notes,
 answers and fixed or dismissed findings, including the coordinator's recorded work notes.
@@ -2174,11 +2201,12 @@ Set a model explicitly on every ad-hoc subagent you start outside Forge's roles,
 including the built-in general-purpose agent. In Claude Code, use Sonnet for analysis and
 research, and Haiku for sorting and search.
 
-The explorer role uses the read-only `explore` kind; `lite` keeps a fix's first
-build round. New repos get `[models.explore.claude]` with `claude-haiku-5-5` at high effort and
-`[models.explore.codex]` with `gpt-6.2-sol` at medium effort. Existing repos
-without explore keep using lite for read-only work after upgrading and syncing. To choose
-separate read-only settings there, add the explore entries in a fix and run `forge sync`.
+The explorer uses the read-only `explore` kind. A fix's first build round uses `lite`.
+The explorer defaults are `gpt-6.1-terra` at medium effort for Codex,
+`claude-haiku-5-5` at high effort for Claude, and `gemini-4-neon` at low effort
+for Antigravity. New repos get these entries at setup. Upgraded repos use the defaults
+for missing entries and keep their configured entries. Run `forge sync` after changing
+explore settings to update the native explorer roles.
 
 ## Build simple
 
@@ -2916,3 +2944,4 @@ Open known issues in this Forge release, from its release notes. When one affect
 - **The design checks read text, not the rendered page.** A word such as `uppercase` in a class name, a long spinner animation, or a `#abc` value that is not a colour can be reported. `<strong>` and `<b>` tags and motion times set in seconds by animation libraries are not checked. Workaround: put `forge-ui-ignore <rule>: <reason>` in the file; it covers that rule for the whole file, and the review still reads the rest. (Since v1.2.48.)
 - **The recovery install can break a running Forge run.** The recovery step reinstalls Forge with `uv tool install --force`; a build, review or CI wait running on that machine at the same time can fail or mix releases. Workaround: let running Forge work finish, or stop it, before the recovery install. (Since v1.2.49.)
 - **A work branch started on v1.2.48 can still use the old GitHub address.** After the default branch upgrades, an existing work branch that pins v1.2.48 can try the disabled GitHub source when close merges the default branch. Workaround: merge the default branch into that work branch with v1.2.49 installed, or start the item again. (Since v1.2.49.)
+- **The half-window line can be missed on older Claude models.** A coordinator on an older Claude model with a 200K window (for example Opus 4.1) is measured against a 1M window, so it gets no line before the chat is shortened automatically. Workaround: use a current Claude model, or hand over by hand when the chat feels long. (Since v1.2.50.)

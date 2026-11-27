@@ -1,0 +1,164 @@
+{
+  "base": "dba263236b9a869fde8dbc5f7369ebe8f0a4393c",
+  "branch": "fix/neon-s-review-ends-with-review-engine-re",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a217b8-8c65-7ce3-b522-592812b3f95b",
+    "head": null,
+    "start": "ed142db74d22025a34e3e6fd4b8db04e266b03ba"
+  },
+  "done_when": "An Antigravity review whose tool call is refused either returns Neon's written review or stops with a message that names the refused step, never \"empty output\".",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "turn() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 487,
+      "outcome": "fixed in round 4",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A refused Antigravity review can finish without identifying the refused step",
+      "work": 2
+    },
+    {
+      "area": "turn() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 488,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Stop treating refused tool titles as provider rate limits",
+      "work": 2
+    },
+    {
+      "area": "turn() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 488,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Preserve failed review usage and conversation records",
+      "work": 2
+    },
+    {
+      "area": "test_1_antigravity_review_names_a_refused_tool_when_no_answer() in tests/test_antigravity_review_refusal.py",
+      "file": "tests/test_antigravity_review_refusal.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 39,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Refused Antigravity reviews preserve Neon's written findings",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "0aee44ade03b3adfac331b52d53a1fbeb013e59f7d89825ce30b645cab4531ae",
+    "changed": "0e689a3765caa96260b34136257a5c1c09e4e2d07b3cf6038d344e708f04aaa0",
+    "commit": "a0803a7d11008fce49cfa0a03956d9b342acfd1c",
+    "dismissals": [],
+    "findings": [],
+    "id": "ed6224c1-0b44-4594-b003-927f55b437d7",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-26T11:57:56.704795+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T11:58:17.960627+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T12:10:22.190668+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T12:10:43.938365+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T12:20:10.509907+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T12:20:10.525240+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-26T12:21:14.991630+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-26T12:28:49.683247+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T12:34:03.351558+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T12:34:03.370055+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-26T12:35:29.060702+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-26T12:43:02.091820+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T12:47:55.410275+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-26T12:34:03.370055+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "src/forge/antigravity.py",
+    "reason": "Owner chose one more round: also cover broken output after an ID-only refused request",
+    "wait_id": "21189308-258d-4161-a726-445920a02a69",
+    "worker_round": 3
+  },
+  "stuck": {
+    "close": "3ec74efe-6fa0-4e99-a9e1-efa739368cbe",
+    "head": "ca90c27525d22eb65866340f541f575557d2fff6",
+    "keys": {},
+    "round": 3
+  },
+  "why": "Neon's review ends with \"review engine returned empty output\" because a refused tool call cancels the turn, and the empty answer is accepted as a completed review, so close stops after two tries.",
+  "worker": "codex"
+}

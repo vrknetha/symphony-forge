@@ -1,0 +1,178 @@
+{
+  "base": "dba263236b9a869fde8dbc5f7369ebe8f0a4393c",
+  "branch": "fix/the-explorer-does-not-follow-the-builder",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a217c2-8403-72d0-83d2-dae3490cf743",
+    "head": null,
+    "start": "8daeec0bf4b62771303943a0dfc713fb3962ea9f"
+  },
+  "done_when": "An idea is sorted by the family that workers picks, and new and upgraded repos get the new explore defaults, with repos that have their own explore entries keeping them.",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "start() in src/forge/intake.py",
+      "file": "src/forge/intake.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 38,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: An idea is sorted by the family that workers picks",
+      "work": 1
+    },
+    {
+      "area": "src/forge/init.py",
+      "file": "src/forge/init.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 111,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Update existing tests for the new explorer behavior",
+      "work": 2
+    },
+    {
+      "area": "start() in src/forge/intake.py",
+      "file": "src/forge/intake.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 66,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Report provider failures instead of malformed replies",
+      "work": 1
+    },
+    {
+      "area": "start() in src/forge/intake.py",
+      "file": "src/forge/intake.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 68,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Scale: Remove Antigravity's per-idea checkout after sorting",
+      "work": 1
+    },
+    {
+      "area": "test_1_start_uses_the_builder_family_and_explore_models() in tests/test_start_uses_builder_explorer.py",
+      "file": "tests/test_start_uses_builder_explorer.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 26,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Prove explorer routing and defaults for new and upgraded repos",
+      "work": 1
+    },
+    {
+      "area": "test_23_prototype_next_fix_commands_run_as_printed() in tests/test_fix_routing.py",
+      "file": "tests/test_fix_routing.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 203,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 2,
+      "security": false,
+      "title": "Gate: Update existing tests for the new explorer behavior",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "a1354bfdf5cadb9de615625595a45a662b9fa6f41b25a18559d20ed501298b96",
+    "changed": "d8da422b5c7395340e383909a281d28e52766ec0660861d08008e0c6dc5b19f5",
+    "commit": "c85e36447f6e09affc323907f88e61c71051bcb0",
+    "dismissals": [],
+    "findings": [],
+    "id": "45de008e-2a4a-44d4-81ed-bc5be29cbf5c",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-26T12:08:51.549919+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-26T12:09:11.294357+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T12:24:36.774236+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T12:24:57.198286+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T12:39:27.368303+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T12:39:27.383148+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-26T12:40:19.232939+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-26T13:18:17.933982+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T13:23:42.127213+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-26T14:03:36.369289+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-26T14:13:58.026880+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-26T12:39:27.383148+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "tests/test_fix_routing.py",
+    "reason": "Owner chose one more round: update the old explorer test",
+    "wait_id": "4ba954e4-9ba7-4fa2-bebf-4a994c2afab6",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "2d080442-6e08-41a3-bd90-734a7764d5c3",
+    "head": "54d9b26e14fba6c1da768fb5f78e76ddd130cb7d",
+    "keys": {},
+    "round": 3
+  },
+  "why": "The explorer does not follow the builder choice: intake.py takes the family from the session, and the explore defaults are gpt-6.2-sol for Codex and none for Antigravity.",
+  "worker": "codex"
+}

@@ -232,7 +232,7 @@ where things are in one sentence and gives the exact next step.
 ### Install
 
 ```sh
-uv tool install --python 3.11 "symphony-forge==1.2.49"
+uv tool install --python 3.11 "symphony-forge==1.2.50"
 ```
 
 Check it worked with `forge --version`. Each project pins the Forge version it uses, and Forge

@@ -21,6 +21,7 @@ from test_first_start_survives_history_changes import (
 )
 from test_lanes_agents import finish, hold_agents, start
 from test_story import worktree
+from test_subagent_roles import _settings
 from test_upgrade_command import MARK, assert_ready, ours, unsynced_up, up  # noqa: F401
 
 STORY = "upgrade-no-install-no-refusal"
@@ -49,7 +50,8 @@ def test_1_upgrade_to_installed_release_continues_during_runs(
             previous = upgrade.show(path, "main").replace('model: "claude-sonnet-5-5"', 'model: "claude-opus-5-5"')
             assert 'model: "claude-opus-5-5"' in previous
             upgrade.on_main(path, previous + "\n")
-        settings = 'models.grill.claude = { model = "opus", effort = "medium" }\n' + settings
+        settings = ('models.grill.claude = { model = "opus", effort = "medium" }\n'
+                    'models.explore.codex = { model = "gpt-6-luna", effort = "high" }\n' + settings)
     upgrade.on_main("forge.toml", settings)
     other = _other_repo(tmp_path, upgrade.repo.bin)
     hold_agents(upgrade.env)
@@ -83,6 +85,8 @@ def test_1_upgrade_to_installed_release_continues_during_runs(
                 assert 'model: "claude-sonnet-5-5"' in front and 'effort: "high"' in front, path
             expected_settings = settings.replace('version = "v1.0.0"', f'version = "{release}"', 1)
             assert upgrade.show("forge.toml", f"fix/{name}") == expected_settings.rstrip("\n")
+            assert _settings(worktree(upgrade.repo, f"fix/{name}"), "explorer") == (
+                ("gpt-6-luna", "high"), ("claude-haiku-5-5", "high"))
         assert not [call for call in upgrade.uv() if call["args"][:2] == ["tool", "install"]]
         assert reader.poll() is None, "Upgrade must leave the other repo's run alone"
     finally:

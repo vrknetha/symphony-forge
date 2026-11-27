@@ -12,8 +12,8 @@ def test_1_sync_writes_no_claude_md_and_agents_md_holds_the_two_claude_lines(rep
     _on_a_branch_with_forge_toml(repo)
     assert repo.forge("sync").returncode == 0
     assert not (repo.path / "CLAUDE.md").exists()
-    agents = (repo.path / "AGENTS.md").read_text(encoding="utf-8")
-    assert "exit Plan Mode with the text of the story doc" in agents
+    agents = " ".join((repo.path / "AGENTS.md").read_text(encoding="utf-8").split())
+    assert "In Claude Code, exit Plan Mode with that text as the plan." in agents
     assert "Run long `forge work` runs in the background and keep watching them." in agents
 
 

@@ -1,0 +1,26 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_review_pending_after_merge.py\tTest: 1: tests/test_review_pending_after_merge.py::test_1_pending_after_merge_does_not_block_and_lists_check_and_owner\tFORGE-REVIEWPROOF-1/PENDING",
+      "kind": "bug",
+      "path": "tests/test_review_pending_after_merge.py",
+      "line": 33,
+      "text": "Test: 1: tests/test_review_pending_after_merge.py::test_1_pending_after_merge_does_not_block_and_lists_check_and_owner",
+      "from": "blocking",
+      "item": "FORGE-REVIEWPROOF-1/PENDING",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_review_pending_after_merge.py\tTest: 2: tests/test_review_pending_after_merge.py::test_2_pending_after_merge_carries_across_rounds_and_stays_out_of_stop_accept_and_spotted\tFORGE-REVIEWPROOF-1/PENDING",
+      "kind": "bug",
+      "path": "tests/test_review_pending_after_merge.py",
+      "line": 92,
+      "text": "Test: 2: tests/test_review_pending_after_merge.py::test_2_pending_after_merge_carries_across_rounds_and_stays_out_of_stop_accept_and_spotted",
+      "from": "blocking",
+      "item": "FORGE-REVIEWPROOF-1/PENDING",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

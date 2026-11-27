@@ -598,6 +598,9 @@ WORKER_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "low"},
 DESIGN_DEFAULTS = {"claude": {"model": "claude-sonnet-5-5", "effort": "xhigh"},
                    "codex": {"model": "gpt-6.2-sol", "effort": "high"},
                    "antigravity": {"model": "default", "effort": "high"}}
+EXPLORE_DEFAULTS = {"claude": {"model": "claude-haiku-5-5", "effort": "high"},
+                    "codex": {"model": "gpt-6.1-terra", "effort": "medium"},
+                    "antigravity": {"model": "gemini-4-neon", "effort": "low"}}
 CLAUDE_GRILL_DEFAULT = {"model": "claude-sonnet-5-5", "effort": "high"}
 TOP_EFFORT = {"codex": "high", "claude": "xhigh", "antigravity": "high"}
 SUBAGENT_DEFAULT = {"model": "claude-haiku-5-5", "effort": "high"}
@@ -768,18 +771,16 @@ def ready_path(item: str, top: Path) -> Path:
 
 
 def models(cfg: dict[str, Any], kind: str, family: str) -> dict[str, str]:
-    """One kind's entry for a family ("codex" or "claude") from forge.toml's [models] table: its
-    own entry, or a single entry whose model is that family's; Claude plan reads default to
-    Sonnet at high effort, and other missing entries return {}."""
-    if kind == "explore" and kind not in cfg.get("models", {}):
-        kind = "lite"
+    """One kind's entry for a family from forge.toml's [models] table: its own entry or a single
+    entry for that family. Explore and Claude plan reads have their own defaults."""
     chosen = cfg.get("models", {}).get(kind) or {}
+    fallback = EXPLORE_DEFAULTS[family] if kind == "explore" else {}
     if "model" not in chosen:
         return chosen.get(family) or (CLAUDE_GRILL_DEFAULT
-                                     if kind == "grill" and family == "claude" else {})
+                                     if kind == "grill" and family == "claude" else fallback)
     model = chosen["model"]
     owner = "codex" if model.startswith("gpt") else "antigravity" if model.startswith("gemini") else "claude"
-    return chosen if owner == family else {}
+    return chosen if owner == family else fallback
 
 
 def user_facing(cfg: dict[str, Any], row: dict[str, str]) -> bool:
@@ -830,7 +831,7 @@ def setting_sources(cfg: dict[str, Any], kind: str, design: bool) -> str:
     local = cfg.get("local")
     if local is None:
         return ""  # ponytail: no local file means forge.toml set them all, so output stays as it was
-    kind = "design" if design else "lite" if kind == "explore" and "explore" not in cfg["models"] else kind
+    kind = "design" if design else kind
     files: dict[str, list[str]] = {LOCAL: [], "forge.toml": [], "built-in default": []}
     for key in ("tools", "workers"):
         files[LOCAL if key in local else "forge.toml"].append(f"{key} = {cfg[key]}")
@@ -841,7 +842,8 @@ def setting_sources(cfg: dict[str, Any], kind: str, design: bool) -> str:
 def model_source(cfg: dict[str, Any], kind: str, family: str) -> str:
     """Where a worker's models for this kind come from. A local [models.<kind>] replaces the whole
     kind, so without an entry for this worker Forge's built-in default applies, as forge work does."""
-    if not models(cfg, kind, family):
+    entry = models(cfg, kind, family)
+    if not entry or (kind == "explore" and entry is EXPLORE_DEFAULTS[family]):
         return "built-in default"
     return LOCAL if kind in cfg.get("local", {}).get("models", {}) else "forge.toml"
 

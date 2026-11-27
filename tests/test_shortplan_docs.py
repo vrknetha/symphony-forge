@@ -25,6 +25,7 @@ def test_1_new_plans_put_one_sentence_per_result_on_top_and_details_below(repo):
     skill = flat(synced_skills(repo))
     assert "no code names, file paths or test names" in skill
     assert "### Done-when details" in skill
+    assert "In Codex, ask the owner to type the `approve <KEY> <code>` line from `forge next`." in skill
 
     doc = (new_story(repo, "SHOP") / "plans" / "SHOP.md").read_text(encoding="utf-8")
     top, builders, below = doc.partition("\n## For the builders\n")
@@ -71,8 +72,11 @@ def test_2_you_approve_only_the_top_part(repo, claude_payload, codex_payload):
     # Codex: forge next says to show the same top part before asking, and the answer approves.
     ready(repo, "WISH", NEW.replace("save a basket", "keep a wish list"))
     shown = flat(repo.forge("next").stdout)
-    assert f"in Codex, show plans/WISH.md {TOP_PART}, then ask request_user_input" in shown
-    recorded = hook(repo, codex_question(codex_payload, _digest(repo)))
+    digest = _digest(repo)
+    assert f"in Codex, show plans/WISH.md {TOP_PART}, then ask the owner to type approve WISH {digest[:6]}." in shown
+    assert f"In Plan Mode, you can instead ask request_user_input with id approve_plan_{digest}" in shown
+    assert "review and trust the new hook with /hooks in Codex" in shown
+    recorded = hook(repo, codex_question(codex_payload, digest))
     assert recorded.returncode == 0, recorded.stderr
 
     # A doc written the old way, with no For the builders heading, is shown and approved whole.

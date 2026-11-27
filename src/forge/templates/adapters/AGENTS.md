@@ -83,11 +83,12 @@ Do not install Mainline or start OAuth sign-in for those requests. An explicit r
 - Never make anything sound more certain or more finished than it is. Keep numbers, uncertainty
   and status (planned, in progress, done) exact. A correlation stays a correlation, and a plan
   stays a plan.
-- A story is approved through Plan Mode: exit Plan Mode with the text of the story doc that
-  `forge next` names, unchanged, as the plan: from its title down to `## For the builders`, or the
-  whole doc when it has no such heading. The approval matches its "What changes for you" and
-  "Done when" sections exactly, so a summary or a rewrite records nothing, and an edit below
-  `## For the builders` needs no new approval. There is no other approval step.
+- Show the story doc that `forge next` names, unchanged, from its title down to
+  `## For the builders`. Show the whole doc if it has no such heading. In Claude Code, exit Plan
+  Mode with that text as the plan. In Codex, ask the owner to type the approval line from
+  `forge next`. A Codex chat already in Plan Mode can use the question from `forge next`.
+  The approval matches "What changes for you" and "Done when" exactly. An edit below
+  `## For the builders` needs no new approval.
 - Run long `forge work` runs in the background and keep watching them.
 - When Forge itself misbehaves (a wrong or confusing message, a refusal that shouldn't happen, a
   crash, a command that reports success but did nothing, generated files that contradict each
