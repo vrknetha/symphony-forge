@@ -65,7 +65,7 @@
     "id": "7315e38a-406e-47ae-a1a7-31132f44b1e1",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -80,13 +80,18 @@
     {
       "at": "2026-11-27T13:44:02.148875+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-27T13:44:21.333718+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "6ae965dd09f0f734f72effaf7cbf0e6f0bbae0d5",
+    "close": "7b6e9b18-56e9-4d65-bcb5-f96b1e884c0c",
+    "head": "3e0b582f06c242fc989343baf1fecf49b6dcea65",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "The v1.2.50 release notes miss what merged after the first notes were written: the explorer follows the builder, typed approval in Codex chats, review severity and pending-after-merge proof, the Codex cache-safe effort change and chat shortening, the queue runner with its notices and stops, and the settings-fix guide rule.",
   "worker": "antigravity"
