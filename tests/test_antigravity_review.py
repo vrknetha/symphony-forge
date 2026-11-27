@@ -232,7 +232,7 @@ def test_3_antigravity_reads_and_reviews_safely_and_own_family_reviews_are_refus
     monkeypatch.delenv("STUB_AGY_HOLD")
     incomplete = {key: value for key, value in clean.items() if key != "review_completion"}
     monkeypatch.setenv("STUB_AGY_REVIEW", json.dumps(incomplete))
-    rejected = close.close(item)
+    rejected = repo.forge("land", item)
     assert rejected.returncode == 1 and "missing or invalid review_completion" in rejected.stderr
     launch = next(line for line in calls(log) if "argv" in line and
                   Path(line["cwd"]).parts[-3:] == ("review", item, "1"))

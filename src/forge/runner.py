@@ -6,13 +6,12 @@ import os
 import re
 import subprocess
 import sys
-import threading
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from forge import __version__, board, codex, doctor, land, machine, nextstep, repo, stops, story, task
+from forge import __version__, board, close, codex, doctor, land, machine, nextstep, repo, stops, story, task
 
 _SKIP_ENV = ("FORGE_NO_RUNNER", "FORGE_WORKER", "FORGE_RUNNER", "CI")
 _POLL_INITIAL = 60.0
@@ -249,23 +248,30 @@ def _log_append(top: Path, text: str) -> None:
         pass
 
 
-def _spawn_land(top: Path, item: str) -> tuple[subprocess.Popen[str], threading.Thread, list[str]]:
+def _spawn_land(top: Path, item: str) -> tuple[subprocess.Popen[bytes], Path]:
+    """Run forge land redirected to a file so killing the runner never breaks a child's stdout pipe."""
     env = _runner_env({"FORGE_RUNNER": "1"})
-    proc = subprocess.Popen(
-        _child_cmd(["land", item]), cwd=top, env=env,
-        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, encoding="utf-8", errors="replace")
-    lines: list[str] = []
+    out_path = repo.forge_dir(top) / f"land-{item.replace('/', '-')}-{os.getpid()}-{time.monotonic_ns()}.log"
+    with out_path.open("wb") as out:
+        proc = subprocess.Popen(
+            _child_cmd(["land", item]), cwd=top, env=env,
+            stdin=subprocess.DEVNULL, stdout=out, stderr=subprocess.STDOUT)
+    return proc, out_path
 
-    def relay() -> None:
-        assert proc.stdout is not None
-        for line in proc.stdout:
-            lines.append(line.rstrip("\n"))
-            _log_append(top, f"[{item}] {line}")
 
-    reader = threading.Thread(target=relay, daemon=True)
-    reader.start()
-    return proc, reader, lines
+def _collect_land_output(top: Path, item: str, out_path: Path) -> list[str]:
+    try:
+        raw = out_path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        raw = ""
+    try:
+        out_path.unlink(missing_ok=True)
+    except OSError:
+        pass
+    lines = raw.splitlines()
+    if raw:
+        _log_append(top, "".join(f"[{item}] {line}\n" for line in lines))
+    return lines
 
 
 def _wake_mtime(path: Path) -> float:
@@ -297,7 +303,7 @@ def main() -> int:
 
 
 def _loop(wake_path: Path) -> int:
-    running: dict[tuple[Path, str], tuple[subprocess.Popen[str], threading.Thread, list[str], str]] = {}
+    running: dict[tuple[Path, str], tuple[subprocess.Popen[bytes], Path, str]] = {}
     quiet: set[tuple[Path, str]] = set()
     retries: dict[tuple[Path, str], float] = {}
     attempts: dict[tuple[Path, str], int] = {}
@@ -338,6 +344,7 @@ def _loop(wake_path: Path) -> int:
     def record_merge(top: Path, item: str) -> None:
         nonlocal quiet
         key = (top, item)
+        stops.lift(top, item)
         clear_item_retry(key)
         polling.pop(key, None)
         quiet = {k for k in quiet if k[0] != top}
@@ -365,12 +372,12 @@ def _loop(wake_path: Path) -> int:
 
         # 1. Collect finished land runs.
         for key in list(running):
-            proc, reader, lines, branch = running[key]
+            proc, out_path, branch = running[key]
             if proc.poll() is None:
                 continue
             running.pop(key)
-            reader.join()
             top, item = key
+            lines = _collect_land_output(top, item, out_path)
             if proc.returncode == 0:
                 ready_line = next((line for line in lines
                                    if line.startswith(f"{item} is ready; a human merges")), None)
@@ -503,6 +510,7 @@ def _loop(wake_path: Path) -> int:
                 for item, branch, tree, state in current_items:
                     key = (top, item)
                     if task._merged(f"origin/{default}", item, top):
+                        stops.lift(top, item)
                         clear_item_retry(key)
                         polling.pop(key, None)
                         continue
@@ -512,6 +520,18 @@ def _loop(wake_path: Path) -> int:
                         continue
                     if stops.stopped(top, item):
                         continue
+                    if stops.parked(top, item, tree):
+                        if nextstep._item_readiness(item, state, tree)[0] == "ready" and close.merger(top, state) != "agent":
+                            merged = _safe_merged(top, branch)
+                            if merged is True:
+                                record_merge(top, item)
+                                merge_happened = True
+                            elif merged is False:
+                                polling[key] = {"branch": branch, "delay": _POLL_INITIAL,
+                                                "next": now + _POLL_INITIAL, "deadline": now + _POLL_MAX_AGE}
+                            else:
+                                schedule_item_retry(key, 0, [], now)
+                        continue
                     if land._pending(top, item):
                         continue
                     if item in live or any(run.get("process") and codex._alive(run["process"]) is not False
@@ -520,8 +540,8 @@ def _loop(wake_path: Path) -> int:
                     if not _lock_free(top, item):
                         continue
                     retries.pop(key, None)
-                    proc, reader, lines = _spawn_land(top, item)
-                    running[key] = (proc, reader, lines, branch)
+                    proc, out_path = _spawn_land(top, item)
+                    running[key] = (proc, out_path, branch)
                     worked_repos.add(top)
 
         if merge_happened:

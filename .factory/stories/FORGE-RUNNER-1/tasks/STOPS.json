@@ -1,0 +1,200 @@
+{
+  "branch": "task/FORGE-RUNNER-1-STOPS",
+  "known": [
+    {
+      "area": "_notice_body() in src/forge/stops.py",
+      "file": "src/forge/stops.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 130,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The owner gets one desktop notice when an item first needs them, with its question or pull request link",
+      "work": 2
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 513,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Restore polling for parked pull requests after a restart",
+      "work": 2
+    },
+    {
+      "area": "summary() in src/forge/stops.py",
+      "file": "src/forge/stops.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 174,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Exclude resolved items from later summary notices",
+      "work": 2
+    },
+    {
+      "area": "stop() in src/forge/machine.py",
+      "file": "src/forge/machine.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 661,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Update existing tests for durable owner stops",
+      "work": 2
+    },
+    {
+      "area": "_runner_pid() in tests/test_runner_restart_repeats_nothing.py",
+      "file": "tests/test_runner_restart_repeats_nothing.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 28,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A restart repeats no finished build and undoes no stop that the owner set, and the runner comes back the first time Forge is used.",
+      "work": 2
+    },
+    {
+      "area": "test_3_4_runner_stops_one_item_and_tells_the_owner() in tests/test_runner_stops_one_item_and_tells_the_owner.py",
+      "file": "tests/test_runner_stops_one_item_and_tells_the_owner.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 55,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The owner gets one desktop notice when an item first needs them, with its question or pull request link",
+      "work": 2
+    },
+    {
+      "area": "test_3_4_runner_stops_one_item_and_tells_the_owner() in tests/test_runner_stops_one_item_and_tells_the_owner.py",
+      "file": "tests/test_runner_stops_one_item_and_tells_the_owner.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 86,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: The notice test must accept Windows' no-popup behavior",
+      "work": 1
+    },
+    {
+      "area": "test_5_runner_restart_repeats_nothing() in tests/test_runner_restart_repeats_nothing.py",
+      "file": "tests/test_runner_restart_repeats_nothing.py",
+      "gain": 2,
+      "harm": 1,
+      "line": 91,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: Exercise stopping an item during its check wait",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "4262f6ac9661fec1d3625135cbf8cfec7f1e3695df59bf21e022804fabdb2ba2",
+    "changed": "abecfa20df56af35f43a6ee47a47c0481a08f60ac5ebfba3c39ad677c4490801",
+    "commit": "04c99dbb2afca9ad65d178c6cef45b86be5c0a5a",
+    "dismissals": [],
+    "findings": [],
+    "id": "1bf69359-56ec-411f-b6d3-e3f8e8e63bdb",
+    "status": "clean"
+  },
+  "round": 5,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-27T11:23:16.065720+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-27T11:23:30.760806+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T11:41:59.459785+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T11:42:19.181876+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T12:28:49.504079+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T12:28:49.504234+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T12:29:32.756365+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T12:34:09.783953+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T12:39:08.562854+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T12:45:07.172191+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T12:49:39.686082+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T12:55:07.094790+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T12:58:21.137638+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-27T12:28:49.504234+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "tests/test_runner_restart_repeats_nothing.py",
+    "reason": "Owner chose one more round: prove a stop survives a runner killed after the stop was set",
+    "wait_id": "81f980a6-09f6-4aaf-ace0-fd2bbbb85560",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "335773ee-3629-4423-b5b1-c0edd7fee669",
+    "head": "fddd2bcb1e0a8dee4ae85138d7616f527cd3e882",
+    "keys": {},
+    "round": 4
+  },
+  "worker": "antigravity"
+}
