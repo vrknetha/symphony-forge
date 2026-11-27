@@ -231,15 +231,26 @@ def test_5_runner_restart_repeats_nothing(case, land, tmp_path, monkeypatch, req
         return
 
     # owner_stop_survives_restart_and_land_lifts_it:
-    # Make the builder sleep when building slow-fix until a marker file exists.
-    marker = tmp_path / "slow-started"
-    release = tmp_path / "slow-release"
+    # Start slow-fix and keeper-fix on one live runner. keeper-fix keeps that same runner alive
+    # across `forge stop slow-fix` (on both 2-core and multi-core machines) so we kill the live
+    # runner strictly AFTER the owner's stop is recorded, then revive with `forge next`.
+    slow_marker = tmp_path / "slow-started"
+    slow_release = tmp_path / "slow-release"
+    keeper_marker = tmp_path / "keeper-started"
+    keeper_release = tmp_path / "keeper-release"
     module = land.repo.bin / "claude_agent_sdk" / "__init__.py"
     original = module.read_text(encoding="utf-8")
     patch = (
-        f'        if "slow-fix" in os.getcwd() and not Path({str(release)!r}).exists():\n'
-        f'            Path({str(marker)!r}).write_text("started", encoding="utf-8")\n'
-        '            import time; time.sleep(30)\n'
+        f'        if "slow-fix" in os.getcwd() and not Path({str(slow_release)!r}).exists():\n'
+        f'            Path({str(slow_marker)!r}).write_text("started", encoding="utf-8")\n'
+        '            import time as _t\n'
+        f'            while not Path({str(slow_release)!r}).exists():\n'
+        '                _t.sleep(0.05)\n'
+        f'        if "keeper-fix" in os.getcwd() and not Path({str(keeper_release)!r}).exists():\n'
+        f'            Path({str(keeper_marker)!r}).write_text("started", encoding="utf-8")\n'
+        '            import time as _t\n'
+        f'            while not Path({str(keeper_release)!r}).exists():\n'
+        '                _t.sleep(0.05)\n'
         '        Path(f"work-{done + 1}.txt").write_text("worked\\n", encoding="utf-8")\n'
     )
     module.write_text(
@@ -249,23 +260,48 @@ def test_5_runner_restart_repeats_nothing(case, land, tmp_path, monkeypatch, req
 
     started = land.repo.forge("fix", "start", "Slow fix", "--done", "Slow fix done", "--slug", "slow-fix")
     assert started.returncode == 0, started.stderr
-    _wait_for(lambda: marker.exists(), timeout=30.0)
+    started_keeper = land.repo.forge("fix", "start", "Keeper fix", "--done", "Keeper fix done", "--slug", "keeper-fix")
+    assert started_keeper.returncode == 0, started_keeper.stderr
+    _wait_for(lambda: slow_marker.exists() and _runner_pid(tmp_path) is not None, timeout=30.0)
+    runner_pid = _runner_pid(tmp_path)
+    assert runner_pid is not None
 
-    # Kill the live runner while the slow build is active, then stop slow-fix and revive the runner.
-    _kill_runner(tmp_path)
+    # 1. Set the owner's stop on slow-fix while the live runner is running.
     stopped = land.repo.forge("stop", "slow-fix")
     assert stopped.returncode == 0, stopped.stderr
+    _wait_for(lambda: keeper_marker.exists(), timeout=30.0)
+    assert _runner_pid(tmp_path) == runner_pid
 
-    # Allow slow-fix to finish quickly if anything ever tried to build it again.
-    release.write_text("go", encoding="utf-8")
-    calls_after_stop = len(calls(land.repo.bin / "claude-sdk-calls.jsonl"))
+    def _spawns() -> list[int]:
+        log = tmp_path / "runner-spawns.jsonl"
+        if not log.exists():
+            return []
+        return [json.loads(line)["pid"] for line in log.read_text(encoding="utf-8").splitlines() if line.strip()]
 
-    # Revive runner with forge next: slow-fix must NOT be built again.
+    spawns_before_kill = _spawns()
+    slow_calls_after_stop = sum("slow-fix" in str(c.get("cwd", "")) for c in calls(land.repo.bin / "claude-sdk-calls.jsonl"))
+
+    # 2. Kill the live runner strictly AFTER the owner's stop is set.
+    killed_pid = _kill_runner(tmp_path)
+    assert killed_pid == runner_pid
+
+    # Allow both builds to finish if anything tries to run them; keeper-fix's surviving land finishes on its own.
+    slow_release.write_text("go", encoding="utf-8")
+    keeper_release.write_text("go", encoding="utf-8")
+    _wait_for(lambda: (land.repo.bin / "merged-fix-keeper-fix").exists(), timeout=45.0)
+
+    # 3. Use Forge again: a new runner starts, cleans up keeper-fix without repeating its build,
+    #    and leaves slow-fix stopped without building it again.
     woke = land.repo.forge("next")
     assert woke.returncode == 0, woke.stderr
-    time.sleep(0.5)
-    _wait_for(lambda: _runner_exited(tmp_path), timeout=30.0)
-    assert len(calls(land.repo.bin / "claude-sdk-calls.jsonl")) == calls_after_stop
+    _wait_for(lambda: not (tmp_path / "repo-fix-keeper-fix").exists() and _runner_exited(tmp_path), timeout=45.0)
+
+    spawns_after_revive = _spawns()
+    assert len(spawns_after_revive) > len(spawns_before_kill) and spawns_after_revive[-1] != runner_pid
+    all_calls = calls(land.repo.bin / "claude-sdk-calls.jsonl")
+    assert sum("slow-fix" in str(c.get("cwd", "")) for c in all_calls) == slow_calls_after_stop
+    assert sum("keeper-fix" in str(c.get("cwd", "")) for c in all_calls) == 1
+    assert not (land.repo.bin / "merged-fix-slow-fix").exists()
 
     # Turn off the runner for the manual merge / land --all / land checks.
     monkeypatch.setenv("FORGE_NO_RUNNER", "1")
