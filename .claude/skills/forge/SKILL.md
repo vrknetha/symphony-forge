@@ -45,8 +45,9 @@ Start with the largest measured cost:
    shared settings, workflow or Forge selection-script change. Larger changes use all groups.
    A `fast_test` with `--testNamePattern`, `--grep`, `-t` or `-g` keeps all groups. Forge does not
    see Vitest's `--test-name-pattern` spelling or a name filter set in the Vitest config: the change
-   can run one group while the filter skips changed tests, so use `--testNamePattern`. Set
-   `groups` to the number of fast runner slots reserved for tests. Give each self-hosted slot its
+   can run one group while the filter skips changed tests, so use `--testNamePattern`. In a
+   settings fix whose `--done` names `forge.toml`, set `groups` to the number of fast runner slots
+   reserved for tests. Give each self-hosted slot its
    own CPU set, memory share and enough cores for the job's worker limit. Use memory-backed
    temporary storage only when that slot has room.
 6. Preinstall git, Python 3.11, uv, Node, the pinned package manager and Docker in the runner
@@ -58,7 +59,7 @@ Start with the largest measured cost:
    has waited five minutes.
 
 New repos get these rules at setup; existing repos get the guide on upgrade and sync, which
-preserve their own scripts and settings. Ask the owner before changing those through a fix.
+preserve their own scripts and settings. Ask the owner before changing those through a fix (with `--done` naming `forge.toml` when changing `forge.toml`).
 For browser selection and parallel API files, copy the matching starter's `scripts/test.mjs`
 changes; for TypeScript also adapt its API Vitest config, tests and helpers for file-owned data.
 
@@ -443,7 +444,7 @@ New and earlier-adopted repos get this check on upgrade. Workers edit `forge.tom
 fix's Done-when names `forge.toml` (never on a story part).
 New and existing repos can choose Antigravity for builds and fixes after installing this release.
 Use `[models.build.antigravity]`, `[models.fix.antigravity]` or `[models.lite.antigravity]`
-to name a model and effort. Forge uses the account's default model when the entry is absent.
+(in a settings fix whose `--done` names `forge.toml`, or in `forge.local.toml`) to name a model and effort. Forge uses the account's default model when the entry is absent.
 Gemini 4 Neon uses `gemini-4-neon` and needs a plan above Free and Plus. Repair rounds resume
 on the same machine and raise effort after a failed check or blocking finding. Forge installs
 its command guard and skills path in a separate profile for each worktree. Sign in with Google,
@@ -468,7 +469,7 @@ Only `forge doctor` reports a likely missing runner, when a current check has be
 least five minutes and no matching job started in its sample of this repo's runs created in
 the last seven days. It reads at most 100 newest runs, skips successful runs, and reads one
 page of latest jobs per remaining run, without earlier attempts or older runs. Make a
-matching runner available or correct the setting; run `forge sync` only if you
+matching runner available or correct the setting in a settings fix whose `--done` names `forge.toml`; run `forge sync` only if you
 change the runner setting. Keep the required checks enabled. New and upgraded repos get the
 same waiting and doctor behaviour from the upgraded Forge commands.
 The `merge` setting is the owner's, because it is a gate on your own work: never change it to
@@ -1593,7 +1594,7 @@ keep existing settings until that fix changes them. An explicit `test_place` kee
    If close cannot read a check name from GitHub, it reports the missing name.
    Retry `forge close <item>` after GitHub returns check data.
    Existing apps keep their scripts and settings on upgrade and sync. Ask before adding these
-   targets and scripts to an existing app or changing its `forge.toml`.
+   targets and scripts to an existing app or changing its `forge.toml` (in a settings fix whose `--done` names `forge.toml`).
    When `fast_test` is missing, `forge doctor` and `forge upgrade` print one suggested
    `fast_test` line: Python gets `forge test --pytest {base}`; vitest and jest keep the
    repo's own install and runner, adding `--changed {base}` or `--changedSince {base}`
@@ -2144,7 +2145,8 @@ Claude planner and architect roles use the plan-read entry; debugger, security
 and performance roles use Sonnet 5.5 at high effort. Reviews, including prototype sign-off,
 use the selected tool's `models.review` entry, or Autoreview's defaults when unset.
 
-Existing model entries stay unchanged on upgrade. To opt in, set each of
+Existing model entries stay unchanged on upgrade. To opt in, start a settings fix whose `--done`
+names `forge.toml` and set each of
 `[models.build.claude]`, `[models.fix.claude]`, `[models.lite.claude]` to Sonnet at low.
 Keep `[models.design.claude]` at Sonnet xhigh. Set `[models.grill.claude]` and
 `[models.review.claude]` to Sonnet at high.
@@ -2157,7 +2159,7 @@ If build, fix or lite has a single entry, move it to its family's table before a
 Claude entry. Then run `forge sync` to refresh subagent roles. Existing review entries stay
 unchanged and still set the review model and effort.
 
-Routing settings (`tools`, `workers` and `models`) come from the default branch's `forge.toml`, plus the clone's `forge.local.toml`, unless a branch changed that key itself; after you change them on the default branch, run `forge sync`.
+Routing settings (`tools`, `workers` and `models`) come from the default branch's `forge.toml`, plus the clone's `forge.local.toml`, unless a branch changed that key itself; after a settings fix whose `--done` names `forge.toml` changes them on the default branch, run `forge sync`.
 With `tools = "both"`, `forge.toml`'s `workers` says who builds each task and fix.
 `forge work` prints the worker,
 model and effort it starts with, and why; `forge next` names the worker beside each ready task:
@@ -2191,10 +2193,10 @@ or `forge work <item>` on its own branch before you remove `.git/forge`.
 Keep `.git/forge` until the upgrade finishes.
 
 Codex app-server turns run at normal speed by default. Set `codex_fast = "needed"` in
-`forge.toml` to use the selected model's Fast tier for every fix, from the second worker
+`forge.toml` (in a settings fix whose `--done` names `forge.toml`) to use the selected model's Fast tier for every fix, from the second worker
 round onward, or when other planned work waits on the item (the board's `waits_for` dependencies).
 Other turns run at normal speed; models without Fast also run normally. Fast uses more of your Codex allowance.
-The optional `codex_fast` setting in `forge.toml` defaults to `"off"`; choose `"needed"` to enable
+The optional `codex_fast` setting in `forge.toml` defaults to `"off"`; in a settings fix whose `--done` names `forge.toml`, choose `"needed"` to enable
 Fast or `"always"` to request it on every Codex turn. `forge doctor` shows the policy and whether the last Codex turn ran
 with Fast. When Fast is wanted but the model does not offer it, the run's first line says so.
 Every turn, including capacity retries, records the
@@ -2274,7 +2276,7 @@ restore after they fetch.
 
 In `forge.toml`, `cold_read_rounds` sets the cold-read limit and `task_review_rounds` sets the task and fix review limit. Each accepts 1 or 2 and defaults to 2. For a fix, only blocked reviews count toward this limit.
 
-The owner can set `auto_more_round = true` in `forge.toml` to permit one more review round per item.
+The owner can set `auto_more_round = true` in `forge.toml` (in a settings fix whose `--done` names `forge.toml`) to permit one more review round per item.
 At the review limit, close applies this policy only when all open blocking findings are P0 or P1
 with `Raise: Functional`. Close reports the policy when it applies it. The setting is off by default.
 P0 findings already return to the worker and do not use this permission. The next worker turn
@@ -2423,8 +2425,8 @@ CI checks this once before the tests job and skips that job for a docs-only chan
 One code file runs tests as usual. New repos get
 this rule at init, and existing repos get it after upgrade and sync. Bare `forge test` still runs.
 For other changes, the generated `forge.yml` runs one `tests` job with `forge test --change`.
-Set `groups = 4` in `forge.toml` to run four parallel jobs with any test runner. Each job runs the
-tests related to the pull request. Put `{group}` and `{groups}` in the `test` or `fast_test`
+Set `groups = 4` in `forge.toml` (in a settings fix whose `--done` names `forge.toml`) to run four parallel jobs with any test runner. Each job runs the
+tests related to the pull request. In the same settings fix (with `--done` naming `forge.toml`), put `{group}` and `{groups}` in the `test` or `fast_test`
 command where the runner expects its shard number and total, for example
 `vitest run --shard={group}/{groups}`. Forge fills these values for each job and uses `1` for both
 outside CI. For a direct pytest command with pytest-split, Forge adds the split options automatically.
@@ -2433,13 +2435,13 @@ Forge chooses each job's groups from its own command. The `forge test --pytest` 
 splits the underlying `test` command.
 When `groups` exceeds 1 and that command has no `{group}` placeholder or automatic pytest split,
 Forge uses one group. `forge doctor` and the generated workflow each show one warning.
-Add the runner's shard options to that command to use more groups.
+Add the runner's shard options to that command in a settings fix whose `--done` names `forge.toml` to use more groups.
 With one group, the required `tests` job also checks for docs-only changes, without extra gate jobs.
 Init writes `groups = 1` for new and adopted repos. An upgrade adds no `groups` setting, so an
 existing repo with a direct pytest command and pytest-split keeps its six groups. Each group then
 runs its share of the related tests through `forge test --change`. The required `tests` check passes
 only when every job passes; branch protection keeps the same `tests` check.
-A full run covers only `forge.toml`'s `test` command; if the repo's whole suite runs elsewhere, point that setting at it.
+A full run covers only `forge.toml`'s `test` command; if the repo's whole suite runs elsewhere, point that setting at it in a settings fix whose `--done` names `forge.toml`.
 Set `full_suite_workflow = "nightly.yml"` in a settings fix whose `--done` names `forge.toml` (and runs `forge sync` to commit the generated workflow) to omit Forge's full-suite jobs.
 The repo's workflow must support `workflow_dispatch`. Start its full run with `gh workflow run nightly.yml --ref <default>`.
 That workflow must post `forge-full-suite` on the default branch commit after its run, with `state` set to `success` or `failure`:
@@ -2486,7 +2488,7 @@ Forge's initial optional-package Node command uses the same selection once an ap
 Go and other runners run the full test command. Compound npm scripts also keep their full
 command because arguments cannot select each runner inside them; `forge doctor`, `forge upgrade`
 and adoption name such a script, and step 9 of Adopt a live app says how to write the command.
-Set `fast_test` for a different selection. Supported runners with no related tests run none locally. A red CI still sends
+Set `fast_test` in a settings fix whose `--done` names `forge.toml` for a different selection. Supported runners with no related tests run none locally. A red CI still sends
 the item back to the worker.
 To include fast checks or a wider selection, set `fast_test` in `forge.toml` (in a settings fix whose `--done` names `forge.toml`), with
 `{base}` standing for the merge base with the default branch.
@@ -2501,7 +2503,7 @@ run, pytest-split assigns each entry to one group; the other groups do not fail 
 not run it. A missing file or node still fails. In a grouped run, a mark or `-k` filter that
 removes an entry is not reported as missing. In a one-group run, an entry that runs no test, for
 example because `-k` deselects it, still fails the run.
-For pytest repos, set `fast_test` to `forge test --pytest {base}`. Forge's own repo uses this
+For pytest repos, set `fast_test` to `forge test --pytest {base}` in a settings fix whose `--done` names `forge.toml`. Forge's own repo uses this
 shipped picker too. It selects only changed test files and tests importing or naming a changed
 Python module by its dotted name or file path, such as `shop.prices` or `src/shop/prices.py`,
 including package-relative imports. Filenames and references to changed non-Python inputs
@@ -2544,7 +2546,7 @@ It prints the report close keeps and always runs, including docs-only and
 uncommitted changes. If the remote default branch is missing it says to fetch it; if forge.toml
 names no test command it says so and exits successfully. In a sample-data prototype, it says
 tests are off until client sign-off. After sign-off, ask the coordinator to set
-`sample_data = false` in `forge.toml` to turn tests on. A missing setting also leaves tests on,
+`sample_data = false` in `forge.toml` in a settings fix whose `--done` names `forge.toml` to turn tests on. A missing setting also leaves tests on,
 regardless of an earlier sign-off's `sample_data: true`. Forge sets `PYTEST_XDIST_AUTO_NUM_WORKERS`
 and `FORGE_TEST_CPUS` to the run's allocation from the shared process budget. On laptops, a worker's session
 requests at most two processes, so its own `pytest -n auto` also stays at two. GitHub Actions workers use
