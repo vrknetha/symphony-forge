@@ -78,6 +78,61 @@
       "closed_by": null
     },
     {
+      "key": "edge\t.github/workflows/forge.yml\tFunctional: Existing tests fail against the local workflow",
+      "kind": "edge",
+      "path": ".github/workflows/forge.yml",
+      "line": 17,
+      "text": "Functional: Existing tests fail against the local workflow",
+      "from": "review",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tforge.toml\tFunctional: Local close skips selected container deployment tests",
+      "kind": "edge",
+      "path": "forge.toml",
+      "line": 9,
+      "text": "Functional: Local close skips selected container deployment tests",
+      "from": "review",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tforge.toml\tFunctional: Local mode does not wait for the remaining required review check",
+      "kind": "edge",
+      "path": "forge.toml",
+      "line": 9,
+      "text": "Functional: Local mode does not wait for the remaining required review check",
+      "from": "review",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tforge.toml\tGate: proof list",
+      "kind": "edge",
+      "path": "forge.toml",
+      "line": 8,
+      "text": "Gate: proof list",
+      "from": "review",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tforge.toml\tNot done: Local close runs unrelated tests and can wait for GitHub test jobs",
+      "kind": "edge",
+      "path": "forge.toml",
+      "line": 9,
+      "text": "Not done: Local close runs unrelated tests and can wait for GitHub test jobs",
+      "from": "review",
+      "item": "owner-26-nov-2026-stop-using-github-runn",
+      "status": "open",
+      "closed_by": null
+    },
+    {
       "key": "edge\ttests/test_proto_deploy.py\tSelected container deployment tests need an explicit local opt-in after the generated test jobs go away.",
       "kind": "edge",
       "path": "tests/test_proto_deploy.py",
