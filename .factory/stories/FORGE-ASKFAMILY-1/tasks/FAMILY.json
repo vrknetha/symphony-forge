@@ -1,7 +1,182 @@
 {
   "branch": "task/FORGE-ASKFAMILY-1-FAMILY",
+  "known": [
+    {
+      "area": "turn() in src/forge/claude_turn.py",
+      "file": "src/forge/claude_turn.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 40,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Disputed keep 12: User hooks still run during Claude's read-only turn",
+      "work": 2
+    },
+    {
+      "area": "turn() in src/forge/claude_turn.py",
+      "file": "src/forge/claude_turn.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 41,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Not done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "work": 2
+    },
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 61,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Not done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "work": 1
+    },
+    {
+      "area": "ask() in src/forge/ask.py",
+      "file": "src/forge/ask.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 71,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A `gpt-` model asks Codex, a `claude-` model asks Claude and a `gemini-` model asks Gemini",
+      "work": 2
+    },
+    {
+      "area": "test_6_read_only_and_failures_across_families() in tests/test_ask_command.py",
+      "file": "tests/test_ask_command.py",
+      "gain": 4,
+      "harm": 4,
+      "line": 255,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+      "work": 2
+    },
+    {
+      "area": "test_4_model_flag_and_config_precedence_and_worktree_routing() in tests/test_ask_command.py",
+      "file": "tests/test_ask_command.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 180,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: `--model` takes precedence over `[models.ask]`, and `[models.ask]` can hold a model for each family.",
+      "work": 2
+    },
+    {
+      "area": "test_3_ask_routes_claude_and_gemini_and_records_answers() in tests/test_ask_command.py",
+      "file": "tests/test_ask_command.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 144,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Each family's answer is recorded after the command waits for an agent place",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "bb7ed1e160303b0f226e1ee5bc92b44429cf4b1992e7f1fd574aff5673a87b72",
+    "changed": "3b6ffdda33866b56106c2db4ec4a4b8aa1cbb03ad40b1a2d56f142256cdc2431",
+    "commit": "4119306f41eed0426d2648454b9daba347a1132f",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 5, Work 2, Harm 4\nRaise: Security \u2014 The ruling excluded project and local settings to prevent hooks, but this line still loads user settings. Claude's [hook documentation](https://code.claude.com/docs/en/hooks#security-considerations) confirms that user-level hooks run with the user's full permissions; that source was not addressed by the ruling. Case: normal use - A developer has a global SessionStart hook that runs a checkout's setup or formatter. A Claude ask starts that hook against the real checkout, where it can overwrite uncommitted edits before the answer.",
+        "file": "src/forge/claude_turn.py",
+        "gain": 5,
+        "harm": 4,
+        "line": 40,
+        "priority": "P1",
+        "title": "Disputed keep 12: User hooks still run during Claude's read-only turn",
+        "work": 2
+      },
+      {
+        "body": "Gain 5, Work 2, Harm 4\nRaise: Security \u2014 The deny list removes three built-in tools but leaves configured MCP tools available. The [pinned SDK](https://raw.githubusercontent.com/anthropics/claude-agent-sdk-python/v0.2.187/src/claude_agent_sdk/types.py) defaults `strict_mcp_config` to false, and Claude's [permission rules](https://code.claude.com/docs/en/agent-sdk/permissions) allow pre-approved MCP tools to run. Case: normal use - A developer has a globally pre-approved filesystem MCP server and asks Claude about a checkout; its write tool can modify an edited file despite the read-only promise. This MCP route is separate from the Bash, Edit and Write tools covered by the ruling.",
+        "file": "src/forge/claude_turn.py",
+        "gain": 5,
+        "harm": 4,
+        "line": 41,
+        "priority": "P1",
+        "title": "Not done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+        "work": 2
+      },
+      {
+        "body": "Gain 5, Work 1, Harm 4\nRaise: Security \u2014 The Codex failure branch ignores the safe `again` text and embeds the question using JSON double quotes. Case: normal use - A developer asks about a shell expression containing `$(...)` or backticks, then pastes the suggested retry; the shell executes the substitution. The retry also drops an explicit `--model`, so retrying a Codex ask from a Codex session can ask Claude instead.",
+        "file": "src/forge/ask.py",
+        "gain": 5,
+        "harm": 4,
+        "line": 61,
+        "priority": "P1",
+        "title": "Not done: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+        "work": 1
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done \u2014 The Gemini path calls `antigravity.read`, which requires the pinned Autoreview helper at `src/forge/antigravity.py:288`; `src/forge/review.py:797` refuses when it is absent or has another version. Case: normal use - A new repo has Antigravity installed and signed in, as the accepted limit requires, but has not installed this separate review helper. A Gemini ask refuses before starting instead of printing and recording an answer. The new test supplies the helper explicitly at `tests/test_ask_command.py:118`, so it misses this setup.",
+        "file": "src/forge/ask.py",
+        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
+        "gain": 4,
+        "harm": 3,
+        "line": 71,
+        "priority": "P1",
+        "title": "Not done: A `gpt-` model asks Codex, a `claude-` model asks Claude and a `gemini-` model asks Gemini",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 4\nRaise: Test \u2014 The checkout comparison makes only the Gemini stub attempt a write. The Claude stub exercises neither user hooks nor MCP tools, while `test_3` asserts the settings that leave those routes open. The Codex failure test uses only `Q` and no explicit model, so it also passes with the unsafe, family-changing retry shown by the current code. Case: normal use - A Claude ask overwrites an edit through a user hook or MCP tool, or a developer copies a Codex retry containing shell substitution; the named proof still passes.",
+        "file": "tests/test_ask_command.py",
+        "gain": 4,
+        "harm": 4,
+        "line": 255,
+        "priority": "P1",
+        "title": "Test: No family can change a file in the checkout, and a failed turn says why and gives a command to run again.",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test \u2014 The per-family case passes the Gemini model explicitly and checks only its effort. No named proof asks without `--model` while using a per-family entry, so the tests would pass if configured per-family model names were ignored. Case: normal use - A Codex session has `[models.ask.claude]` set to a specific Claude model, but a bare ask uses Claude's default instead.",
+        "file": "tests/test_ask_command.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 180,
+        "priority": "P1",
+        "title": "Test: `--model` takes precedence over `[models.ask]`, and `[models.ask]` can hold a model for each family.",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test \u2014 The wait case exercises only Codex, and the Codex test checks its answer on stdout without checking the work log. The Claude and Gemini cases do not check waiting. Case: normal use - Claude or Gemini starts while every agent place is occupied, or a Codex answer is printed but not recorded; the named tests would still pass.",
+        "file": "tests/test_ask_command.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 144,
+        "priority": "P1",
+        "title": "Test: Each family's answer is recorded after the command waits for an agent place",
+        "work": 2
+      }
+    ],
+    "id": "75769c5c-596f-4944-bf66-e089dad6663e",
+    "status": "blocked"
+  },
   "round": 2,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T13:26:04.914775+00:00",
@@ -16,6 +191,10 @@
       "at": "2026-11-27T16:37:16.414831+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T16:45:45.971990+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
