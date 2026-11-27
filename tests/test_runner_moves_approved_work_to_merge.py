@@ -110,6 +110,16 @@ if fail_view.exists() and args[:2] == ["pr", "view"] and len(args) > 2 and args[
         fail_view.write_text(f"{{n - 1}}|{{msg}}", "utf-8")
         answer("", 1, msg + "\\n")
 
+if args[:2] == ["pr", "list"] and "--head" in args:
+    branch = args[args.index("--head") + 1]
+    clock_path = pathlib.Path({clock_file!r})
+    log_path = pathlib.Path({runner_log!r})
+    item = branch.removeprefix("fix/").removeprefix("task/")
+    if (clock_path.exists() and log_path.exists()
+            and f"{{item}} is ready; a human merges" in log_path.read_text("utf-8")):
+        with open(here / "poll-reads.jsonl", "a", encoding="utf-8") as log:
+            log.write(json.dumps({{"branch": branch, "elapsed": float(clock_path.read_text("utf-8").strip())}}) + "\\n")
+
 fail_list = here / "gh-fail-pr-list"
 if fail_list.exists() and args[:2] == ["pr", "list"] and "--head" in args and args[args.index("--head") + 1] == "fix/retry-fix":
     raw = fail_list.read_text("utf-8").strip().split("|", 1)
@@ -169,7 +179,9 @@ def _install_multi_gh(env, tmp_path: Path) -> None:
     assert Path(os.environ.get("APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME", "")).resolve() == (
         tmp_path / "config").resolve()
     _install(env.repo.bin, "gh", MULTI_GH.format(
-        python=sys.executable, remote=str(tmp_path / "remote.git"), url=URL)
+        python=sys.executable, remote=str(tmp_path / "remote.git"), url=URL,
+        clock_file=(tmp_path / "clock" / "elapsed").as_posix(),
+        runner_log=(env.repo.path / ".git" / "forge" / "runner.log").as_posix())
         + GH_STUB.format(python=sys.executable).split("\n", 1)[1])
     _install_process_tracker(env, tmp_path)
 
@@ -608,10 +620,17 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
         done = land.repo.forge("fix", "start", "Stale PR", "--done", "Stops after 24h", "--slug", "retry-fix")
         assert done.returncode == 0, done.stderr
         _wait_for(lambda: _runner_exited(tmp_path), timeout=60.0, detail=lambda: _runner_log(land))
-        elapsed = float((tmp_path / "clock" / "elapsed").read_text("utf-8").strip())
-        assert elapsed >= 86400.0, elapsed
-        polls = [call for call in land.gh_calls("pr", "list") if "--head" in call and "fix/retry-fix" in call]
-        assert len(polls) >= 47, len(polls)
+        poll_file = land.repo.bin / "poll-reads.jsonl"
+        assert poll_file.exists(), _runner_log(land)
+        poll_times = [json.loads(line)["elapsed"] for line in poll_file.read_text("utf-8").splitlines()
+                      if json.loads(line)["branch"] == "fix/retry-fix"]
+        tick = 1800.0
+        assert 46 <= len(poll_times) <= 48, len(poll_times)
+        exit_elapsed = float((tmp_path / "clock" / "elapsed").read_text("utf-8").strip())
+        # Polling begins one tick before the first poll read and stops at the 24h (86400s) deadline.
+        polling_elapsed = exit_elapsed - (poll_times[0] - tick)
+        assert 86400.0 <= polling_elapsed <= 86400.0 + tick, polling_elapsed
+        assert 86400.0 - 2 * tick <= poll_times[-1] - poll_times[0] <= 86400.0, (poll_times[0], poll_times[-1])
         log = _runner_log(land)
         assert "The requested URL returned error: 503" in log, log
         assert log.count("retry-fix is ready; a human merges") == 1, log
