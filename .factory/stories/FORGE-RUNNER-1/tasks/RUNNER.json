@@ -1,7 +1,297 @@
 {
   "branch": "task/FORGE-RUNNER-1-RUNNER",
+  "known": [
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 248,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Recover from transient network failures in runner operations",
+      "work": 2
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 296,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Scale: Avoid querying GitHub on every runner tick",
+      "work": 2
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 272,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Stop polling a human merge after 24 hours",
+      "work": 1
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 341,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: When the work is done, the runner ends and makes no recurring GitHub calls.",
+      "work": 2
+    },
+    {
+      "area": "land() in src/forge/land.py",
+      "file": "src/forge/land.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 82,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Plan gap: Wire the stop continuation and summary callbacks",
+      "work": 2
+    },
+    {
+      "area": "src/forge/templates/skill.md",
+      "file": "src/forge/templates/skill.md",
+      "gain": 4,
+      "harm": 4,
+      "line": 229,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change",
+      "work": 1
+    },
+    {
+      "area": "tests/test_runner_moves_approved_work_to_merge.py",
+      "file": "tests/test_runner_moves_approved_work_to_merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 169,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: After one approval, every part becomes ready for a person to merge",
+      "work": 2
+    },
+    {
+      "area": "test_2_runner_builds_a_started_fix() in tests/test_runner_builds_a_started_fix.py",
+      "file": "tests/test_runner_builds_a_started_fix.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 17,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The folder of every merged item that holds no local changes is removed",
+      "work": 2
+    },
+    {
+      "area": "test_6_runner_ends_when_idle() in tests/test_runner_ends_when_idle.py",
+      "file": "tests/test_runner_ends_when_idle.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 21,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: When the work is done, the runner ends and makes no recurring GitHub calls.",
+      "work": 2
+    },
+    {
+      "area": "test_1_runner_moves_approved_work_to_merge() in tests/test_runner_moves_approved_work_to_merge.py",
+      "file": "tests/test_runner_moves_approved_work_to_merge.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 190,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: CI and older-release repos do not start background work",
+      "work": 2
+    },
+    {
+      "area": "test_2_runner_builds_a_started_fix() in tests/test_runner_builds_a_started_fix.py",
+      "file": "tests/test_runner_builds_a_started_fix.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 19,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Standard: Tests own and clean up every process they start, even after a crash",
+      "work": 2
+    },
+    {
+      "area": "_loop() in src/forge/runner.py",
+      "file": "src/forge/runner.py",
+      "gain": 2,
+      "harm": 2,
+      "line": 296,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: Clean merged worktrees in repos with submodules",
+      "work": 3
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "163cdd35f0f0dae2eba80bf9d38d8bf5352e12f9e87ca1b285100677e75559c7",
+    "changed": "550237c7b815dc8e8f506c1614125a36729402ee74a7a453753e68882c833aad",
+    "commit": "620f217535fef23ed10c0a994e034556057c03ac",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - GitHub remains unavailable for several seconds while approved work is starting or landing.\nAfter a failed land, line 248 calls `land._merged` before scheduling the retry. That call uses `close._pull_request`, whose GitHub read can raise after its own retries, terminating the whole runner instead of retrying. The same unhandled read occurs during human-merge polling at line 275. Separately, a failed `task start` at line 304 is only logged, so a temporary fetch failure can leave the runner with no running or retrying work and make it exit. Recovery requires another Forge command.\nAdds work: retry failed runner-owned reads and starts; F 2 x H 2 = 4; 2 x C = 4",
+        "file": "src/forge/runner.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 248,
+        "priority": "P1",
+        "title": "Functional: Recover from transient network failures in runner operations",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Scale\nCase: normal use - a pull request waits through a workday for a person to merge it.\nEvery two-second pass calls `doctor.tidy_finished` and `nextstep.startable`, regardless of the polling deadline. `doctor.py:118-124` makes a GitHub GraphQL request for the worktrees, and `nextstep.py:263-264` lists merged and open pull requests. The pass also fetches origin. One waiting pull request can therefore cause thousands of requests instead of the promised one-minute, exponentially backed-off checks, risking GitHub throttling.",
+        "file": "src/forge/runner.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 296,
+        "priority": "P1",
+        "title": "Scale: Avoid querying GitHub on every runner tick",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Functional\nCase: normal use - a pull request remains unmerged overnight or over a weekend.\nWhen the deadline expires, this removes the polling entry but does not keep the item quiet. The same pass reaches lines 317-336, starts `forge land` again, and a ready response creates a fresh 24-hour polling deadline. The runner and its GitHub traffic can consequently continue indefinitely without another use of Forge.",
+        "file": "src/forge/runner.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 272,
+        "priority": "P1",
+        "title": "Functional: Stop polling a human merge after 24 hours",
+        "work": 1
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a person merges the final pull request before its next scheduled poll.\n`doctor.tidy_finished` can remove the clean worktree on the next pass, but the polling entry is cleared only when the item is still in `current_items` or its next GitHub poll runs. Once cleanup removed the item, neither the idle check nor cleanup removes that entry. The runner can remain alive for up to the 30-minute polling interval and make another GitHub call after the final merge.",
+        "file": "src/forge/runner.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 341,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: When the work is done, the runner ends and makes no recurring GitHub calls.",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 2, Harm 3\nRaise: Plan gap\nCase: normal use - the STOPS task is implemented and an owner continues a stopped item.\nThe promised seam has no `lift` or `summary` stub or call. This land path calls `close._worktree` before entering the new lock, and `close._worktree` calls the new `task.require_active` stop check. Once STOPS makes that check refuse a stopped item, a person's `forge land <item>` cannot lift the stop. The runner also exits at `runner.py:344` without a summary callback. STOPS was assigned to fill `stops.py` without editing these caller files, so filling the stubs alone cannot deliver either behavior.",
+        "file": "src/forge/land.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 82,
+        "priority": "P1",
+        "title": "Plan gap: Wire the stop continuation and summary callbacks",
+        "work": 2
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 4\nRaise: Data loss\nCase: normal use - a coordinator follows the shipped settings instructions after the owner approves a settings change.\nThe new paragraph says the runner builds fixes, but the same shipped guide still tells the coordinator to make the settings edit itself and says workers never edit settings (`skill.md:428-437`). It also still directs the coordinator to start and watch each part (`skill.md:1958`, `2761-2765`, and `2821-2823`). In the settings flow, the old instructions allow the coordinator to edit after `fix start` and add `forge.toml` to Done-when only after a refusal; the newly started worker can restore that uncommitted edit under `worker.py:467-472`. This is new evidence beyond the accepted plan note, which assumed the old flow would be replaced.",
+        "file": "src/forge/templates/skill.md",
+        "gain": 4,
+        "harm": 4,
+        "line": 229,
+        "priority": "P1",
+        "title": "Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change",
+        "work": 1
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - the default human-merge setting is used for a story with a dependent part.\nThe named proof exercises only `two_part_agent_merge`; it never checks that the first part becomes ready for a person or that the second starts after that person's merge. Removing the human polling path would leave this proof green. The claimed network-retry case also does not assert that a land run failed and was retried: its four injected failures can be consumed by the initial `nextstep` pull-request reads before land starts.",
+        "file": "tests/test_runner_moves_approved_work_to_merge.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 169,
+        "priority": "P1",
+        "title": "Test: After one approval, every part becomes ready for a person to merge",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a person merges a started fix's ready pull request.\nBoth fix cases configure agent merging. That path removes the worktree inside `merge.py:343-350`; neither case exercises the runner's cleanup after a human merge. Removing `runner.py:296` would leave this proof passing while clean folders from human-merged fixes remained.",
+        "file": "tests/test_runner_builds_a_started_fix.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 17,
+        "priority": "P1",
+        "title": "Test: The folder of every merged item that holds no local changes is removed",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - Forge is opened in an idle repo, or the last pull request is merged by a person.\nThe idle assertion treats an absent `runner.json` as proof the runner ended, but the detached process may not have created that file yet; the case can pass even if `forge lanes` never wakes a runner. The other case tests only agent merging, so it also misses the current human-merge path that retains a polling entry after cleanup.",
+        "file": "tests/test_runner_ends_when_idle.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 21,
+        "priority": "P1",
+        "title": "Test: When the work is done, the runner ends and makes no recurring GitHub calls.",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - CI shares an account with remembered repos, or a remembered repo pins an older release.\nThe CI case uses an idle repo and only checks that the identity file is absent after a delay, which can also happen if an unwanted idle runner starts and exits. The older-pin case starts the fix before changing the pin, then only waits for the identity file to be absent; it never asserts that no builder or merge ran and can return before the detached runner starts. Both cases can pass with their exclusion removed, despite the proof list claiming those exclusions are tested.",
+        "file": "tests/test_runner_moves_approved_work_to_merge.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 190,
+        "priority": "P1",
+        "title": "Test: CI and older-release repos do not start background work",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Gate\nCase: normal use - a runner test times out or its worker crashes on Windows.\nThe new tests start detached runners but do not record their process identities or terminate them in cleanup. The shared leftover-process check returns only processes with `*.owned-process.json` markers on Windows (`tests/conftest.py:403-420`), and these tests create no such marker. A failed test can therefore leave its runner and land children running without the suite detecting them.",
+        "file": "tests/test_runner_builds_a_started_fix.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 19,
+        "priority": "P1",
+        "title": "Standard: Tests own and clean up every process they start, even after a crash",
+        "work": 2
+      },
+      {
+        "body": "Gain 2, Work 3, Harm 2\nCase: normal use - a repo with a tracked `.gitmodules` file has a clean item merged by a person.\nThe runner relies on `doctor.tidy_finished`, but `doctor.py:118-121` excludes every worktree containing `.gitmodules`, even when the submodules and worktree have no local changes. The runner can then clear the polling entry and exit with that merged folder still present.\nAdds work: safely identify and remove clean submodule worktrees; F 2 x H 2 = 4; 2 x C = 4",
+        "file": "src/forge/runner.py",
+        "gain": 2,
+        "harm": 2,
+        "line": 296,
+        "priority": "P2",
+        "title": "Follow-up: Clean merged worktrees in repos with submodules",
+        "work": 3
+      }
+    ],
+    "id": "46fa37b5-8f5e-44cd-9bbe-29a022c6e000",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T02:18:40.052208+00:00",
@@ -11,6 +301,10 @@
       "at": "2026-11-27T02:18:54.104287+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T02:49:12.515976+00:00",
+      "step": "review"
     }
   ],
   "stuck": {

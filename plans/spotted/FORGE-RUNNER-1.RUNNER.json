@@ -1,0 +1,136 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/land.py\tPlan gap: Wire the stop continuation and summary callbacks\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "src/forge/land.py",
+      "line": 82,
+      "text": "Plan gap: Wire the stop continuation and summary callbacks",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/runner.py\tFunctional: Recover from transient network failures in runner operations\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "src/forge/runner.py",
+      "line": 248,
+      "text": "Functional: Recover from transient network failures in runner operations",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/runner.py\tFunctional: Stop polling a human merge after 24 hours\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "src/forge/runner.py",
+      "line": 272,
+      "text": "Functional: Stop polling a human merge after 24 hours",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/runner.py\tNot done: When the work is done, the runner ends and makes no recurring GitHub calls.\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "src/forge/runner.py",
+      "line": 341,
+      "text": "Not done: When the work is done, the runner ends and makes no recurring GitHub calls.",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/runner.py\tScale: Avoid querying GitHub on every runner tick\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "src/forge/runner.py",
+      "line": 296,
+      "text": "Scale: Avoid querying GitHub on every runner tick",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/templates/skill.md\tStandard: Replacing behaviour deletes the old path, its tests and its docs in the same change\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "src/forge/templates/skill.md",
+      "line": 229,
+      "text": "Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_builds_a_started_fix.py\tStandard: Tests own and clean up every process they start, even after a crash\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "tests/test_runner_builds_a_started_fix.py",
+      "line": 19,
+      "text": "Standard: Tests own and clean up every process they start, even after a crash",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_builds_a_started_fix.py\tTest: The folder of every merged item that holds no local changes is removed\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "tests/test_runner_builds_a_started_fix.py",
+      "line": 17,
+      "text": "Test: The folder of every merged item that holds no local changes is removed",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_ends_when_idle.py\tTest: When the work is done, the runner ends and makes no recurring GitHub calls.\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "tests/test_runner_ends_when_idle.py",
+      "line": 21,
+      "text": "Test: When the work is done, the runner ends and makes no recurring GitHub calls.",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_moves_approved_work_to_merge.py\tTest: After one approval, every part becomes ready for a person to merge\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "tests/test_runner_moves_approved_work_to_merge.py",
+      "line": 169,
+      "text": "Test: After one approval, every part becomes ready for a person to merge",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_runner_moves_approved_work_to_merge.py\tTest: CI and older-release repos do not start background work\tFORGE-RUNNER-1/RUNNER",
+      "kind": "bug",
+      "path": "tests/test_runner_moves_approved_work_to_merge.py",
+      "line": 190,
+      "text": "Test: CI and older-release repos do not start background work",
+      "from": "blocking",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/runner.py\tFollow-up: Clean merged worktrees in repos with submodules",
+      "kind": "edge",
+      "path": "src/forge/runner.py",
+      "line": 296,
+      "text": "Follow-up: Clean merged worktrees in repos with submodules",
+      "from": "review",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
