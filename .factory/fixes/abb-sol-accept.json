@@ -9,10 +9,16 @@
     "start": "ea64f0d96372b1009b1777c97eed26e919e8d572"
   },
   "done_when": "After forge close --resolve accept, close records the choice and goes on to the checks without asking the round-limit question again.",
+  "drop": {
+    "at": "2026-11-27T16:50:48.451913+00:00",
+    "because": "Duplicate from the Neon and Sol trial; the other copy merges",
+    "by": "vrknetha <vrknetha@gmail.com> 1795798248 +0530",
+    "status": "working"
+  },
   "fix_kind": "backend",
   "kind": "fix",
   "round": 1,
-  "status": "working",
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-25T08:41:04.341685+00:00",
@@ -22,6 +28,10 @@
       "at": "2026-11-25T08:43:20.291024+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T16:50:48.452074+00:00",
+      "step": "drop"
     }
   ],
   "stuck": {
