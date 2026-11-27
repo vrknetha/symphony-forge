@@ -1,10 +1,14 @@
 {
   "doc": "plans/FORGE-MIXTEST-1.md",
-  "status": "planning",
+  "status": "read",
   "steps": [
     {
       "at": "2026-11-27T08:51:37.616813+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-27T09:09:44.219863+00:00",
+      "step": "read"
     }
   ],
   "title": "Run related tests locally and full suites on GitHub",
