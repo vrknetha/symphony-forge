@@ -128,7 +128,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T11:23:16.065720+00:00",
@@ -156,12 +156,23 @@
       "at": "2026-11-27T12:28:49.504234+00:00",
       "round": 2,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-27T12:29:32.756365+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-27T12:28:49.504234+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "tests/test_runner_restart_repeats_nothing.py",
-    "wait_id": "81f980a6-09f6-4aaf-ace0-fd2bbbb85560"
+    "reason": "Owner chose one more round: prove a stop survives a runner killed after the stop was set",
+    "wait_id": "81f980a6-09f6-4aaf-ace0-fd2bbbb85560",
+    "worker_round": 2
   },
   "stuck": {
     "close": "04393627-e38f-4909-94a8-a716c33e9002",
