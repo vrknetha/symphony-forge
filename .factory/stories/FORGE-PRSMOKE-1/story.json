@@ -1,6 +1,15 @@
 {
+  "approval": {
+    "at": "2026-11-27T10:48:24.778756+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01X1cJzmHZjskV1GLdTp9VH6",
+    "hash": "716ed9fd5467d6c1ab2864865c59ada3166043e92211b8112ae5e2f9953988db",
+    "round": 2,
+    "runtime": "claude",
+    "session": "e8d7f20b-ca4d-46a3-a2cb-4517da9d28ca"
+  },
   "doc": "plans/FORGE-PRSMOKE-1.md",
-  "status": "read",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-27T10:18:36.280609+00:00",
@@ -13,8 +22,12 @@
     {
       "at": "2026-11-27T10:46:41.487102+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-27T10:48:24.778950+00:00",
+      "step": "approved"
     }
   ],
   "title": "Run fewer tests on Forge pull requests",
-  "touches": 0
+  "touches": 1
 }
