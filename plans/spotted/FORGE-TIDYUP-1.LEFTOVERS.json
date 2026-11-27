@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/doctor.py\tFunctional: Classify builder completion from the run outcome\tFORGE-TIDYUP-1/LEFTOVERS",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 329,
+      "text": "Functional: Classify builder completion from the run outcome",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/LEFTOVERS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tFunctional: Preserve unknown PR status when GitHub is unavailable\tFORGE-TIDYUP-1/LEFTOVERS",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 298,
+      "text": "Functional: Preserve unknown PR status when GitHub is unavailable",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/LEFTOVERS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tFunctional: Respect a fix dropped on another machine\tFORGE-TIDYUP-1/LEFTOVERS",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 316,
+      "text": "Functional: Respect a fix dropped on another machine",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/LEFTOVERS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tNot done: `forge next` lists every item that is not merged and not moving in one block, with one next step for each.\tFORGE-TIDYUP-1/LEFTOVERS",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 318,
+      "text": "Not done: `forge next` lists every item that is not merged and not moving in one block, with one next step for each.",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/LEFTOVERS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/nextstep.py\tNot done: `forge next` lists every item that is not merged and not moving in one block, with one next step for each.\tFORGE-TIDYUP-1/LEFTOVERS",
+      "kind": "bug",
+      "path": "src/forge/nextstep.py",
+      "line": 184,
+      "text": "Not done: `forge next` lists every item that is not merged and not moving in one block, with one next step for each.",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/LEFTOVERS",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_next_lists_stuck_items.py\tTest: `forge next` lists every item that is not merged and not moving in one block, with one next step for each.\tFORGE-TIDYUP-1/LEFTOVERS",
+      "kind": "bug",
+      "path": "tests/test_next_lists_stuck_items.py",
+      "line": 76,
+      "text": "Test: `forge next` lists every item that is not merged and not moving in one block, with one next step for each.",
+      "from": "blocking",
+      "item": "FORGE-TIDYUP-1/LEFTOVERS",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
