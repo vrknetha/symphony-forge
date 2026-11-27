@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/templates/skill.md\tNot done: Settings-fix instructions must name forge.toml in Done-when\tthe-coordinator-guide-still-tells-the-co",
+      "kind": "bug",
+      "path": "src/forge/templates/skill.md",
+      "line": 2212,
+      "text": "Not done: Settings-fix instructions must name forge.toml in Done-when",
+      "from": "blocking",
+      "item": "the-coordinator-guide-still-tells-the-co",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
