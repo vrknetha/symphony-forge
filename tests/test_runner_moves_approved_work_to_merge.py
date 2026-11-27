@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from conftest import GH_STUB, _install
+from conftest import GH_STUB, ROOT, _install
 from test_close import env  # noqa: F401
 from test_land import COMMITS, URL, _agent, land  # noqa: F401
 from test_worker import calls
@@ -182,10 +182,21 @@ def _mark_installed_before(tmp_path: Path, stamp: str = "2020-01-01T00:00:00+00:
 
 def _install_process_tracker(env, tmp_path: Path) -> None:
     """Record every detached runner and runner child in *.owned-process.json for crash cleanup,
-    and log every Popen call launching forge.runner so CI-skip tests are deterministic."""
+    log every Popen call launching forge.runner so CI-skip tests are deterministic, and keep
+    direct `python -c` runner/land children from stalling on host load or memory in CI."""
+    src_posix = (ROOT / "src").as_posix()
     snippet = (
         "\nimport json as _j, os as _o, pathlib as _p, subprocess as _sp, sys as _s, time as _t\n"
         f"_runner_tmp = _p.Path({tmp_path.as_posix()!r})\n"
+        "if hasattr(_o, 'getloadavg'):\n"
+        "    _o.getloadavg = lambda: (0.0, 0.0, 0.0)\n"
+        f"_forge_src = {src_posix!r}\n"
+        "if any('forge.runner' in _a or 'forge.cli' in _a for _a in getattr(_s, 'orig_argv', ())):\n"
+        "    if _forge_src not in _s.path:\n"
+        "        _s.path.insert(0, _forge_src)\n"
+        "    from forge import machine as _m\n"
+        "    _m.memory = lambda: dict(total_bytes=16_000_000_000, available_bytes=8_000_000_000)\n"
+        "    _m.busy_runners = lambda: 0\n"
         "if _s.argv[:1] == ['-c'] or _o.environ.get('FORGE_RUNNER') == '1':\n"
         "    _runner_tmp.joinpath(f'runner-{_o.getpid()}.owned-process.json').write_text(\n"
         "        _j.dumps({'pid': _o.getpid(), 'at_ns': _t.time_ns()}), encoding='utf-8')\n"
@@ -596,7 +607,11 @@ def test_1_runner_moves_approved_work_to_merge(case, land, tmp_path, monkeypatch
         monkeypatch.delenv("FORGE_NO_RUNNER", raising=False)
         done = land.repo.forge("fix", "start", "Stale PR", "--done", "Stops after 24h", "--slug", "retry-fix")
         assert done.returncode == 0, done.stderr
-        _wait_for(lambda: _runner_exited(tmp_path), timeout=90.0, detail=lambda: _runner_log(land))
+        _wait_for(lambda: _runner_exited(tmp_path), timeout=60.0, detail=lambda: _runner_log(land))
+        elapsed = float((tmp_path / "clock" / "elapsed").read_text("utf-8").strip())
+        assert elapsed >= 86400.0, elapsed
+        polls = [call for call in land.gh_calls("pr", "list") if "--head" in call and "fix/retry-fix" in call]
+        assert len(polls) >= 47, len(polls)
         log = _runner_log(land)
         assert "The requested URL returned error: 503" in log, log
         assert log.count("retry-fix is ready; a human merges") == 1, log
