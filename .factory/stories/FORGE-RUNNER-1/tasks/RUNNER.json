@@ -229,7 +229,7 @@
     "id": "1c7edce9-10a2-4882-b29a-470b185c61ac",
     "status": "blocked"
   },
-  "round": 3,
+  "round": 4,
   "status": "fixing",
   "steps": [
     {
@@ -282,25 +282,20 @@
       "choice": "same",
       "round": 3,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T06:32:41.726067+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
-  "stop": {
-    "at": "2026-11-27T06:31:20.290328+00:00",
-    "by": "owner",
-    "choice": "same",
-    "question": "Approved work keeps moving to merge without reminders: A background runner moves approved work to merge is stuck. It should deliver: Wake and start of the runner, automatic part and fix starts, builds through `forge land` with no chat, the land lock, polling of human merges, cleanup, the end of the runner, the stub seam for STOPS, all guide text\nTwo rounds in a row left the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md.\nThe worker tried: Mark runner test platform-sensitive and update tools guide test for settings-fix flow; Fix round 3 runner review findings: guide cleanup, 5xx retry, retry lifecycle, and test tracking.\nChoose one: switch this item to Claude; keep Antigravity for one more round; or narrow or split it.",
-    "reason": "Owner chose one more Neon round with the scope and no-wake rules and the guide cleanup",
-    "tool": "antigravity",
-    "wait_id": "60bbe30e-911e-4497-8c51-8391c780bb78",
-    "worker_round": 3
-  },
   "stuck": {
-    "close": "669ace25-063f-44ec-bf79-66a06c54f7fe",
-    "head": "49e44828b5edbc1a8da187fee0b3a5c48fa8c6e7",
+    "close": "41f1fc1f-0d84-4599-8f20-fb7ebf138d8e",
+    "head": "23d7cafc79ecb307aeec899aeba7df37a1661b9e",
     "keys": {
-      "the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md": 2
+      "the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md": 3
     },
-    "round": 2
+    "round": 3
   },
   "worker": "antigravity"
 }
