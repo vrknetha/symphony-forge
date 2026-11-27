@@ -120,10 +120,11 @@ line to its run, so judge it by reading it:
 $proof_checked For each line, read the
 named test: report a test whose assertions would still pass if the line were false as a P1
 `Test: <the line>`, and a `check:` entry for an item that changes runtime behaviour the same
-way — except when the item's proof can exist only after the merge, which you report as
-`After merge: <the Done-when item>` instead of `Test:` or `Not done`. A new test's line names the closest existing test, or none, and the outcome no existing
+way. A new test's line names the closest existing test, or none, and the outcome no existing
 test proves; a missing choice is part of `Gate: proof list`, and a new test whose outcome the
-closest test already proves is a P2 `Follow-up: duplicate test`.
+closest test already proves is a P2 `Follow-up: duplicate test`. A `check:` entry for an item
+whose proof can exist only after the merge is reported as `After merge: <the Done-when item>`,
+not as `Test:` or `Not done`.
 
 $proof_list
 
