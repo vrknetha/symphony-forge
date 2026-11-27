@@ -180,7 +180,7 @@
     "id": "1f809927-b18f-43b7-b38d-5097de9e6055",
     "status": "clean"
   },
-  "round": 5,
+  "round": 6,
   "status": "fixing",
   "steps": [
     {
@@ -259,28 +259,18 @@
       "choice": "split",
       "round": 5,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T10:40:37.895338+00:00",
+      "round": 6,
+      "step": "resume"
     }
   ],
-  "stop": {
-    "at": "2026-11-27T08:59:43.021812+00:00",
-    "by": "owner",
-    "choice": "split",
-    "fixes": [
-      "review-findings-split-from-forge-runner"
-    ],
-    "question": "Approved work keeps moving to merge without reminders: A background runner moves approved work to merge is stuck. It should deliver: Wake and start of the runner, automatic part and fix starts, builds through `forge land` with no chat, the land lock, polling of human merges, cleanup, the end of the runner, the stub seam for STOPS, all guide text\nTwo rounds in a row left the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md.\nThe worker tried: Isolate runner in tests, enforce install-time scope cutoff, block test wakes, and finish prototype guide updates.\nChoose one: switch this item to Claude; keep Antigravity for one more round; or narrow or split it.",
-    "reason": "Owner chose split: the guide lines that tell the coordinator to edit forge.toml in a settings fix without naming it (skill.md ~1257 sample_data, ~459-462 runner labels, ~1618 fast_test) become their own small fix that merges before v1.2.50",
-    "tool": "antigravity",
-    "wait_id": "c10946b2-e1ed-48f6-bc4f-c1536f1cc514",
-    "worker_round": 5
-  },
   "stuck": {
-    "close": "41f1fc1f-0d84-4599-8f20-fb7ebf138d8e",
-    "head": "23d7cafc79ecb307aeec899aeba7df37a1661b9e",
-    "keys": {
-      "the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md": 3
-    },
-    "round": 3
+    "close": "a6fb41f3-c8ea-41c4-b561-e3082aeddd41",
+    "head": "ae3e4a46106ff3e05a5c386a81fc151bba25244f",
+    "keys": {},
+    "round": 5
   },
   "worker": "antigravity"
 }
