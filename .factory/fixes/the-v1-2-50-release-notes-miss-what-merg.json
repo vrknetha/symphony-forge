@@ -55,7 +55,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T13:33:43.588760+00:00",
@@ -83,12 +83,23 @@
       "at": "2026-11-27T13:56:35.727749+00:00",
       "round": 2,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-27T13:58:09.632297+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-27T13:56:35.727749+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "src/forge/release-notes/v1.2.50.md",
-    "wait_id": "e14df89e-8964-40db-bdbe-bbc2a3fc0ae0"
+    "reason": "Owner chose one more round: fix the two inaccurate sentences",
+    "wait_id": "e14df89e-8964-40db-bdbe-bbc2a3fc0ae0",
+    "worker_round": 2
   },
   "stuck": {
     "close": "7b6e9b18-56e9-4d65-bcb5-f96b1e884c0c",
