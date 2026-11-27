@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-TIDYUP-1-LEFTOVERS",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-27T03:51:51.653390+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-27T03:53:26.333081+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "ca2e955b0456dcf4a7d92f2134ec68ce7beaba46",
+    "keys": {},
+    "round": null
+  },
+  "worker": "antigravity"
 }
