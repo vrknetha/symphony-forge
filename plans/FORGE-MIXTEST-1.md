@@ -1,66 +1,61 @@
 # Run related tests locally and full suites on GitHub
 
-<n> parts · Risks: ... · New moving parts: ...
+1 part · Risks: none one-way; three accepted limits · New moving parts: none
 
 ## What changes for you
 
-- Owners of new and existing repositories can opt into mixed testing in forge.toml. The current default stays the same.
+- A repo can set `test_place = "mixed"` in forge.toml. With it, close runs the change's related tests on your machine, as it does today with `local`. When the related tests are most of the suite, close does not run them here. It sends the change's tests to GitHub, where they run in parallel across the test groups, and close waits for GitHub's `tests` check. (Source: the owner's request, 27 Nov 2026)
+- "Most of the suite" means more than a third of the test files, or a change to a shared test input such as `pyproject.toml` or a root `conftest.py`. A small change still starts no test group on GitHub. It starts two short check jobs that report in about a minute. (Source: the owner's request, 27 Nov 2026)
+- What each repo gets: a new repo and an existing repo get no change. `test_place` stays `ci` or `local` as today, and the default stays as today. A repo uses `mixed` only after its owner or agent writes it in forge.toml through a settings fix. No command is added, and saved records stay as they are.
+- This repo moves to `mixed` after this story merges and its release is installed, in one settings fix: the coordinator sets `test_place = "mixed"` in forge.toml and runs `forge sync` to rewrite the workflow. The required checks stay `forge-pr-check` only, so the owner changes no branch protection. (Source: the owner's request, 27 Nov 2026)
+
+Design: none (no screen changes)
 
 ## Why
 
-Forge makes each repository choose one place for change tests. Running locally keeps GitHub usage low, but a change that selects the whole suite can take two to two and a half hours on one laptop.
+Today a repo picks one place for change tests. `ci` makes every pull request run tests on GitHub. `local` keeps GitHub use low, which this repo chose on 26 Nov 2026 to avoid another ban for heavy Actions use. But when a change touches a widely used file, the related tests are almost the whole suite. On one laptop that takes about 2 to 2.5 hours. Across 6 GitHub machines it takes about 25 to 30 minutes. For example, a small edit to `src/forge/close.py` selects 955 of the 960 test files. This story lets a repo keep ordinary changes local and send only these wide changes to GitHub.
 
 ## Done when
 
-1. **A change that selects only part of the suite runs its related tests locally and starts no GitHub test jobs.**
-2. **A change that selects the whole suite runs it once on GitHub, split across six runners in Forge’s own setup, with a target of 25 to 30 minutes.**
-3. **Forge requires a passing result for the current change from the selected place before it can close or merge.**
+1. **With `test_place = "mixed"`, a change whose related tests are a small part of the suite runs them on this machine at close, and its pull request starts no GitHub test group.**
+2. **A change whose related tests are most of the suite does not run its tests on this machine. Close sends them to GitHub, where the generated workflow runs them across its test groups, and close does not pass the change until GitHub's `tests` check is green.**
+3. **A repo that does not choose `mixed` gets the same settings checks and the same generated workflow as today.**
 
 ## Risks
 
-<!-- Each one-way step: deleting data, a destructive migration, a new vendor. -->
+Risks: none one-way. The part reverts with its pull request.
 
-Risks: none
+Accepted limits:
+- Forge decides "most of the suite" only for Forge's own pytest picker (`fast_test = "forge test --pytest {base}"`, or no `fast_test`). A repo whose `fast_test` is its own script, such as the starter's `scripts/test.mjs` that prints "Affected parts: all", never counts as wide. For that repo `mixed` acts as `local`.
+- The laptop and the GitHub job each run the same selection code on the same diff. If they ever disagree (for example when the default branch moved in between), a change can cost GitHub time that close did not plan for. A change that close sends to GitHub is never left untested: the GitHub job cannot decide "narrow" when it cannot compute the selection, so it runs the groups.
+- After the default branch moves, `forge merge` retests the incoming changes on this machine, as it does in `local` mode. A wide incoming change is not sent to GitHub by this story.
 
 ## For the builders
 
-<!-- Everything from here down is for the agents. The owner doesn't see it when approving, and
-tightening it needs no new approval. -->
-
 ### Done-when details
 
-<!-- Under each Done-when item's number: its evidence, edge cases and the tests that prove it.
-Workers and reviewers get the entries of the items they cover. An item with nothing to add has
-no entry. -->
-
-1. <Evidence, edge cases and the tests that prove item 1.>
+1. How wide is decided, once, for close and for the workflow: add `wide(top, base)` to `src/forge/fasttest.py`, next to `related` (line 395). It runs `related(base)` from inside `top` (`contextlib.chdir`) and returns `shared or len(picked) * 3 > len(tests)`. The `* 3` ratio is the one `pytest_tests` already uses for its "Broad selection" message (line 852). It returns false when `fast_test` is set to anything but the pattern `small_change` already accepts (`review-tests.py` line 124: `(?:uv run ...)?forge test --pytest \{base\}`). Evidence that the ratio separates real cases: on this repo a one-line edit to `src/forge/templates/skill.md` selects 4 of 960 test files and one to `src/forge/close.py` selects 955 of 960.
+   `repo.py` (1,185 lines; at most 4 added): add `"mixed"` to `CHOICES["test_place"]` (line 582). In `_config_text` (line 763), after `config["test_place"] = test_place(config)`, a value of `mixed` becomes `test_place = "local"` plus a derived `config["mixed"] = True`, which is not a forge.toml key. Every existing `== "local"` branch (close, review's proof checks, `forge test --change`, merge, land, doctor, the worker's test step) then keeps working unchanged for the narrow case.
+   `close.py` (1,165 lines; at most 12 added): next to `local_tests = cfg["test_place"] == "local"` (line 260), set `wide = cfg.get("mixed") and fasttest.wide(top, review_ref)` and `local_tests = local_tests and not wide`. When `wide`, print one line ("This change selects most of the suite, so its tests run on GitHub. Close waits for the tests check."), keep the Done-when names-on-branch check that `review.test_run` runs first (`proof.check(top, item, proof_base, "", ran=False)`, `review.py` line 424), and pass `[*cfg["checks"], "tests"]` to the existing `checks.wait` at line 482, which now also runs because `local_tests` is false. The wait already refuses a red check ("Checks failed on the pull request: tests.") and a check that has not reported ("The checks are not green yet"). The PR body already says "green checks" when `local_tests` is false (line 527). If close.py would pass 1,200 lines, put the helper in `checks.py` (876 lines). Do not touch `review.py` (1,200 lines).
+   `prcheck.py` (662 lines; `ships`, line 304): for `cfg.get("mixed")` build the workflow as for `ci_tests`: keep `docs-check`, `tests` and `tests-passed`, and set `test = "forge test --change"` with the install line, whatever `checks` says. Add the output `wide: ${{ steps.docs.outputs.wide }}` to `docs-check`. The `tests` job `if` gains `&& needs.docs-check.outputs.wide == 'true'`. The `tests-passed` step gets `WIDE: ${{ needs.docs-check.outputs.wide }}` and passes when the tests job is skipped and `WIDE != 'true'`, the same way it already passes for a docs-only change. So `tests` is green on every narrow pull request, and a repo may even require `tests` in branch protection. Mixed adds no nightly full-suite job (`full_run` stays `ci` only).
+   `templates/review-tests.py` (319 lines): start with `wide = True` (fail closed: missing history or a failed import runs the groups). In the existing `try`, set `wide = fasttest.wide(Path.cwd(), BASE_SHA)` when `BASE_SHA` is set; write `wide=<true|false>` to the output file beside `one-group`. Its own `place == "local"` read (line 287) also treats `mixed` as `local`.
+   Tests (new `tests/test_mixed_test_place.py`, `STORY = "FORGE-MIXTEST-1"`, a new repo, GitHub stubbed as in `tests/test_broad_related_tests_wait_for_ci.py`): `test_1_...` uses a mixed repo whose change touches one module that two of many test files import. `forge close` runs those two test files (pytest receipt, as in `tests/test_close_runs_only_related_tests.py`) and reads no check. The generated `.forge/review-tests.py`, run with `BASE_SHA`, `HEAD_SHA`, `DOCS_ONLY_EXCLUDES` and `GITHUB_OUTPUT` set as in `tests/test_docs_only_test_checks.py`, writes `wide=false`. The `tests-passed` step's `run:` line, run with `bash -c` and `TEST_GROUP_RESULT=skipped`, `DOCS_CHECK=success`, `DOCS_ONLY=`, `WIDE=false`, exits 0.
+2. Tests, same file. `test_2_...` uses the same repo and a change that selects most test files (a root `conftest.py` edit, and a module that most tests import). `forge close` starts no pytest (no receipt), prints the GitHub line, and does not reach Ready while the stubbed `tests` check is missing or red. The refusal names `tests`. With the check green, close reaches Ready and says "green checks". The `tests-passed` step with `WIDE=true` and `TEST_GROUP_RESULT=skipped` exits 1, and the `tests` job `if` contains the `wide` output. `review-tests.py` writes `wide=true`, and also writes `wide=true` when `fasttest` cannot be imported. The `tests` job lists all groups for a repo that uses pytest-split.
+3. Tests, same file. `test_3_...`: `test_place = "mixed"` loads (`forge doctor` does not refuse it), and `test_place = "sometimes"` is refused with the allowed values listed, as today. A repo with `test_place = "local"` and one with `ci` and `checks = ["forge-pr-check", "tests"]` get a workflow equal to a copy recorded in the test from the code before this change, as `tests/test_ci_limits_pull_requests_to_linux.py` reads the generated workflow. Only a new repo is tested. The suite's one upgrade test is not extended, because no record changes.
 
 ## Tasks
 
-<!-- One row per task. Covers: the Done-when numbers it delivers, at most three. Scope: the paths
-it may change. Before writing each Scope, search the code for the files the task needs. The plan
-check refuses two tasks whose Scope paths have the same prefix up to the first wildcard, unless
-one waits for the other through After, directly or through another task; it names both tasks.
-Paths with a segment named `tests`, `test`, `__tests__` or `spec` do not cause Scope overlaps
-and can be shared without an After link. Explicit After links still apply.
-When tasks need the same production file, put it in the first task's Scope with the shared names and stubs;
-tasks that need them wait for that task through After and then own only their files. Keep a file
-that a script can make at build time out of the repo and out of every Scope; when the repo keeps such
-a file on purpose, give its change to one part that the others wait for. Tests: the
-tests it adds or changes. After: the tasks it waits for. When two tasks share a function, field,
-file format or command, the first task pins it: it commits the shared names and stubs plus one
-test that crosses both sides, and the tasks that use it list it under After. Split tasks so each
-owns its files; shared lines (command table, guide list, registry) go to one task or a small last
-wiring task; After only when a task needs another task's code. The
-Developer column is optional: the lead fills or changes a GitHub username here, below For the
-builders, without another approval. Leave it blank for an unassigned part. Forge next uses
-the caller's GitHub login; another developer may start it with a warning. Existing tables
-without Developer still work. The moving-parts line stays last: "none", or each new dependency, service, datastore,
-queue, background job or abstraction layer, with the Done-when item that needs it. -->
-
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
+| MIXED | Mixed test place: related tests here, wide changes on GitHub | `test_place = "mixed"`; `fasttest.wide`; close sends a wide change to GitHub and waits for the `tests` check; the generated workflow runs test groups only for a wide change; `skill.md` and `brief.md` explain the value | 1, 2, 3 | `src/forge/repo.py`, `src/forge/fasttest.py`, `src/forge/close.py`, `src/forge/checks.py`, `src/forge/prcheck.py`, `src/forge/templates/review-tests.py`, `src/forge/templates/skill.md`, `src/forge/templates/brief.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_mixed_test_place.py` (new) | | no | |
 
 New moving parts: none
 
 ## Notes
+
+- One part, not two. The workflow side needs `fasttest.wide` and the `mixed` flag, and close needs the same two, so a second part would only wait for the first. The change is about 60 lines of code plus the tests and the guide text.
+- Module sizes (ceiling 1,200 lines, `test_5_forge_stays_small`): `repo.py` has 1,185 and gets at most 4 lines; `close.py` has 1,165 and gets at most 12, with `checks.py` (876) as the overflow; `review.py` has 1,200 and is not touched. New logic goes in `fasttest.py` (899), `prcheck.py` (662) and `review-tests.py` (319). Run the cheap repo checks from AGENTS.md before the round ends.
+- Review rule (a change to what a coordinator or worker can use updates the skill or brief): `templates/skill.md` gets the new value in the test-place text (near lines 378 and 1757): what `mixed` does, how a repo chooses it (a settings fix that sets `test_place = "mixed"` and runs `forge sync`), and that the required checks stay as they are. `templates/brief.md` gets one sentence beside the `test_place` paragraph (line 329). The worker's own test step stays the `local` one, because a worker always runs related tests on its machine. The two synced skill copies are regenerated by `forge sync`.
+- Why the workflow decides again and no new signal exists: the generated `docs-check` job already runs `.forge/review-tests.py` on every pull request and passes outputs such as `docs-only` and `one-group` to the `tests` job. This story adds one output beside them. A label or a commit status would need a new write from close and a new trigger on the workflow.
+- What the required check is: no new required check. In `mixed`, `checks` can stay `["forge-pr-check"]`. The `tests` check is reported on every pull request (green at once when narrow), so a repo may require it in branch protection without blocking narrow changes. Close waits for `tests` by name only for a wide change.
+- Guesses to confirm with the owner. (1) "The selection is the whole suite" is read as "more than a third of the test files, or a changed shared test input", because a real wide change such as `close.py` selects 955 of 960 files, not all 960. The ratio is the one the worker's broad-selection message already uses and is easy to change. (2) Forge's own pytest picker is the only selection that counts. (3) The settings fix for this repo waits for the release that has this story, because the pinned Forge (`v1.2.50`) refuses `mixed` as an unknown value until then. (4) Ordinary pull requests still start two short check jobs (`docs-check` and `tests`); only the test groups are saved.
