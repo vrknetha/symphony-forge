@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-ASKFAMILY-1-FAMILY",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-27T13:26:04.914775+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-27T13:26:17.907797+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "117b52eb409be55e7489b1e7b30e684d722b01d1",
+    "keys": {},
+    "round": null
+  },
+  "worker": "antigravity"
 }
