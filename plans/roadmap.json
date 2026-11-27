@@ -750,6 +750,12 @@
       "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-PRUSAGE-1",
+      "title": "Show model use and change size in pull requests",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [

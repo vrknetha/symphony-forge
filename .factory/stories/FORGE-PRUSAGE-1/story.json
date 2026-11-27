@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-PRUSAGE-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-27T10:45:08.753034+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Show model use and change size in pull requests",
+  "touches": 0
+}
