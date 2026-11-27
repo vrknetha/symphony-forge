@@ -1,6 +1,11 @@
 {
   "doc": "plans/FORGE-JOBS-1.md",
-  "status": "planning",
+  "drop": {
+    "at": "2026-11-27T16:49:56.795074+00:00",
+    "because": "The owner wants it later (27 Nov cleanup); kept in the idea list",
+    "by": "vrknetha <vrknetha@gmail.com> 1795798196 +0530"
+  },
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-10-25T17:43:14.862058+00:00",
