@@ -77,7 +77,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T14:46:15.930514+00:00",
@@ -105,12 +105,23 @@
       "at": "2026-11-27T15:12:15.740929+00:00",
       "round": 2,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-27T15:16:04.638952+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-27T15:12:15.740929+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "tests/test_runner_ends_when_idle.py",
-    "wait_id": "3e593289-458b-4eae-aaa3-1fc69a04d23b"
+    "reason": "Owner chose one more round: fix both runner test timings",
+    "wait_id": "3e593289-458b-4eae-aaa3-1fc69a04d23b",
+    "worker_round": 2
   },
   "stuck": {
     "close": "ee54019e-2065-4a8b-9177-e9e7c1957735",
