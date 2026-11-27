@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-27T12:44:35.154856+00:00
-seconds: 551.614
-read_hash: a1696687aa138a45b790c15cd373399224fe7c39
-round: 1
+read_at: 2026-11-27T12:58:08.076884+00:00
+seconds: 645.329
+read_hash: 8847efec1d0c0e7e7eeda221f0c499b296c46551
+round: 2
 passed: no
-doc_seen: a1696687aa138a45b790c15cd373399224fe7c39
+doc_seen: 8847efec1d0c0e7e7eeda221f0c499b296c46551
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: c0c02ceb10b4bcce591ebc6688e912a18e4f45da
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21d00-deff-71d2-a1bd-cf2ae06fa405
 session:
-loop_choice:
-loop_reason:
+loop_choice: accept
+loop_reason: Owner accepted; builder fixes in its first note: the read-only Claude turn (ask and cold reads) loads no project or local settings (no hooks) and allows no Bash, Edit or Write tools; tested
 ---
 # Cold read notes
 
@@ -100,3 +100,35 @@ Only a genuine trade-off goes to the human, as a question with options.
 
 Not checked: `forge next` could not finish because the read-only environment denied its lock.
    Disposition: keep - below the bar (live with)
+
+## Round 2
+
+12. Blocking: Not done: item 4: a Claude ask can execute repository hooks with full user permissions.
+    Raise: Security — [the planned Claude runner](/plans/FORGE-ASKFAMILY-1.md:38) uses the real checkout, and [the SDK driver](/src/forge/claude_turn.py:39) loads project and local settings. Claude’s [hook documentation](https://code.claude.com/docs/en/hooks#security-considerations) says SDK sessions run settings-file hooks with the user’s permissions.
+    Case: normal use - A developer asks Claude about a fetched branch whose settings contain a startup hook; that hook can overwrite uncommitted files or read secrets before the answer.
+    Gain 5, Work 2, Harm 4
+   Disposition: keep - Owner accepted; builder fixes in its first note: the read-only Claude turn (ask and cold reads) loads no project or local settings (no hooks) and allows no Bash, Edit or Write tools; tested
+
+13. Blocking: Not done: item 4: Claude’s plan mode can run write-capable shell commands.
+    Raise: Security — [Forge pre-allows Bash](/src/forge/githooks.py:32), and its guard explicitly [allows deletion of an individual file](/tests/test_deny.py:61). Claude’s [SDK permission rules](https://code.claude.com/docs/en/agent-sdk/permissions) permit shell commands approved by an allow rule during planning.
+    Case: normal use - In a trusted Forge repo, a Claude ask runs a pre-approved command that deletes or overwrites an edited file.
+    Gain 5, Work 2, Harm 4
+   Disposition: keep - Owner accepted; builder fixes in its first note: the read-only Claude turn (ask and cold reads) loads no project or local settings (no hooks) and allows no Bash, Edit or Write tools; tested
+
+14. Advisory: The new Claude write-protection test contradicts the specified runner.
+    Raise: Test — [the plan](/plans/FORGE-ASKFAMILY-1.md:41) sets `STUB_CLAUDE_TOUCH` and expects the edited file to remain unchanged. [The stub](/tests/stubs/claude_agent_sdk.py:103) writes that file directly, while [`_sdk_read`](/src/forge/story.py:997) starts it in the real checkout. With distinct starting contents, the prescribed test fails even if Claude tool calls are denied.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+15. Advisory: The Gemini test’s named switch does not demonstrate a denied write.
+    Raise: Test — [the plan](/plans/FORGE-ASKFAMILY-1.md:41) names `STUB_AGY_TOUCH`, but [the stub](/tests/stubs/agy:108) uses it only when `STUB_AGY_SHOW` is set. Even then, `touch()` preserves the bytes of an existing file, so the proposed byte comparison can pass when the write restriction is missing.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+16. Advisory: Disputed keep 7: Gemini also omits some edited files from the copy.
+    Raise: Functional — [the accepted limit](/plans/FORGE-ASKFAMILY-1.md:31) says uncommitted edits are in the copy, but [the copy filter](/src/forge/antigravity.py:170) excludes `AGENTS.md` and `CLAUDE.md`, and the [existing test](/tests/test_antigravity_review.py:144) confirms the exclusion.
+    Case: normal use - A user asks Gemini to review an edited `AGENTS.md`; the file is absent from the copy. This is separate from the accepted lack of Git history.
+    Gain 3, Work 1, Harm 2
+
+Not checked: `forge next` could not finish because the read-only environment denied its lock.
+   Disposition: keep - below the bar (follow-up)
