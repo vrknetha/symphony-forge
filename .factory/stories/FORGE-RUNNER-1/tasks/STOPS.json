@@ -1,0 +1,10 @@
+{
+  "branch": "task/FORGE-RUNNER-1-STOPS",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T11:23:16.065720+00:00",
+      "step": "start"
+    }
+  ]
+}
