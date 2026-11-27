@@ -1,0 +1,16 @@
+{
+  "base": "fd4f51ffae9d5c78c915953f2d41341e45c67883",
+  "branch": "fix/main-s-full-test-run-fails-run-460143175",
+  "done_when": "The five named tests pass in the full test run on GitHub, each still checking its rule (the guide tests check the current guide wording; the runner tests do not depend on machine speed)",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T14:46:15.930514+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Main's full test run fails (run 46014317556), blocking the v1.2.50 tag: tests/test_adoption_shared_input_checks.py::test_1_adoption_review_keeps_shared_input_checks[new-client] and tests/test_combined_script_quick_test.py::test_2_the_synced_guide_tells_the_agent_how_to_write_the_quicker_command[new repo] and [earlier-adopted repo] assert guide sentences that the settings-fix guide change reworded; tests/test_runner_moves_approved_work_to_merge.py::test_1_runner_moves_approved_work_to_merge[human_merge_stops_after_24h] and test_6_runner_ends_when_idle fail on GitHub's machines."
+}
