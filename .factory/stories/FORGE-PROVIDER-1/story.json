@@ -9,12 +9,7 @@
     "session": "c01a489d-c76f-41c1-8371-d6f0052b027c"
   },
   "doc": "plans/FORGE-PROVIDER-1.md",
-  "drop": {
-    "at": "2026-11-27T16:49:39.819510+00:00",
-    "because": "The owner wants it later (27 Nov cleanup); kept in the idea list",
-    "by": "vrknetha <vrknetha@gmail.com> 1795798179 +0530"
-  },
-  "status": "dropped",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-12T15:50:13.481414+00:00",
