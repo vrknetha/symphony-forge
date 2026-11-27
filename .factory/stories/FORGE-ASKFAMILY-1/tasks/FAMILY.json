@@ -115,7 +115,7 @@
     "status": "blocked"
   },
   "round": 3,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T13:26:04.914775+00:00",
@@ -148,12 +148,23 @@
       "at": "2026-11-27T16:57:15.695247+00:00",
       "round": 3,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-27T16:59:03.336401+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 3,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-27T16:57:15.695247+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "tests/test_ask_command.py",
-    "wait_id": "90cf735f-4718-462e-94a1-d6da1961c77a"
+    "reason": "Owner chose one more round: make the test also prove the provider runs only after it gets an agent place",
+    "wait_id": "90cf735f-4718-462e-94a1-d6da1961c77a",
+    "worker_round": 3
   },
   "stuck": {
     "close": "c4697854-e4f8-4ebf-80e4-11dc2c56f233",
