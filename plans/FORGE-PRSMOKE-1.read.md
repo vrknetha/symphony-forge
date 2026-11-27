@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-27T10:32:49.116966+00:00
-seconds: 467.235
-read_hash: f0fcffd0fbd64e2d29088ee8288d3d5d5e601c11
-round: 1
-passed: no
-doc_seen: f0fcffd0fbd64e2d29088ee8288d3d5d5e601c11
+read_at: 2026-11-27T10:46:41.472448+00:00
+seconds: 702.367
+read_hash: 7971c2fb0c145888e477ab3e5def1c339f1b62b6
+round: 2
+passed: yes
+doc_seen: 7971c2fb0c145888e477ab3e5def1c339f1b62b6
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: a5e403983b2a061f58e1e85a3f70eeefca123f0a
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21c89-8770-7031-923e-25a864266a51
 session:
@@ -83,3 +83,28 @@ Only a genuine trade-off goes to the human, as a question with options.
    Disposition: cut the plan now says other tasks wait until a later full run passes after the fix (nightly or by hand); the accepted limits and the `merge.red` description say the same
 
 Skipped `forge next` because it can remove finished worktrees; this read had to leave files unchanged.
+
+## Round 2
+
+8. Advisory: Not done: item 1 — basic tests can fail in a nested Python project.  
+   Raise: Not done  
+   Case: normal use - A repo uses `cd backend && pytest tests` and lists `backend/tests/test_smoke.py` as a basic test.  
+   [fasttest.py](/src/forge/fasttest.py:138) appends the repository-relative path unchanged. Pytest receives it after `cd backend` and looks under `backend/backend/tests`, so the run fails. The planned test uses repository-root tests and would not catch this.  
+   Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+9. Advisory: Plan gap — the revised worker brief says touched test files run, but a task can skip them.  
+   Raise: Plan gap  
+   Case: normal use - A task’s Tests column names one test in a file, and the worker also updates another test in that file.  
+   The [plan](/plans/FORGE-PRSMOKE-1.md:54) now says bare `forge test` runs touched test files. The retained task path in [fasttest.py](/src/forge/fasttest.py:852) clears the changed-file selection and runs only the named test, so the other updated test is skipped.  
+   Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+10. Advisory: Not done: item 1 — mixed Python and JavaScript repos can run extra tests.  
+    Raise: Not done  
+    Case: normal use - A repo uses `pytest ... && vitest run`, and a pull request changes a JavaScript module.  
+    The planned change narrows pytest, but [fasttest.py](/src/forge/fasttest.py:322) still runs Vitest with `--changed`. It can select unchanged JavaScript tests outside the Proof list and basic list, contrary to the promised test set.  
+    Gain 3, Work 3, Harm 2
+
+Skipped `forge next` because it can remove finished worktrees.
+   Disposition: keep - below the bar (follow-up)

@@ -9,6 +9,10 @@
     {
       "at": "2026-11-27T10:32:49.131518+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-27T10:46:41.487102+00:00",
+      "step": "read"
     }
   ],
   "title": "Run fewer tests on Forge pull requests",
