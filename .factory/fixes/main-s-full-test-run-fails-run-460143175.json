@@ -76,7 +76,7 @@
     "id": "eebd63e6-ce59-4d89-8703-16f3d4d7e8db",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -91,13 +91,18 @@
     {
       "at": "2026-11-27T14:57:40.748631+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-27T14:58:00.613427+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "60fbcb13ebe24b591228f90dc5a17b588318581a",
+    "close": "ee54019e-2065-4a8b-9177-e9e7c1957735",
+    "head": "1191ecf28bfd7df565af14d0b5cdbe13532554e5",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "Main's full test run fails (run 46014317556), blocking the v1.2.50 tag: tests/test_adoption_shared_input_checks.py::test_1_adoption_review_keeps_shared_input_checks[new-client] and tests/test_combined_script_quick_test.py::test_2_the_synced_guide_tells_the_agent_how_to_write_the_quicker_command[new repo] and [earlier-adopted repo] assert guide sentences that the settings-fix guide change reworded; tests/test_runner_moves_approved_work_to_merge.py::test_1_runner_moves_approved_work_to_merge[human_merge_stops_after_24h] and test_6_runner_ends_when_idle fail on GitHub's machines.",
   "worker": "antigravity"
