@@ -9,6 +9,13 @@
     "start": "b9a80aaa4dd0525d4bca164fece1e4aa0f58a610"
   },
   "done_when": "A review no longer finds: Functional: Existing tests fail against the local workflow (.github/workflows/forge.yml:17); Functional: Local mode does not wait for the remaining required review check (forge.toml:9); Functional: Local close skips selected container deployment tests (forge.toml:9); Not done: Local close runs unrelated tests and can wait for GitHub test jobs (forge.toml:9); Gate: proof list (forge.toml:8)",
+  "drop": {
+    "at": "2026-11-27T02:24:31.330413+00:00",
+    "because": "Replaced by fix tests-read-this-repo-s-own-forge-yml-and, which carries the same test changes on main",
+    "by": "vrknetha <vrknetha@gmail.com> 1795746271 +0530",
+    "pull_request": 26,
+    "status": "waiting for checks"
+  },
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
@@ -56,7 +63,7 @@
   },
   "round": 3,
   "stacked_on": "owner-26-nov-2026-stop-using-github-runn",
-  "status": "waiting for checks",
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-26T17:51:10.815765+00:00",
@@ -96,6 +103,10 @@
       "choice": "accept",
       "round": 3,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T02:24:31.330582+00:00",
+      "step": "drop"
     }
   ],
   "stop": {
