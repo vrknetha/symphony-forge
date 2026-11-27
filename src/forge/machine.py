@@ -638,6 +638,12 @@ def stop(args: Any) -> int:
         raise repo.Refused("Name an item with optional --repo, or use --id alone.", "")
     root = main_checkout(Path(args.repo).resolve() if args.repo else repo.root()) if args.item else None
     targets: list[tuple[Path, str]] = []
+    # Pre-validate live check waits outside _queue() because board.active_runs may read _queue().
+    if root and args.item and repo.ITEM.fullmatch(args.item):
+        for entry in board.active_runs(root, args.item):
+            process = entry.get("process")
+            if process and codex._alive(process) is not False and ("started" not in process or codex._alive(process) is None):
+                raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
     with _queue() as runs:
         selected = [run for run in runs if run["id"] == args.entry_id or
                     (root and run["repo_root"] == root.as_posix() and run["item"] == args.item)]
@@ -648,6 +654,13 @@ def stop(args: Any) -> int:
             process = run["process"]
             if (run.get("agent") or run["started_at"]) and ("started" not in process or codex._alive(process) is None):
                 raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
+        if not selected and root and repo.ITEM.fullmatch(args.item):
+            for kind in ("Build", "Grill"):
+                lock = codex._item_file(root, args.item, ".lock", kind)
+                if lock.exists():
+                    owner = codex._json(lock)
+                    if "started" not in owner or codex._alive(owner) is None:
+                        raise repo.Refused("Forge cannot verify this run's process; nothing was stopped.", "")
         for run in selected:
             if run.get("item"):
                 pair = (Path(run["repo_root"]), run["item"])

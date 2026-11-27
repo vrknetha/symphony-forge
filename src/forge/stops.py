@@ -99,35 +99,46 @@ def add(top: Path, item: str) -> None:
             _write(path, data)
 
 
+def _still_waiting(top: Path, item: str, default: str) -> bool:
+    if task._merged(f"origin/{default}", item, top):
+        return False
+    tree = _worktree(top, item)
+    state = repo.read_state(item, tree)
+    return bool(state and state.get("status") != "dropped")
+
+
 def _notice_body(top: Path, item: str, code: int, lines: list[str]) -> str:
     question = codex.record(top, item).get("question")
     if isinstance(question, str) and question.strip():
         return question.strip()
+    tree = _worktree(top, item)
+    state = repo.read_state(item, tree) or {}
+    stop = state.get("stop") or {}
+    if stop and not stop.get("choice"):
+        if isinstance(stop.get("question"), str) and stop["question"].strip():
+            return stop["question"].strip()
+        from forge import review
+
+        return review.stop_question(tree, item, state).strip()
     if code == 0:
         for line in lines:
             if line.startswith(f"{item} is ready; a human merges"):
                 return line.strip()
+    tail = lines
+    for i in range(len(lines) - 1, -1, -1):
+        if lines[i].strip().startswith(("Stopped:", "Stopped after ")):
+            tail = lines[i + 1:]
+            break
     next_line = ""
     refusal = ""
-    skip_prefixes = (
-        "Building ",
-        "Closing ",
-        "Fix round ",
-        "Merging ",
-        "Stopped:",
-        "Open findings:",
-        "Failing checks:",
-        "- ",
-        "Next: ",
-    )
-    for raw in lines:
+    for raw in tail:
         line = raw.strip()
         if not line:
             continue
         if line.startswith("Next: "):
             next_line = line
             continue
-        if not refusal and not line.startswith(skip_prefixes):
+        if not refusal:
             refusal = line
     if not refusal:
         refusal = next((raw.strip() for raw in lines if raw.strip()), f"{item} needs you.")
@@ -170,8 +181,20 @@ def ended(top: Path, item: str, code: int, lines: list[str]) -> None:
 
 def summary(top: Path, merged: list[str]) -> None:
     """Send the end-of-run summary notice for a repo the runner worked on."""
-    data = _read(_path(top))
-    waiting = [item for item in dict.fromkeys([*data["told"], *data["stopped"]]) if item not in merged]
+    path = _path(top)
+    default = repo.default_branch(top)
+    merged_set = set(merged)
+    with codex._one_at_a_time(path):
+        data = _read(path)
+        kept_stopped = [item for item in data["stopped"]
+                        if item not in merged_set and _still_waiting(top, item, default)]
+        kept_told = {item: sig for item, sig in data["told"].items()
+                     if item not in merged_set and _still_waiting(top, item, default)}
+        if kept_stopped != data["stopped"] or kept_told != data["told"]:
+            data["stopped"] = kept_stopped
+            data["told"] = kept_told
+            _write(path, data)
+    waiting = list(dict.fromkeys([*kept_told, *kept_stopped]))
     body = f"{len(merged)} merged."
     if waiting:
         body += f" Waiting for you: {', '.join(waiting)}."
