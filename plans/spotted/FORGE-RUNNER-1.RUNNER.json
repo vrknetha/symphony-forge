@@ -131,6 +131,17 @@
       "item": "FORGE-RUNNER-1/RUNNER",
       "status": "open",
       "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/templates/skill.md\tStandard: Replacing behaviour deletes the old path, its tests and its docs in the same change",
+      "kind": "edge",
+      "path": "src/forge/templates/skill.md",
+      "line": 1257,
+      "text": "Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change",
+      "from": "review",
+      "item": "FORGE-RUNNER-1/RUNNER",
+      "status": "open",
+      "closed_by": null
     }
   ]
 }
