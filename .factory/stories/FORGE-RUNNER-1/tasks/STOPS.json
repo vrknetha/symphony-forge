@@ -59,7 +59,7 @@
       "gain": 4,
       "harm": 3,
       "line": 28,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 1,
       "security": false,
@@ -108,27 +108,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "5a6a7529cfd0ddaa81449d4d2fb28e374c08492cb2e9c7fe6e9291d0fcd3b5a2",
-    "changed": "f06e4711092674b5ed73e2bc32496b4fe0a399744fbffed70486f2d2e5eee38a",
-    "commit": "e9ef6bb20144a44010171c59ca168c570451f1be",
+    "branch_diff": "1b8e4f5e45fc30ee316644daef61cc91cc5f7d4a6e24f78d29070a0abbc5ecf3",
+    "changed": "bcf264cd0d31f68c3d0de257822975e3a07369fd539697e6451b31aec7b138da",
+    "commit": "ceb1c4ae569fddf0eb66b356c7a8f59f17443955",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Test\nCase: normal use - the owner stops an item, then the runner is killed and Forge is used again. The test kills the runner here before recording the stop on the next line, and it never kills a live runner after that stop. Also, `forge stop` itself wakes a replacement runner (src/forge/cli.py:162-173), so the subsequent `forge next` can merely wake that process. The test therefore still does not prove that an existing owner stop survives an abrupt runner restart.",
-        "file": "tests/test_runner_restart_repeats_nothing.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 255,
-        "priority": "P1",
-        "title": "Test: A restart repeats no finished build and undoes no stop that the owner set, and the runner comes back the first time Forge is used.",
-        "work": 2
-      }
-    ],
-    "id": "2272963d-7052-42f7-bcc9-e125a9076790",
-    "status": "blocked"
+    "findings": [],
+    "id": "acfc1852-b3ec-4391-9fe1-c8ab429e588a",
+    "status": "clean"
   },
   "round": 3,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-27T11:23:16.065720+00:00",
@@ -168,6 +157,10 @@
       "at": "2026-11-27T12:34:09.783953+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T12:39:08.562854+00:00",
+      "step": "review"
     }
   ],
   "stop": {
