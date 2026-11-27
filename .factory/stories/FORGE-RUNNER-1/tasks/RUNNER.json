@@ -290,7 +290,7 @@
     "id": "46fa37b5-8f5e-44cd-9bbe-29a022c6e000",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -305,13 +305,20 @@
     {
       "at": "2026-11-27T02:49:12.515976+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-27T02:49:31.766853+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "69b362ec35b7663621892d9ba0129b33744ca177",
-    "keys": {},
-    "round": null
+    "close": "100a6282-c023-43f5-afac-01cb345dea31",
+    "head": "98ada8b294aa106843098f19c8781dbb84280587",
+    "keys": {
+      "the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md": 1
+    },
+    "round": 1
   },
   "worker": "antigravity"
 }
