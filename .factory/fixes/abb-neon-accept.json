@@ -55,7 +55,7 @@
     "id": "b16356f7-517f-40f9-8f24-8790ae713a84",
     "status": "clean"
   },
-  "round": 3,
+  "round": 4,
   "status": "working",
   "steps": [
     {
@@ -84,13 +84,18 @@
       "at": "2026-11-25T09:24:45.900965+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-27T03:52:19.753607+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": "2d539cb5-091e-4be6-9a33-e5ee55043671",
-    "head": "4e2656e98f1ef6b42bc51b5872ebb98a9925efae",
+    "close": "367eab4c-6829-4e68-9153-efcc74a06756",
+    "head": "777dfe1fa8f170a84ec17684f97209da355d250e",
     "keys": {},
-    "round": 2
+    "round": 3
   },
   "why": "forge close --resolve accept records the owner's choice, then prints the same round-limit question again, so it looks as if the choice was not taken (issue #1805).",
   "worker": "antigravity"
