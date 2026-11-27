@@ -1,0 +1,16 @@
+{
+  "base": "480ed1a959dfdcfb0adff5378eae2eaceaed50ab",
+  "branch": "fix/the-v1-2-50-release-notes-miss-what-merg",
+  "done_when": "src/forge/release-notes/v1.2.50.md lists every client-visible change merged since v1.2.49 and the release notes tests pass; nothing else changes",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T13:33:43.588760+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The v1.2.50 release notes miss what merged after the first notes were written: the explorer follows the builder, typed approval in Codex chats, review severity and pending-after-merge proof, the Codex cache-safe effort change and chat shortening, the queue runner with its notices and stops, and the settings-fix guide rule."
+}
