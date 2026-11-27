@@ -4,41 +4,18 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon. End each
-item with its source in plain words, such as (Source: the client's note on late orders, 12 Oct),
-or with the sourced item that needs it, such as (Needed by: the Customers screen). A source is a
-client note, a brief answer, a decision, a screen marked Build now at sign-off, a fixed rule of
-the app, or the owner's own request with its date. Name each screen, field, endpoint, tool and
-setting that the plan adds in one of these items.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact made with the client's design system (link in
-docs/design/design-system.md); on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id. Before the first approval it needs a new read;
-after it, a design part's redraw that changes only that id keeps the approval; any other edit needs a new one.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- Ask Codex, Claude, or Gemini from the same command and get a second opinion from another family by default.
 
 ## Why
 
-Ask another model family for a second opinion
-
-
+Forge always sends questions to Codex, so Codex coordinators cannot get a second opinion from another family through this command.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **An explicit model takes precedence over [models.ask], and the gpt-, claude-, or gemini- prefix selects the corresponding family.**
+2. **With no explicit or configured model, Forge selects a different family from the active Claude Code, Codex, or Antigravity coordinator.**
+3. **Forge waits for an agent place, reuses the selected family's existing read-only turn from cold reads, and prints the answer without changing checkout files.**
+4. **New repositories get this behavior at setup, and existing repositories get it on upgrade with their model settings preserved.**
 
 ## Risks
 
