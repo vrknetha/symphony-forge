@@ -121,7 +121,7 @@ def _finished(top: Path, main: Path) -> list[tuple[Path, str, str, str]]:
              and not (path / ".gitmodules").exists()}
     if not trees: return []
 
-    by_head = set(_cleanup_prs(gh, top, trees))
+    by_head = repo.command_fact(("cleanup prs",), top, lambda: set(_cleanup_prs(gh, top, trees)))
     open_branches = {branch for branch, _, state in by_head if state == "OPEN"}
     reported = {branch for branch, _, _ in by_head}
     # Old lane entries recorded the checkout as "repo", including while they waited for a place.
@@ -276,6 +276,84 @@ def _unbuilt(top: Path) -> list[tuple[str, str]]:
             rows.append((f"Fix {name} started more than seven days ago and has no work commits.",
                          f'forge fix drop {name} --because "<reason>"'))
     return rows
+
+
+def _stuck_title(top: Path, item: str, state: dict[str, Any]) -> str:
+    if "/" not in item:
+        return str(state.get("why") or item)
+    key, _, part = item.partition("/")
+    doc = story.show(top, story.plan_ref(top, key), f"plans/{key}.md") or ""
+    name = task.rows(task.sections(doc)).get(part, {}).get("Name") if doc else ""
+    return f"{name} ({item})" if name else item
+
+
+def stuck_items(top: Path, facts: dict[str, Any] | None = None) -> list[str]:
+    """Items that are not merged and not moving, in one block with one next step each."""
+    from forge import board, board_facts, native
+
+    trees = story.worktrees(top)
+    if not trees:
+        return []
+    by_head = repo.command_fact(("cleanup prs",), top, set)
+    github = (facts or {}).get("github") or {}
+    open_branches = ({b for b, _, s in by_head if s == "OPEN"}
+                     | {pr["headRefName"] for pr in github.get("open", []) if isinstance(pr.get("headRefName"), str)})
+    merged_branches = ({b for b, _, s in by_head if s == "MERGED"}
+                       | {pr["headRefName"] for pr in board_facts.merged_prs(github)})
+    closed_branches = {b for b, _, s in by_head if s == "CLOSED"}
+    live = {Path(folder).resolve() for run in machine.entries()
+            if (folder := run.get("checkout_root") or run.get("repo"))}
+    events = board._event_history(top)[1]
+    landed = story.landed_ref(top)
+    now = datetime.fromisoformat(repo.now())
+    rows: list[str] = []
+    for branch, path in sorted(trees.items()):
+        if not branch.startswith(("task/", "fix/", "forge/")) or not path.is_dir():
+            continue
+        found = task.branch_item(branch, path)
+        if not found:
+            continue
+        item, state = found
+        status = state.get("status") or "started"
+        if (status in ("merged", "done", "dropped", "reviewing", "waiting for checks", "ready")
+                or branch in merged_branches
+                or story.show(top, landed, repo.state_path(item)) is not None):
+            continue
+        if (path.resolve() in live
+                or board.active_runs(top, item, events.get(item, []))
+                or native.lock_alive(codex._item_file(top, item, ".lock", "Build")) is True):
+            continue
+        reason = ""
+        if branch in closed_branches and branch not in open_branches:
+            reason = "its pull request was closed without a merge"
+        elif status == "working":
+            reason = "its builder stopped before it finished"
+        elif status == "started":
+            activity = events.get(item, [])
+            ended = {e.get("run_id") for e in activity if e.get("event") == "run end"}
+            if any(e.get("event") == "run start" and e.get("kind") in ("work", "worker")
+                   and e.get("id") not in ended and e.get("round") == state.get("round")
+                   for e in activity):
+                reason = "its builder stopped before it finished"
+        if not reason and branch not in open_branches and branch not in closed_branches:
+            base = state.get("base")
+            unbuilt = bool(base and repo.git("rev-list", "--count", "--no-merges", branch,
+                                             "--not", base, landed, cwd=top) == "1")
+            if unbuilt:
+                started = next((step["at"] for step in state.get("steps", []) if step["step"] == "start"), None)
+                stalled = bool(started and now - datetime.fromisoformat(started) > timedelta(days=7))
+            else:
+                last = repo.git("log", "-1", "--format=%cI", branch, cwd=top)
+                stalled = bool(last and now - datetime.fromisoformat(last) > timedelta(days=7))
+            if stalled:
+                reason = "no pull request and no commit for more than 7 days"
+        if not reason:
+            continue
+        title = _stuck_title(top, item, state)
+        step = (f'Next: forge land {item}, or forge fix drop {item} --because "<reason>"'
+                if branch.startswith(("fix/", "forge/")) else f"Next: forge land {item}")
+        rows += [f"- {title}: {reason}.", f"  {step}"]
+    return ["Stuck items:", *rows] if rows else []
 def _contents(top: Path, specs: list[str]) -> dict[str, str]:
     if not specs: return {}
     done = subprocess.run([shutil.which("git") or "git", "cat-file", "--batch"], cwd=top,
