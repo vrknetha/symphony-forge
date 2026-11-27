@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-RUNNER-1-RUNNER",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-27T02:18:40.052208+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-27T02:18:54.104287+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "69b362ec35b7663621892d9ba0129b33744ca177",
+    "keys": {},
+    "round": null
+  },
+  "worker": "antigravity"
 }
