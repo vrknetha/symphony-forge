@@ -4,6 +4,7 @@ import re
 import shlex
 import subprocess
 import sys
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -39,10 +40,20 @@ def test_3_slow_tests_run_only_when_ci_opts_in():
         assert "test_1_old_labelled_leftover_is_removed_and_a_fresh_one_is_kept" in enabled.stdout
 
     # These settings are the independent CI routing contract, not Forge source internals.
-    workflow = (ROOT / ".github/workflows/forge-next.yml").read_text(encoding="utf-8")
-    tests_job = workflow.split("  tests:\n", 1)[1].split("  net-lines:\n", 1)[0]
-    assert re.search(r"^    env:\n      FORGE_CONTAINERS: \$\{\{ matrix.os == 'ubuntu-24.04' && '1' \|\| '0' \}\}$",
-                     tests_job, re.M), "Only the Ubuntu suite must opt in to Linux containers"
+    workflow = (ROOT / ".github/workflows/forge.yml").read_text(encoding="utf-8")
+    jobs = set(re.findall(r"^  ([\w-]+):$", workflow, re.M))
+    settings = tomllib.loads((ROOT / "forge.toml").read_text(encoding="utf-8"))
+    checks = settings.get("checks", [])
+    place = settings.get("test_place", "ci" if any(
+        check != "forge-pr-check" for check in checks) else "local")
+    if place == "ci":
+        for name in ("tests", "full-suite"):
+            job = re.split(r"^  [\w-]+:\n", workflow.split(f"\n  {name}:\n", 1)[1],
+                           maxsplit=1, flags=re.M)[0]
+            assert 'runs-on: "ubuntu-24.04"' in job
+            assert "FORGE_CONTAINERS: '1'" in job
+    else:
+        assert "tests" not in jobs and "full-suite" not in jobs
     smoke = (ROOT / ".github/workflows/codex-smoke.yml").read_text(encoding="utf-8")
     assert re.search(r'^      FORGE_LIVE_CODEX: "1"$', smoke, re.M)
     command = re.search(r"^        run: (.*pytest .*test_.*)$", smoke, re.M)

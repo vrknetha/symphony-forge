@@ -26,20 +26,21 @@ SCRIPT = r"""
 import re, subprocess, sys
 from pathlib import Path
 from playwright.sync_api import expect, sync_playwright
-url, teammate, client = sys.argv[1:]
+url, teammate = sys.argv[1:]
 BOARD = "(await import(new URL('app.js' + location.search, location.href))).Board"
 failures = []
 revision = 0
 
 def git(cwd, *args):
-    subprocess.run(['git', *args], cwd=cwd, check=True, capture_output=True, text=True, encoding='utf-8')
+    # The outer test captures stderr, so a failed fetch reports Git's reason.
+    subprocess.run(['git', *args], cwd=cwd, check=True, stdout=subprocess.DEVNULL)
 
 def update(page, container, control):
     global revision
     revision += 1
     control.focus()
     expect(control).to_be_focused()
-    # A real assignment lands and is fetched while the browser stays on the item.
+    # Let the board fetch the new assignment while the browser stays on the item.
     # Its changed owner proves the event stream refreshed this view before focus is checked.
     owner = 'keyboard-dev-' + str(revision)
     path = Path(teammate) / 'plans' / 'SHOP.md'
@@ -47,7 +48,6 @@ def update(page, container, control):
     git(teammate, 'add', '-A')
     git(teammate, 'commit', '-qm', 'Assign the basket to ' + owner)
     git(teammate, 'push', '-q', 'origin', 'HEAD:main')
-    git(client, 'fetch', '-q', 'origin')
     expect(container.get_by_text('Owner ' + owner, exact=True)).to_be_visible(timeout=60000)
     try:
         expect(control).to_be_focused(timeout=1000)
@@ -138,11 +138,11 @@ def test_2_live_item_updates_keep_keyboard_focus_and_navigation(client, gh, tmp_
         "isDraft": False, "url": "https://github.com/shop/basket/pull/7", "body": ""}])
     teammate.git("switch", "-q", "main")
     client.git("fetch", "-q", "origin")
-    with live(client, FORGE_BOARD_FETCH_WAIT="3600") as url:
+    with live(client, FORGE_BOARD_FETCH_WAIT="1") as url:
         # Its own process group, so a stop also ends uv's Python and the browser it started.
         shown = subprocess.Popen([REAL_UV or "uv", "run", "--no-project", "--python", "3.11", "--with",
                                   "playwright==1.55.0", "python", "-c", SCRIPT, url,
-                                  str(teammate.path), str(client.path)], stdout=subprocess.PIPE,
+                                  str(teammate.path)], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE, text=True, encoding="utf-8",
                                  start_new_session=os.name != "nt")
         try:

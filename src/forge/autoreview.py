@@ -137,10 +137,10 @@ def spent(folder: Path) -> dict[str, Any]:
 
 def attempt(argv: list[str], cwd: Path, out: Path,
             selected: dict[str, str], top: Path, item: str, run_id: str,
-            strict: bool = False) -> tuple[list[dict[str, Any]], str]:
+            strict: bool = False, *, env: dict[str, str] | None = None) -> tuple[list[dict[str, Any]], str]:
     """Retry temporary Codex capacity failures before counting an unfinished review."""
     for retry in range(4):
-        findings, reason = _attempt(argv, cwd, out, selected, top, item, run_id, strict)
+        findings, reason = _attempt(argv, cwd, out, selected, top, item, run_id, strict, env=env)
         if not reason or retry == 3 or "codex" not in argv:
             break
         # A long failure trailer can truncate the capacity event from its last line.
@@ -157,24 +157,32 @@ def attempt(argv: list[str], cwd: Path, out: Path,
 
 def _attempt(argv: list[str], cwd: Path, out: Path,
              selected: dict[str, str], top: Path, item: str, run_id: str,
-             strict: bool = False) -> tuple[list[dict[str, Any]], str]:
+             strict: bool = False, *, env: dict[str, str] | None = None) -> tuple[list[dict[str, Any]], str]:
     """Run Autoreview once: its findings, or the reason the run doesn't count."""
     from forge import review_process  # importing it here avoids sync's hook-import cycle
     out.unlink(missing_ok=True)
     # The run's output file: what a person sees when they open the run from the pane.
     log = repo.forge_dir(top) / f"review-{run_id}.log"
-    with review_process.owned(argv, cwd) as proc, log.open("wb") as saved, machine.agent_process(proc, log):
+    antigravity = env is not None and env.get("FORGE_REVIEW_ENGINE") == "antigravity"
+    engine_started = not antigravity
+    with (review_process.owned(argv, cwd, env=env) as proc, log.open("wb") as saved,
+          machine.agent_process(proc, log)):
         last = ""
         pending = b""
         for line in proc.stdout or []:  # streamed as bytes: its progress is how a person watches it
             line = line.replace(b"\0", b"")
             # Claude's failure trailer contains its result JSON. Hold it until we
             # can name a sign-in failure without printing the raw result first.
-            if "claude" in argv and (pending or line.lstrip().startswith(b"{")
-                                      or b"claude engine failed" in line):
+            if not antigravity and "claude" in argv and (pending or line.lstrip().startswith(b"{")
+                                                        or b"claude engine failed" in line):
                 pending += line
                 last = line.decode("utf-8", "replace").strip() or last
                 continue
+            if not engine_started:
+                # The helper's engine label and model describe its placeholder runner.
+                if line.startswith((b"engine: ", b"model: ", b"thinking: ", b"fallback_model: ")):
+                    continue
+                engine_started = line.startswith(b"Antigravity runs ")
             sys.stderr.buffer.write(line)
             sys.stderr.flush()
             saved.write(line)
@@ -220,7 +228,7 @@ def _attempt(argv: list[str], cwd: Path, out: Path,
             "scoped-clean", "findings", "filtered", "incorrect"):
         return [], "it did not report a completed review"
     raw = report.get("findings")
-    findings = ([_finding(f) for f in [*raw, *rejected]]
+    findings = ([_finding(f, strict=strict) for f in [*raw, *rejected]]
                 if isinstance(raw, list) and isinstance(rejected, list) else [None])
     if None in findings:
         return [], "it wrote findings Forge cannot read"
@@ -229,7 +237,32 @@ def _attempt(argv: list[str], cwd: Path, out: Path,
     return findings, ""  # type: ignore[return-value]
 
 
-def _finding(raw: Any) -> dict[str, Any] | None:
+def _changes_migration(top: Path, base: str, head: str) -> bool:
+    return bool(repo.git("diff", "--name-only", "-z", "--no-renames", "--diff-filter=AMT",
+                         f"{base}...{head}", "--", ":(glob)**/migrations/**",
+                         ":(glob)**/alembic/versions/**", cwd=top))
+
+
+def stale_migration_floor(result: dict[str, Any], top: Path, base: str, head: str) -> bool:
+    """Earlier reviews stored the floored score in place of the reviewer's score."""
+    return any((line := score.LINE.search(f["body"])) and "(floor: migration)" in line[0]
+               for f in score.open_findings(result)) and not _changes_migration(top, base, head)
+
+
+def migration_floor(findings: list[dict[str, Any]], top: Path, base: str, head: str) -> None:
+    """Apply the migration floor using the full change, including earlier repair rounds."""
+    if not findings or not _changes_migration(top, base, head):
+        return
+    for finding in findings:
+        # Findings already at Harm 4 or above may carry a security or data-loss floor label.
+        if (current := score.of(finding)) and current[2] < 4:
+            scores, body = score.normalise(finding["title"], finding["body"])
+            if scores:
+                finding["gain"], finding["work"], finding["harm"] = scores
+                finding["body"] = body
+
+
+def _finding(raw: Any, *, strict: bool) -> dict[str, Any] | None:
     """The fields Forge uses from one finding, or None when they can't be read."""
     where = raw.get("code_location") if isinstance(raw, dict) else None
     if not isinstance(where, dict) or raw.get("priority") not in PRIORITIES:
@@ -240,7 +273,7 @@ def _finding(raw: Any) -> dict[str, Any] | None:
     if category in ("security", "data loss") and not any(
             name == category and pattern.search(body) for pattern, name in score.FLOORS[:2]):
         body += f"\nRaise: {category.capitalize()}"
-    scores, body = score.normalise(title, body)
+    scores, body = score.normalise(title, body, migration=strict)
     return {"priority": raw["priority"], "title": title, "body": body,
             **(dict(zip(("gain", "work", "harm"), scores)) if scores else {}),
             "file": str(where.get("file_path", "")), "line": where.get("line", 0)}

@@ -714,6 +714,42 @@
       "title": "Finished work is cleaned up every time, and leftover work is listed with one next step",
       "status": "pending",
       "order": 129
+    },
+    {
+      "key": "FORGE-TOKENS-1",
+      "title": "Builder rounds send fewer input tokens",
+      "status": "pending",
+      "order": 129
+    },
+    {
+      "key": "FORGE-CHATHANDOVER-1",
+      "title": "Hand a long coordinator chat over to a fresh chat",
+      "status": "pending",
+      "order": 130
+    },
+    {
+      "key": "FORGE-SLOWTEST-1",
+      "title": "Faster tests for repos with one combined test command",
+      "status": "pending",
+      "order": 120
+    },
+    {
+      "key": "FORGE-REVIEWPROOF-1",
+      "title": "Separate review severity from merge decisions",
+      "status": "pending",
+      "order": 131
+    },
+    {
+      "key": "FORGE-CODEXAPPROVE-1",
+      "title": "Approve a story from a Codex chat",
+      "status": "pending",
+      "order": 130
+    },
+    {
+      "key": "FORGE-TOKENS-2",
+      "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
+      "status": "pending",
+      "order": 130
     }
   ],
   "epics": [

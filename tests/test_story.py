@@ -67,7 +67,7 @@ if args == ["--version"]:
 if args[:1] == ["plugin"]:
     if args == ["plugin", "marketplace", "list", "--json"]:
         print(json.dumps([{{"name": "forge", "source": {{
-            "source": "github", "repo": "knacklabs/symphony-forge"}}}}]))
+            "source": "github", "repo": "vrknetha/symphony-forge"}}}}]))
     elif args == ["plugin", "list", "--json"]:
         print(json.dumps([{{"id": "forge@forge", "scope": "user", "enabled": True,
                            "version": "1.2.6"}}]))

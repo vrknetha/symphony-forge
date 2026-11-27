@@ -200,7 +200,7 @@ def test_1_a_failed_round_runs_at_top_effort_in_the_same_thread(
         assert retry["threadId"] == conversation
         assert (initial["config"]["model"], initial["config"]["model_reasoning_effort"]) == (
             model, effort)
-        assert (retry["config"]["model"], retry["config"]["model_reasoning_effort"]) == (
+        assert (retry["config"]["model"], _sent(log, "turn/start")[-1]["effort"]) == (
             model, expected_effort)
         for key in ("agents.default_subagent_model", "agents.default_subagent_reasoning_effort"):
             assert initial["config"][key] == retry["config"][key]
@@ -334,9 +334,10 @@ def test_5_effort_none_is_never_sent(
         efforts = [call["options"]["effort"] for call in (initial, failed)]
         assert initial["session_id"] == failed["session_id"]
     else:
-        [initial] = _sent(log, "thread/start")
-        failed = _sent(log, "thread/resume")[-1]
-        efforts = [call["config"]["model_reasoning_effort"] for call in (initial, failed)]
+        [start] = _sent(log, "thread/start")
+        assert start["config"]["model_reasoning_effort"] == "none"
+        turns = _sent(log, "turn/start")
+        efforts = [turns[0]["effort"], turns[-1]["effort"]]
     assert efforts == ["none", "xhigh" if family == "claude" else "high"]
     assert (folder / "forge.toml").read_bytes() == before
 

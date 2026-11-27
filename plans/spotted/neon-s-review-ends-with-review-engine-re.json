@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tNot done: A refused Antigravity review can finish without identifying the refused step\tneon-s-review-ends-with-review-engine-re",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 487,
+      "text": "Not done: A refused Antigravity review can finish without identifying the refused step",
+      "from": "blocking",
+      "item": "neon-s-review-ends-with-review-engine-re",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tPreserve failed review usage and conversation records\tneon-s-review-ends-with-review-engine-re",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 488,
+      "text": "Preserve failed review usage and conversation records",
+      "from": "blocking",
+      "item": "neon-s-review-ends-with-review-engine-re",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tStop treating refused tool titles as provider rate limits\tneon-s-review-ends-with-review-engine-re",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 488,
+      "text": "Stop treating refused tool titles as provider rate limits",
+      "from": "blocking",
+      "item": "neon-s-review-ends-with-review-engine-re",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_antigravity_review_refusal.py\tTest: Refused Antigravity reviews preserve Neon's written findings\tneon-s-review-ends-with-review-engine-re",
+      "kind": "bug",
+      "path": "tests/test_antigravity_review_refusal.py",
+      "line": 39,
+      "text": "Test: Refused Antigravity reviews preserve Neon's written findings",
+      "from": "blocking",
+      "item": "neon-s-review-ends-with-review-engine-re",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

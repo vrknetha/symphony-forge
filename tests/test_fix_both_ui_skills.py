@@ -9,7 +9,7 @@ from conftest import patient
 from test_close import env  # noqa: F401 (pytest fixture)
 from test_setup import _autoreview, _executable, _fresh_client, _stub_forge
 from test_setup import doctor_sdks, sdk_data  # noqa: F401
-from test_worker import calls, install_claude
+from test_worker import calls, install_claude, referenced_standards
 
 import pytest
 
@@ -48,11 +48,12 @@ def test_2_worker_and_review_get_both_ui_skills_and_blocking_checks(env):
     item, _ = env.start_fix()
     worked = repo.forge("work", item)
     assert worked.returncode == 0, worked.stderr
-    brief = flat(calls(log)[-1]["brief"])
-    assert "impeccable and emil-design-eng are required for every UI" in brief
-    assert "prototypes included" in brief
-    assert "one batched inspection" in brief
-    assert "Invoke emil-design-eng with a specific task" in brief
+    # The worker opens the standards page from the brief. The review still includes its text.
+    standards = flat(referenced_standards(calls(log)[-1]["brief"]).read_text("utf-8"))
+    assert "impeccable and emil-design-eng are required for every UI" in standards
+    assert "prototypes included" in standards
+    assert "one batched inspection" in standards
+    assert "Invoke emil-design-eng with a specific task" in standards
 
     closed = env.close(item)
     assert closed.returncode == 0, closed.stderr

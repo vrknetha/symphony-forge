@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/board_facts.py\tFunctional: Re-running a scheduled workflow can revive a cleared failure\tFORGE-SLOWTEST-1/NIGHTLY",
+      "kind": "bug",
+      "path": "src/forge/board_facts.py",
+      "line": 478,
+      "text": "Functional: Re-running a scheduled workflow can revive a cleared failure",
+      "from": "blocking",
+      "item": "FORGE-SLOWTEST-1/NIGHTLY",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

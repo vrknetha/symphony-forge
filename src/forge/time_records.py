@@ -203,6 +203,30 @@ def _observations(top: Path, key: str, state: dict[str, Any], name: str,
             and row.get("item") is not None]
 
 
+def _restore_review_severity(top: Path, key: str, state: dict[str, Any], events: list[dict[str, Any]]) -> None:
+    """Older events used the blocking score. The saved review carries the author's severity."""
+    current = state.get("review") or {}
+    if not key or not current.get("id"):
+        return
+    candidates = [event for event in events if event.get("event") == "review result"
+                  and event.get("id") and not event.get("rebuilt_commit")
+                  and isinstance(event.get("findings"), list)
+                  and any(f.get("priority") == "P0" for f in event["findings"])]
+    by_id = {current["id"]: current}
+    if any(event["id"] not in by_id for event in candidates):
+        from forge import review
+
+        by_id.update((saved["id"], saved) for saved in review._history(top, key, "", current)
+                     if saved.get("id"))
+    for event in candidates:
+        original = by_id.get(event["id"], {}).get("findings") or []
+        if len(original) == len(event["findings"]) and all(
+                (a.get("file"), a.get("title")) == (b.get("file"), b.get("title"))
+                for a, b in zip(original, event["findings"])):
+            event["findings"] = [{**f, "priority": saved["priority"]}
+                                 for f, saved in zip(event["findings"], original)]
+
+
 def item(top: Path, key: str, state: dict[str, Any], *,
          events: list[dict[str, Any]] | None = None,
          timings: list[dict[str, Any]] | None = None,
@@ -210,6 +234,7 @@ def item(top: Path, key: str, state: dict[str, Any], *,
     events = list({e.get("id") or json.dumps(e, sort_keys=True): e for e in
                    [*_observations(top, key, state, "events", events), *_lifecycle(state, key)]
                    if e.get("item") == key}.values())
+    _restore_review_severity(top, key, state, events)
     events.sort(key=lambda e: e.get("at") or "")
     timings = _observations(top, key, state, "timings", timings)
     lane_rounds = {e["lane_id"]: e["round"] for e in events if e.get("event") == "work phase"
@@ -867,6 +892,9 @@ def _combined(top: Path, key: str, state: dict[str, Any], published: str, *,
         return merged(item(top, key, state, events=events, timings=timings, ended_at=ended_at), {})
     rows = {name: _observations(top, key, state, name, given)
             for name, given in (("events", events), ("timings", timings))}
+    earlier = [{**event} for event in record.get("events", [])]
+    _restore_review_severity(top, key, state, [*rows["events"], *earlier])
+    record = {**record, "events": earlier}
     return merged({**rows, "state": state, "ended_at": ended_at}, record)
 
 

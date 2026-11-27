@@ -156,6 +156,8 @@ def test_1_looping_item_retains_findings_ci_give_up_owner_wait_and_pull_request_
                and event["findings"][0]["file"] == "app.py" for event in reviews)
     loop_wait = next(event for event in reversed(records(env.repo, "events.jsonl"))
                      if event["event"] == "owner wait start" and event.get("reason") == "review loop")
+    # The published hold and the local wait log mark the same start.
+    assert f"On hold: {loop_wait['at']}\n" in body(env.gh_calls("pr", "edit")[-1])
     wait_started = datetime.fromisoformat(loop_wait["at"])
     monkeypatch.setenv("FORGE_NOW", (wait_started + timedelta(seconds=30)).isoformat())
     config = env.repo.path / "forge.toml"

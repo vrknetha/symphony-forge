@@ -16,7 +16,7 @@ pytestmark = pytest.mark.platform
 
 STORY = "FORGE-UPGRADE-1"
 
-SOURCE = "git+https://github.com/knacklabs/symphony-forge@"
+SOURCE = "symphony-forge=="
 
 # This checkout's Forge, installed as the release <version> names: no later release exists yet.
 RELEASE = """#!{python}
@@ -36,7 +36,7 @@ import json, pathlib, sys
 here = pathlib.Path(__file__).resolve().parent
 with open(here / "uv-calls.jsonl", "a", encoding="utf-8") as f:
     f.write(json.dumps(sys.argv[1:]) + "\\n")
-(here / "forge").write_text({release!r}.replace("<version>", sys.argv[-1].rsplit("@v", 1)[1]),
+(here / "forge").write_text({release!r}.replace("<version>", sys.argv[-1].rsplit("==", 1)[1]),
                             encoding="utf-8")
 (here / "forge").chmod(0o755)
 """
@@ -80,7 +80,11 @@ def _pr_check_steps(env) -> list[str]:
     env.repo.git("worktree", "add", "-q", "-b", "fix/sync", str(synced))
     done = env.repo.forge("sync", cwd=synced)
     assert done.returncode == 0, done.stderr
-    jobs = (synced / ".github/workflows/forge.yml").read_text("utf-8").split(
+    return _review_job_steps((synced / ".github/workflows/forge.yml").read_text("utf-8"))
+
+
+def _review_job_steps(workflow: str) -> list[str]:
+    jobs = workflow.split(
         "\n  forge-pr-check:\n", 1)[1]
     job = re.split(r"\n  [a-z0-9_-]+:\n", jobs, maxsplit=1)[0]
     steps = []
@@ -105,7 +109,7 @@ def _on_v1_2_0(env) -> list[str]:
     return _pr_check_steps(env)
 
 
-def _run_pr_check_job(env, where, steps) -> subprocess.CompletedProcess[str]:
+def _run_pr_check_job(env, where, steps, branch="fix/tidy-readme") -> subprocess.CompletedProcess[str]:
     """The whole job, run like the runner does on the base checkout, where no Forge is installed
     until the job installs one: each step in bash -e, each seeing what earlier steps added to
     $GITHUB_ENV, stopping at the first failure."""
@@ -116,7 +120,7 @@ def _run_pr_check_job(env, where, steps) -> subprocess.CompletedProcess[str]:
     variables = {**os.environ, "PR": "1", "GITHUB_ENV": str(github_env), "RUNNER_TEMP": str(env.tmp),
                  "BASE_SHA": env.repo.git("rev-parse", "main"),
                  "HEAD_SHA": env.repo.git("rev-parse", "HEAD", cwd=where),
-                 "HEAD_REF": "fix/tidy-readme"}
+                 "HEAD_REF": branch}
     for step in steps:
         variables.update(line.split("=", 1) for line in github_env.read_text("utf-8").splitlines())
         done = subprocess.run(["bash", "-e", "-c", step], cwd=env.repo.path, env=variables,
@@ -142,7 +146,7 @@ def _upgrade_installs_and_passes_the_release_it_pins(env):
 
     assert (done.returncode, done.stdout) == (0, "forge-pr-check passed for fix/tidy-readme.\n"), \
         done.stderr
-    assert _uv_calls(env) == [["tool", "install", SOURCE + "v1.3.0"]]
+    assert _uv_calls(env) == [["tool", "install", SOURCE + "1.3.0"]]
     assert env.repo.forge("--version").stdout.split()[-1] == "v1.3.0"
 
 
@@ -174,7 +178,7 @@ def _ordinary_pull_request_installs_and_passes_the_default_branch_release(env):
 
     assert (done.returncode, done.stdout) == (0, "forge-pr-check passed for fix/tidy-readme.\n"), \
         done.stderr
-    assert _uv_calls(env) == [["tool", "install", SOURCE + "v1.2.0"]]
+    assert _uv_calls(env) == [["tool", "install", SOURCE + "1.2.0"]]
 
 
 BASH = pytest.mark.skipif(os.name == "nt", reason="the workflow's steps run in bash on ubuntu-latest")

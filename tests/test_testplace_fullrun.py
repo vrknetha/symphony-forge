@@ -227,7 +227,7 @@ def test_3_full_run_is_nightly_and_daily(repo, gh, tmp_path, monkeypatch):
     assert "fetch-depth: 0" in full_job
     assert "actions/setup-python@" in full_job and "astral-sh/setup-uv@" in full_job
     version = repo.forge("--version").stdout.split()[-1]
-    assert f"uv tool install git+https://github.com/knacklabs/symphony-forge@{version}" in full_job
+    assert f"uv tool install symphony-forge=={version.removeprefix('v')}" in full_job
     assert "github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'" in full_job
     for name, body in _jobs(ci_workflow.split("\njobs:\n", 1)[1]).items():
         if name not in {"full-suite", "full-suite-result"}:

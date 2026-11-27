@@ -1,0 +1,49 @@
+{
+  "approval": {
+    "at": "2026-11-25T07:36:52.413364+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_015ZStYeLmWzPGHYAgJtfi2V",
+    "hash": "7d4867b7bbecf40bbfbb9ce76341befef2f40a59da4d8bc44c10c125080843fc",
+    "round": 5,
+    "runtime": "claude",
+    "session": "defc2e85-5a69-4ec7-8d30-1a66f4aa5ff6"
+  },
+  "doc": "plans/FORGE-TOKENS-1.md",
+  "status": "approved",
+  "steps": [
+    {
+      "at": "2026-11-25T03:37:48.737446+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T03:51:13.073389+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T03:59:42.974629+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T04:23:18.908971+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T06:11:51.887796+00:00",
+      "step": "approved"
+    },
+    {
+      "at": "2026-11-25T07:35:01.159985+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T07:36:12.159303+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-25T07:36:52.413663+00:00",
+      "step": "approved"
+    }
+  ],
+  "title": "Builder rounds send fewer input tokens",
+  "touches": 2
+}

@@ -1,0 +1,73 @@
+{
+  "base": "f46d0d319eed56976a220b9975502c95a74bdf1c",
+  "branch": "fix/a-coordinator-s-own-ad-hoc-subagents-wit",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a2116e-1855-7310-9448-3c170f59d730",
+    "head": null,
+    "start": "5e0c55a6873786277335464cff8207805fd20513"
+  },
+  "done_when": "The coordinator guide that Forge ships tells the coordinator to set a model on every ad-hoc subagent it starts outside Forge's roles (Sonnet for analysis and research, Haiku for sorting and search), and a test checks the shipped guide says so.",
+  "fix_kind": "mechanical",
+  "kind": "fix",
+  "known": [
+    {
+      "area": "test_1_the_coordinator_guide_requires_ad_hoc_subagent_models() in tests/test_ad_hoc_subagent_models.py",
+      "file": "tests/test_ad_hoc_subagent_models.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 13,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: Run the ad-hoc model test when the shipped guide changes",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "d7c2a32f79e4c0d08d5dc0a14a60ca5304b6960d44bf84d65d246e8e1d8afaf3",
+    "changed": "093f3558a03ce7606851aae56c3a2fa32eb41e42fd880921c5bb5224cf76cb38",
+    "commit": "4798a43da0add57d99a9960dccd895775cafcf4f",
+    "dismissals": [],
+    "findings": [],
+    "id": "47398000-5c73-4cb6-8180-a987533a705a",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-25T06:38:56.485400+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-25T06:39:14.850049+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T06:53:38.538686+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-25T06:54:00.722286+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-25T07:01:15.775915+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "55331c34-8092-47ac-b356-746ec4ca4684",
+    "head": "495d9bd2b4dd2abab74c524818cb30c41a010b97",
+    "keys": {},
+    "round": 1
+  },
+  "why": "A coordinator's own ad-hoc subagents without a model, such as the built-in general-purpose agent, inherit the coordinator's model (Opus) for analysis that a cheaper model handles.",
+  "worker": "codex"
+}

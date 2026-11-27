@@ -21,7 +21,8 @@ def test_3_every_finding_shows_its_scores(env, adopted):
 
     assert closed.returncode == 1, closed.stdout + closed.stderr
     for number, note in enumerate([blocker, rare, advice], 1):
-        assert f"{number}. {note['priority']} {note['title']} (app.py:1)\n" in closed.stdout
+        status = ", blocks the merge." if number == 1 else ""
+        assert f"{number}. {note['priority']}{status} {note['title']} (app.py:1)\n" in closed.stdout
         assert note["body"] in closed.stdout
     review = body(env.gh_calls("pr", "create")[-1]).split("<!-- forge:begin -->\n", 1)[1]
     # The old block omitted the blocker's scores and replaced the follow-up reason with scores.

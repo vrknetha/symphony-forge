@@ -55,6 +55,12 @@ def hook(args: argparse.Namespace | None) -> None:
     if blocked := _violation(str(command or "")):
         rule, found = blocked
         refuse(REFUSALS[rule], code=2, found=found)
+    from forge.contextsize import warning
+
+    if line := warning(payload):
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "additionalContext": line,
+        }}))
 
 
 def _antigravity_reason(tool: object) -> str:
