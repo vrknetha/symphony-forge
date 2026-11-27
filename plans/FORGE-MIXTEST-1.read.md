@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-27T09:21:12.616562+00:00
-seconds: 435.256
-read_hash: f3eb09a75b810379f985e8d4f0b494bd2ce31e30
-round: 2
+read_at: 2026-11-27T09:31:37.930489+00:00
+seconds: 369.551
+read_hash: 96b8e4de533a7476e5ec3983fc7d15a103d8af8f
+round: 3
 passed: no
-doc_seen: f3eb09a75b810379f985e8d4f0b494bd2ce31e30
+doc_seen: 96b8e4de533a7476e5ec3983fc7d15a103d8af8f
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 1264f8aa72674d8a54e4d98bdec8a95f437a288a
+notes_seen: 9516c004fc45b488b10eb87ba1a6de46459e3cb7
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21c39-cb5d-7a13-9178-e47d07ae1105
 session:
-loop_choice: more
-loop_reason: One more round: fix notes 8 and 9, and add the owner's 27 Nov request that the release full-suite run goes to GitHub
+loop_choice: accept
+loop_reason: Owner accepted; builder fixes: the one-group mixed workflow equals local except the by-hand full-suite job; the guide says a check removal also needs the owner's branch-protection change; a laptop full run stays a valid release fallback. No nightly run (owner).
 ---
 # Cold read notes
 
@@ -104,4 +104,31 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - A CI repository relies on Forge’s generated nightly full suite and has no separate full-suite workflow. The amended plan keeps `full_run` limited to CI mode; [prcheck.py](/src/forge/prcheck.py:306) consequently removes the schedule after the settings fix merges. The full run then needs to be started manually, even though [test selection](/src/forge/fasttest.py:850) still says the nightly run covers missed tests.  
     Adds work: retain the existing nightly run after switching; F 3 x H 2 = 6; 2 x C = 6.  
     Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+## Round 3
+
+11. **Blocking: Not done: The proposed check removal does not update branch protection.**  
+    Raise: Not done.  
+    Case: normal use - A one-group repository requires `tests` in GitHub branch protection. The revised plan removes `tests` from `forge.toml`, but [checks.required](/src/forge/checks.py:93) only changes which checks Forge waits for. [init.protect](/src/forge/init.py:259) is not called for an ordinary settings fix, so GitHub still requires the now-missing check. The planned test checks close, not the merge. Finding 8 remains open.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; builder fixes: the one-group mixed workflow equals local except the by-hand full-suite job; the guide says a check removal also needs the owner's branch-protection change; a laptop full run stays a valid release fallback. No nightly run (owner).
+
+12. **Blocking: Plan gap: The one-group workflow test contradicts the new full-run job.**  
+    Raise: Plan gap.  
+    Case: normal use - With one group and no custom full-suite workflow, the plan requires mixed mode to generate a manual full-suite job, but also requires its entire workflow to equal the local workflow. The [local workflow has no full-suite job](/src/forge/prcheck.py:306). The required test in [MIXED](/plans/FORGE-MIXTEST-1.md:45) therefore cannot pass with the specified full-run behavior, blocking the first part.  
+    Gain 5, Work 1, Harm 3
+   Disposition: keep - Owner accepted; builder fixes: the one-group mixed workflow equals local except the by-hand full-suite job; the guide says a check removal also needs the owner's branch-protection change; a laptop full run stays a valid release fallback. No nightly run (owner).
+
+13. **Advisory: Not done: The release guard also accepts a local full run.**  
+    Raise: Not done.  
+    Case: normal use - A developer runs the existing `forge test --full` command on the latest default-branch commit. [fullrun.py](/src/forge/fullrun.py:109) posts the same success status for that local run, and the unchanged guard reads only its context and state. It can therefore accept the local result without the GitHub run required by item 4.  
+    Gain 3, Work 2, Harm 3
+   Disposition: keep - Owner accepted; builder fixes: the one-group mixed workflow equals local except the by-hand full-suite job; the guide says a check removal also needs the owner's branch-protection change; a laptop full run stays a valid release fallback. No nightly run (owner).
+
+14. **Advisory: Functional: A failed mixed full run is not marked on the board.**  
+    Raise: Functional.  
+    Case: normal use - A manually started release full run fails. The plan leaves [full_workflow](/src/forge/board_facts.py:408) limited to CI mode, so the failure is not classified as a full run and gets no Needs you row. `forge next` can still show a generic failed-workflow message. This is separate from the accepted choice not to hold merges.  
+    Adds work: classify mixed’s manual run as a full run for the board; F 1 x H 2 = 2; 2 x C = 2.  
+    Gain 3, Work 2, Harm 2
    Disposition: keep - below the bar (follow-up)
