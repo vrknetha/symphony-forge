@@ -311,46 +311,55 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Security  
     Case: normal use - During setup, the owner selects “All repositories” on GitHub’s installation page. [The plan](/plans/FORGE-PROVIDER-1.md:89) checks that the App has the requested permissions on this repo, but does not check which other repos the installation can access. GitHub permits that selection, so the key stored in AWS can have Administration write across the account, beyond the single repo described to the owner. [GitHub’s installation guide](https://docs.github.com/en/apps/using-github-apps/installing-a-github-app-from-a-third-party)  
     Gain 5, Work 2, Harm 4
+   Disposition: cut - setup refuses an App installation on all repos or on more than this one repo.
 
 46. **Blocking: Security: EC2 user data exposes the runner configuration.**  
     Raise: Security  
     Case: normal use - A person who can inspect EC2 instances, but cannot read Secrets Manager, reads a new machine’s user data while it is starting. [The plan](/plans/FORGE-PROVIDER-1.md:95) puts the one-use runner configuration there. [AWS documents that instance user data can be read through EC2](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-data-inventory.html); the reader can start that runner elsewhere before the intended machine connects and receive a job and its credentials.  
     Gain 5, Work 2, Harm 4
+   Disposition: cut - the one-use runner config goes in the machine's own table item, read at boot and removed after the runner starts, never in user data.
 
 47. **Blocking: Security: renaming a repository leaves its App key in AWS.**  
     Raise: Security  
     Case: normal use - An owner renames a private repository and later turns AWS runners off. [The stack name is derived from the current owner and repository name](/plans/FORGE-PROVIDER-1.md:59), so turn-off looks for a new name and can report nothing to delete. The old stack and its Administration-write App key remain in AWS. GitHub redirects the old repository URL after a rename, but that does not rename the AWS stack. [GitHub’s rename guide](https://docs.github.com/en/enterprise-cloud%40latest/repositories/creating-and-managing-repositories/renaming-a-repository)  
     Gain 5, Work 2, Harm 4
+   Disposition: cut - the stack is named by the repo's numeric GitHub id, so a rename changes nothing.
 
 48. **Blocking: Data loss: turn-off deletes unrelated runner registrations.**  
     Raise: Data loss  
     Case: normal use - A private repo already has a separately managed runner named `forge-team`. [Turn-off](/plans/FORGE-PROVIDER-1.md:103) deletes every repo runner whose name starts with `forge-`, including that runner. GitHub permanently removes its registration, so the team must register it again. [GitHub’s runner removal guide](https://docs.github.com/en/actions/how-tos/manage-runners/self-hosted-runners/remove-runners)  
     Gain 5, Work 2, Harm 4
+   Disposition: cut - turn-off deletes only the runner ids that the stack recorded.
 
 49. **Blocking: Not done: the planned AWS roles cannot launch a machine.**  
     Raise: Not done  
     Case: normal use - A private repo queues its first AWS test job. [The planned roles](/plans/FORGE-PROVIDER-1.md:60) grant `RunInstances` only on the launch template, subnet and security group. AWS also requires authorization for the image, instance, volume and network interface created or used by the call, so the launch is denied and the job remains queued. The fake does not enforce those permissions. [AWS’s EC2 policy examples](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ExamplePolicies_EC2.html)  
     Gain 5, Work 1, Harm 3
+   Disposition: cut - the launch role lists every resource RunInstances needs.
 
 50. **Blocking: Not done: the timer cannot read machine states.**  
     Raise: Not done  
     Case: normal use - After the launch permission is corrected, a job finishes and its machine terminates. [The timer’s role](/plans/FORGE-PROVIDER-1.md:60) restricts `DescribeInstances` to tagged instances, but AWS does not support resource-level permissions for that call. The timer cannot confirm termination, free the place, or admit the next job. [AWS’s EC2 policy examples](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ExamplePolicies_EC2.html)  
     Gain 5, Work 1, Harm 3
+   Disposition: cut - DescribeInstances is granted on * because it has no resource-level permission.
 
 51. **Blocking: Not done: working machines cannot send their marks.**  
     Raise: Not done  
     Case: normal use - A test job runs for more than 15 minutes. [The machine role](/plans/FORGE-PROVIDER-1.md:60) limits the DynamoDB attribute condition to `mark`, but the update also needs the table’s `pk` key. AWS requires primary-key attributes in that condition, so the marks are denied and the timer stops the working machine as stale. [AWS’s DynamoDB condition documentation](https://docs.aws.amazon.com/amazondynamodb/latest/developerguide/specifying-conditions.html)  
     Gain 5, Work 1, Harm 3
+   Disposition: cut - the machine's mark update uses dynamodb:LeadingKeys on its own item.
 
 52. **Blocking: Not done: the AWS machine cannot run the starter’s Docker tests.**  
     Raise: Not done  
     Case: normal use - A private repo made from Forge’s Python starter runs its API tests. [The starter](/src/forge/templates/starter-python/scripts/test.mjs:47) invokes `docker compose`, while [the planned startup](/plans/FORGE-PROVIDER-1.md:99) installs `docker.io` but not Ubuntu’s separate Compose package. It also specifies an unprivileged runner without granting it Docker access. The planned test stubs the installer and cannot catch either failure. [Ubuntu package details](https://packages.ubuntu.com/noble/arm64/docker.io), [Docker’s Linux setup](https://docs.docker.com/engine/install/linux-postinstall/)  
     Gain 5, Work 2, Harm 3
+   Disposition: cut - the machine start script installs docker-compose-v2.
 
 53. **Blocking: Not done: a failed launch prevents the waiting job from retrying.**  
     Raise: Not done  
     Case: normal use - GitHub creates the one-job runner, then AWS temporarily has no machine capacity. [The failure path](/plans/FORGE-PROVIDER-1.md:95) releases the place but specifies no deletion of the already-created GitHub runner. The next attempt uses the same runner name, which GitHub rejects as already existing; the queued job can remain stuck until it times out. [GitHub documents the conflict](https://docs.github.com/en/enterprise-server%403.19/rest/actions/self-hosted-runners?apiVersion=2022-11-28), and its community records this response for an existing JIT runner. [GitHub discussion](https://github.com/orgs/community/discussions/180967)  
     Gain 5, Work 2, Harm 3
+   Disposition: cut - a failed launch deletes the runner it created at GitHub before the job waits again.
 
 54. **Advisory: Not done: an uncertain launch can exceed the machine limit.**  
     Raise: Functional  
@@ -362,6 +371,7 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Plan gap  
     Case: normal use - The agent syncs the generated workflow in the settings fix that enables AWS runners, then waits for that fix to merge before running setup. The pull request’s workflow now asks for `forge-aws`, but there is no stack or App to start it. The [planned guide](/plans/FORGE-PROVIDER-1.md:105) does not pin an order that avoids this wait. GitHub runs the `pull_request` workflow from the pull request’s merge commit. [GitHub’s workflow guidance](https://docs.github.com/en/actions/reference/security/securely-using-pull_request_target)  
     Gain 4, Work 2, Harm 2
+   Disposition: cut - the label turns on through test_runner = "forge-aws" in a second settings fix, only after setup is verified.
 
 56. **Advisory: Not done: a late redelivery can start another machine.**  
     Raise: Functional  
@@ -379,8 +389,10 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Plan gap  
     Case: normal use - CI runs the new handler tests on a clean checkout. [The plan](/plans/FORGE-PROVIDER-1.md:137) chooses a test-only AWS SDK package installed with `npm ci`, but the task scopes include neither that package and lock file nor a CI installation step. The handlers therefore cannot be assumed to find the SDK that the Lambda runtime supplies in production.  
     Gain 4, Work 2, Harm 2
+   Disposition: cut - INTAKE's Scope adds tests/aws_handlers/package.json, its lock file and the .gitignore line.
 
 59. **Advisory: Disputed keep 20: setup now adds a browser page and flow.**  
     Raise: Gate  
     Case: normal use - A person creates the GitHub App during setup. The earlier keep relied on there being no screen or page, but [the rewritten plan](/plans/FORGE-PROVIDER-1.md:89) adds a locally served manifest page and a browser-based registration flow. Its [Design line](/plans/FORGE-PROVIDER-1.md:24) still says there is no page, so the stated reason no longer applies.  
     Gain 4, Work 2, Harm 2
+   Disposition: cut - the Design line now names the local one-page App setup flow.
