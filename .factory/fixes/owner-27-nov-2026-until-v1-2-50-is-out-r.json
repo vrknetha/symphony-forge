@@ -5,12 +5,25 @@
   "fix_kind": "mechanical",
   "fix_kind_explicit": true,
   "kind": "fix",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-27T09:58:36.138426+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-27T10:00:19.761851+00:00",
+      "round": 1,
+      "step": "resume"
     }
   ],
-  "why": "Owner, 27 Nov 2026: until v1.2.50 is out, run this repo's tests on GitHub again, because every remaining change runs the whole suite and that takes about 2.5 hours on the laptop against about 30 minutes on GitHub; switch back after the release."
+  "stuck": {
+    "close": null,
+    "head": "79317cb8614407736ecaf0b93e5ccce13249106f",
+    "keys": {},
+    "round": null
+  },
+  "why": "Owner, 27 Nov 2026: until v1.2.50 is out, run this repo's tests on GitHub again, because every remaining change runs the whole suite and that takes about 2.5 hours on the laptop against about 30 minutes on GitHub; switch back after the release.",
+  "worker": "antigravity"
 }
