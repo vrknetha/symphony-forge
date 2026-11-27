@@ -750,6 +750,12 @@
       "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-MIXTEST-1",
+      "title": "Run related tests locally and full suites on GitHub",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [
