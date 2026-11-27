@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-27T10:57:08.503052+00:00
-seconds: 581.621
-read_hash: 280368a0b3d5ec874e1fd5d99f84e5e7c516aeb3
-round: 1
-passed: no
-doc_seen: 280368a0b3d5ec874e1fd5d99f84e5e7c516aeb3
+read_at: 2026-11-27T11:10:33.484171+00:00
+seconds: 624.752
+read_hash: 61e053a93ed32ac93c0b9cafa43a5b4da717e0b2
+round: 2
+passed: yes
+doc_seen: 61e053a93ed32ac93c0b9cafa43a5b4da717e0b2
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: c440deaf809fd38a490ea25de63b583f27bd4bf9
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21c9e-0c29-7741-adfd-7e0155d4be15
 session:
@@ -97,6 +97,52 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Plan gap  
     [The task](/plans/FORGE-PRUSAGE-1.md:46) covers four Done-when items; the read rules require a split above three.  
     Adds work: split the task; F 2 x H 1 = 2; 2 x C = 4  
+    Gain 2, Work 1, Harm 1
+
+Skipped `forge next` because it can remove finished worktrees.
+   Disposition: keep - below the bar (live with)
+
+## Round 2
+
+12. Advisory: Stopped native builds are omitted from run coverage.
+    Raise: Functional  
+    Case: normal use - a person stops a native build and starts another. [native.py](/src/forge/native.py:321) records the first run’s start, but cancellation does not record its end. Counting only end events can report complete token coverage while omitting that run.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+13. Advisory: Older retained timing records can contain a builder model that the new line omits.
+    Raise: Not done  
+    Case: normal use - an item started on an earlier release has an unshortened worker timing but no matching run events. [repo.py](/src/forge/repo.py:462) records model and effort in timings, and [time_records.py](/src/forge/time_records.py:474) already uses those records for round history. The proposed build line reads only events, so it omits that model without the shortened-history warning.  
+    Gain 3, Work 3, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+14. Advisory: The new size field reaches the board’s JSON.
+    Raise: Not done  
+    Case: normal use - an owner reads a ready item with `forge board --json`. Unlike the round text and usage fields addressed in the earlier note, the new `ready.size` field passes through [time_records.py](/src/forge/time_records.py:970) and [board.py](/src/forge/board.py:639). The planned board test checks only for token and cost fields.  
+    Gain 3, Work 3, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+15. Advisory: The saved size can be stale when the default branch moves before merge.
+    Raise: Functional  
+    Case: normal use - another pull request changes the same file after close, and Forge merges and retests the combined change. [merge.py](/src/forge/merge.py:121) can update the head without recalculating size. If the incoming change includes some of the same edits, the saved count no longer describes the delivered diff.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+16. Advisory: The model test does not distinguish requested values from actual values.
+    Raise: Test  
+    Case: normal use - Antigravity selects a different model or effort from the request. The test in [the story](/plans/FORGE-PRUSAGE-1.md:34) can pass when start and end values match, even if the renderer still reads the start.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+17. Advisory: The size tests do not cover an old ready record without a size.
+    Raise: Test  
+    Case: normal use - a ready pull request from before the upgrade is refreshed or merged. Existing ready records contain `commit` and `review` but no `size`, as shown in [time_records.py](/src/forge/time_records.py:559). The planned new-record tests can pass even if reading that older record fails.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+18. Advisory: The upgrade description incorrectly says all earlier runs have no recorded tokens.
+    Raise: Plan gap  
+    [codex.py](/src/forge/codex.py:728) already records token counts, and the current event log contains earlier runs with counts. The proposed aggregation will show those counts when their events remain, contrary to [the story’s upgrade description](/plans/FORGE-PRUSAGE-1.md:11).  
     Gain 2, Work 1, Harm 1
 
 Skipped `forge next` because it can remove finished worktrees.
