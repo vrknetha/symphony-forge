@@ -180,7 +180,7 @@
     "status": "blocked"
   },
   "round": 5,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-27T02:18:40.052208+00:00",
@@ -246,8 +246,19 @@
     {
       "at": "2026-11-27T08:59:25.781437+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-27T08:59:43.021812+00:00",
+      "round": 5,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-27T08:59:43.021812+00:00",
+    "question": "Approved work keeps moving to merge without reminders: A background runner moves approved work to merge is stuck. It should deliver: Wake and start of the runner, automatic part and fix starts, builds through `forge land` with no chat, the land lock, polling of human merges, cleanup, the end of the runner, the stub seam for STOPS, all guide text\nTwo rounds in a row left the open P0 standard: replacing behaviour deletes the old path, its tests and its docs in the same change in src/forge/templates/skill.md.\nThe worker tried: Isolate runner in tests, enforce install-time scope cutoff, block test wakes, and finish prototype guide updates.\nChoose one: switch this item to Claude; keep Antigravity for one more round; or narrow or split it.",
+    "tool": "antigravity",
+    "wait_id": "c10946b2-e1ed-48f6-bc4f-c1536f1cc514"
+  },
   "stuck": {
     "close": "41f1fc1f-0d84-4599-8f20-fb7ebf138d8e",
     "head": "23d7cafc79ecb307aeec899aeba7df37a1661b9e",
