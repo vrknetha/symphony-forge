@@ -1,10 +1,14 @@
 {
   "doc": "plans/FORGE-PLANQUEUE-1.md",
-  "status": "planning",
+  "status": "read",
   "steps": [
     {
       "at": "2026-11-27T05:20:26.502834+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-27T05:39:54.292078+00:00",
+      "step": "read"
     }
   ],
   "title": "Move story plans to approval without reminders",
