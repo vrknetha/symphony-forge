@@ -29,6 +29,7 @@ class ClaudeAgentOptions:
     env: dict = dataclasses.field(default_factory=dict)
     system_prompt: dict | None = None
     setting_sources: list | None = None
+    disallowed_tools: list = dataclasses.field(default_factory=list)
     agents: dict[str, AgentDefinition] | None = None
     stderr: object = None
 

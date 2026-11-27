@@ -30,13 +30,15 @@ def event(message):
 
 
 async def turn(request):
+    read_only = request["permission_mode"] == "plan"
     options = ClaudeAgentOptions(
         cwd=request["cwd"], model=request["model"], effort=request["effort"],
         permission_mode=request["permission_mode"], resume=request.get("resume"),
         session_id=request.get("session_id"), add_dirs=request["add_dirs"],
         env={"FORGE_WORKER": "1"},
         system_prompt={"type": "preset", "preset": "claude_code"},
-        setting_sources=["user", "project", "local"],
+        setting_sources=["user"] if read_only else ["user", "project", "local"],
+        disallowed_tools=["Bash", "Edit", "Write"] if read_only else [],
         agents={name: AgentDefinition(**definition) for name, definition in request["agents"].items()},
         stderr=lambda line: print(line, file=sys.stderr, flush=True))
     failed = False
