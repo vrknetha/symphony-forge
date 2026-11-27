@@ -1,0 +1,139 @@
+{
+  "base": "480ed1a959dfdcfb0adff5378eae2eaceaed50ab",
+  "branch": "fix/the-v1-2-50-release-notes-miss-what-merg",
+  "done_when": "src/forge/release-notes/v1.2.50.md lists every client-visible change merged since v1.2.49 and the release notes tests pass; nothing else changes",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "src/forge/release-notes/v1.2.50.md",
+      "file": "src/forge/release-notes/v1.2.50.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 12,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: src/forge/release-notes/v1.2.50.md lists every client-visible change merged since v1.2.49",
+      "work": 1
+    },
+    {
+      "area": "src/forge/release-notes/v1.2.50.md",
+      "file": "src/forge/release-notes/v1.2.50.md",
+      "gain": 3,
+      "harm": 3,
+      "line": 12,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepted: the two inaccurate sentences are fixed; release-note prose accuracy is checked by review, not by a test",
+      "round": 1,
+      "security": false,
+      "title": "Test: v1.2.50 release notes list every client-visible change",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "ac86210d1cdeb57297af2e5317aa95348615f64a239e266adee8165f2775847b",
+    "changed": "e66d84d804a82fcc3d4c8ac3a75dcddeb3e6525bd526d028bdad74f0f0c8ed4c",
+    "commit": "21ddef5b5f01d16753f796c15a82ba7cfa5560ec",
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepted: the two inaccurate sentences are fixed; release-note prose accuracy is checked by review, not by a test",
+        "finding": 1
+      }
+    ],
+    "findings": [
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test: src/forge/release-notes/v1.2.50.md lists every client-visible change merged since v1.2.49 and the release notes tests pass; nothing else changes\nCase: normal use - a client relies on the upgrade notes to understand which explorer or merge behavior applies.\nThe two previously identified inaccurate sentences are corrected, but the proof gap remains. `tests/test_release_notes.py:22-45,138-155` checks fixture notes and older releases, while `tests/test_release_version.py:81-99` checks structure rather than the v1.2.50 claims. The previous inaccurate sentences passed these checks, and the unchanged tests would also pass if the same mistakes returned or new client-visible bullets were omitted.",
+        "file": "src/forge/release-notes/v1.2.50.md",
+        "gain": 3,
+        "harm": 3,
+        "line": 11,
+        "priority": "P1",
+        "title": "Test: v1.2.50 release notes list every client-visible change",
+        "work": 2
+      }
+    ],
+    "id": "3a8317db-04bd-4671-bfa0-10b1d8a58143",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-27T13:33:43.588760+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-27T13:36:05.009033+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T13:44:02.148875+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T13:44:21.333718+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T13:56:35.713942+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T13:56:35.727749+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T13:58:09.632297+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-27T13:59:32.883976+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-27T14:06:10.199590+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-27T14:06:10.217654+00:00",
+      "round": 3,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-27T14:12:10.116681+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 3,
+      "step": "owner decision"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-27T14:06:10.217654+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/release-notes/v1.2.50.md",
+    "reason": "Owner accepted: the two inaccurate sentences are fixed; release-note prose accuracy is checked by review, not by a test",
+    "wait_id": "d9b5912c-3ad5-499f-8e8c-4f3cd71662ad",
+    "worker_round": 3
+  },
+  "stuck": {
+    "close": "879cd25f-eeea-48c1-86dd-c9b9c830b145",
+    "head": "4d5a8e9f575c95b6a7c5153bc4f0a62af04963d0",
+    "keys": {},
+    "round": 2
+  },
+  "why": "The v1.2.50 release notes miss what merged after the first notes were written: the explorer follows the builder, typed approval in Codex chats, review severity and pending-after-merge proof, the Codex cache-safe effort change and chat shortening, the queue runner with its notices and stops, and the settings-fix guide rule.",
+  "worker": "antigravity"
+}
