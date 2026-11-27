@@ -1,0 +1,17 @@
+{
+  "base": "500398938fa88f72d2091dbee2dba83eaedb259c",
+  "branch": "fix/review-findings-split-from-forge-runner",
+  "done_when": "A review no longer finds: Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change (src/forge/templates/skill.md:1257)",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "stacked_on": "FORGE-RUNNER-1/RUNNER",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-27T09:01:07.702731+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Review findings split from FORGE-RUNNER-1/RUNNER: Standard: Replacing behaviour deletes the old path, its tests and its docs in the same change (src/forge/templates/skill.md:1257)"
+}
