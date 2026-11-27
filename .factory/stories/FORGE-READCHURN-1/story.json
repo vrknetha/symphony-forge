@@ -9,12 +9,7 @@
     "session": "d657efa8-39f4-4695-91d7-c193e1a5ba69"
   },
   "doc": "plans/FORGE-READCHURN-1.md",
-  "drop": {
-    "at": "2026-11-27T16:49:43.986443+00:00",
-    "because": "The owner wants it later (27 Nov cleanup); kept in the idea list",
-    "by": "vrknetha <vrknetha@gmail.com> 1795798183 +0530"
-  },
-  "status": "dropped",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-25T06:12:50.595629+00:00",
