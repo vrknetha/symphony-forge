@@ -16,8 +16,10 @@ import re
 import sys
 
 from conftest import ROOT, _install
-from test_close import CLEAN, FAILED, GREEN, blocked, body, env, finding, run  # noqa: F401
+from test_close import (CLEAN, FAILED, GREEN, STORY_DOC, approve_story, blocked, body, env,  # noqa: F401
+                        finding, report, run)
 from test_item_time_history import row
+from test_story import worktree
 
 STORY = "FORGE-PRUSAGE-1"
 
@@ -98,22 +100,23 @@ def test_1_pr_how_it_went_shows_build_model_and_effort(env, tmp_path, monkeypatc
     worked = env.repo.forge("work", fix)
     assert worked.returncode == 0, worked.stdout + worked.stderr
     env.commit(where, "feature.py", "print('built')\n", "Implement fix\n\nProof list:\n- Done when: check: synthetic fixture")
-    env.reviews(CLEAN)
+    env.reviews({"exit": 0, "report": report(finding("P2", "Clarify the usage label", "feature.py"))})
     closed = env.close(fix)
     assert closed.returncode == 0, closed.stdout + closed.stderr
 
     section = _how_it_went(_pr_body(env))
-    lines = section.splitlines()
-    round_indices = [i for i, line in enumerate(lines) if line.startswith("Round 1: ")]
-    build_indices = [i for i, line in enumerate(lines) if line.startswith("Build: ")]
-    assert len(round_indices) == 1, section
-    assert len(build_indices) == 1, section
-    round_line = lines[round_indices[0]]
-    assert round_line.startswith("Round 1: built at low; "), round_line
-    assert "gpt-6.1-sol" not in round_line
-    assert lines[build_indices[0]] == "Build: gpt-6.1-sol at low"
-    # Build line must appear below the time summary and the round line.
-    assert build_indices[0] > round_indices[0] > 0
+    elapsed = r"(?:unknown|\d+ (?:seconds?|minutes?|hours?))"
+    assert re.search(
+        rf"^working: {elapsed}; waiting: {elapsed}; unmeasured time: {elapsed}\n\n"
+        rf"building: {elapsed}; own tests: {elapsed}; reviewing: {elapsed}; fixing findings: {elapsed}; "
+        rf"waiting for CI: {elapsed}; waiting in line: {elapsed}; waiting for the owner: {elapsed}\n\n"
+        rf"Round 1: built at low; building completed \({elapsed}\); review clean \({elapsed}\); "
+        rf"CI passed \({elapsed}\); (?:in line {elapsed}; )?"
+        r"waiting for the owner \(ongoing\); findings: 1 new, 0 repeated — P2 Clarify the usage label \(feature\.py\)\n\n"
+        r"Build: gpt-6\.1-sol at low$", section, re.M
+    ), section
+    assert sum(line.startswith("Round 1: ") for line in section.splitlines()) == 1, section
+    assert sum(line.startswith("Build: ") for line in section.splitlines()) == 1, section
 
 
 def test_2_pr_how_it_went_shows_token_totals_coverage_and_shortened_history(env, tmp_path, monkeypatch):
@@ -185,27 +188,7 @@ def test_2_pr_how_it_went_shows_token_totals_coverage_and_shortened_history(env,
     assert "Review tokens: no tokens recorded" in none_section
     assert "input 0" not in none_section
 
-    # Case C: real plan read (`forge read`) on a spec fix renders `Plan read tokens:` on its PR.
-    spec_doc = (
-        "---\nstatus: draft\n---\n\n# Read usage spec\n\n## Rules\n- R-1: Track read tokens.\n\n"
-        "## Roadmap\n- SPEC-1: Track read tokens\n"
-    )
-    fix_read, where_read = _new_fix(env, "read-usage", {"docs/specs/read-usage.md": spec_doc})
-    monkeypatch.delenv("CODEX_THREAD_ID", raising=False)
-    monkeypatch.setenv("CLAUDECODE", "1")
-    monkeypatch.setenv("STUB_CODEX_TEXT", "No notes at the bar.")
-    read_res = env.repo.forge("read", "read-usage", cwd=where_read)
-    monkeypatch.delenv("STUB_CODEX_TEXT")
-    monkeypatch.delenv("CLAUDECODE", raising=False)
-    monkeypatch.setenv("CODEX_THREAD_ID", "coordinator")
-    assert read_res.returncode == 0, read_res.stdout + read_res.stderr
-    env.reviews(CLEAN)
-    closed_read = env.close(fix_read)
-    assert closed_read.returncode == 0, closed_read.stdout + closed_read.stderr
-    read_section = _how_it_went(_pr_body(env))
-    assert "Plan read tokens: input 1,200 (cached 1,000), output 300" in read_section
-
-    # Case D: shortened history through real compaction adds the notice sentence inside How it went.
+    # Case C: shortened history through real compaction adds the notice sentence inside How it went.
     env.open_pr(refreshed_body)
     env.commit(where, "feature.py", "print('v3')\n", "Round 3\n\nProof list:\n- Done when: check: synthetic fixture")
     many = [finding("P1", "Main blocker", "feature.py"),
@@ -215,6 +198,33 @@ def test_2_pr_how_it_went_shows_token_totals_coverage_and_shortened_history(env,
     assert blocked_close.returncode == 1, blocked_close.stdout + blocked_close.stderr
     compact_section = _how_it_went(_pr_body(env))
     assert "Earlier history was shortened; its models and tokens are not shown." in compact_section
+
+    # Case D: an existing story PR gets its own real plan read when close retries the history rebuild.
+    with monkeypatch.context() as reader:
+        reader.delenv("CODEX_THREAD_ID", raising=False)
+        reader.setenv("CLAUDECODE", "1")
+        reader.setenv("STUB_CODEX_TEXT", "No findings.")
+        approve_story(env.repo, STORY_DOC)
+    story_path = worktree(env.repo, "story/SHOP")
+    env.repo.git("push", "-q", "origin", "HEAD:refs/pull/8/head", cwd=story_path)
+    env.gh.respond("pr", "list", "--state", "open", stdout=json.dumps([
+        {"number": 8, "state": "OPEN", "headRefName": "story/SHOP", "body": ""},
+    ]))
+    env.gh.respond("pr", "list", "--head", stdout="[]")
+    env.gh.respond("api", "graphql", "--paginate", stdout="")
+    (env.repo.path / ".git/forge/backfill-pending").touch()
+    env.reviews(CLEAN)
+    task, _ = env.start_task()
+    task_close = env.close(task)
+    assert task_close.returncode == 0, task_close.stdout + task_close.stderr
+    story_edits = env.gh_calls("pr", "edit", "8")
+    assert story_edits, task_close.stdout + task_close.stderr
+    read_lines = [line for line in _how_it_went(body(story_edits[-1])).splitlines()
+                  if line.startswith("Plan read tokens:")]
+    assert read_lines == ["Plan read tokens: input 1,200 (cached 1,000), output 300"]
+    task_pr = env.gh_calls("pr", "create", path="task/SHOP-T1")
+    assert task_pr, task_close.stdout + task_close.stderr
+    assert "Plan read tokens:" not in _how_it_went(body(task_pr[-1]))
 
 
 def test_3_pr_how_it_went_shows_change_size_for_fix_and_task(env):
