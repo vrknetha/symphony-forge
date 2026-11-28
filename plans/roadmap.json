@@ -756,6 +756,12 @@
       "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-STORYHOLD-1",
+      "title": "Hold and safely drop stories",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [

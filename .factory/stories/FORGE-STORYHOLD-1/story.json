@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-STORYHOLD-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-28T01:00:25.699391+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Hold and safely drop stories",
+  "touches": 0
+}
