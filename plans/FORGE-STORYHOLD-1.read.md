@@ -136,6 +136,7 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Test
     Case: normal use - Close is waiting for checks on an already-open request when the story is held. The planned check before **opening** a request does not cover [the later path that records Ready](/src/forge/close.py:480); the new test can pass because no new request opens.
     Gain 3, Work 2, Harm 3
+   Disposition: keep - the owner accepted the read; must-fix for the builders (For the builders, Must fix)
 
 18. Advisory: The restore overlap check misses fixes using the same files.
     Raise: Functional
@@ -153,6 +154,7 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Functional
     Case: normal use - A teammate holds a story while the owner still has its approval prompt open in another clone. [Approval](/src/forge/approval.py:176) reads the local checkout without fetching the held record, then commits approval there. Its push fails against the held branch, leaving the local and published story branches divergent instead of giving the planned undo step.
     Gain 3, Work 2, Harm 3
+   Disposition: keep - the owner accepted it as a known issue: a rare stale-checkout race; workaround: fetch, then hold again
 
 21. Advisory: Unproven: item 4 — restore is not tested after an earlier part merged.
     Raise: Test
