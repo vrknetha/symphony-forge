@@ -1,0 +1,48 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/cli.py\tFunctional: Keep the requested checkout until merge finalization completes\tbug-52-leaves-finished-task-fix-and-stor",
+      "kind": "bug",
+      "path": "src/forge/cli.py",
+      "line": 145,
+      "text": "Functional: Keep the requested checkout until merge finalization completes",
+      "from": "blocking",
+      "item": "bug-52-leaves-finished-task-fix-and-stor",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tNot done: List finished worktrees retained outside the removable set\tbug-52-leaves-finished-task-fix-and-stor",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 145,
+      "text": "Not done: List finished worktrees retained outside the removable set",
+      "from": "blocking",
+      "item": "bug-52-leaves-finished-task-fix-and-stor",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/doctor.py\tNot done: Remove clean finished worktrees in repositories with submodules\tbug-52-leaves-finished-task-fix-and-stor",
+      "kind": "bug",
+      "path": "src/forge/doctor.py",
+      "line": 144,
+      "text": "Not done: Remove clean finished worktrees in repositories with submodules",
+      "from": "blocking",
+      "item": "bug-52-leaves-finished-task-fix-and-stor",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_squashed_worktree_cleanup.py\tTest: Prove cleanup and reporting for the retained-worktree cases\tbug-52-leaves-finished-task-fix-and-stor",
+      "kind": "bug",
+      "path": "tests/test_squashed_worktree_cleanup.py",
+      "line": 39,
+      "text": "Test: Prove cleanup and reporting for the retained-worktree cases",
+      "from": "blocking",
+      "item": "bug-52-leaves-finished-task-fix-and-stor",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
