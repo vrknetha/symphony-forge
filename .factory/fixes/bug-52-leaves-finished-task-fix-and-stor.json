@@ -20,7 +20,7 @@
       "gain": 4,
       "harm": 3,
       "line": 145,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -33,7 +33,7 @@
       "gain": 4,
       "harm": 3,
       "line": 144,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -59,7 +59,7 @@
       "gain": 3,
       "harm": 3,
       "line": 39,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -69,59 +69,28 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "c7c74f2ab12a80dcec95c5e71625e91816a7043fa6cfa64be2fb80c53a92e516",
-    "changed": "01784be6f1c0ee0a8dcdd39aa1b5fa869a2f1b473f6cbab4eedd43c1de2a1def",
-    "commit": "c70e9fca6dfe3c2646ab7d7366d0137fac7b529c",
+    "branch_diff": "12ca854be04765efd984c634acd679bd6c45edfb7e3b0337f9f55fdc6674662c",
+    "changed": "e095dbd578bd663576025ad21615caf1f9fd9b2c5dd996ca337b444af23b553b",
+    "commit": "9765b8910d194ceebc677bd4ff83d3ac3cd23a84",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - a user retries `forge merge <item>` or `forge close <item>` after GitHub merged the pull request and deleted its remote branch. The new sweep removes the clean local checkout and branch before either handler resolves the item. `merge.py:55` and `close.py:82` call `close._worktree`, whose fallback in `task.py:251-270` requires the now-deleted remote branch, so the command reports that the item was not started instead of finishing its merge records and cleanup. `forge land <item>` has the same problem through `land.py:62,97` when the new tree comparison recognizes a local head GitHub does not match.\nAdds work: preserve the requested checkout until its command finishes; F 2 x H 2 = 4; 2 x C = 4.",
-        "file": "src/forge/cli.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 145,
-        "priority": "P1",
-        "title": "Functional: Keep the requested checkout until merge finalization completes",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a repository tracks a dependency as a Git submodule and a clean, unused task, fix, or story worktree has been squash-merged. Even when the tree comparison succeeds here, `_removable` at `src/forge/doctor.py:158-162` rejects every checkout containing `.gitmodules`. Consequently, these repositories retain all such finished worktrees.\nDone-when: In v1.2.51, any Forge command and land\u2019s sweep remove clean, unused task, fix, and story worktrees when merging their branch would leave main\u2019s tree unchanged, including after a squash merge, and list the worktrees they keep.",
-        "file": "src/forge/doctor.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 144,
-        "priority": "P1",
-        "required_done_when": true,
-        "title": "Not done: Remove clean finished worktrees in repositories with submodules",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a pull request is closed and its remote branch is deleted or advanced. Lines 145-154 add the checkout to the finished list only when the remote head still matches, so Forge keeps the local work but never lists its folder. Line 119 also excludes the primary checkout entirely when it is on a finished task, fix, or story branch, so that retained checkout is not listed either.\nDone-when: In v1.2.51, any Forge command and land\u2019s sweep remove clean, unused task, fix, and story worktrees when merging their branch would leave main\u2019s tree unchanged, including after a squash merge, and list the worktrees they keep.",
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a developer checks out a teammate's published fix branch in the primary checkout, then its pull request is squash-merged elsewhere. If the developer made no local commit, the branch's first reflog entry still equals HEAD, so lines 145\u2013147 exclude it before comparing its tree with main. Ordinary commands pass `all_prs=False` (`src/forge/cli.py:175`), so `forge lanes --json` does not discover the merged pull request or list the primary checkout it keeps, even after main is fetched. The filter at line 151 also omits closed pull requests with deleted or advanced remote branches when their local changes are not in main. `forge doctor` uses `all_prs=True` and does list those cases.\nDone-when: In v1.2.51, any Forge command and land\u2019s sweep remove clean, unused task, fix, and story worktrees when merging their branch would leave main\u2019s tree unchanged, including after a squash merge, and list the worktrees they keep.",
         "file": "src/forge/doctor.py",
         "gain": 3,
         "harm": 3,
-        "line": 145,
+        "line": 146,
         "priority": "P1",
         "required_done_when": true,
         "title": "Not done: List finished worktrees retained outside the removable set",
         "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a finished checkout contains `.gitmodules`, or a closed pull request has lost its remote branch. The removal fixtures contain no submodules, and the only retained-folder output assertion checks the dirty folder. This proof therefore passes while clean submodule worktrees remain forever and closed-PR folders are kept silently. Exercise those outcomes through a Forge command.\nDone-when: In v1.2.51, any Forge command and land\u2019s sweep remove clean, unused task, fix, and story worktrees when merging their branch would leave main\u2019s tree unchanged, including after a squash merge, and list the worktrees they keep.",
-        "file": "tests/test_squashed_worktree_cleanup.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 39,
-        "priority": "P1",
-        "title": "Test: Prove cleanup and reporting for the retained-worktree cases",
-        "work": 2
       }
     ],
-    "id": "2220c68b-d5dd-4b13-8982-8bf87152216c",
+    "id": "5aaaf781-7b26-4c3e-88f7-62c927c301d7",
     "status": "blocked"
   },
   "round": 4,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-28T01:02:17.159204+00:00",
@@ -150,8 +119,22 @@
       "at": "2026-11-28T08:26:50.096939+00:00",
       "round": 4,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-28T09:01:17.180131+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T09:01:17.200474+00:00",
+      "round": 4,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-28T09:01:17.200474+00:00",
+    "file": "src/forge/doctor.py",
+    "wait_id": "6d269ce1-e2ee-4c01-b0d1-c1409359d772"
+  },
   "stuck": {
     "close": "7ff4ae63-0359-47f1-867b-17e988946310",
     "head": "f2d5a683420153e5940879ab5d844013a2841fdb",
