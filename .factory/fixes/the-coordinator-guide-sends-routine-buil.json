@@ -1,0 +1,16 @@
+{
+  "base": "736caa91f545eef2c403f2875c594276b3c6c955",
+  "branch": "fix/the-coordinator-guide-sends-routine-buil",
+  "done_when": "The guide and its synced copies explain how to switch builders or models in forge.local.toml, reserve forge.toml for shared defaults and Fast tier policy, and describe the existing per-item switch for stalled work. The current checkout has no per-item --tool option to document.",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-28T02:35:52.661867+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The coordinator guide sends routine builder and model changes through a shared settings fix even though Forge supports direct edits to forge.local.toml."
+}
