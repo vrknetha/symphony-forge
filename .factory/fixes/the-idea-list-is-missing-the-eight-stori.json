@@ -1,0 +1,16 @@
+{
+  "base": "93875cb3b222d55715028d74bc87d5a0c325f4a0",
+  "branch": "fix/the-idea-list-is-missing-the-eight-stori",
+  "done_when": "plans/ideas.md has exactly one entry each for FORGE-ASSIST-1, FORGE-PANE-1, FORGE-RENDER-1, FORGE-MODELS-1, FORGE-FASTPATH-1, FORGE-DASH-1, FORGE-JOBS-1, and FORGE-VAPT-1, with the story key, its plain title, a note that its branch keeps the work, and the exact phrase \u201cowner wants it later (27 Nov 2026)\u201d.",
+  "fix_kind": "mechanical",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-28T03:31:06.831735+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "The idea list is missing the eight stories the owner set aside on 27 Nov 2026, making their saved work harder to find."
+}
