@@ -108,7 +108,7 @@
     "id": "b2cc9c66-f376-475c-98a1-e90e284266e4",
     "status": "blocked"
   },
-  "round": 2,
+  "round": 3,
   "status": "fixing",
   "steps": [
     {
@@ -144,6 +144,11 @@
       "choice": "more",
       "round": 2,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-28T07:19:38.358685+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
   "stop": {
@@ -156,10 +161,10 @@
     "worker_round": 2
   },
   "stuck": {
-    "close": "cec2938d-c643-42ac-879d-5a73d49f3d1e",
-    "head": "f8a8e2f0f4f40a519144382008cb77bba7538c96",
+    "close": "6d5f8278-1948-4bcc-9522-b8e178b7641c",
+    "head": "4720ce960d706e64c8539efb8afa27f8514a50d1",
     "keys": {},
-    "round": 1
+    "round": 2
   },
   "worker": "codex"
 }
