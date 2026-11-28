@@ -31,6 +31,22 @@ Risks: closed pull requests. `--later` closes the open pull requests of the stor
 
 ## For the builders
 
+### Must fix: notes from the last cold read (round 2)
+
+The owner accepted the plan with these as must-fix items. Each part's builder fixes the ones it owns and tests them; its review checks them. Full cases: `plans/FORGE-STORYHOLD-1.read.md`, Round 2.
+
+- **12, HOLD/RESTORE:** HOLD's change to the approved-story test must not need `--undo`; move that test change to RESTORE.
+- **13, HOLD:** refusing an approval of a held plan must leave the checkout clean (no uncommitted story record), so `--undo` still works.
+- **14, RESTORE:** a restored story must be started by the runner even when its approval is older than the runner's install time (for example, record the restore time and let the runner use it).
+- **16, RESTORE:** the board rule must keep showing a story's remaining parts as held after an earlier part merged.
+- **17, HOLD:** close that already has an open pull request must not record Ready for a held story; test that path.
+- **18, RESTORE:** the overlap check on undo must also see open fixes that use the same files.
+- **19, RESTORE:** the by-hand reopen list for old records must match `task/<KEY>-<part>` exactly, never a longer story key.
+- **21, RESTORE:** undo after an earlier part merged must skip the merged part (its branch is gone) and restore only the held ones; test it.
+- **22, HOLD:** `merge.py`'s wait-then-merge path must refuse a held story; add `src/forge/merge.py` to HOLD's Scope and test it.
+
+Known issues (owner accepted, not fixed in this story): 15, a close that finishes its review in the seconds while a hold is closing pull requests can leave one request open (workaround: run the hold again); 20, approving from a stale checkout while a teammate holds the plan elsewhere can leave the two story branches different (workaround: fetch, then run the hold again).
+
 ### Done-when details
 
 1. Hold is the existing dropped state plus a marker, so every check that already hides a dropped story keeps working (`nextstep.py` hides it at the end of the story scan, `task.py` REFUSALS `dropped`, `board.py`, `land.py`, `machine.py`, `_has_approved_unstarted`). `forge story drop` lives in `src/forge/intake.py` `story_drop`, not `story.py` (`story.py` is 1,200 lines and `nextstep.py` 1,198; the ceiling is 1,200, so add nothing to them beyond one or two call lines). New option: `--later` (the reason is optional with it; default "The owner wants it later"), stored as `drop.later = true`. One gap: `runner._story_eligible` does not look at the story status, so the runner would still land the started parts of a dropped story. Return False there when the record is `dropped`. Test (the pattern in `tests/test_runner_moves_approved_work_to_merge.py`): start a part, hold the story, run the runner: no `forge land` and no `forge task start` runs for it (this test fails without the runner change, because `forge next` already hides dropped stories); `forge next` has no `task start` line for it.

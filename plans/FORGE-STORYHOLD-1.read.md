@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-28T01:13:23.552986+00:00
-seconds: 600.619
-read_hash: a0db4a06a26b8ab86a602ee0660bd0903881ba84
-round: 1
+read_at: 2026-11-28T01:27:44.143634+00:00
+seconds: 773.714
+read_hash: f947c27407d4c55771391694b026c06656eba3cf
+round: 2
 passed: no
-doc_seen: a0db4a06a26b8ab86a602ee0660bd0903881ba84
+doc_seen: f947c27407d4c55771391694b026c06656eba3cf
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 69bb5b5e40e07f619634903760d2543810407ef2
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21fad-ad4a-7d51-8190-522e1817507f
 session:
@@ -99,3 +99,69 @@ Only a genuine trade-off goes to the human, as a question with options.
     [HOLD](/plans/FORGE-STORYHOLD-1.md:50) covers four Done-when items. The requested planning check calls for a split when one task covers more than three.
     Gain 2, Work 1, Harm 1
    Disposition: keep - below the bar (live with)
+
+## Round 2
+
+12. Blocking: HOLD depends on `--undo` before RESTORE can build it.
+    Raise: Plan gap
+    Case: normal use - HOLD must change [the approved-story test](/plans/FORGE-STORYHOLD-1.md:40) to use `--undo`, but [RESTORE implements `--undo` after HOLD](/plans/FORGE-STORYHOLD-1.md:50). HOLD cannot pass that test, so RESTORE cannot start.
+    Gain 5, Work 1, Harm 3
+   Disposition: keep - the owner accepted the read; must-fix for the builders (For the builders, Must fix)
+
+13. Blocking: Unproven: item 4 — refusing an approval can prevent the later undo.
+    Raise: Test
+    Case: normal use - A held plan’s checkout remains because it contains ignored files, and the owner answers its pending approval from that checkout. The new refusal reaches [approval.py’s existing handler](/src/forge/approval.py:86), which changes the tracked story record without committing it. [Undo’s existing checkout check](/src/forge/intake.py:281) then refuses the dirty checkout. The planned test checks only that approval is refused and the story stays dropped.
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - the owner accepted the read; must-fix for the builders (For the builders, Must fix)
+
+14. Blocking: Not done: item 4 — restoring older approved work does not make the runner resume it.
+    Raise: Not done
+    Case: normal use - An existing repo upgrades on a machine where the runner was installed after the story was approved. Recreating the checkout does not change the original approval time; [the runner](/src/forge/runner.py:92) still excludes it as older than the installation time. The amended plan promises that restored parts resume.
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - the owner accepted the read; must-fix for the builders (For the builders, Must fix)
+
+15. Blocking: Not done: item 3 — a running close can publish during the hold operation.
+    Raise: Not done
+    Case: normal use - While GitHub is taking several seconds to close requests for a story’s other parts, a part already scanned by the hold finishes its review. The [existing loop](/src/forge/intake.py:284) publishes the dropped status only after scanning and closing requests. The new pre-publication check therefore still sees an approved story, and the hold can finish with the new request open.
+    Gain 5, Work 3, Harm 3
+   Disposition: keep - the owner accepted it as a known issue: a rare timing race; workaround: run the hold again
+
+16. Advisory: The proposed board fix shows held parts after an earlier part merged.
+    Raise: Functional
+    Case: normal use - A story has one merged part and one held part. The [new rule](/plans/FORGE-STORYHOLD-1.md:39) prefers the default branch’s older approved record over the newer dropped story branch. [The board](/src/forge/board.py:268) would therefore stop filtering that story’s parts as held.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+17. Advisory: Unproven: item 3 — a close with an existing pull request can finish while held.
+    Raise: Test
+    Case: normal use - Close is waiting for checks on an already-open request when the story is held. The planned check before **opening** a request does not cover [the later path that records Ready](/src/forge/close.py:480); the new test can pass because no new request opens.
+    Gain 3, Work 2, Harm 3
+
+18. Advisory: The restore overlap check misses fixes using the same files.
+    Raise: Functional
+    Case: normal use - A fix changes a file while the story that previously used it is held. Item 4 says undo refuses when other work took the files, but the proposed `task.can_start` busy set comes from [story task branches only](/src/forge/task.py:659), so that fix is not checked.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+19. Advisory: Legacy restore can name another story’s pull request for reopening.
+    Raise: Functional
+    Case: normal use - Stories have keys such as `PARKED` and `PARKED-MORE`. The [planned legacy list](/plans/FORGE-STORYHOLD-1.md:39) uses `task/<KEY>-*`, which also matches the longer key. An [existing test](/tests/test_story_drop_frees_parked_parts.py:59) identifies this branch-prefix overlap; the planned legacy test checks only the by-hand line.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+20. Advisory: A stale checkout can still record approval of a remotely held plan.
+    Raise: Functional
+    Case: normal use - A teammate holds a story while the owner still has its approval prompt open in another clone. [Approval](/src/forge/approval.py:176) reads the local checkout without fetching the held record, then commits approval there. Its push fails against the held branch, leaving the local and published story branches divergent instead of giving the planned undo step.
+    Gain 3, Work 2, Harm 3
+
+21. Advisory: Unproven: item 4 — restore is not tested after an earlier part merged.
+    Raise: Test
+    Case: normal use - One part has merged and its branch was removed before the remaining part is held. [Story drop’s record scan](/src/forge/intake.py:262) includes merged part records, while [merge normally deletes their remote branches](/src/forge/merge.py:312). A restore that tries to recreate every recorded part would fail, while the planned one-started-part test would pass.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+22. Advisory: The late merge check is outside HOLD’s scope and test.
+    Raise: Plan gap
+    Case: normal use - A merge is already waiting for checks when the story is held. [merge.py](/src/forge/merge.py:174) proceeds from that wait to the merge call, but HOLD’s scope excludes that file, and its tests do not exercise this path or the promised dropped-story refusal.
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
