@@ -74,6 +74,7 @@ def walk(env, claude_payload, monkeypatch) -> dict:
     # One stub claude reads the story doc ("No findings.") and stands in for the worker.
     conftest._install(repo.bin, "claude", READER.format(python=sys.executable))
     seen: dict = {}
+    heads: dict[str, str] = {}
     merged: dict[str, str] = {}  # branch -> when the human merged its pull request
 
     def step(when: str, *args: str, **options):
@@ -84,6 +85,7 @@ def walk(env, claude_payload, monkeypatch) -> dict:
 
     def merge(branch: str, when: str) -> None:
         """The human merges the pull request: a squash merge on the default branch."""
+        heads[branch] = repo.git("rev-parse", branch)
         stamp = f"2026-09-{when}:00+00:00"
         for name in ("GIT_AUTHOR_DATE", "GIT_COMMITTER_DATE"):
             monkeypatch.setenv(name, stamp)
@@ -105,6 +107,7 @@ def walk(env, claude_payload, monkeypatch) -> dict:
     monkeypatch.setenv("FORGE_NOW", "2026-09-21T10:00:00+00:00")
     approved = hook(repo, claude_plan(claude_payload, DOC, cwd=plan))
     assert approved.returncode == 0, approved.stderr
+    heads["story/CART"] = repo.git("rev-parse", "story/CART")
 
     for task, code, start, ready, landed in (("SAVE", "cart.py", "21T11", "21T12", "22T10"),
                                              ("SEND", "send.py", "22T11", "22T12", "23T10")):
@@ -142,6 +145,7 @@ def walk(env, claude_payload, monkeypatch) -> dict:
     page = env.tmp / "board.json"
     step("24T09:00", "board", "--out", str(page))
     seen["board"] = json.loads(page.read_text("utf-8"))
+    seen["heads"] = heads
     return seen
 
 
@@ -160,7 +164,7 @@ def test_42_story_done(env, claude_payload, monkeypatch):
             'Next: git fetch origin, then forge story done CART "<outcome sentence>"') in seen["next"]
     # It retains outcome and date recording on the caller's existing correction branch.
     assert seen["done"].stdout.splitlines()[-1] == "Next: forge next"
-    made = repo.git("log", "-1", "--format=%H", "--grep=Record the outcome", "fix/cart-done")
+    made = repo.git("log", "-1", "--format=%H", "--grep=Record the outcome", seen["heads"]["fix/cart-done"])
     recorded = repo.git("show", "--format=", made, "--", ".factory/stories/CART/story.json")
     for fact in (OUTCOME, "2026-09-22T10:00:00+00:00", "2026-09-23T10:00:00+00:00"):
         assert fact in recorded, fact

@@ -147,8 +147,10 @@ def test_15_board_keeps_original_starters_after_squash_merge_and_branch_cleanup(
     assert client.git("branch", "--list", "task/SHOP-SAVE") == ""
     assert client.git("ls-remote", "origin", "refs/heads/task/SHOP-SAVE") == ""
     # Completed story branches are no longer needed by any participant.
-    client.git("worktree", "remove", str(plan))
-    client.git("branch", "-D", "story/SHOP")
+    if plan.exists():
+        client.git("worktree", "remove", str(plan))
+    if client.git("branch", "--list", "story/SHOP"):
+        client.git("branch", "-D", "story/SHOP")
     if client.git("ls-remote", "origin", "refs/heads/story/SHOP"):
         client.git("push", "-q", "origin", "--delete", "story/SHOP")
     client.git("fetch", "-q", "--prune", "origin")

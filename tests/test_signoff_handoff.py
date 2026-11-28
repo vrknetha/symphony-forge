@@ -89,7 +89,8 @@ def test_1_first_and_second_stories_keep_signed_off_evidence(
 
     second = _start_story(repo, "PROD-2").read_text("utf-8")
     _assert_evidence(second, tree, working_build)
-    assert "status: accepted" in page.read_text("utf-8")
+    assert "status: accepted" in repo.git(
+        "show", "main:docs/decisions/0001-client-signoff.md")
 
 
 def test_2_adopted_legacy_signoff_starts_without_fabricated_evidence(

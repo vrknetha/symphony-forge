@@ -653,7 +653,7 @@ ELSEWHERE = ("github.com", "/pull/", "forge-pr-check", "success", "failure", "No
 
 
 def test_25_state_only(env, claude_payload, monkeypatch):
-    walk(env, claude_payload, monkeypatch)
+    heads = walk(env, claude_payload, monkeypatch)["heads"]
     repo = env.repo
     story = ".factory/stories/CART/story.json"
     # Each branch's own commits (the first task's branch starts from the story's) write only its
@@ -664,14 +664,14 @@ def test_25_state_only(env, claude_payload, monkeypatch):
            "fix/cart-done": ("main", ".factory/fixes/cart-done.json")}
     for branch, (start, state) in own.items():
         for line in repo.git("log", "--no-merges", "--format=%H %s",
-                             f"{start}..{branch}").splitlines():
+                             f"{heads.get(start, start)}..{heads[branch]}").splitlines():
             sha, subject = line.split(" ", 1)
             wrote = set(repo.git("diff-tree", "--no-commit-id", "--name-only", "-r", sha, "--",
                                  ".factory").splitlines())
             allowed = {state, story} if subject.startswith("Record the outcome of ") else {state}
             assert wrote <= allowed, (branch, subject, wrote)
     # Nothing in .factory/ repeats a pull request link, a check result or a tool's output.
-    for ref in ["main", *own]:
+    for ref in ["main", *heads.values()]:
         for rel in repo.git("ls-tree", "-r", "--name-only", ref, "--", ".factory").splitlines():
             text = repo.git("show", f"{ref}:{rel}")
             assert not [word for word in ELSEWHERE if word in text], (ref, rel, text)

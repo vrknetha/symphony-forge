@@ -133,9 +133,8 @@ def _finished(top: Path, common: Path, requested: Iterable[str], all_prs: bool
         if len(lines) < 3 or not lines[2].startswith("branch refs/heads/"): continue
         branch = lines[2].removeprefix("branch refs/heads/")
         kind, _, name = branch.partition("/")
-        path = Path(lines[0].removeprefix("worktree ")).resolve()
-        if kind in ("story", "task", "fix", "forge") and name not in names and path.is_dir():
-            trees[branch] = (path, lines[1].removeprefix("HEAD "))
+        if kind in ("story", "task", "fix", "forge") and name not in names:
+            trees[branch] = (lines[0].removeprefix("worktree "), lines[1].removeprefix("HEAD "))
     if not trees: return []
 
     # A newly created branch inherits a commit without finishing any work.
@@ -148,6 +147,7 @@ def _finished(top: Path, common: Path, requested: Iterable[str], all_prs: bool
         candidates[branch] = head
 
     in_main = set() if all_prs else _in_main(top, candidates.values())
+    if not all_prs and not in_main: return []
     branches = trees if all_prs else [branch for branch, head in candidates.items() if head in in_main]
     by_head: set[tuple[str, str, str]] = set()
     if branches and (gh := shutil.which("gh")):
@@ -168,7 +168,7 @@ def _finished(top: Path, common: Path, requested: Iterable[str], all_prs: bool
         in_main = _in_main(top, (head for branch, head in candidates.items() if branch not in merged | closed))
     held_paths = {common.parent, top.resolve()}
     found = []
-    for branch, (path, head) in trees.items():
+    for branch, (folder, head) in trees.items():
         if branch in merged:
             state = "merged"
         elif branch in closed:
@@ -177,6 +177,8 @@ def _finished(top: Path, common: Path, requested: Iterable[str], all_prs: bool
             state = "in main"
         else:
             continue
+        path = Path(folder).resolve()
+        if not path.is_dir(): continue
         held = path in held_paths or branch in open_branches
         if state == "closed":
             held |= remote_heads.get(f"refs/heads/{branch}") != head

@@ -97,10 +97,13 @@ def _plan(client, claude_payload, key, doc, rejected=False):
 
 
 def _remove_plan(client, key, where):
-    client.git("worktree", "remove", str(where))
-    client.git("branch", "-D", f"story/{key}")
+    branch = f"story/{key}"
+    if where.exists():
+        client.git("worktree", "remove", str(where))
+    if client.git("branch", "--list", branch):
+        client.git("branch", "-D", branch)
     if client.git("ls-remote", "origin", f"refs/heads/story/{key}"):
-        client.git("push", "-q", "origin", "--delete", f"story/{key}")
+        client.git("push", "-q", "origin", "--delete", branch)
     client.git("fetch", "-q", "--prune", "origin")
     client.git("merge", "-q", "--ff-only", "origin/main")
 
