@@ -12,6 +12,13 @@ from forge import repo
 
 AWS_LABEL = "forge-aws"
 ACCOUNT_REGION = re.compile(r"^(\d{12})/([a-z]{2}(?:-[a-z]+)+-\d)$")
+ORIGIN_REPO = re.compile(
+    r"^(?:(?:https?|ssh)://[^/]+/|[^@/:]+@[^/:]+:)([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?/?$"
+)
+NON_LINUX_RUNNER = re.compile(r"^(?:windows|macos)(?:$|-)", re.I)
+NON_LINUX_CMD = re.compile(
+    r"(?i)(?:^|[\s;&|])(?:powershell(?:\.exe)?|cmd(?:\.exe)?\s+/c|pwsh(?:\.exe)?\b[^\n]*\.ps1|\S+\.(?:bat|cmd|ps1))(?=$|[\s;&|\"'])"
+)
 
 REFUSALS = {
     "off": (
@@ -27,8 +34,8 @@ REFUSALS = {
         'ask the owner to set test_runner = "forge-aws" or remove it, in a settings fix',
     ),
     "not_linux": (
-        "forge.toml sets runner to {runner}, and AWS runners run Linux (Ubuntu 24.04) jobs only.",
-        'ask the owner to set runner = "ubuntu-24.04" in a settings fix',
+        "forge.toml uses {detail}, and AWS runners run Linux (Ubuntu 24.04) jobs only.",
+        "use Linux tests and a Linux runner before turning on AWS runners",
     ),
     "public_repo": (
         "{owner_repo} is public. GitHub says self-hosted runners should almost never be used for "
@@ -61,12 +68,13 @@ def main(args: Any) -> int:
     return 0
 
 
-def _repo_name(top: Path) -> str:
-    """Best-effort owner/repo from origin URL for error messages before GitHub answers."""
+def _origin_repo(top: Path) -> str | None:
+    """The checkout's GitHub owner/repo from its origin remote, or None if origin is not a remote repo."""
     done = repo.run("git", "remote", "get-url", "origin", cwd=top)
-    url = done.stdout.strip() if done.returncode == 0 else ""
-    match = re.search(r"[:/]([^/:]+/[^/]+?)(?:\.git)?$", url)
-    return match[1] if match else top.name
+    if done.returncode != 0:
+        return None
+    match = ORIGIN_REPO.fullmatch(done.stdout.strip())
+    return match[1] if match else None
 
 
 def _last_line(text: str) -> str:
@@ -92,24 +100,35 @@ def setup(top: Path, args: Any) -> int:
         repo.refuse(REFUSALS["other_runner"], runner=test_runner)
 
     runner = cfg["runner"]
-    if not runner.startswith("ubuntu-"):
-        repo.refuse(REFUSALS["not_linux"], runner=runner)
+    if NON_LINUX_RUNNER.match(runner):
+        repo.refuse(REFUSALS["not_linux"], detail=f"runner {runner}")
+    for key in ("test", "fast_test"):
+        if cfg[key] and NON_LINUX_CMD.search(cfg[key]):
+            repo.refuse(REFUSALS["not_linux"], detail=f"a non-Linux {key} command")
 
-    gh_done = repo.run("gh", "api", "repos/{owner}/{repo}", cwd=top)
+    origin_slug = _origin_repo(top)
+    if not origin_slug:
+        repo.refuse(REFUSALS["gh_failed"], owner_repo=top.name,
+                    detail="origin remote does not point to a GitHub repository")
+    gh_env = {key: value for key, value in os.environ.items() if key != "GH_REPO"}
+    gh_done = repo.run("gh", "api", f"repos/{origin_slug}", cwd=top, env=gh_env)
     if gh_done.returncode != 0:
-        repo.refuse(REFUSALS["gh_failed"], owner_repo=_repo_name(top),
+        repo.refuse(REFUSALS["gh_failed"], owner_repo=origin_slug,
                     detail=_last_line(gh_done.stderr or gh_done.stdout))
     try:
         info = json.loads(gh_done.stdout)
     except ValueError:
-        repo.refuse(REFUSALS["gh_failed"], owner_repo=_repo_name(top),
+        repo.refuse(REFUSALS["gh_failed"], owner_repo=origin_slug,
                     detail=_last_line(gh_done.stdout or gh_done.stderr))
     if not isinstance(info, dict) or not isinstance(info.get("private"), bool):
-        repo.refuse(REFUSALS["gh_failed"], owner_repo=_repo_name(top),
+        repo.refuse(REFUSALS["gh_failed"], owner_repo=origin_slug,
                     detail="unexpected GitHub response")
-    owner_repo = info.get("full_name") or _repo_name(top)
+    full_name = info.get("full_name")
+    if not isinstance(full_name, str) or full_name.casefold() != origin_slug.casefold():
+        repo.refuse(REFUSALS["gh_failed"], owner_repo=origin_slug,
+                    detail=f"GitHub answered for {full_name or 'another repo'}, not {origin_slug}")
     if not info["private"]:
-        repo.refuse(REFUSALS["public_repo"], owner_repo=owner_repo)
+        repo.refuse(REFUSALS["public_repo"], owner_repo=full_name)
 
     if shutil.which("aws") is None:
         repo.refuse(REFUSALS["no_aws"])

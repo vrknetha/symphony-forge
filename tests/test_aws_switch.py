@@ -53,22 +53,34 @@ def test_1_aws_runners_are_off_by_default(repo, gh, tmp_path, monkeypatch):
     repo.git("init", "-q", "-b", "main", str(client))
     repo.git("remote", "add", "origin", str(origin), cwd=client)
 
-    # New repo: forge init leaves aws_runners unset; sync writes the same workflow with no forge-aws.
+    # New repo: forge init leaves aws_runners unset and makes no AWS or runner-related GitHub call.
     gh.respond("api", "repos/{owner}/{repo}/branches/main/protection", stdout="{}")
     gh.respond("api", "--method", "PUT", "repos/{owner}/{repo}/branches/main/protection", stdout="{}")
     init = repo.forge("init", "--actions", "yes", cwd=client)
     assert init.returncode == 0, init.stderr
     assert aws_calls(repo.bin) == []
-    gh_before_sync = len(gh.calls())
+    # Only branch-protection calls may occur during init; no repo/runner/app calls.
+    for call in gh.calls():
+        assert any("branches/main/protection" in arg for arg in call), call
+    gh_after_init = len(gh.calls())
+
     config_text = (client / "forge.toml").read_text(encoding="utf-8")
     assert "aws_runners" not in config_text
     assert repo.forge("sync", cwd=client).returncode == 0
-    first_workflow = (client / ".github/workflows/forge.yml").read_text(encoding="utf-8")
-    assert "forge-aws" not in first_workflow
-    assert repo.forge("sync", cwd=client).returncode == 0
-    assert (client / ".github/workflows/forge.yml").read_text(encoding="utf-8") == first_workflow
+    default_workflow = (client / ".github/workflows/forge.yml").read_text(encoding="utf-8")
+    assert "forge-aws" not in default_workflow
+    assert _job_runs_on(default_workflow) == {
+        "tests": '"ubuntu-24.04"',
+        "forge-pr-check": '"ubuntu-24.04"',
+        "full-suite": '"ubuntu-24.04"',
+        "full-suite-result": '"ubuntu-24.04"',
+    }
     assert aws_calls(repo.bin) == []
-    assert len(gh.calls()) == gh_before_sync
+    assert len(gh.calls()) == gh_after_init
+    # Guide in both host skills documents aws_runners and waiting for verified setup before forge-aws.
+    for rel in (".claude/skills/forge/SKILL.md", ".codex/skills/forge/SKILL.md"):
+        guide = (client / rel).read_text(encoding="utf-8")
+        assert "aws_runners" in guide and "forge lanes --aws setup" in guide and 'test_runner = "forge-aws"' in guide
 
     # Option refusals on `forge lanes`.
     both = repo.forge("lanes", "--box", "setup", "--aws", "setup", cwd=client)
@@ -83,9 +95,9 @@ def test_1_aws_runners_are_off_by_default(repo, gh, tmp_path, monkeypatch):
     assert off.returncode != 0
     assert "AWS runners are off in this repo's forge.toml." in off.stderr
     assert aws_calls(repo.bin) == []
-    assert len(gh.calls()) == gh_before_sync
+    assert len(gh.calls()) == gh_after_init
 
-    # Turn on aws_runners alone: workflow labels do not change.
+    # Turn on aws_runners alone: workflow bytes do not change.
     base_toml = (client / "forge.toml").read_text(encoding="utf-8")
 
     def write_toml(extra: str) -> None:
@@ -96,7 +108,7 @@ def test_1_aws_runners_are_off_by_default(repo, gh, tmp_path, monkeypatch):
 
     write_toml('aws_runners = "123456789012/ap-south-1"\n')
     assert repo.forge("sync", cwd=client).returncode == 0
-    assert (client / ".github/workflows/forge.yml").read_text(encoding="utf-8") == first_workflow
+    assert (client / ".github/workflows/forge.yml").read_text(encoding="utf-8") == default_workflow
 
     # Refusal: test_runner set to a label other than forge-aws.
     write_toml('aws_runners = "123456789012/ap-south-1"\ntest_runner = "custom-runner"\n')
@@ -104,32 +116,57 @@ def test_1_aws_runners_are_off_by_default(repo, gh, tmp_path, monkeypatch):
     assert other.returncode != 0
     assert "forge.toml sets test_runner to custom-runner, so test jobs would not use AWS." in other.stderr
 
-    # Refusal (note 66): non-Linux runner.
-    write_toml('aws_runners = "123456789012/ap-south-1"\nrunner = "windows-2022"\n')
-    non_linux = repo.forge("lanes", "--aws", "setup", cwd=client)
-    assert non_linux.returncode != 0
-    assert "windows-2022" in non_linux.stderr and "Linux" in non_linux.stderr
+    # Refusal (note 66): non-Linux runner (Windows, macOS) or non-Linux test command.
+    for bad_runner in ("windows-2022", "macos-14"):
+        write_toml(f'aws_runners = "123456789012/ap-south-1"\nrunner = "{bad_runner}"\n')
+        non_linux = repo.forge("lanes", "--aws", "setup", cwd=client)
+        assert non_linux.returncode != 0
+        assert bad_runner in non_linux.stderr and "Linux" in non_linux.stderr
+    write_toml('aws_runners = "123456789012/ap-south-1"\ntest = "powershell -File run.ps1"\n')
+    win_cmd = repo.forge("lanes", "--aws", "setup", cwd=client)
+    assert win_cmd.returncode != 0
+    assert "non-Linux test command" in win_cmd.stderr and "Linux" in win_cmd.stderr
 
-    # Back to valid Linux runner with aws_runners set.
+    # Refusal: origin is not a GitHub repository URL.
     write_toml('aws_runners = "123456789012/ap-south-1"\n')
+    no_gh_origin = repo.forge("lanes", "--aws", "setup", cwd=client)
+    assert no_gh_origin.returncode != 0
+    assert "origin remote does not point to a GitHub repository" in no_gh_origin.stderr
 
-    # Refusal: public repo.
-    gh.respond("api", "repos/{owner}/{repo}",
-               stdout=json.dumps({"id": 42, "full_name": "acme/demo", "private": False}))
+    # Point origin at a public GitHub repo; GH_REPO pointing to a private repo must not bypass check.
+    repo.git("remote", "set-url", "origin", "https://github.com/acme/public-demo.git", cwd=client)
+    monkeypatch.setenv("GH_REPO", "acme/private-other")
+    gh.respond("api", "repos/acme/private-other",
+               stdout=json.dumps({"id": 99, "full_name": "acme/private-other", "private": True}))
+    gh.respond("api", "repos/acme/public-demo",
+               stdout=json.dumps({"id": 42, "full_name": "acme/public-demo", "private": False}))
     pub = repo.forge("lanes", "--aws", "setup", cwd=client)
     assert pub.returncode != 0
-    assert "acme/demo is public." in pub.stderr
+    assert "acme/public-demo is public." in pub.stderr
     assert "public repositories" in pub.stderr
+    assert gh.calls("api", "repos/acme/public-demo")
+    assert not gh.calls("api", "repos/acme/private-other")
+    assert not gh.calls("api", "repos/{owner}/{repo}")
+
+    # Refusal: GitHub answers for a different repo than origin.
+    gh.respond("api", "repos/acme/public-demo",
+               stdout=json.dumps({"id": 99, "full_name": "acme/private-other", "private": True}))
+    mismatch = repo.forge("lanes", "--aws", "setup", cwd=client)
+    assert mismatch.returncode != 0
+    assert "acme/private-other" in mismatch.stderr and "acme/public-demo" in mismatch.stderr
+
+    # Switch origin to the private repo for remaining checks.
+    repo.git("remote", "set-url", "origin", "https://github.com/acme/demo.git", cwd=client)
 
     # Refusal: gh api fails.
-    gh.respond("api", "repos/{owner}/{repo}", stderr="HTTP 401: Bad credentials\n", exit=1)
+    gh.respond("api", "repos/acme/demo", stderr="HTTP 401: Bad credentials\n", exit=1)
     gh_err = repo.forge("lanes", "--aws", "setup", cwd=client)
     assert gh_err.returncode != 0
-    assert "Forge could not read if" in gh_err.stderr
+    assert "Forge could not read if acme/demo is private:" in gh_err.stderr
     assert "HTTP 401: Bad credentials" in gh_err.stderr
 
     # Private repo from here on.
-    gh.respond("api", "repos/{owner}/{repo}",
+    gh.respond("api", "repos/acme/demo",
                stdout=json.dumps({"id": 42, "full_name": "acme/demo", "private": True}))
 
     # Refusal: no AWS CLI on PATH.
@@ -172,29 +209,36 @@ def test_1_aws_runners_are_off_by_default(repo, gh, tmp_path, monkeypatch):
     for call in aws_calls(repo.bin):
         assert any(call[:len(prefix)] == prefix for prefix in allowed_prefixes), call
 
-    # Matching account and region passes checks (SWITCH stops before FOUNDATION deploy).
-    clear_aws_calls(repo.bin)
-    set_aws_state(repo.bin, {"identity": {"Account": "123456789012"}, "region": "ap-south-1"})
-    ok = repo.forge("lanes", "--aws", "setup", cwd=client)
-    assert ok.returncode == 0
-    assert "Nothing created yet." in ok.stdout
+    # Matching account and region passes checks (both ubuntu-24.04 and documented self-hosted Linux runner).
+    for ok_runner in ("ubuntu-24.04", "self-hosted"):
+        write_toml(f'aws_runners = "123456789012/ap-south-1"\nrunner = "{ok_runner}"\n')
+        clear_aws_calls(repo.bin)
+        set_aws_state(repo.bin, {"identity": {"Account": "123456789012"}, "region": "ap-south-1"})
+        ok = repo.forge("lanes", "--aws", "setup", cwd=client)
+        assert ok.returncode == 0, ok.stderr
+        assert "Nothing created yet." in ok.stdout
 
     # Workflow label routing with test_runner = "forge-aws" for grouped (2) and one-group (1) repos.
+    # Use a splittable command ({group}/{groups}) so groups = 2 genuinely generates a 2-group matrix.
     repo.git("checkout", "-q", "-b", "fix/aws-runner-test", cwd=client)
     for groups in (2, 1):
         write_toml(
-            'test = "echo ok"\n'
+            'test = "echo {group}/{groups}"\n'
             'aws_runners = "123456789012/ap-south-1"\n'
             'test_runner = "forge-aws"\n'
             f"groups = {groups}\n"
         )
         assert repo.forge("sync", cwd=client).returncode == 0
         wf = (client / ".github/workflows/forge.yml").read_text(encoding="utf-8")
-        runs_on = _job_runs_on(wf)
-        assert runs_on["docs-check"] == '"ubuntu-24.04"'
-        assert runs_on["forge-pr-check"] == '"ubuntu-24.04"'
-        assert runs_on["tests-passed"] == '"ubuntu-24.04"'
-        assert runs_on["full-suite-result"] == '"ubuntu-24.04"'
-        assert runs_on["full-suite"] == '"forge-aws"'
-        assert "'forge-aws'" in runs_on["tests"]
-        assert "'ubuntu-24.04'" in runs_on["tests"]
+        assert _job_runs_on(wf) == {
+            "docs-check": '"ubuntu-24.04"',
+            "tests": "${{ needs.docs-check.outputs.docs-tests == 'true' && 'ubuntu-24.04' || 'forge-aws' }}",
+            "tests-passed": '"ubuntu-24.04"',
+            "forge-pr-check": '"ubuntu-24.04"',
+            "full-suite": '"forge-aws"',
+            "full-suite-result": '"ubuntu-24.04"',
+        }
+        if groups == 2:
+            assert "group: [1, 2]" in wf
+        else:
+            assert "group: [1, 2]" not in wf
