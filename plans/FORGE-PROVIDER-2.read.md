@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-28T02:39:24.483518+00:00
-seconds: 790.015
-read_hash: bd1d4bfe26e6949316b37ff172c473237a261d25
-round: 1
+read_at: 2026-11-28T04:29:11.488096+00:00
+seconds: 1058.094
+read_hash: 3cb445aafaae236807e779afa68164c5ab3a7fbe
+round: 2
 passed: no
-doc_seen: bd1d4bfe26e6949316b37ff172c473237a261d25
+doc_seen: 3cb445aafaae236807e779afa68164c5ab3a7fbe
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 932eb3183633ceadff48ba5020fadef1e29bd65e
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21ff9-89ae-7901-913c-09e951d37fcb
 session:
-loop_choice:
-loop_reason:
+loop_choice: accept
+loop_reason: Owner accepted; the 7 open notes (#19-25) become must-fix lines in the covered Done-when details
 ---
 # Cold read notes
 
@@ -171,3 +171,89 @@ Only a genuine trade-off goes to the human, as a question with options.
    Disposition: cut - SETUP's test now checks the old-stack line through `status` and the update to version 2; the stay-on-the-laptop case moved to ROUTE's `test_1`, which owns the hook.
 
 Not checked: a live AWS run. I skipped `forge next` because it can change repository files.
+
+## Round 2
+
+19. Blocking: A fork’s code can pass the checkout check and read approved test files.
+    Raise: Security  
+    Case: normal use - a maintainer checks out a public fork’s pull request in the upstream clone and runs its tests.  
+    [SHIP](/plans/FORGE-PROVIDER-2.md:74) checks only the `origin` repository ID. The upstream clone can have that ID while its checked-out branch contains fork code. The box then gives that code the approved files and internet access, contrary to the assumption that nobody outside the repo can reach a box. [GitHub CLI supports checking out pull requests locally.](https://cli.github.com/manual/gh_pr_checkout)  
+    Gain 4, Work 3, Harm 4
+   Disposition: keep - Owner accepted; the 7 open notes (#19-25) become must-fix lines in the covered Done-when details
+
+20. Blocking: A stale default-branch ref can send work to AWS after boxes are turned off.
+    Raise: Security  
+    Case: normal use - a teammate has not fetched since `aws_tests = false` merged.  
+    [ROUTE](/plans/FORGE-PROVIDER-2.md:62) reads the locally stored default ref without a network check. It can therefore see the old `true` value and upload the teammate’s working tree while the stack still exists.  
+    Not done: item 1 requires the default branch’s setting to control routing.  
+    Gain 4, Work 3, Harm 4
+   Disposition: keep - Owner accepted; the 7 open notes (#19-25) become must-fix lines in the covered Done-when details
+
+21. Blocking: An approved test file can remain in Docker’s build cache after the run ends.
+    Raise: Security  
+    Case: normal use - a starter app builds its Docker image while an approved ignored fixture is in the working tree.  
+    The starter’s [Dockerfile](/src/forge/templates/starter/Dockerfile:4) copies the tree into a build stage. An ignored fixture need not match the starter’s [Docker exclusions](/src/forge/templates/skeleton/.dockerignore:1). [SHIP](/plans/FORGE-PROVIDER-2.md:77) deletes the run folder, but Docker’s [build cache is separate](https://docs.docker.com/reference/cli/docker/builder/prune/). The file can remain on the box after the run, even without a concurrent run.  
+    Not done: item 2 promises deletion of the approved files when the run ends.  
+    Gain 4, Work 3, Harm 4
+   Disposition: keep - Owner accepted; the 7 open notes (#19-25) become must-fix lines in the covered Done-when details
+
+22. Blocking: A repo without Node can never make its box ready.
+    Raise: Functional  
+    Case: normal use - a Python or Go repo sends a test to a new box.  
+    [SETUP](/plans/FORGE-PROVIDER-2.md:83) sets `NodeMajor` to zero for a repo without Node. [GUEST](/plans/FORGE-PROVIDER-2.md:91) installs no Node in that case but still requires `node` to run with that major before declaring the box ready. Forge supports [Python and Go repos](/src/forge/init.py:72).  
+    Not done: item 4 requires a usable box for these runs.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; the 7 open notes (#19-25) become must-fix lines in the covered Done-when details
+
+23. Blocking: Forge is installed for root but invoked as a different user.
+    Raise: Functional  
+    Case: normal use - a fresh box starts its first test.  
+    [GUEST](/plans/FORGE-PROVIDER-2.md:91) installs Forge as root using [the existing install command](/src/forge/sync.py:149). By default, `uv tool install` places the tool under that user’s home; [SHIP](/plans/FORGE-PROVIDER-2.md:77) then invokes it as a new run user. The root-only readiness check can pass while that user cannot run Forge. [uv storage locations](https://docs.astral.sh/uv/reference/storage/)  
+    Not done: item 5 requires the box to run and return the tests.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; the 7 open notes (#19-25) become must-fix lines in the covered Done-when details
+
+24. Blocking: The shipped AWS policy cannot perform the new secret-version update.
+    Raise: Functional  
+    Case: normal use - a developer uses the documented least-privilege permission set and runs `forge lanes --aws files`.  
+    [SHIP](/plans/FORGE-PROVIDER-2.md:76) requires `UpdateSecretVersionStage` after each write, but [SETUP’s policy](/plans/FORGE-PROVIDER-2.md:84) grants only `PutSecretValue` for the test-files secret. AWS requires [a separate permission](https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_UpdateSecretVersionStage.html), so the command fails after writing the secret.  
+    Not done: item 2 requires approved files to be managed through `files`.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; the 7 open notes (#19-25) become must-fix lines in the covered Done-when details
+
+25. Blocking: The box is not given the Node version it must install.
+    Raise: Plan gap  
+    Case: normal use - a Node repo starts a new box.  
+    [SETUP](/plans/FORGE-PROVIDER-2.md:83) stores `NodeMajor` as a stack parameter, and [GUEST](/plans/FORGE-PROVIDER-2.md:91) needs it before readiness. The inputs [PLACES passes to the guest](/plans/FORGE-PROVIDER-2.md:89) do not include it, and no other handoff is specified. The separate fake tests can pass without proving that handoff.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; the 7 open notes (#19-25) become must-fix lines in the covered Done-when details
+
+26. Advisory: The required untracked-file comparison cannot pass as written.
+    Raise: Test  
+    [SHIP’s test](/plans/FORGE-PROVIDER-2.md:79) requires an untracked test to be committed as an addition in the synthetic box repo and also requires its `git diff --name-status` to equal the laptop’s. The laptop’s `git diff` omits untracked files; Forge’s [picker lists them separately](/src/forge/fasttest.py:395).  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+27. Advisory: An approved file ignored by local Git settings can make a box close fail.
+    Raise: Functional  
+    [SHIP](/plans/FORGE-PROVIDER-2.md:76) accepts files ignored by `--exclude-standard`, including a developer’s global ignore rules. The reconstructed repo and new run user do not receive those rules, so such a file can appear untracked after the secret is written. The existing [close dirty check](/src/forge/review.py:443) then refuses it, although the laptop checkout is clean.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+28. Advisory: A Node major does not preserve an exact version selected by the repo.
+    Raise: Functional  
+    [SETUP](/plans/FORGE-PROVIDER-2.md:83) retains only the major version, while [the generated CI](/src/forge/prcheck.py:283) can use an exact `.nvmrc` or `.node-version`. Two repos requiring different releases within the same major become indistinguishable, so the box can run a different runtime and give a different result.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
+
+29. Advisory: The planned guide omits a step that turn-off now requires.
+    Raise: Not done  
+    [The turn-off rule](/plans/FORGE-PROVIDER-2.md:104) refuses while `test_runner = "forge-aws"` remains on the default branch. The [guide instructions](/plans/FORGE-PROVIDER-2.md:105) repeat the old order without removing it, so a repo using both features reaches that refusal.  
+    Gain 2, Work 1, Harm 1
+   Disposition: keep - below the bar (live with)
+
+30. Advisory: The planned secret read is not proven against the new stage restriction.
+    Raise: Test  
+    [SETUP](/plans/FORGE-PROVIDER-2.md:83) restricts reads using `secretsmanager:VersionStage`, but [SHIP](/plans/FORGE-PROVIDER-2.md:77) does not specify sending `AWSCURRENT` in the read request. AWS has documented a [denied implicit-stage request](https://github.com/aws/aws-cli/issues/5031); the planned tests check the policy and fake read separately. A live AWS run was not checked.  
+    Gain 3, Work 3, Harm 3
+   Disposition: keep - below the bar (follow-up)
