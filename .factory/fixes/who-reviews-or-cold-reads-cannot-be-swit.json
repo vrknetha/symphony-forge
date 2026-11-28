@@ -12,8 +12,138 @@
   "fix_kind": "backend",
   "fix_kind_explicit": true,
   "kind": "fix",
+  "known": [
+    {
+      "area": "_with_local() in src/forge/repo.py",
+      "file": "src/forge/repo.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 687,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A local cold-reader choice cannot provision the selected SDK",
+      "work": 2
+    },
+    {
+      "area": "review_family() in src/forge/roles.py",
+      "file": "src/forge/roles.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 89,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Refuse a reviewer that built an earlier round of the item",
+      "work": 3
+    },
+    {
+      "area": "_with_local() in src/forge/repo.py",
+      "file": "src/forge/repo.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 687,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Refresh default-branch rules before a locally configured cold read",
+      "work": 1
+    },
+    {
+      "area": "test_1_local_reviews_selects_the_cold_reader() in tests/test_personal_review_choice.py",
+      "file": "tests/test_personal_review_choice.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 25,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A local reviews line selects the cold reader",
+      "work": 2
+    },
+    {
+      "area": "test_2_local_reviews_selects_the_reviewer_and_refuses_the_builder() in tests/test_personal_review_choice.py",
+      "file": "tests/test_personal_review_choice.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 35,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A local reviews line refuses a family that built the item",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "e2062009f101e51a0dcca0f1ce573eebd0ca149c74b8bc57063f87afd1ad9e4a",
+    "changed": "fe3247482a3478da0c810372492a8d4c41e4ea85ac834d92399c8352734e1dbe",
+    "commit": "671b9908e1fb034b582a540aa4b2ea565aaf802a",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done.\nCase: normal use - A client repo initialized with only Codex later selects Claude as its local cold reader.\nDone when: A reviews line in forge.local.toml picks this clone reviewer with the same values as forge.toml, and naming the family that built the item is refused with a message that points to forge.local.toml.\nEven after Claude is installed, `story.py:244-246` requires the Claude SDK and `worker.py:483-486` directs the user to `forge doctor --fix` if it is missing. But `doctor.py:574-579` and `sync.py:729-731` do not install that SDK when `tools = \"codex\"`, so the selected reader remains unusable. The reverse switch from a Claude-only repo to a Codex reader has the same problem with the Codex SDK.",
+        "file": "src/forge/repo.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 687,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: A local cold-reader choice cannot provision the selected SDK",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 3, Harm 3\nRaise: Not done.\nCase: normal use - Codex commits an initial round, the developer switches the worker to Claude for a later round, then selects Codex as the local reviewer.\nDone when: A reviews line in forge.local.toml picks this clone reviewer with the same values as forge.toml, and naming the family that built the item is refused with a message that points to forge.local.toml.\n`worker.py:325-327` replaces the recorded worker on each round, and `review.py:840-842` passes only that latest value to this check. Consequently Codex is allowed to review the item even when its earlier changes remain in the reviewed diff; the promised refusal is never shown.",
+        "file": "src/forge/roles.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 89,
+        "priority": "P1",
+        "required_done_when": true,
+        "title": "Not done: Refuse a reviewer that built an earlier round of the item",
+        "work": 3
+      },
+      {
+        "body": "Gain 4, Work 1, Harm 3\nRaise: Functional.\nCase: normal use - A teammate updates the approved constitution after this clone last fetched, and a developer then starts a cold read using a local reviewer.\nAccepting `reviews` here makes `story.py:166-167` skip the default-branch fetch. The read still obtains the constitution from the last-fetched ref through `story.py:300` and `records.py:635-648`, so it can approve a plan using an obsolete constitution or none at all even though the new one has merged.\nAdds work: restore the existing fetch for local-reviewer reads; F 2 x H 2 = 4; 2 x C = 2.",
+        "file": "src/forge/repo.py",
+        "gain": 4,
+        "harm": 3,
+        "line": 687,
+        "priority": "P1",
+        "title": "Functional: Refresh default-branch rules before a locally configured cold read",
+        "work": 1
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test.\nCase: normal use - A repo that was set up for one tool selects the other tool as its local cold reader.\nThis proof selects only Antigravity, while the shared `repo` fixture installs both Codex and Claude SDKs (`tests/conftest.py:658-669`). It therefore passes while a Codex-only repo cannot provision the locally selected Claude reader, and vice versa: the prescribed `forge doctor --fix` does not install the needed SDK.",
+        "file": "tests/test_personal_review_choice.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 25,
+        "priority": "P1",
+        "title": "Test: A local reviews line selects the cold reader",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test.\nCase: normal use - An item has work from two builder families after the developer switches workers.\nThis test supplies one builder directly to `env.start_fix`; that fixture writes the worker field into the internal state (`tests/test_close.py:223-253`) instead of exercising builder rounds. Its assertions still pass even though a later round overwrites the earlier builder and selecting that earlier family is accepted for review.",
+        "file": "tests/test_personal_review_choice.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 35,
+        "priority": "P1",
+        "title": "Test: A local reviews line refuses a family that built the item",
+        "work": 2
+      }
+    ],
+    "id": "fbc6b1a7-2e36-4ab6-bf84-fd0d203b1c72",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-28T05:05:40.970100+00:00",
@@ -23,6 +153,10 @@
       "at": "2026-11-28T05:06:19.375909+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-28T08:35:41.029529+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
