@@ -99,7 +99,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-28T00:56:19.123209+00:00",
@@ -122,8 +122,19 @@
     {
       "at": "2026-11-28T01:25:18.841529+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-28T01:35:34.983333+00:00",
+      "round": 2,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-28T01:35:34.983333+00:00",
+    "question": "A private repo's test jobs run on throwaway AWS machines: AWS runners are off, and setup refuses what it must is stuck. It should deliver: The `aws_runners` setting; the `forge lanes` options beside `--box`; `aws.setup`'s refusals; the old Mainline spec removed\nTwo rounds in a row left the open P0 not done: `forge lanes --aws setup` refuses a public repo in src/forge/aws.py.\nThe worker tried: Fix round 2 review findings: origin-bound repo check, self-hosted Linux runners, guide sync, and split workflow proof.\nChoose one: switch this item to Claude; keep Antigravity for one more round; or narrow or split it.",
+    "tool": "antigravity",
+    "wait_id": "17f255cb-721b-4072-a623-b2b42785b579"
+  },
   "stuck": {
     "close": "71d9ab17-e1bd-4a41-ad64-253276ede78b",
     "head": "2c93f8515d3fc31c98b98ac121498441b5dc5d20",
