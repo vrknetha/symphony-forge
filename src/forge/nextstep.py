@@ -158,7 +158,7 @@ def next_step(args: Any) -> int:
     repo.forge_dir(top)
     repo.default_branch(top)
     story.worktrees(top)
-    # Independent network reads overlap each other and the bulk local history.
+    # Other network reads run while the migration warning check refreshes Git refs.
     with ThreadPoolExecutor(max_workers=6) as pool:
         open_fields = "headRefName,headRefOid,body,url,isDraft"
         open_read = pool.submit(board_facts._listing, top, "open", fields=open_fields)
@@ -173,8 +173,8 @@ def next_step(args: Any) -> int:
                    "checks": pool.submit(checks), "github": github_read}
         activity = pool.submit(board._event_history, top)
         warning_read = pool.submit(migration_warnings.warnings, top)
-        history = board._machine_history(top)
         warnings = warning_read.result()
+        history = board._machine_history(top)
         activity.result()
         facts = {name: future.result() for name, future in pending.items()}
     lines = warnings + _report(

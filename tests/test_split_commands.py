@@ -160,7 +160,7 @@ HELP_GOLDEN = {'': 'usage: forge [-h] [--version]\n'
           '\n'
           'commands:\n'
           '  {drop,new,done}\n'
-          '    drop           Drop a plan and keep its remote branch\n'
+          '    drop           Drop or hold a story and keep its branches\n'
           '    new            Start a story branch, worktree and story doc, or promote a\n'
           '                   fix\n'
           "    done           Record a finished story's outcome sentence and dates\n",

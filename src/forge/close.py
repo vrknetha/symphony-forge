@@ -482,6 +482,8 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         raise
     # Publish successful CI with Ready, or once before restarting on a refreshed head.
     if pr and pr.get("isDraft") and not stacked_waiting:  # a blocked review left it a draft
+        if "/" in item:
+            task.require_active(item, top)
         _gh(top, "pr", "ready", str(pr["number"]))
     # Main can move during checks; DRAFT also hides an up-to-date requirement until ready.
     pr = _pull_request(top, branch) or pr
@@ -503,6 +505,8 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         again.dismiss = again.because = again.resolve = again.reason = again.by = None
         again.no_review = False
         return close(again)
+    if "/" in item:
+        task.require_active(item, top)
     merge = merger(top, state)
     path = repo.ready_path(item, top)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -991,6 +995,8 @@ def _publish(top: Path, item: str, state: dict[str, Any], branch: str, default: 
         body_file.write_bytes(_bounded_body(f"Why: {why}\nDone when: {summary}\n\n{notes}{block}\n").encode("utf-8"))
         create = ("--base", default, "--head", branch, "--title", title, "--body-file",
                   str(body_file))
+        if "/" in item:
+            task.require_active(item, top)
         url = _draft(top, "pr", "create", "--draft", *create) if draft else ""
         is_draft = bool(url)
         url = url or _gh(top, "pr", "create", *create)

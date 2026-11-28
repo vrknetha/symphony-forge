@@ -1,0 +1,37 @@
+{
+  "approval": {
+    "at": "2026-11-28T01:58:27.729726+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_017vPJTXFraZ954Bz9U5uhcW",
+    "hash": "c834bb01e399e37e93acc1edabf79d8ab11efe20bba03edd9f3fead4b3bbd161",
+    "round": 3,
+    "runtime": "claude",
+    "session": "26518c53-7541-418c-a81e-9f4aa1925767"
+  },
+  "doc": "plans/FORGE-STORYHOLD-1.md",
+  "status": "approved",
+  "steps": [
+    {
+      "at": "2026-11-28T01:00:25.699391+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-28T01:13:23.567051+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-28T01:27:44.158181+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-28T01:47:24.407531+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-28T01:58:27.729884+00:00",
+      "step": "approved"
+    }
+  ],
+  "title": "Hold and safely drop stories",
+  "touches": 1
+}

@@ -185,6 +185,7 @@ the next merge.
 | "Make it a story" (a fix) | Add the key to the fix's roadmap and commit it, then `forge story new <KEY> --from-fix <fix>` |
 | "Make it a fix" or "Just fix it" (a plan with no merged part, even if approved or with unmerged built parts; `story drop` keeps the remote branches, closes the open pull requests of its own parts, frees their files and stops those parts from starting or closing again; merged parts count after branch cleanup) | `forge fix start "<its Problem>" --done "<its first Done-when>"`, then `forge story drop <KEY> --because "Moved to the fix <fix>"` |
 | "Do it later" (a fix) | `forge fix drop <fix> --because "The owner wants it later"`, then `forge start "Do this later: <its why> (kept on fix <fix>)"`. `fix drop --undo` brings it back |
+| "Do it later" (a story) | `forge story drop <KEY> --later`. This keeps the branches, closes open pull requests and pauses the story's parts |
 | "Do it now" (an idea-list entry) | `forge start "<the owner's new words>: <the entry's idea without its deferral words>"`, for example `forge start "Do it now: add dark mode"`. Then remove the entry from the main checkout's file while it is waiting, or else in the new item's branch |
 | "Remove this feature" or "We do not need X any more" (in a client app) | `forge start "Remove the <feature> feature"`; the removal is the part's work |
 | "Let this fix go over the limit" | `forge fix allow-large "<reason>"` |

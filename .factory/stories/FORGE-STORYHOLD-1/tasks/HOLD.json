@@ -1,0 +1,186 @@
+{
+  "branch": "task/FORGE-STORYHOLD-1-HOLD",
+  "chat": {
+    "approval": "c834bb01e399e37e93acc1edabf79d8ab11efe20bba03edd9f3fead4b3bbd161",
+    "claude": null,
+    "conversation": "01a22073-a5ff-76b0-af41-db4a4685189e",
+    "head": null,
+    "start": "a41e11264b84f455cc28089270e8f56f258e71d0"
+  },
+  "known": [
+    {
+      "area": "_record_approval() in src/forge/approval.py",
+      "file": "src/forge/approval.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 193,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Approval of a held plan can approve a different story",
+      "work": 2
+    },
+    {
+      "area": "story_drop() in src/forge/intake.py",
+      "file": "src/forge/intake.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 307,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: `forge next` never offers its parts, however long the story stays held",
+      "work": 2
+    },
+    {
+      "area": "hook() in src/forge/approval.py",
+      "file": "src/forge/approval.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 91,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: A declined held-plan prompt leaves the story checkout dirty",
+      "work": 1
+    },
+    {
+      "area": "test_1_dropped_story_does_not_run_its_started_part() in tests/test_story_hold.py",
+      "file": "tests/test_story_hold.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 65,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: `forge next` never offers held story parts",
+      "work": 1
+    },
+    {
+      "area": "test_3_later_holds_started_parts_and_refuses_part_commands() in tests/test_story_hold.py",
+      "file": "tests/test_story_hold.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 85,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Open pull requests of all held story parts close",
+      "work": 2
+    },
+    {
+      "area": "test_5_read_and_approved_plans_can_drop() in tests/test_approved_story_drop.py",
+      "file": "tests/test_approved_story_drop.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 46,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A read plan drops and an approved drop's notice is one line",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "b65efebb06f6cbfc10f48abb0e1fd5b3375e3ed09f9a8f30cc8cb7a766a55a2f",
+    "changed": "28b8fa2a45ce44c43d3487db37afde87217643302da5611e0f4af62dc69afdeb",
+    "commit": "3d1a95d6dd9085e62a7a618be3419f33d196a992",
+    "dismissals": [],
+    "findings": [],
+    "id": "15c8e55c-1e0a-40e7-8e57-f1a591958fb3",
+    "status": "clean"
+  },
+  "round": 6,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-28T04:39:22.944866+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-28T04:39:37.713278+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T05:06:33.756678+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T05:06:53.633066+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T05:20:39.018626+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T05:20:39.018761+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-28T07:18:47.862668+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-28T07:19:38.358685+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T07:28:24.684709+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T08:25:56.141258+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T08:38:15.821020+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T08:59:53.398463+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T09:29:51.290484+00:00",
+      "round": 6,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T09:34:35.018321+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-28T05:20:39.018761+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "tests/test_story_hold.py",
+    "reason": "Owner chose one more round. Make the peer test run forge next without fetching the hold first, so forge next must fetch it itself; the test must fail if forge next offers the held part from a stale snapshot. Change nothing else.",
+    "wait_id": "aecec1d9-dadb-4134-9af9-81dd7ae79684",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "19171427-324b-4d0e-b250-d1d06b208d03",
+    "head": "e7a16a4fbe825e5d758998abbe983383574c0737",
+    "keys": {},
+    "round": 4
+  },
+  "worker": "codex"
+}
