@@ -60,7 +60,7 @@ REFUSALS = {
               'forge close {item} --resolve <switch|same|narrow|split> --reason "<human\'s choice>"'),
     "chosen": ("The owner's choice is recorded; the worker's next round follows it.", "forge work {item}"),
     "unsynced": ("This {kind} changes Forge's version, but {files} {verb} what forge sync writes "
-                 "for it.", "forge sync in {path}, commit what it wrote, then forge close {item}"),
+                 "for it.", "{sync_cmd} in {path}, commit what it wrote, then forge close {item}"),
     "unsynced_forge": ("This {kind} pins Forge {pinned}, but Forge {installed} is running close, "
                        "so it can't tell whether the {kind}'s files are what {pinned} writes.",
                        "uv tool install symphony-forge=={package_version}, "
@@ -240,19 +240,12 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     if pending := time_records.pending_merge_wait(top, item, (pr or {}).get("body") or "", reason="merge conflict"):
         repo.record_event(top, item, "owner wait end", wait_id=pending["id"])
         _refresh_record(top, item, state, pr)
+    size_lines, size_files = time_records.change_size(top, review_ref)
     if "/" in item:
         key = item.split("/")[0]
         design.check(top, design.kept_plan(top, key), "HEAD", required=False)
-        excluded = list(review.DOC_EXCLUDES)
-        excluded += [path.replace(":(glob)", ":(exclude,glob)") for path in repo.TEST_PATHS]
-        stats = repo.git("diff", "--numstat", "-z", "--no-renames", f"{review_ref}...HEAD",
-                         "--", ".", *excluded, cwd=top)
-        counts = [row for record in stats.split("\0") if len(row := record.split("\t", 2)) == 3]
-        generated = repo.generated_files(top, [row[2] for row in counts], "HEAD")
-        lines = sum(int(number) for added, deleted, path in counts if path not in generated
-                    for number in (added, deleted) if number.isdigit())
-        if lines > 400:
-            print(f"Warning: This part changes {lines} lines outside tests and docs; aim for about 400.")
+        if size_lines > 400:
+            print(f"Warning: This part changes {size_lines} lines outside tests and docs; aim for about 400.")
     task.check_settings_change(item, top, state, default)
     repo.resume_pin(top, cfg["version"], getattr(args, "land_rounds", None), accepted=choice == "accept",
                     before=getattr(args, "pin_before", None))
@@ -518,7 +511,8 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         if not pending:
             repo.record_event(top, item, "owner wait start", reason="merge", commit=head)
     tmp = path.with_suffix(".tmp")
-    ready = {"commit": head, "review": "clean", **({"skipped": result["skipped"]} if result.get("skipped") else {})}
+    ready = {"commit": head, "review": "clean", "size": {"lines": size_lines, "files": size_files},
+             **({"skipped": result["skipped"]} if result.get("skipped") else {})}
     if "/" in item and state.get("stacked_on"):
         ready["base"] = base
     tmp.write_text(json.dumps(ready) + "\n", encoding="utf-8")
@@ -835,16 +829,25 @@ def _synced(top: Path, item: str, changed_files: list[str]) -> None:
     repo.git("worktree", "add", "-q", "-b", branch, str(check), "HEAD", cwd=top)
     try:
         cfg = repo.config(check)
-        sync.write(check, cfg)
-        if cfg.get("repo") == "forge-source":
-            sync.write_file(check, "docs/commands.md", sync.command_page())
+        is_source = cfg.get("repo") == "forge-source"
+        if is_source:
+            script = ("from forge import repo, sync; top = repo.root(); "
+                      "sync.write(top, repo.config(top)); "
+                      "sync.write_file(top, 'docs/commands.md', sync.command_page())")
+            repo.run(sys.executable, "-B", "-c",
+                     f"import sys; sys.path.insert(0, {json.dumps((check / 'src').as_posix())}); {script}",
+                     cwd=check).check_returncode()
+        else:
+            sync.write(check, cfg)
         stale = synced_changes(check)
     finally:
         repo.git("worktree", "remove", "-f", str(check), cwd=top)
         repo.git("branch", "-D", branch, cwd=top)
     if stale:
         repo.refuse(REFUSALS["unsynced"], kind=kind, files=", ".join(stale),
-                    verb="aren't" if len(stale) > 1 else "isn't", path=top, item=item)
+                    verb="aren't" if len(stale) > 1 else "isn't",
+                    sync_cmd="uv run --frozen forge sync" if is_source else "forge sync",
+                    path=top, item=item)
 
 
 def generated_fix_proof(done: str, evidence: str, item: str) -> str:

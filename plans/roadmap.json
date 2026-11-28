@@ -762,6 +762,18 @@
       "title": "Hold and safely drop stories",
       "status": "pending",
       "order": 132
+    },
+    {
+      "key": "FORGE-PRUSAGE-1",
+      "title": "Show model use and change size in pull requests",
+      "status": "pending",
+      "order": 132
+    },
+    {
+      "key": "FORGE-ASKFAMILY-1",
+      "title": "Ask another model family for a second opinion",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [

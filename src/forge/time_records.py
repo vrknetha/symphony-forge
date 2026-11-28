@@ -540,6 +540,113 @@ def item(top: Path, key: str, state: dict[str, Any], *,
             "total_seconds": round((end - start).total_seconds(), 3) if start and end and end >= start else None}
 
 
+def change_size(top: Path, review_ref: str) -> tuple[int, int]:
+    """Product lines (added plus removed) and files changed against review_ref."""
+    from forge import review
+
+    excluded = list(review.DOC_EXCLUDES)
+    excluded += [path.replace(":(glob)", ":(exclude,glob)") for path in repo.TEST_PATHS]
+    stats = repo.git("diff", "--numstat", "-z", "--no-renames", f"{review_ref}...HEAD",
+                     "--", ".", *excluded, cwd=top)
+    counts = [row for record in stats.split("\0") if len(row := record.split("\t", 2)) == 3]
+    generated = repo.generated_files(top, [row[2] for row in counts], "HEAD")
+    kept = [row for row in counts if row[2] not in generated]
+    lines = sum(int(number) for added, deleted, _ in kept
+                for number in (added, deleted) if number.isdigit())
+    return lines, len(kept)
+
+
+def token_usage(events: list[dict[str, Any]]) -> dict[str, dict[str, int]]:
+    """Count runs and sum recorded tokens per kind from run end events."""
+    kinds = {"work": "build", "worker": "build", "review": "review", "read": "read"}
+    totals = {name: {"runs": 0, "reported": 0, "input_tokens": 0, "cached_input_tokens": 0, "output_tokens": 0}
+              for name in ("build", "review", "read")}
+    seen_runs: set[str] = set()
+    for event in events:
+        if event.get("event") != "run end":
+            continue
+        bucket = kinds.get(event.get("kind") or "")
+        if not bucket:
+            continue
+        run_id = event.get("run_id")
+        if run_id:
+            if run_id in seen_runs:
+                continue
+            seen_runs.add(run_id)
+        entry = totals[bucket]
+        entry["runs"] += 1
+        inp = event.get("input_tokens")
+        if type(inp) is int:
+            entry["reported"] += 1
+            entry["input_tokens"] += inp
+            cached = event.get("cached_input_tokens")
+            out = event.get("output_tokens")
+            if type(cached) is int:
+                entry["cached_input_tokens"] += cached
+            if type(out) is int:
+                entry["output_tokens"] += out
+    return totals
+
+
+def _usage_lines(events: list[dict[str, Any]], ready: dict[str, Any] | None, shortened: bool) -> list[str]:
+    starts = {e.get("id"): e for e in events if e.get("event") == "run start" and e.get("id")}
+    builds: list[str] = []
+    seen_runs: set[str] = set()
+    for event in events:
+        if event.get("event") != "run end" or event.get("kind") not in ("work", "worker"):
+            continue
+        run_id = event.get("run_id")
+        if run_id:
+            if run_id in seen_runs:
+                continue
+            seen_runs.add(run_id)
+        start = starts.get(run_id) or {}
+        if event.get("model"):
+            model = event["model"]
+            effort = event.get("effort") or start.get("effort")
+            requested = bool(event.get("requested"))
+        else:
+            model = start.get("model")
+            effort = event.get("effort") or start.get("effort")
+            requested = bool(model)
+        if not model:
+            continue
+        label = f"{model} at {effort}" if effort else str(model)
+        if requested:
+            label += " requested"
+        if label not in builds:
+            builds.append(label)
+    lines: list[str] = []
+    if builds:
+        lines.append("Build: " + ", ".join(builds))
+    usage = token_usage(events)
+    for key, label in (("build", "Build tokens"), ("review", "Review tokens"), ("read", "Plan read tokens")):
+        entry = usage[key]
+        if not entry["runs"]:
+            continue
+        if not entry["reported"]:
+            lines.append(f"{label}: no tokens recorded")
+        else:
+            line = (f"{label}: input {entry['input_tokens']:,} "
+                    f"(cached {entry['cached_input_tokens']:,}), output {entry['output_tokens']:,}")
+            if entry["reported"] < entry["runs"]:
+                line += f"; {entry['reported']} of {entry['runs']} runs reported tokens"
+            lines.append(line)
+    size = (ready or {}).get("size")
+    if isinstance(size, dict) and type(size.get("lines")) is int and type(size.get("files")) is int:
+        if size["lines"] == 0:
+            lines.append("Size: no product lines")
+        else:
+            grade = "S" if size["lines"] <= 100 else "M" if size["lines"] <= 400 else "L"
+            line_word = "line" if size["lines"] == 1 else "lines"
+            file_word = "file" if size["files"] == 1 else "files"
+            lines.append(f"Size: {grade} ({size['lines']} {line_word} in {size['files']} {file_word})")
+    lines.append("Cost: unavailable")
+    if shortened:
+        lines.append("Earlier history was shortened; its models and tokens are not shown.")
+    return lines
+
+
 def how_it_went(top: Path, key: str, state: dict[str, Any], published: str = "", *,
                preserve_ready: bool = False, ended_at: str | None = None) -> str:
     records = {name: _observations(top, key, state, name)
@@ -558,7 +665,7 @@ def how_it_went(top: Path, key: str, state: dict[str, Any], published: str = "",
         head = repo.git("rev-parse", "HEAD", cwd=top)
         data["ready"] = None
         if ready.get("commit") == head and ready.get("review") == "clean":
-            data["ready"] = {name: ready[name] for name in ("commit", "review", "base") if name in ready}
+            data["ready"] = {name: ready[name] for name in ("commit", "review", "base", "size") if name in ready}
             if review := state.get("review"):
                 data["clean_reviews"] = list({r.get("id") or r.get("commit"): r
                                               for r in [*data["clean_reviews"], review]}.values())
@@ -612,6 +719,7 @@ def how_it_went(top: Path, key: str, state: dict[str, Any], published: str = "",
     retained_rounds = set(re.findall(r"^Round (\d+):", retained, re.M)) if data.get("rebuilt") else set()
     current = times + "\n\n" + "\n".join(r["line"] for r in view["rounds"]
                                             if str(r["round"]) not in retained_rounds)
+    current += "\n\n" + "\n".join(_usage_lines(rows["events"], data.get("ready"), bool(summary)))
     if starts:
         current += "\n\nStarted: " + min(starts).isoformat()
     if data.get("ended_at"):

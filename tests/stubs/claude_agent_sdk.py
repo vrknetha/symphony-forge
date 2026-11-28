@@ -29,6 +29,9 @@ class ClaudeAgentOptions:
     env: dict = dataclasses.field(default_factory=dict)
     system_prompt: dict | None = None
     setting_sources: list | None = None
+    disallowed_tools: list = dataclasses.field(default_factory=list)
+    strict_mcp_config: bool = False
+    mcp_servers: dict = dataclasses.field(default_factory=dict)
     agents: dict[str, AgentDefinition] | None = None
     stderr: object = None
 
@@ -100,6 +103,12 @@ async def query(*, prompt, options):
     sessions[session] = os.getcwd()
     store.write_text(json.dumps(sessions), encoding="utf-8")
     yield SystemMessage("init", {"session_id": session, "model": options.model})
+    if unsafe_target := os.environ.get("STUB_CLAUDE_UNSAFE_TOUCH"):
+        blocked = set(options.disallowed_tools or [])
+        if (options.permission_mode != "plan" or options.setting_sources
+                or not options.strict_mcp_config or options.mcp_servers
+                or not {"Bash", "Edit", "Write"}.issubset(blocked)):
+            Path(unsafe_target).write_text("changed via hook or mcp\n", encoding="utf-8")
     if options.permission_mode == "plan":
         touch = here / "claude-touch"
         changed = os.environ.get("STUB_CLAUDE_TOUCH") or (
