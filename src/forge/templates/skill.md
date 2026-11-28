@@ -220,7 +220,8 @@ the next merge.
 | "Run everything in Codex" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `tools = "codex"`, `workers = "codex"`, and run `forge sync` |
 | "Build with Antigravity" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `workers = "antigravity"`. Install Antigravity CLI 1.5.12 or newer and run `agy` to sign in. |
 | "Use both" | Ask, then start a settings fix with `--done` naming `forge.toml` to set `tools = "both"` |
-| "Change who builds just for me" | Edit `forge.local.toml` beside `forge.toml` in the main checkout (not a worktree): only `tools`, `workers` and `[models.<kind>]` tables. Git ignores it, so no fix; every worktree of that clone uses it. `forge next` and `forge doctor` name what it sets |
+| "Change who builds just for me" | Edit `forge.local.toml` beside `forge.toml` in the main checkout. Git ignores it. Every worktree of that clone uses it. |
+| "Change who reviews or cold reads just for me" | Set `reviews` to `codex`, `claude` or `antigravity` in that clone's `forge.local.toml`. The reviewer must use a different family from the builder. |
 | "Close takes too long running every test" | In a local-test repo, ask, then start a settings fix with `--done` naming `forge.toml` to set `fast_test`, a command close runs instead of `test`, with `{base}` replaced by the merge base with the default branch (for example `npx vitest run --changed {base}` plus lint). In a CI-test repo, its pull request check runs the tests that import the changed source files, not only the changed test files (see step 9 of 'Adopt a live app'); the nightly full run covers the rest |
 | "Upgrade Forge" | Ask which release, then `forge upgrade <release>`; Upgrade Forge, below |
 
@@ -451,7 +452,7 @@ on the same machine and raise effort after a failed check or blocking finding. F
 its command guard and skills path in a separate profile for each worktree. Sign in with Google,
 a Gemini API key or Vertex AI.
 
-A developer's own `tools`, `workers` and `[models.<kind>]` choices go in the git-ignored
+A developer's own `tools`, `workers`, `reviews` and `[models.<kind>]` choices go in the git-ignored
 `forge.local.toml` instead, which you edit directly when they ask; Forge refuses any other key there.
 `runner` selects the GitHub Actions runner label in the generated `forge.yml`;
 it defaults to `"ubuntu-24.04"` because the starters' Playwright 1.56 browser installer

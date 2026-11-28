@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/repo.py\tFunctional: Refresh default-branch rules before a locally configured cold read\twho-reviews-or-cold-reads-cannot-be-swit",
+      "kind": "bug",
+      "path": "src/forge/repo.py",
+      "line": 687,
+      "text": "Functional: Refresh default-branch rules before a locally configured cold read",
+      "from": "blocking",
+      "item": "who-reviews-or-cold-reads-cannot-be-swit",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/repo.py\tNot done: A local cold-reader choice cannot provision the selected SDK\twho-reviews-or-cold-reads-cannot-be-swit",
+      "kind": "bug",
+      "path": "src/forge/repo.py",
+      "line": 687,
+      "text": "Not done: A local cold-reader choice cannot provision the selected SDK",
+      "from": "blocking",
+      "item": "who-reviews-or-cold-reads-cannot-be-swit",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/roles.py\tNot done: Refuse a reviewer that built an earlier round of the item\twho-reviews-or-cold-reads-cannot-be-swit",
+      "kind": "bug",
+      "path": "src/forge/roles.py",
+      "line": 89,
+      "text": "Not done: Refuse a reviewer that built an earlier round of the item",
+      "from": "blocking",
+      "item": "who-reviews-or-cold-reads-cannot-be-swit",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_personal_review_choice.py\tTest: A local reviews line refuses a family that built the item\twho-reviews-or-cold-reads-cannot-be-swit",
+      "kind": "bug",
+      "path": "tests/test_personal_review_choice.py",
+      "line": 35,
+      "text": "Test: A local reviews line refuses a family that built the item",
+      "from": "blocking",
+      "item": "who-reviews-or-cold-reads-cannot-be-swit",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_personal_review_choice.py\tTest: A local reviews line selects the cold reader\twho-reviews-or-cold-reads-cannot-be-swit",
+      "kind": "bug",
+      "path": "tests/test_personal_review_choice.py",
+      "line": 25,
+      "text": "Test: A local reviews line selects the cold reader",
+      "from": "blocking",
+      "item": "who-reviews-or-cold-reads-cannot-be-swit",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
