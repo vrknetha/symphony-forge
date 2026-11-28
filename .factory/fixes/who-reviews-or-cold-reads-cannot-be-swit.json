@@ -1,0 +1,16 @@
+{
+  "base": "4a47d4e4feebaaa003743821e9a6b0fff31f467d",
+  "branch": "fix/who-reviews-or-cold-reads-cannot-be-swit",
+  "done_when": "A reviews line in forge.local.toml picks this clone reviewer with the same values as forge.toml, and naming the family that built the item is refused with a message that points to forge.local.toml.",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-28T05:05:40.970100+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Who reviews or cold reads cannot be switched for one clone without editing the shared forge.toml, which the owner rule of 28 Nov 2026 says must never be needed, for clients too."
+}
