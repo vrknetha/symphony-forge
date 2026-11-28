@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/approval.py\tFunctional: A declined held-plan prompt leaves the story checkout dirty\tFORGE-STORYHOLD-1/HOLD",
+      "kind": "bug",
+      "path": "src/forge/approval.py",
+      "line": 91,
+      "text": "Functional: A declined held-plan prompt leaves the story checkout dirty",
+      "from": "blocking",
+      "item": "FORGE-STORYHOLD-1/HOLD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/approval.py\tFunctional: Approval of a held plan can approve a different story\tFORGE-STORYHOLD-1/HOLD",
+      "kind": "bug",
+      "path": "src/forge/approval.py",
+      "line": 193,
+      "text": "Functional: Approval of a held plan can approve a different story",
+      "from": "blocking",
+      "item": "FORGE-STORYHOLD-1/HOLD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_approved_story_drop.py\tTest: A read plan drops and an approved drop's notice is one line\tFORGE-STORYHOLD-1/HOLD",
+      "kind": "bug",
+      "path": "tests/test_approved_story_drop.py",
+      "line": 46,
+      "text": "Test: A read plan drops and an approved drop's notice is one line",
+      "from": "blocking",
+      "item": "FORGE-STORYHOLD-1/HOLD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_story_hold.py\tTest: Open pull requests of all held story parts close\tFORGE-STORYHOLD-1/HOLD",
+      "kind": "bug",
+      "path": "tests/test_story_hold.py",
+      "line": 85,
+      "text": "Test: Open pull requests of all held story parts close",
+      "from": "blocking",
+      "item": "FORGE-STORYHOLD-1/HOLD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_story_hold.py\tTest: `forge next` never offers held story parts\tFORGE-STORYHOLD-1/HOLD",
+      "kind": "bug",
+      "path": "tests/test_story_hold.py",
+      "line": 65,
+      "text": "Test: `forge next` never offers held story parts",
+      "from": "blocking",
+      "item": "FORGE-STORYHOLD-1/HOLD",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/intake.py\tNot done: `forge next` never offers its parts, however long the story stays held",
+      "kind": "edge",
+      "path": "src/forge/intake.py",
+      "line": 307,
+      "text": "Not done: `forge next` never offers its parts, however long the story stays held",
+      "from": "review",
+      "item": "FORGE-STORYHOLD-1/HOLD",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
