@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-28T01:27:44.143634+00:00
-seconds: 773.714
-read_hash: f947c27407d4c55771391694b026c06656eba3cf
-round: 2
+read_at: 2026-11-28T01:47:24.392399+00:00
+seconds: 389.141
+read_hash: 081cd5e50c1bad9b21ec40478493af2cc929cb31
+round: 3
 passed: no
-doc_seen: f947c27407d4c55771391694b026c06656eba3cf
+doc_seen: 081cd5e50c1bad9b21ec40478493af2cc929cb31
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 69bb5b5e40e07f619634903760d2543810407ef2
+notes_seen: 8144b8ae315355c7abde55aff20352ba8ad6d306
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21fad-ad4a-7d51-8190-522e1817507f
 session:
@@ -106,19 +106,19 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Plan gap
     Case: normal use - HOLD must change [the approved-story test](/plans/FORGE-STORYHOLD-1.md:40) to use `--undo`, but [RESTORE implements `--undo` after HOLD](/plans/FORGE-STORYHOLD-1.md:50). HOLD cannot pass that test, so RESTORE cannot start.
     Gain 5, Work 1, Harm 3
-   Disposition: keep - the owner accepted the read; must-fix for the builders (For the builders, Must fix)
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
 
 13. Blocking: Unproven: item 4 — refusing an approval can prevent the later undo.
     Raise: Test
     Case: normal use - A held plan’s checkout remains because it contains ignored files, and the owner answers its pending approval from that checkout. The new refusal reaches [approval.py’s existing handler](/src/forge/approval.py:86), which changes the tracked story record without committing it. [Undo’s existing checkout check](/src/forge/intake.py:281) then refuses the dirty checkout. The planned test checks only that approval is refused and the story stays dropped.
     Gain 5, Work 2, Harm 3
-   Disposition: keep - the owner accepted the read; must-fix for the builders (For the builders, Must fix)
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
 
 14. Blocking: Not done: item 4 — restoring older approved work does not make the runner resume it.
     Raise: Not done
     Case: normal use - An existing repo upgrades on a machine where the runner was installed after the story was approved. Recreating the checkout does not change the original approval time; [the runner](/src/forge/runner.py:92) still excludes it as older than the installation time. The amended plan promises that restored parts resume.
     Gain 5, Work 2, Harm 3
-   Disposition: keep - the owner accepted the read; must-fix for the builders (For the builders, Must fix)
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
 
 15. Blocking: Not done: item 3 — a running close can publish during the hold operation.
     Raise: Not done
@@ -136,7 +136,7 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Test
     Case: normal use - Close is waiting for checks on an already-open request when the story is held. The planned check before **opening** a request does not cover [the later path that records Ready](/src/forge/close.py:480); the new test can pass because no new request opens.
     Gain 3, Work 2, Harm 3
-   Disposition: keep - the owner accepted the read; must-fix for the builders (For the builders, Must fix)
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
 
 18. Advisory: The restore overlap check misses fixes using the same files.
     Raise: Functional
@@ -166,4 +166,44 @@ Only a genuine trade-off goes to the human, as a question with options.
     Raise: Plan gap
     Case: normal use - A merge is already waiting for checks when the story is held. [merge.py](/src/forge/merge.py:174) proceeds from that wait to the merge call, but HOLD’s scope excludes that file, and its tests do not exercise this path or the promised dropped-story refusal.
     Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+## Round 3
+
+23. Blocking: Disputed keep 12: the repair is absent from the worker’s brief.  
+    Raise: Plan gap  
+    Case: normal use - Forge starts HOLD after approval. The [new must-fix section](/plans/FORGE-STORYHOLD-1.md:34) is outside the [details Forge extracts](/src/forge/story.py:81). The [worker brief](/src/forge/worker.py:634) instead includes the unchanged instruction to use `--undo` in HOLD’s test, before RESTORE builds it. The other must-fix instructions are omitted too.  
+    Gain 5, Work 1, Harm 3
+   Disposition: cut - the must-fix lines now sit in the covered Done-when details, which the task brief carries
+
+24. Advisory: Disputed keep 14: review receives the required fixes as accepted findings.  
+    Raise: Plan gap  
+    Case: normal use - RESTORE is reviewed without completing a must-fix. [Review construction](/src/forge/review.py:629) puts every kept plan note under “Known and accepted,” where the [review instructions](/src/forge/templates/review.md:453) tell the reviewer not to repeat it. That conflicts with the plan’s instruction that review check the fixes.  
+    Gain 3, Work 2, Harm 3
+   Disposition: cut - the must-fix items are no longer kept notes; they are part of the Done-when details the review checks
+
+25. Blocking: Not done: item 4 — undo recreates a part branch that can already exist.  
+    Raise: Plan gap  
+    Case: normal use - The owner holds a started part and immediately restores it, while its checkout remains. [Starting the part](/src/forge/task.py:274) creates its local branch, and [story drop](/src/forge/intake.py:293) removes only the story checkout. The [prescribed `git worktree add -b`](/plans/FORGE-STORYHOLD-1.md:55) fails when the part branch already exists.  
+    Gain 5, Work 2, Harm 3
+   Disposition: cut - added as a must-fix line in Done-when detail 4
+
+26. Advisory: HOLD changes the command before its required guide update.  
+    Raise: Gate  
+    Case: normal use - HOLD is reviewed before RESTORE starts. [HOLD adds `--later`, while RESTORE owns the guide update](/plans/FORGE-STORYHOLD-1.md:66). The [repository’s review rule](/AGENTS.md:139) requires an option and its guide update in the same change.  
+    Gain 4, Work 1, Harm 2
+   Disposition: cut - HOLD now updates the guide for `--later` (Done-when detail 3, Scope)
+
+27. Advisory: Disputed keep 15: repeating the hold cannot close the escaped pull request.  
+    Raise: Plan gap  
+    Case: rare - A running close leaves a pull request open during a hold. The [known issue](/plans/FORGE-STORYHOLD-1.md:48) says to run the hold again, but the [repeat rule](/plans/FORGE-STORYHOLD-1.md:54) says that command changes nothing. The request remains open.  
+    Gain 2, Work 1, Harm 2
+   Disposition: keep - below the bar (follow-up)
+
+28. Advisory: Disputed keep 20: fetching and repeating the hold cannot reconcile divergent branches.  
+    Raise: Plan gap  
+    Case: rare - An approval push fails after another machine holds the story. The [documented workaround](/plans/FORGE-STORYHOLD-1.md:48) fetches and repeats a hold that [changes nothing](/plans/FORGE-STORYHOLD-1.md:54); neither action reconciles the local and published branches. The [restore pattern](/src/forge/task.py:1018) refuses divergent branches.  
+    Gain 2, Work 1, Harm 2
+
+Skipped live Forge commands to keep the repository unchanged.
    Disposition: keep - below the bar (follow-up)
