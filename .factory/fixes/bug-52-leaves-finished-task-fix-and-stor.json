@@ -46,8 +46,8 @@
       "gain": 3,
       "harm": 3,
       "line": 145,
-      "outcome": "open",
-      "reason": "",
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepts: a teammate's merged fix branch checked out in the main folder with no local commit is not listed as finished. Rare, and nothing is lost. Follow-up later.",
       "round": 1,
       "security": false,
       "title": "Not done: List finished worktrees retained outside the removable set",
@@ -72,7 +72,13 @@
     "branch_diff": "12ca854be04765efd984c634acd679bd6c45edfb7e3b0337f9f55fdc6674662c",
     "changed": "e095dbd578bd663576025ad21615caf1f9fd9b2c5dd996ca337b444af23b553b",
     "commit": "9765b8910d194ceebc677bd4ff83d3ac3cd23a84",
-    "dismissals": [],
+    "dismissals": [
+      {
+        "accepted": true,
+        "because": "Human accepted the remaining finding: Owner accepts: a teammate's merged fix branch checked out in the main folder with no local commit is not listed as finished. Rare, and nothing is lost. Follow-up later.",
+        "finding": 1
+      }
+    ],
     "findings": [
       {
         "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - a developer checks out a teammate's published fix branch in the primary checkout, then its pull request is squash-merged elsewhere. If the developer made no local commit, the branch's first reflog entry still equals HEAD, so lines 145\u2013147 exclude it before comparing its tree with main. Ordinary commands pass `all_prs=False` (`src/forge/cli.py:175`), so `forge lanes --json` does not discover the merged pull request or list the primary checkout it keeps, even after main is fetched. The filter at line 151 also omits closed pull requests with deleted or advanced remote branches when their local changes are not in main. `forge doctor` uses `all_prs=True` and does list those cases.\nDone-when: In v1.2.51, any Forge command and land\u2019s sweep remove clean, unused task, fix, and story worktrees when merging their branch would leave main\u2019s tree unchanged, including after a squash merge, and list the worktrees they keep.",
@@ -87,10 +93,10 @@
       }
     ],
     "id": "5aaaf781-7b26-4c3e-88f7-62c927c301d7",
-    "status": "blocked"
+    "status": "clean"
   },
   "round": 4,
-  "status": "hotspot",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-28T01:02:17.159204+00:00",
@@ -128,12 +134,23 @@
       "at": "2026-11-28T09:01:17.200474+00:00",
       "round": 4,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-28T09:30:18.910934+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 4,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-28T09:01:17.200474+00:00",
+    "by": "owner",
+    "choice": "accept",
     "file": "src/forge/doctor.py",
-    "wait_id": "6d269ce1-e2ee-4c01-b0d1-c1409359d772"
+    "reason": "Owner accepts: a teammate's merged fix branch checked out in the main folder with no local commit is not listed as finished. Rare, and nothing is lost. Follow-up later.",
+    "wait_id": "6d269ce1-e2ee-4c01-b0d1-c1409359d772",
+    "worker_round": 4
   },
   "stuck": {
     "close": "7ff4ae63-0359-47f1-867b-17e988946310",
