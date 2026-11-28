@@ -722,11 +722,12 @@ def sync(args: argparse.Namespace) -> None:
     top = repo.root()
     cfg = repo.config(top)
     raw_config = tomllib.loads((top / "forge.toml").read_text(encoding="utf-8"))
-    if (cfg["tools"] == "both" or cfg["tools"] == "codex"
-            and (cfg["codex_fast"] == "off" or shutil.which("claude"))):
+    if (cfg.get("reviews") == "codex" or cfg["tools"] == "both"
+            or cfg["tools"] == "codex" and (cfg["codex_fast"] == "off" or shutil.which("claude"))):
         if codex.sdk_problem():
             codex.install()
-    if cfg["tools"] == "both" or cfg["tools"] == "claude" and shutil.which("codex"):
+    if (cfg.get("reviews") == "claude" or cfg["tools"] == "both"
+            or cfg["tools"] == "claude" and shutil.which("codex")):
         if claude_sdk.sdk_problem():
             claude_sdk.install()
     uses_codex_default = raw_config.get("tools", repo.DEFAULTS["tools"]) != "claude" and any(

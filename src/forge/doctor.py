@@ -542,6 +542,7 @@ def doctor(args: argparse.Namespace) -> int:
                      and (cfg["codex_fast"] == "off" or programs["claude"]))
     if antigravity_selected:
         needs_sdk = bool(on_codex and needs_sdk)
+    needs_sdk = needs_sdk or cfg.get("reviews") == "codex"
     sdk_failed = ""
     if args.fix and needs_sdk and shutil.which("uv") and codex.sdk_problem():
         try: codex.install()
@@ -574,6 +575,7 @@ def doctor(args: argparse.Namespace) -> int:
     needs_claude_sdk = bool(cfg["tools"] == "both" or cfg["tools"] == "claude" and programs["codex"])
     if antigravity_selected:
         needs_claude_sdk = bool(on_claude and needs_claude_sdk)
+    needs_claude_sdk = needs_claude_sdk or cfg.get("reviews") == "claude"
     claude_failed = ""
     if args.fix and needs_claude_sdk and shutil.which("uv") and claude_sdk.sdk_problem():
         try: claude_sdk.install()

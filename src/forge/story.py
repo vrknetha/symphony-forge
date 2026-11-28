@@ -163,7 +163,7 @@ def read(args: Any) -> int:
     top, doc, notes, is_story = _paths(args.target)
     repo._work_branch(top)  # pyright: ignore[reportPrivateUsage]
     config = repo.config(top)
-    if not (args.resolve or args.reason) and "reviews" not in config.get("local", {}):
+    if not (args.resolve or args.reason):
         routing.refresh_reviews(top, args.target)
     config = routing.routed_reviews(top, config)
     if config.get("reviews") != "antigravity":
@@ -235,11 +235,12 @@ def _read(args: Any, top: Path, doc: Path, notes: Path, is_story: bool, config: 
     if not recorded:
         recorded = "codex" if saved.get("conversation") else "claude" if saved.get("claude") else ""
     reader, gone = roles.read_family(config, here, recorded)
-    why = (f"forge.toml's {'reviews' if config.get('reviews') else 'tools'} is now {reader}"
+    source = repo.LOCAL if "reviews" in config.get("local", {}) else "forge.toml"
+    selector = f"{source}'s {'reviews' if config.get('reviews') else 'tools'}"
+    why = (f"{selector} is now {reader}"
            if recorded in NAMES and reader != recorded and (config.get("reviews") or config["tools"] != "both") else
            f"its reader, {NAMES[recorded]}, is no longer installed" if gone else "")
-    left = codex.record(top, target, "Grill") if gone else {}
-    left = left.get("conversation") if recorded == "codex" else (left.get("claude") or {}).get("id")
+    left = (saved.get("conversation") if recorded == "codex" else (saved.get("claude") or {}).get("id")) if gone else None
     is_native = repo.route(config, reader, command="read", item=target) == "native"
     models = (antigravity.ready(config, "grill", False) if reader == "antigravity" else
               worker.ready(top, config, "Grill", reader == "codex", native=is_native))
@@ -310,8 +311,7 @@ def _read(args: Any, top: Path, doc: Path, notes: Path, is_story: bool, config: 
               "reader": reader, "left": left,
               "native": is_native,
               "model": repo.models(config, "grill", reader).get("model", "its own default model"),
-              "reason": f"forge.toml's reviews is {reader}" if config.get("reviews") else
-                        f"forge.toml's tools is {reader}" if config["tools"] != "both" else
+              "reason": f"{selector} is {reader}" if config.get("reviews") or config["tools"] != "both" else
                         "the reader is this session's tool"}
     if is_native:
         return native.offer(top, target, result, prompt, fresh_prompt, why,

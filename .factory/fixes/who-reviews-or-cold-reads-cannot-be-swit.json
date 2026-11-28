@@ -1,0 +1,126 @@
+{
+  "base": "4a47d4e4feebaaa003743821e9a6b0fff31f467d",
+  "branch": "fix/who-reviews-or-cold-reads-cannot-be-swit",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a2208c-1388-7a62-a62e-c3f70f302824",
+    "head": null,
+    "start": "72ee2a7204cea5557abb6983a354c7b8498b3b03"
+  },
+  "done_when": "A reviews line in forge.local.toml picks this clone reviewer with the same values as forge.toml, and naming the family that built the item is refused with a message that points to forge.local.toml.",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "_with_local() in src/forge/repo.py",
+      "file": "src/forge/repo.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 687,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A local cold-reader choice cannot provision the selected SDK",
+      "work": 2
+    },
+    {
+      "area": "review_family() in src/forge/roles.py",
+      "file": "src/forge/roles.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 89,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Refuse a reviewer that built an earlier round of the item",
+      "work": 3
+    },
+    {
+      "area": "_with_local() in src/forge/repo.py",
+      "file": "src/forge/repo.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 687,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Refresh default-branch rules before a locally configured cold read",
+      "work": 1
+    },
+    {
+      "area": "test_1_local_reviews_selects_the_cold_reader() in tests/test_personal_review_choice.py",
+      "file": "tests/test_personal_review_choice.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 25,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A local reviews line selects the cold reader",
+      "work": 2
+    },
+    {
+      "area": "test_2_local_reviews_selects_the_reviewer_and_refuses_the_builder() in tests/test_personal_review_choice.py",
+      "file": "tests/test_personal_review_choice.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 35,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A local reviews line refuses a family that built the item",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "6b3614c4abde6ca89f85994b69487f3556959c4a74ff8836651f056e113a6139",
+    "changed": "3a3d45b0cdec5b3d4d92eb1c6ab46b5a74aa0f2f0435096ad9656df03b8fc300",
+    "commit": "94cc578ecf54782d102577ffca9d82214b2d3d49",
+    "dismissals": [],
+    "findings": [],
+    "id": "1971edd7-130e-4b2a-a70e-17b355b22339",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-28T05:05:40.970100+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-28T05:06:19.375909+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T08:35:41.029529+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T08:36:01.611510+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T09:00:29.211201+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "2eb174a7-f567-4553-a340-e63fe10ef04a",
+    "head": "ceace38a8324ec23de40bc2a5c6a27cd09734498",
+    "keys": {},
+    "round": 1
+  },
+  "why": "Who reviews or cold reads cannot be switched for one clone without editing the shared forge.toml, which the owner rule of 28 Nov 2026 says must never be needed, for clients too.",
+  "worker": "codex"
+}
