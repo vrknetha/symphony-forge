@@ -1,7 +1,159 @@
 {
   "branch": "task/FORGE-PRUSAGE-1-USAGE",
+  "known": [
+    {
+      "area": "_usage_lines() in src/forge/time_records.py",
+      "file": "src/forge/time_records.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 623,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The block shows input, cached input and output tokens for build, review and plan read, each apart.",
+      "work": 3
+    },
+    {
+      "area": "_usage_lines() in src/forge/time_records.py",
+      "file": "src/forge/time_records.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 606,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A task or fix pull request's \"How it went\" block has a build line with the builder model and effort",
+      "work": 2
+    },
+    {
+      "area": "test_1_pr_how_it_went_shows_build_model_and_effort() in tests/test_pr_usage_summary.py",
+      "file": "tests/test_pr_usage_summary.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 52,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A task or fix pull request's \"How it went\" block has a build line and unchanged round lines",
+      "work": 1
+    },
+    {
+      "area": "test_2_pr_how_it_went_shows_token_totals_coverage_and_shortened_history() in tests/test_pr_usage_summary.py",
+      "file": "tests/test_pr_usage_summary.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 87,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The block shows input, cached input and output tokens for build, review and plan read, each apart",
+      "work": 2
+    },
+    {
+      "area": "test_3_pr_how_it_went_shows_change_size_for_fix_and_task() in tests/test_pr_usage_summary.py",
+      "file": "tests/test_pr_usage_summary.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 123,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: When the work is ready, the block shows S, M or L with the lines and the number of product files",
+      "work": 2
+    },
+    {
+      "area": "_append_events() in tests/test_pr_usage_summary.py",
+      "file": "tests/test_pr_usage_summary.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 18,
+      "outcome": "open",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: the model and token proofs fabricate Forge's internal event records",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "bb99649b85fc1acbb46faf79371f9c42de0282fe14b56c4b18a60c2783c8743e",
+    "changed": "6fc444b355416028836557a5e26164e8b53a157b8706829a3f20175d23fe16a9",
+    "commit": "fbd06ac9c1be1e83cd1ddacf45e94c36bc8b3cee",
+    "dismissals": [],
+    "findings": [
+      {
+        "body": "Gain 5, Work 3, Harm 3\nRaise: Not done\nCase: normal use - a story is read and then implemented as tasks. The new read bucket has no normal pull request on which to render: `story.py:349` records the read under the story key, while `close.py:652-656` closes only task and fix branches, and `story.py:1187-1190` says story completion opens no separate pull request. Task histories do not load their parent story's events. The approved decision excludes copying those tokens to task pull requests, but the story's plan-read tokens consequently appear in no Forge-created pull request.",
+        "file": "src/forge/time_records.py",
+        "gain": 5,
+        "harm": 3,
+        "line": 623,
+        "priority": "P1",
+        "title": "Not done: The block shows input, cached input and output tokens for build, review and plan read, each apart.",
+        "work": 3
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - an Antigravity model exposes no thinking-level setting. `antigravity.py:514-516` records the actual model with `effort=None` and reports that it ran at its own level. This fallback instead takes the requested effort from the start event, and the presence of an end-event model prevents the `requested` label. The pull request therefore presents an unconfirmed effort as the effort actually used.",
+        "file": "src/forge/time_records.py",
+        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
+        "gain": 3,
+        "harm": 3,
+        "line": 606,
+        "priority": "P1",
+        "title": "Not done: A task or fix pull request's \"How it went\" block has a build line with the builder model and effort",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - a pull request displays a completed build. The proof only searches the entire body for `Build: ...` and `built at low`; it would still pass if the build line moved outside How it went, appeared before the rounds, or the existing round line gained extra model text. The other usage assertions also search the entire body, so they do not establish that their lines are in the required block.",
+        "file": "tests/test_pr_usage_summary.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 52,
+        "priority": "P1",
+        "title": "Test: A task or fix pull request's \"How it went\" block has a build line and unchanged round lines",
+        "work": 1
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a plan read is published, a review is retried, or close refreshes an existing pull request. This proof supplies no plan-read run and only one token-reporting review run, so it passes if plan-read totals disappear or a review retry is omitted. It also never supplies `first_body` back to the GitHub stub: `test_close.py:310` continues to return no pull request, so the second close creates a fresh body instead of combining published and local history. A defect that double-counts a retained run during a real refresh would pass.",
+        "file": "tests/test_pr_usage_summary.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 87,
+        "priority": "P1",
+        "title": "Test: The block shows input, cached input and output tokens for build, review and plan read, each apart",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a change removes product lines, changes several product files, or contains tests or generated files. Every nonempty size example adds lines to one file, and the only zero-product example changes documentation. The proof would pass if removed lines were ignored, the file count were always one, or tests and generated files were counted in the displayed size. It also does not check the promised 100- and 400-line boundaries.",
+        "file": "tests/test_pr_usage_summary.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 123,
+        "priority": "P1",
+        "title": "Test: When the work is ready, the block shows S, M or L with the lines and the number of product files",
+        "work": 2
+      },
+      {
+        "body": "Gain 3, Work 2, Harm 3\nRaise: Gate\nCase: normal use - a real worker or reviewer produces the history that close publishes. Tests 1 and 2 append handcrafted records directly to `.git/forge/events.jsonl` instead of generating them through Forge with provider responses faked at the external edge. They can pass when a real run stops recording the fields used by the new summary, and a behavior-preserving change to the private event format can break them. The required command-level proof must cover the producer-to-pull-request path.",
+        "file": "tests/test_pr_usage_summary.py",
+        "gain": 3,
+        "harm": 3,
+        "line": 18,
+        "priority": "P1",
+        "title": "Gate: the model and token proofs fabricate Forge's internal event records",
+        "work": 2
+      }
+    ],
+    "id": "969a3824-ad07-4e2a-8886-e52c4023ebac",
+    "status": "blocked"
+  },
   "round": 1,
-  "status": "working",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-28T02:02:16.264459+00:00",
@@ -11,6 +163,10 @@
       "at": "2026-11-28T02:02:34.623571+00:00",
       "round": 1,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-28T02:18:18.592309+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
