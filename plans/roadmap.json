@@ -756,6 +756,12 @@
       "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-ITEMTOOL-1",
+      "title": "Choose a builder for one item",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [

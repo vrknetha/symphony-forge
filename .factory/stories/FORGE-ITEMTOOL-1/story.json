@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-ITEMTOOL-1.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-28T01:17:28.183715+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Choose a builder for one item",
+  "touches": 0
+}
