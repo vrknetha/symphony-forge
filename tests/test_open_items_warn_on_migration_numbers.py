@@ -56,9 +56,11 @@ def test_1_next_and_close_warn_without_refusing_duplicate_migration_numbers(env,
     assert warnings == [warning + " Change one number before merge."]
     calls = [json.loads(line)["argv"][1:] for line in trace.read_text("utf-8").splitlines()
              if json.loads(line)["event"] == "start"]
-    peer_diffs = [args for args in calls if args[:1] == ["diff"]
-                  and any(peer_tip in arg for arg in args)]
-    assert len(peer_diffs) == 1, peer_diffs
+    # Next also checks newly fetched fixes for file overlaps.
+    migration_diffs = [args for args in calls if args[:1] == ["diff"]
+                       and any("migrations/" in arg for arg in args)
+                       and any(peer_tip in arg for arg in args)]
+    assert len(migration_diffs) == 1, migration_diffs
     assert sum(args[:1] == ["fetch"] for args in calls) == 1, calls
     # The next push leaves this checkout's newly discovered peer ref out of date.
     repo.git("mv", "db/migrations/0002_orders.sql", "db/migrations/0004_orders.sql", cwd=other)
