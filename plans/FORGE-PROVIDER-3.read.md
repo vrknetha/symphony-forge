@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-28T02:41:02.323237+00:00
-seconds: 887.83
-read_hash: c6bb6185611aa244da763b05b9a60f4105d2992a
-round: 1
+read_at: 2026-11-28T04:26:01.879588+00:00
+seconds: 867.854
+read_hash: 68416d82fb376e9a8881add25d3d8359632c6cd3
+round: 2
 passed: no
-doc_seen: c6bb6185611aa244da763b05b9a60f4105d2992a
+doc_seen: 68416d82fb376e9a8881add25d3d8359632c6cd3
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 4274ead1d37000bd438f70c4b36806c2d3077075
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21ff9-89ae-7012-a3e2-a0bb172d857a
 session:
-loop_choice:
-loop_reason:
+loop_choice: accept
+loop_reason: Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
 ---
 # Cold read notes
 
@@ -182,3 +182,105 @@ Only a genuine trade-off goes to the human, as a question with options.
    Disposition: cut - SIGNIN now writes the first guide section and every later part that adds a command or step edits it in its own change (each part's scope lists the guide files); NEON adds only the Neon lines; checked in `test_1` and `test_6`.
 
 Not checked: real AWS execution. `forge next` could not finish in the read-only sandbox.
+
+## Round 2
+
+22. **Blocking: Not done: item 2: A developer can send commands to another developer’s round box.**  
+    Raise: Security  
+    Case: normal use - two developers use the same AWS setup.  
+    [Story 2’s policy](/Users/ravikiranvemula/Workdir/symphony-forge-story-FORGE-PROVIDER-2/plans/FORGE-PROVIDER-2.md:84) permits `ssm:SendCommand` on every instance with the stack tag. [This plan](/plans/FORGE-PROVIDER-3.md:64) leaves that permission in place and relies on the guide to restrict access. A developer can run a command on another developer’s round box and read its sign-ins, without impersonating its claim.  
+    Gain 5, Work 3, Harm 5
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+23. **Blocking: Not done: item 2: A developer can replace another developer’s round script.**  
+    Raise: Security  
+    Case: normal use - two developers use the same AWS setup.  
+    [Story 2’s policy](/Users/ravikiranvemula/Workdir/symphony-forge-story-FORGE-PROVIDER-2/plans/FORGE-PROVIDER-2.md:84) gives developers list and write access to the shared bucket. [The new round](/plans/FORGE-PROVIDER-3.md:79) runs a script stored there. Another developer can list and replace that script before it runs, causing it to disclose the round owner’s sign-ins.  
+    Gain 5, Work 3, Harm 5
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+24. **Blocking: Not done: item 2: Direct invocation can forge the control URL’s caller identity.**  
+    Raise: Security  
+    Case: normal use - two developers use the same AWS setup.  
+    [Story 2](/Users/ravikiranvemula/Workdir/symphony-forge-story-FORGE-PROVIDER-2/plans/FORGE-PROVIDER-2.md:84) lets developers invoke `webhook` directly with an event they supply. [The new control path](/plans/FORGE-PROVIDER-3.md:62) trusts `requestContext.authorizer.iam.userId` in that event but specifies no check that it came through the authenticated URL. A direct caller can supply that field for another developer; the new test exercises only a signed URL call.  
+    Gain 5, Work 3, Harm 5
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+25. **Blocking: Not done: item 1: A developer can retag another developer’s secret.**  
+    Raise: Security  
+    Case: normal use - two developers save sign-ins in the same stack.  
+    [The setup policy](/plans/FORGE-PROVIDER-3.md:64) permits `TagResource` on every developer’s secret when the *requested* developer tag equals the caller. A caller can therefore replace another secret’s developer and stack tags. [Turn-off](/plans/FORGE-PROVIDER-3.md:66) then misses that secret when it filters by the original stack tag.  
+    Gain 5, Work 2, Harm 4
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+26. **Blocking: Not done: item 2: The new filter can leave a Codex sign-in in the log.**  
+    Raise: Security  
+    Case: normal use - a diagnostic prints the JSON sign-in file.  
+    [The filter](/plans/FORGE-PROVIDER-3.md:80) matches the complete file as raw text or base64. The [Codex driver](/src/forge/codex_turn.py:44) serializes output as JSON, escaping the file’s quotes and newlines. Neither complete-file string matches that encoded output, so its credentials can reach S3. The proposed filter test prints a Claude token, not an encoded sign-in file.  
+    Gain 5, Work 3, Harm 5
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+27. **Blocking: Not done: item 2: The webhook lacks permission to launch a round box.**  
+    Raise: Functional  
+    Case: normal use - the first round needs a new box.  
+    [Story 2](/Users/ravikiranvemula/Workdir/symphony-forge-story-FORGE-PROVIDER-2/plans/FORGE-PROVIDER-2.md:83) grants the webhook permission for its test role and launch template. [The new stack rules](/plans/FORGE-PROVIDER-3.md:64) add neither `iam:PassRole` for `RoundMachineRole` nor `ec2:RunInstances` on its launch template. The [claim](/plans/FORGE-PROVIDER-3.md:75) therefore cannot launch it with the specified permissions. [AWS instance-role permissions](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/permission-to-pass-iam-roles.html).  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+28. **Blocking: Not done: item 2: The Lambda cannot create the tagged session secret.**  
+    Raise: Functional  
+    Case: normal use - a round is placed.  
+    [The plan](/plans/FORGE-PROVIDER-3.md:64) grants the Lambda `CreateSecret` but not `TagResource` on `forge-session/`. AWS requires both when creating a tagged secret. Creating it without the tag would instead make [turn-off’s tag filter](/plans/FORGE-PROVIDER-3.md:66) miss it. [AWS CreateSecret](https://docs.aws.amazon.com/secretsmanager/latest/apireference/API_CreateSecret.html).  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+29. **Blocking: Not done: item 1: The setup policy denies sign-in checks and updates.**  
+    Raise: Functional  
+    Case: normal use - a developer saves or replaces a sign-in.  
+    [The policy](/plans/FORGE-PROVIDER-3.md:64) requires `aws:RequestTag/forge-developer` for `ListSecretVersionIds` and `PutSecretValue`. Those requests do not carry tags, so the condition is not met. The [sign-in command](/plans/FORGE-PROVIDER-3.md:65) cannot verify a first save or update an existing value under that policy. [AWS condition keys](https://docs.aws.amazon.com/service-authorization/latest/reference/list_secretsmanager.html).  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+30. **Blocking: Not done: item 2: The control alias lacks a required invoke permission.**  
+    Raise: Functional  
+    Case: normal use - the laptop makes its first control request.  
+    [The plan](/plans/FORGE-PROVIDER-3.md:64) adds `lambda:InvokeFunctionUrl` on `control`, while story 2 grants `lambda:InvokeFunction` on the unqualified webhook. AWS requires both permissions for a new function URL, and an unqualified function permission does not cover a qualified alias. [AWS URL permissions](https://docs.aws.amazon.com/lambda/latest/dg/urls-auth.html), [AWS function ARN permissions](https://docs.aws.amazon.com/lambda/latest/dg/lambda-api-permissions-ref.html).  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+31. **Blocking: Not done: item 3: The setup policy cannot start the sign-in session.**  
+    Raise: Functional  
+    Case: normal use - a developer signs in to Codex for the first time.  
+    [The sign-in steps](/plans/FORGE-PROVIDER-3.md:90) require `aws ssm start-session`, but [the new developer policy](/plans/FORGE-PROVIDER-3.md:64) does not grant `ssm:StartSession` or the data-channel permission. Story 2 grants command permissions, not session permissions. [AWS session policy example](https://docs.aws.amazon.com/systems-manager/latest/userguide/getting-started-default-session-document.html).  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+32. **Blocking: Not done: item 3: The Lambda cannot read the sign-in copy-back secret.**  
+    Raise: Functional  
+    Case: normal use - the first Codex sign-in finishes, or a Codex round refreshes it.  
+    [The copy-back steps](/plans/FORGE-PROVIDER-3.md:90) require the Lambda to read `forge-session/...-back`. [Its policy](/plans/FORGE-PROVIDER-3.md:64) grants `GetSecretValue` only on `forge-<RepoId>/*`, so the copy cannot occur and the refreshed sign-in cannot be saved before release.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+33. **Blocking: Not done: item 3: The interactive helper is not given its session secret name.**  
+    Raise: Functional  
+    Case: normal use - a developer signs in to Codex for the first time.  
+    [A round](/plans/FORGE-PROVIDER-3.md:75) receives its session token in its SSM command, and the machine’s user data has no session name. The [interactive steps](/plans/FORGE-PROVIDER-3.md:90) start only a shell and run `keep-signin codex` without that token. The helper has no specified way to find the session or its `-back` secret.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+34. **Blocking: Not done: item 1: Deleted session copies can remain after AWS is turned off.**  
+    Raise: Security  
+    Case: normal use - a round ends, then the developer turns AWS off.  
+    [The round](/plans/FORGE-PROVIDER-3.md:80) deletes its one-use secret without specifying immediate deletion. AWS normally schedules deletion with a recovery window, and [the planned `list-secrets` call](/plans/FORGE-PROVIDER-3.md:66) excludes secrets already scheduled for deletion. Turn-off can report completion while recoverable copies of sign-ins remain. [AWS deletion](https://docs.aws.amazon.com/secretsmanager/latest/userguide/manage_delete-secret.html), [AWS list-secrets](https://docs.aws.amazon.com/cli/latest/reference/secretsmanager/list-secrets.html).  
+    Gain 4, Work 2, Harm 4
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
+
+35. **Advisory: Not done: item 2: Round boxes cannot read approved test files.**  
+    Raise: Functional  
+    Case: normal use - a repository’s tests need an approved test file.  
+    [The round steps](/plans/FORGE-PROVIDER-3.md:77) say the box reads story 2’s test-files secret. Neither [the round role nor the Lambda role](/plans/FORGE-PROVIDER-3.md:64) can read that secret, and the session copy contains only the GitHub and provider sign-ins. The planned test can pass without running a test that needs an approved file.  
+    Gain 4, Work 2, Harm 3
+
+Not checked: real AWS execution. `forge next` could not finish in the read-only sandbox.
+   Disposition: keep - Owner accepted; note 22 becomes a must-fix line (owner tag on each box, commands allowed only on your own boxes)
