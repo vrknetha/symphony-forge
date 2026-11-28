@@ -60,7 +60,7 @@ REFUSALS = {
               'forge close {item} --resolve <switch|same|narrow|split> --reason "<human\'s choice>"'),
     "chosen": ("The owner's choice is recorded; the worker's next round follows it.", "forge work {item}"),
     "unsynced": ("This {kind} changes Forge's version, but {files} {verb} what forge sync writes "
-                 "for it.", "forge sync in {path}, commit what it wrote, then forge close {item}"),
+                 "for it.", "{sync_cmd} in {path}, commit what it wrote, then forge close {item}"),
     "unsynced_forge": ("This {kind} pins Forge {pinned}, but Forge {installed} is running close, "
                        "so it can't tell whether the {kind}'s files are what {pinned} writes.",
                        "uv tool install symphony-forge=={package_version}, "
@@ -835,16 +835,25 @@ def _synced(top: Path, item: str, changed_files: list[str]) -> None:
     repo.git("worktree", "add", "-q", "-b", branch, str(check), "HEAD", cwd=top)
     try:
         cfg = repo.config(check)
-        sync.write(check, cfg)
-        if cfg.get("repo") == "forge-source":
-            sync.write_file(check, "docs/commands.md", sync.command_page())
+        is_source = cfg.get("repo") == "forge-source"
+        if is_source:
+            script = ("from forge import repo, sync; top = repo.root(); "
+                      "sync.write(top, repo.config(top)); "
+                      "sync.write_file(top, 'docs/commands.md', sync.command_page())")
+            repo.run(sys.executable, "-B", "-c",
+                     f"import sys; sys.path.insert(0, {json.dumps((check / 'src').as_posix())}); {script}",
+                     cwd=check).check_returncode()
+        else:
+            sync.write(check, cfg)
         stale = synced_changes(check)
     finally:
         repo.git("worktree", "remove", "-f", str(check), cwd=top)
         repo.git("branch", "-D", branch, cwd=top)
     if stale:
         repo.refuse(REFUSALS["unsynced"], kind=kind, files=", ".join(stale),
-                    verb="aren't" if len(stale) > 1 else "isn't", path=top, item=item)
+                    verb="aren't" if len(stale) > 1 else "isn't",
+                    sync_cmd="uv run --frozen forge sync" if is_source else "forge sync",
+                    path=top, item=item)
 
 
 def generated_fix_proof(done: str, evidence: str, item: str) -> str:
