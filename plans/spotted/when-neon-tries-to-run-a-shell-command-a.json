@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tNot done: Close cannot recover from an ID-only shell denial\twhen-neon-tries-to-run-a-shell-command-a",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 412,
+      "text": "Not done: Close cannot recover from an ID-only shell denial",
+      "from": "blocking",
+      "item": "when-neon-tries-to-run-a-shell-command-a",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/antigravity.py\tPreserve the first turn's usage when the follow-up fails\twhen-neon-tries-to-run-a-shell-command-a",
+      "kind": "bug",
+      "path": "src/forge/antigravity.py",
+      "line": 544,
+      "text": "Preserve the first turn's usage when the follow-up fails",
+      "from": "blocking",
+      "item": "when-neon-tries-to-run-a-shell-command-a",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_neon_review_recovers_after_shell_denial.py\tTest: Close gets a valid Neon review after a denied shell command\twhen-neon-tries-to-run-a-shell-command-a",
+      "kind": "bug",
+      "path": "tests/test_neon_review_recovers_after_shell_denial.py",
+      "line": 13,
+      "text": "Test: Close gets a valid Neon review after a denied shell command",
+      "from": "blocking",
+      "item": "when-neon-tries-to-run-a-shell-command-a",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
