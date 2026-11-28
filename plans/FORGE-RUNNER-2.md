@@ -1,69 +1,72 @@
-# Keep approved work moving without reminders
+# Keep builders and test places full without anyone watching
 
-<n> parts · Risks: ... · New moving parts: ...
+3 parts · Risks: none one-way; four accepted limits · New moving parts: none
 
 ## What changes for you
 
-- Forge keeps available build and test places busy whenever approved work is ready, even with no coordinator chat open.
-- Forge sends questions it can answer back to the builder and shows questions that need the owner in a desktop notice and the coordinator chat’s status line.
+- The background runner (the helper Forge starts by itself) now takes every approved story part and every started fix that has had any recorded activity in the last 7 days. Today it skips all work approved or started before the day it first ran on your computer, so older work waits for a coordinator to start it by hand. Work that has been quiet for more than 7 days is not started on its own, so an upgrade never wakes old abandoned items. It starts again as soon as a person touches it. (Source: your decision of 28 Nov 2026)
+- The runner stays on while any work is left, and ends when nothing is left. About every 30 seconds it looks for a part that is ready and starts it, so a free builder place or test place is used at once, with no Forge command needed. The rules that make a part wait (its files overlap another part, or the places are in use) stay as they are. A runner that is running old Forge code starts a fresh copy of itself, so one old copy can no longer fail every cycle on settings it does not understand. (Source: your decision of 28 Nov 2026)
+- When a builder asks a question that the repo's files, the approved plan, or a decision you recorded already answers, Forge sends the answer back to the builder and the work goes on. Forge answers at most two questions per item. It never answers a question about approving a plan, widening what a part may change, accepting a known defect, or another review round or a split, unless a standing choice of yours already covers it. (Source: your decision of 28 Nov 2026)
+- Everything else reaches you as one desktop notice, and in the coordinator chat. An open chat keeps one background wait (`forge next --wait`) that returns when the first new stop appears, not when all runs end, and tells you in one line what the item needs. (Source: your decision of 28 Nov 2026)
+- What each repo gets: a new repo gets all of this from setup. An existing repo gets it when it upgrades to the release that has this story, and `forge sync` refreshes the guide. No setting is added and no record changes. Stops you set before the upgrade stay. Work quiet for more than 7 days at the upgrade stays quiet. (Source: your decision of 28 Nov 2026)
+
+Design: none (no screen changes)
 
 ## Why
 
-The runner skips work approved or started before its first start on the machine and can exit while unfinished work still needs attention. On 28 November, two stops waited 28 and 29 minutes while four test places were free. Two earlier stops waited 6 hours 14 minutes and 4 hours 54 minutes.
+On 28 Nov 2026, Astra read Forge's records and found a gap of 27 minutes 43 seconds (14:32:07 to 14:59:50 IST) with no builder running, while four local test places were free at 14:59. In that time a question about test timing waited 27m 43s and a review decision waited 29m 02s. Earlier stops waited 6h 14m (a scope question) and 4h 54m (a stuck builder). These waits overlap, so they are not added up. The records do not measure the total avoidable idle hours, and they do not show whether a desktop notice was delivered or read.
+
+From the code (not from the records), three things keep places empty: the runner skips work older than its first start, it ends when nothing it started is still running even if stopped items or unstarted parts remain, and it looks for new work only after a Forge command, a merge or a retry. A runner that lives longer also keeps old code: for about an hour it failed every cycle with "forge.local.toml can't set reviews" because it ran older code than the checkout's settings.
 
 ## Done when
 
-1. **On its first start, the runner picks up eligible stories approved earlier and fixes started earlier without another Forge command.**
-2. **While approved work remains, the runner stays on and starts the next ready build or test as soon as a suitable place frees up.**
-3. **When an item stops, the runner reads its Forge next step and sends an answer supported by the repo, approved scope, or a recorded owner decision back to the builder through Forge’s work note.**
-4. **When an item needs the owner, the desktop notice and coordinator chat status line show what needs a decision while other ready work continues.**
-5. **The shared guide tells an open coordinator chat to keep one background wait that returns on the first new stop.**
+1. **The runner picks up every approved story part and started fix that has recorded activity in the last 7 days, whenever this computer first ran the runner. Work quiet for more than 7 days is not started on its own, and the first-start date is gone.**
+2. **While any such work is left, the runner stays on and, within about 30 seconds of a place freeing, starts each ready part with no Forge command. Overlap waits and place lines are unchanged, it ends when no work is left, and a runner whose Forge code changed on disk starts a fresh copy.**
+3. **A builder question that the repo, the approved plan or a recorded decision answers goes back through `forge work <item> --note`, at most twice per item, with a source Forge has checked.**
+4. **Every other stop, and every question about a plan approval, wider scope, a known defect, or another review round or split, is not answered by Forge. It reaches you as one desktop notice, and a failed answer step falls back to you.**
+5. **`forge next --wait` returns on the first new unresolved stop (or says no work is left), and the shared guide tells an open chat to keep one such wait and tell you the stop in one line.**
+6. **A new repo gets all of this at setup and an existing repo on upgrade, keeping stops you set before.**
 
 ## Risks
 
-<!-- Each one-way step: deleting data, a destructive migration, a new vendor. -->
+Risks: none one-way. Each part reverts with its pull request.
 
-Risks: none
+Accepted limits:
+- A model reading the repo can answer wrongly. The answer still goes through the builder's tests and code review, is limited to two per item, and is written in the item's record so you can see it.
+- An item abandoned for 6 days starts when the runner next looks. Only items quiet for more than 7 days are left alone.
+- Windows gets no desktop notice, so the chat's background wait is its only way to hear of a stop, and only while a chat is open.
+- A runner left on looks at local records about every 30 seconds while work is left. That cost is not measured.
 
 ## For the builders
 
 <!-- Everything from here down is for the agents. The owner doesn't see it when approving, and
 tightening it needs no new approval. -->
 
+Line numbers are on main at `d61aeee20` (28 Nov 2026) and approximate; search for the named symbol.
+
 ### Done-when details
 
-<!-- Under each Done-when item's number: its evidence, edge cases and the tests that prove it.
-Workers and reviewers get the entries of the items they cover. An item with nothing to add has
-no entry. -->
-
-1. <Evidence, edge cases and the tests that prove item 1.>
+1. **The cutoff.** In `src/forge/runner.py`, `_installed_at`, `_installed_file`, `record_install`, `_story_eligible`, `_item_eligible` and the `cutoff` argument of `_has_approved_unstarted` compare an approval or start time with `~/.config/forge/runner-installed-at`. Replace them with one function that says an item is current when the newest recorded time is within `CURRENT_DAYS = 7` of now (the seven days `forge doctor` already uses for a started fix with no work commits). For a story: the newest of `approval.at` and the `at` of every step in its parts' state files (`repo.state_path`). For a fix or task: the newest `at` in `state["steps"]`. Delete the install file code, the call in `src/forge/cli.py` (about :163-166) and the test helper `_mark_installed_before`; leave an old `runner-installed-at` file on disk, unread. Tests, new file `tests/test_runner_keeps_work_moving.py`, `STORY = "FORGE-RUNNER-2"`, `test_1_...` on a repo made by `forge init`, with `fake_clock` and the helpers of `tests/test_runner_moves_approved_work_to_merge.py` (`_install_multi_gh`, `_wait_for`, `runner_cleanup`): a story approved 3 days ago and a fix started 3 days ago, both before the runner's first start, are built and merged; a fix started 8 days ago with no later step is not started; a story approved 8 days ago whose first part merged yesterday has its second part started. Changed: `tests/test_runner_moves_approved_work_to_merge.py` (the "left alone" case at about :435 becomes the 8-day case; the install-file asserts go).
+2. **Staying on.** The loop returns at about :549-554 when `running`, `polling`, `retries`, `repo_retries` and `pass_needed` are empty, and passes run only for a Forge command (wake), a merge or a retry. Change it so that: every remembered repo is added to `pass_needed` each `FORGE_RUNNER_PASS` seconds (default 30; a test sets it small); a pass that finds no current unfinished item in any repo ends the runner as today, with no GitHub call (`tests/test_runner_ends_when_idle.py` must still pass); and a stopped or parked item counts as unfinished while it is current, so the runner stays on until the owner answers. No new place logic: `nextstep.startable` and `forge task start` and `forge land` already apply the overlap rule and the place queue. First reproduce the 28 Nov gap in a test that fails today: two ready parts, one stopped item, a person merging a pull request with no Forge command, and check the second part starts within the pass time. The fresh-copy rule: at start the runner notes the newest change time of Forge's own source files; at a pass with no `land` run in progress, if it changed, it releases the lock, starts a fresh runner and ends. Keep one runner at a time (the existing lock). This is the cheap one-line answer to the old-code failure: if it cannot be done in about 20 lines, drop it and say so in the commit. Test `test_2_...`: run the runner from a copy of the Forge package in a temp folder, touch one file there, and see the runner's process id change while the lock is never held by two.
+3. **Answering.** Where `_loop` calls `stops.ended` for an item that needs the owner (about :332, :388, :415), first call a new `stops.try_answer(top, item)` in `src/forge/stops.py`. It runs only when `forge next` for that item (run in the item's checkout) ends with the line `Next: forge work <item> --note "<answer>"`, which is how a builder question shows; every other Next line (review limit, size choice, tool setup, human merge, a stuck run) returns "not answered" at once. It asks one read-only turn the way `forge ask` does (`src/forge/ask.py`, model from `[models.ask]`) with a prompt Forge builds: the question, the part's Done-when entries and Scope, the names of files under `docs/decisions` and `docs/specs`, the owner's standing settings in `forge.toml`, and the reserved matters in plain words. The reply must start `ANSWER:` and carry a `Source:` line naming a file that exists in the repo or the story doc; otherwise (or on `OWNER:`, an empty reply, a missing tool, or any error) Forge returns "not answered". Forge counts earlier automatic answers from the item's event record (`repo.record_event(top, item, "auto answer", question_id=..., source=...)`, written for each answer) and returns "not answered" at two. On an answer it runs `forge work <item> --note "<answer>"` as a child, as the coordinator would, and does not call `stops.ended`; the next pass continues the item with `forge land`. Tests, new file `tests/test_runner_answers_builder_questions.py`, `test_3_...` and `test_4_...`: a stub worker asks a question the story doc answers, the stub answer cites `plans/<KEY>.md`, and the item is built and merged with no notice; an answer with no `Source:`, a source that does not exist, and an `OWNER:` reply each end in the desktop notice (the stub of `tests/test_runner_stops_one_item_and_tells_the_owner.py`); the third question of one item goes to the owner; a review-limit stop, a size question and a human-merge wait never call the answer step; a question that asks to widen scope goes to the owner (the stub answerer replies `OWNER:` and the test checks the prompt names the reserved matters); with no answering tool installed the existing notice still arrives.
+4. **Everything else.** Covered by the same tests and by `tests/test_runner_stops_one_item_and_tells_the_owner.py`, which keeps passing (its questions have no installed answerer and fall back to the owner). Windows still sends no pop-up (`stops._notify`).
+5. **The wait.** Add `--wait` to `next` in `src/forge/nextstep.py` (its `args` is empty today). `nextstep.py` is 1,198 lines: the part may add at most two lines there, calling one function in `stops.py`, or must move a helper out first and end at or below 1,200. In `stops.py`, `wait_for_stop(top)` takes the open stops now (items whose `told` signature still matches, via `parked`, or in `stopped`, not merged), polls local records every `FORGE_RUNNER_TICK` seconds with no GitHub call, and on the first stop not in that first list prints `<item> needs you:` and the notice text from `_notice_body`, then `Next:` and exits 0; when no current work is left it prints `No work is left.` and exits 0. In `src/forge/templates/skill.md`, change the runner paragraphs (about :231-240 and :1968-1971, where "the background runner keeps moving work without a chat watching it" stands): an open chat starts `forge next --wait` in the background, tells the owner each stop in one line when it returns, answers what is its to answer, and starts the wait again; the guide says the wait returns on the first new stop, not when all runs end. Run `forge sync` so `docs/commands.md` and the two synced `SKILL.md` copies match. Tests, new file `tests/test_runner_wait_for_stop.py`, `test_5_...`: with one stopped item already open, `--wait` stays silent until a second item stops, then prints that item and its Next line; it prints `No work is left.` when everything has merged; it makes no GitHub call. `test_6_...` in the same file, on a repo made by `forge init`: the synced guide copies in `.claude/skills/forge/SKILL.md` and `.codex/skills/forge/SKILL.md` contain the wait rule and the 7-day rule, and a stop recorded in `runner.json` before the code change is still shown by `--wait` as open.
+6. **Clients.** No new command, no setting, no change to the `runner.json` format. The runner lives in the installed Forge release and the guide is synced, so a new repo gets this from `forge init` and an existing repo on `forge upgrade`; `tests/test_upgrade_to_installed_release.py` is not extended. The age rule is tested on a new repo with aged records (see item 1).
 
 ## Tasks
 
-<!-- One row per task. Covers: the Done-when numbers it delivers, at most three. Scope: the paths
-it may change. Before writing each Scope, search the code for the files the task needs. The plan
-check refuses two tasks whose Scope paths have the same prefix up to the first wildcard, unless
-one waits for the other through After, directly or through another task; it names both tasks.
-Paths with a segment named `tests`, `test`, `__tests__` or `spec` do not cause Scope overlaps
-and can be shared without an After link. Explicit After links still apply.
-When tasks need the same production file, put it in the first task's Scope with the shared names and stubs;
-tasks that need them wait for that task through After and then own only their files. Keep a file
-that a script can make at build time out of the repo and out of every Scope; when the repo keeps such
-a file on purpose, give its change to one part that the others wait for. Tests: the
-tests it adds or changes. After: the tasks it waits for. When two tasks share a function, field,
-file format or command, the first task pins it: it commits the shared names and stubs plus one
-test that crosses both sides, and the tasks that use it list it under After. Split tasks so each
-owns its files; shared lines (command table, guide list, registry) go to one task or a small last
-wiring task; After only when a task needs another task's code. The
-Developer column is optional: the lead fills or changes a GitHub username here, below For the
-builders, without another approval. Leave it blank for an unassigned part. Forge next uses
-the caller's GitHub login; another developer may start it with a warning. Existing tables
-without Developer still work. The moving-parts line stays last: "none", or each new dependency, service, datastore,
-queue, background job or abstraction layer, with the Done-when item that needs it. -->
-
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
+| STAY | The runner stays on and takes recent work | 7-day rule in place of the first-start date, a 30-second pass while work is left, a fresh copy on new code | 1, 2 | `src/forge/runner.py`, `src/forge/cli.py`, `src/forge/templates/skill.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_runner_keeps_work_moving.py` (new); changed: `tests/test_runner_moves_approved_work_to_merge.py` | | no | |
+| ANSWER | Answer builder questions the sources answer | One bounded answer step before a stop reaches the owner, at most twice per item | 3, 4 | `src/forge/runner.py`, `src/forge/stops.py`, `src/forge/templates/skill.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_runner_answers_builder_questions.py` (new) | STAY | no | |
+| WAIT | A chat wait that returns on the first new stop | `forge next --wait` and the guide rule for an open chat | 5, 6 | `src/forge/stops.py`, `src/forge/nextstep.py`, `src/forge/templates/skill.md`, `docs/commands.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_runner_wait_for_stop.py` (new) | ANSWER | no | |
 
 New moving parts: none
 
 ## Notes
+
+- Why a chain: all three parts change `skill.md` and its synced copies, and STAY and ANSWER both change `runner.py`; ANSWER and WAIT both change `stops.py`. Each part is small.
+- Cost check for ANSWER (F x H >= 2 x C): F 3 if stops happen daily (two question stops on 28 Nov alone; not measured over a longer time), H 2, C 3 (one model call and a new flow): 6 against 6, at the edge. If stops are less frequent it fails the bar. STAY and WAIT do not depend on it, so the owner can drop ANSWER at approval and keep the other two.
+- The owner's idea of the coordinator chat's status line ("Session status updated") is shown by Claude Code's own hooks. No code in this repo prints it, so this story does not change it; the chat sees a stop through the `--wait` result. Not verified in a live chat.
+- Out of scope: a system service that survives a restart (the runner still starts on the next Forge use); an automatic answer to any stop that is not a builder question; changing who may accept a defect or choose another review round.
+- Measure after the release, with existing events only: minutes with no builder while ready parts exist, minutes between a stop and its answer, and the number of automatic answers per item.
