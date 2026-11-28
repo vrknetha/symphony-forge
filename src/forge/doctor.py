@@ -112,29 +112,37 @@ def _cleanup_prs(gh: str, top: Path, branches: dict[str, Path]) -> list[tuple[st
     return prs
 
 
-def _finished(top: Path, main: Path) -> list[tuple[Path, str, str, str]]:
+def _finished(top: Path, main: Path) -> list[tuple[Path, str, str, str, bool]]:
     gh = shutil.which("gh")
-    if not gh: return []
     trees = {branch: path for branch, path in story.worktrees(top).items()
              if branch.startswith(("story/", "task/", "fix/", "forge/"))
-             and path.resolve() not in (main, top.resolve()) and path.is_dir()
-             and not (path / ".gitmodules").exists()}
+             and path.resolve() != main and path.is_dir()}
     if not trees: return []
 
-    by_head = set(_cleanup_prs(gh, top, trees))
+    current = top.resolve()
+    pr_branches = {branch: path for branch, path in trees.items() if path.resolve() != current}
+    by_head: set[tuple[str, str, str]] = set()
+    if gh and pr_branches:
+        with suppress(AttributeError, KeyError, TypeError, OSError, ValueError, subprocess.SubprocessError):
+            by_head = set(_cleanup_prs(gh, top, pr_branches))
     open_branches = {branch for branch, _, state in by_head if state == "OPEN"}
-    reported = {branch for branch, _, _ in by_head}
     # Old lane entries recorded the checkout as "repo", including while they waited for a place.
     live = {Path(folder).resolve() for run in machine.entries()
             if (folder := run.get("checkout_root") or run.get("repo"))}
+    landed = repo.git("rev-parse", story.landed_ref(top), cwd=top)
+    main_tree = repo.git("rev-parse", f"{landed}^{{tree}}", cwd=top)
     closed = {}
     found = []
     for branch, path in trees.items():
-        if branch not in reported or branch in open_branches or path.resolve() in live: continue
         head = repo.git("rev-parse", f"refs/heads/{branch}", cwd=top)
+        held = path.resolve() in live or path.resolve() == current or branch in open_branches
         if (branch, head, "MERGED") in by_head:
-            found.append((path, branch, head, "merged"))
-        elif (branch, head, "CLOSED") in by_head:
+            found.append((path, branch, head, "merged", held))
+            continue
+        trial = repo.run("git", "merge-tree", "--write-tree", "--no-messages", landed, head, cwd=top)
+        if trial.returncode == 0 and trial.stdout.strip() == main_tree:
+            found.append((path, branch, head, "in main", held))
+        elif not held and (branch, head, "CLOSED") in by_head:
             closed[f"refs/heads/{branch}"] = (head, path, branch)
     if closed:
         heads = repo.run("git", "ls-remote", "--heads", "origin", *closed, cwd=top, timeout=10)
@@ -143,7 +151,7 @@ def _finished(top: Path, main: Path) -> list[tuple[Path, str, str, str]]:
                 head, _, ref = line.partition("\t")
                 if ref in closed and head == closed[ref][0]:
                     _, path, branch = closed[ref]
-                    found.append((path, branch, head, "closed"))
+                    found.append((path, branch, head, "closed", False))
     return found
 
 
@@ -211,8 +219,9 @@ def _remove_finished(main: Path, path: Path, ref: str, head: str, report, *,
             scratch.rmdir()  # Never delete files if Git could not move the worktree back.
 
 
-def tidy_finished(top: Path, *, inspect: bool = False, restore_lock: bool = False, report=None) -> int:
-    """Remove only worktrees whose exact local work is available on GitHub."""
+@repo.command_cache()
+def tidy_finished(top: Path, *, inspect_lock: bool = False, restore_lock: bool = False, report=None) -> int:
+    """Remove finished worktrees whose committed changes are already saved."""
     from forge import board
 
     try:
@@ -225,14 +234,16 @@ def tidy_finished(top: Path, *, inspect: bool = False, restore_lock: bool = Fals
 
     count = 0
     clean = []
-    for path, branch, head, state in finished:
+    kept = dict.fromkeys(path for path, *_ in finished)
+    for path, branch, head, state, held in finished:
         ref = f"refs/heads/{branch}"
         try:
             item = task.branch_item(branch, path)
-            if item and board.active_runs(path, item[0], events.get(item[0], [])): continue
+            if held or item and board.active_runs(path, item[0], events.get(item[0], [])): continue
             if not _removable(path, ref, head): continue
-            if inspect:
+            if inspect_lock and repo.git("status", "--porcelain", "--", "uv.lock", cwd=path):
                 clean.append(str(path))
+                del kept[path]
                 continue
             removed = _remove_finished(main, path, ref, head, report, restore_lock=restore_lock)
             if removed is None: continue
@@ -240,8 +251,10 @@ def tidy_finished(top: Path, *, inspect: bool = False, restore_lock: bool = Fals
                 if report is not None:
                     report(f"Forge couldn't remove {path}: {_last(removed)}",
                            f"unlock it or close programs using it, then {REPAIR}")
+                    del kept[path]
                 continue
             count += 1
+            del kept[path]
             if repo.git("show-ref", "--hash", "--verify", ref, cwd=main) != head: continue
             deleted = repo.run("git", "branch", "-D", branch, cwd=main)
         except (OSError, ValueError, subprocess.SubprocessError, repo.Refused):
@@ -250,8 +263,13 @@ def tidy_finished(top: Path, *, inspect: bool = False, restore_lock: bool = Fals
             if deleted.returncode:
                 report(f"Removed {path}, but its branch {branch} is still here: "
                        f"{_last(deleted).rstrip('.')}.", f"git branch -D {branch}")
+            elif state == "in main":
+                print(f"- Fixed: removed {path}. The default branch already has its changes.")
             else:
                 print(f"- Fixed: removed {path}, whose pull request is {state}.")
+    for path in kept:
+        print(f"Forge kept the finished worktree at {path}.",
+              file=sys.stderr if report is None else sys.stdout)
     if clean and report is not None:
         report(f"{len(clean)} folders hold finished work: {', '.join(clean)}.")
     return count
@@ -608,7 +626,7 @@ def doctor(args: argparse.Namespace) -> int:
                 problem, _, fix = str(refused).partition("\nNext: ")
                 add(problem, fix)
     rows += _unbuilt(top)
-    tidy_finished(top, inspect=not args.fix, restore_lock=args.fix, report=add)
+    tidy_finished(top, inspect_lock=not args.fix, restore_lock=args.fix, report=add)
     rows += _files(top, cfg, wanted, args.fix and pinned == f"v{__version__}")
     if not shutil.which("sh"): add("sh isn't on PATH, so no host hook can run.", "install Git, which brings sh, and put it on PATH")
     elif wanted and sync.read(top / sync.LAUNCHER) != wanted.get(sync.LAUNCHER):

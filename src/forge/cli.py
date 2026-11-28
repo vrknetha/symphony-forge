@@ -137,6 +137,13 @@ def _run(argv: list[str] | None, holding: contextlib.ExitStack) -> int:
                     problem=f"forge {args.words}: unrecognized arguments: {' '.join(extra)}",
                     prog=f"forge {args.words}")
     args.args = extra
+    # These commands own their sweep. Host and Git hooks run as part of other operations.
+    if (top and not args.words.startswith("hook ") and not getattr(args, "dry_run", False)
+            and args.words not in ("doctor", "land", "next", "start")):
+        from forge import doctor
+
+        if removed := doctor.tidy_finished(Path(top)):
+            print(f"Removed {removed} finished folders.", file=sys.stderr)
     if args.words == "work":
         from forge import worker
         holding.enter_context(worker.stop_signals(args))
