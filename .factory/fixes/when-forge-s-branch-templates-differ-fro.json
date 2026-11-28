@@ -1,0 +1,16 @@
+{
+  "base": "8cb98e82154cee06e4c96ba0078a304c9539e119",
+  "branch": "fix/when-forge-s-branch-templates-differ-fro",
+  "done_when": "In v1.2.51, when close finds stale guides in Forge\u2019s own checkout, its Next line tells the user to run uv run --frozen forge sync in the affected checkout, and that command regenerates the guides from the branch\u2019s templates.",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-28T01:02:59.221238+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "When Forge\u2019s branch templates differ from the installed release, the suggested sync can regenerate guides from the installed templates and leave close blocked."
+}
