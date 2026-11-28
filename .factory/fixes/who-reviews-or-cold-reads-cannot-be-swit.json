@@ -142,7 +142,7 @@
     "id": "fbc6b1a7-2e36-4ab6-bf84-fd0d203b1c72",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -157,13 +157,18 @@
     {
       "at": "2026-11-28T08:35:41.029529+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-28T08:36:01.611510+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "46b527e981df70f5c7ed9db87ebbb53d0bcf9328",
+    "close": "2eb174a7-f567-4553-a340-e63fe10ef04a",
+    "head": "ceace38a8324ec23de40bc2a5c6a27cd09734498",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "Who reviews or cold reads cannot be switched for one clone without editing the shared forge.toml, which the owner rule of 28 Nov 2026 says must never be needed, for clients too.",
   "worker": "codex"
