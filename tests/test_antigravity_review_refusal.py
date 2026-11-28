@@ -29,6 +29,7 @@ def test_1_antigravity_review_names_a_refused_tool_when_no_answer(env, repo, mon
                 and row["event"] == "run end" and row["kind"] == "review" and row["outcome"] == "failed"]
 
     title = "Inspect rate limit configuration"
+    usage_by_chat = {}
     for index, (refusal, reply, step) in enumerate((
         ("request", "", title),
         ("update", "", title),
@@ -48,10 +49,14 @@ def test_1_antigravity_review_names_a_refused_tool_when_no_answer(env, repo, mon
         assert "empty output" not in output and "non-JSON output" not in output, output
         runs = failed_reviews()
         assert len(runs) == index * 2
-        sessions = [row["params"]["sessionId"] for row in calls(log) if row.get("method") == "session/prompt"]
+        sessions = list(dict.fromkeys(row["params"]["sessionId"] for row in calls(log)
+                                      if row.get("method") == "session/prompt"))
         assert [row["chat"] for row in runs] == sessions
-        assert all((row["input_tokens"], row["cached_input_tokens"], row["output_tokens"])
-                   == (1200, 1000, 300) for row in runs)
+        # Failed recovery still records both turns' usage against the same session.
+        expected = (1200, 1000, 300) if refusal == "id-only" else (2400, 2000, 600)
+        usage_by_chat.update(dict.fromkeys(sessions[-2:], expected))
+        assert {row["chat"]: (row["input_tokens"], row["cached_input_tokens"], row["output_tokens"])
+                for row in runs} == usage_by_chat
 
     serious = finding("P1", "The greeting omits the reader")
     serious["code_location"].pop("column")

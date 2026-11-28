@@ -567,12 +567,12 @@ KEYS = {"version": str, "repo": str, "stage": str, "workers": str, "reviews": st
         "signoff": str, "sample_data": bool, "runner": str, "test_runner": str, "codex_fast": str, "stop_default": str,
         "merge": str, "stack": str, "auto_more_round": bool, "test_place": str, "checks": list, "interfaces": list,
         "always_test": list, "groups": int, "models": dict, "full_suite_workflow": str,
-        "added_work_min_gain": int, "always_block": list, "cold_read_rounds": int, "task_review_rounds": int, "boxes": str}
+        "added_work_min_gain": int, "always_block": list, "cold_read_rounds": int, "task_review_rounds": int, "boxes": str, "aws_runners": str}
 # A client repo without a stage counts as live: prototype rules never reach an app by default.
 DEFAULTS = {"repo": "client", "stage": "live", "workers": "codex", "tools": "both", "test": "", "fast_test": "",
             "signoff": "", "runner": "ubuntu-24.04", "test_runner": "", "codex_fast": "off",
             "stop_default": "narrow", "merge": "human", "stack": "on", "checks": [], "interfaces": [], "always_test": [],
-            "models": {}, "cold_read_rounds": 2, "task_review_rounds": 2, "auto_more_round": False, "boxes": "off"}
+            "models": {}, "cold_read_rounds": 2, "task_review_rounds": 2, "auto_more_round": False, "boxes": "off", "aws_runners": ""}
 # ponytail: retain stop_default's old values so existing forge.toml files still load.
 FAMILIES = ("codex", "claude", "antigravity")
 CHOICES = {"repo": ("client", "forge-source"), "stage": ("live", "prototype"),

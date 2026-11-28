@@ -33,6 +33,7 @@ def update(**data):
 record(argv=sys.argv[1:], cwd=str(Path.cwd()))
 profile = Path(sys.argv[sys.argv.index("--gemini-dir") + 1])
 model = "gemini-4-argon"
+review_session = None
 effort = "low"
 models = [model, "gemini-3.8-flash"]
 if os.environ.get("STUB_AGY_PLAN") != "plus":
@@ -85,6 +86,30 @@ for line in sys.stdin:
     elif method == "session/prompt":
         if os.environ.get("STUB_AGY_HOLD"):
             continue
+        recovery = os.environ.get("STUB_AGY_REVIEW_RECOVERY")
+        if recovery and review_session == session:
+            if recovery == "connection-error":
+                send(id=identifier, error={"code": -32000, "message": "Review connection lost"})
+                continue
+            send(id="review-read", method="session/request_permission", params={
+                "toolCall": {"kind": "read", "locations": [{"path": "app.py"}]},
+                "options": [{"kind": "allow_once", "optionId": "yes"}],
+            })
+            permission = json.loads(next(sys.stdin))
+            if permission["result"]["outcome"].get("optionId") != "yes":
+                raise RuntimeError("The reviewer could not read app.py")
+            update(sessionUpdate="agent_message_chunk", content={
+                "type": "text", "text": json.dumps({
+                    "review_completion": "complete", "overall_correctness": "patch is correct",
+                    "overall_confidence": 1,
+                    "overall_explanation": Path("app.py").read_text(encoding="utf-8").strip(),
+                    "findings": [],
+                }),
+            })
+            send(id=identifier, result={"stopReason": "end_turn"})
+            continue
+        if recovery:
+            review_session = session
         if refusal := os.environ.get("STUB_AGY_REVIEW_PERMISSION"):
             update(sessionUpdate="agent_message_chunk", content={
                 "type": "text", "text": "I will inspect the patch.",
@@ -105,6 +130,13 @@ for line in sys.stdin:
             else:
                 update(sessionUpdate="tool_call_update", toolCallId=tool["toolCallId"],
                        status="failed", rawOutput="permission check failed")
+        if recovery:
+            result = {"stopReason": recovery}
+            if recovery == "connection-error":
+                result = {"stopReason": "end_turn",
+                          "usage": {"inputTokens": 200, "cachedReadTokens": 1000, "outputTokens": 300}}
+            send(id=identifier, result=result)
+            continue
         if names := os.environ.get("STUB_AGY_SHOW"):
             settings = json.loads((profile / "antigravity-cli/settings.json").read_text("utf-8"))
             permissions = settings.get("permissions", {})

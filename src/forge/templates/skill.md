@@ -459,6 +459,7 @@ does not support Ubuntu 26.04. Sync preserves explicit runner settings.
 Optional `test_runner` selects a different label for pull-request and nightly full-suite test jobs,
 with one group or several groups. All other jobs use `runner`.
 Without `test_runner`, all jobs use `runner`. Set the label in `forge.toml` in a settings fix whose `--done` names `forge.toml`, then run `forge sync`.
+AWS Actions runners are off by default (`aws_runners` unset) in new and upgraded repos, and work for private repos with Linux tests only. To turn them on, ask the owner, set `aws_runners = "<12-digit account>/<region>"` in a first settings fix whose `--done` names `forge.toml`, and have a person run `forge lanes --aws setup` (accepts `--max-machines`, `--budget`, `--email` and `--region`; never combined with `--box`). Only after setup reports verified should a second settings fix set `test_runner = "forge-aws"`.
 For self-hosted Linux runners, initialise with
 `forge init --runner self-hosted`, or set `runner = "self-hosted"` (or a custom label) in an
 existing repo's fix whose `--done` names `forge.toml`, then run `forge sync`. New repos get it at init; earlier adopted repos get
