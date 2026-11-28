@@ -1,10 +1,14 @@
 {
   "doc": "plans/FORGE-PROVIDER-3.md",
-  "status": "planning",
+  "status": "read",
   "steps": [
     {
       "at": "2026-11-28T01:22:34.404377+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-28T02:41:02.340478+00:00",
+      "step": "read"
     }
   ],
   "title": "Keep builds running in AWS while the laptop sleeps",
