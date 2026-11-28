@@ -4,41 +4,21 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon. End each
-item with its source in plain words, such as (Source: the client's note on late orders, 12 Oct),
-or with the sourced item that needs it, such as (Needed by: the Customers screen). A source is a
-client note, a brief answer, a decision, a screen marked Build now at sign-off, a fixed rule of
-the app, or the owner's own request with its date. Name each screen, field, endpoint, tool and
-setting that the plan adds in one of these items.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact made with the client's design system (link in
-docs/design/design-system.md); on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id. Before the first approval it needs a new read;
-after it, a design part's redraw that changes only that id keeps the approval; any other edit needs a new one.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- Builders see the checks they owe in their briefs, and reviewers verify those same checks at close.
+- Owners get fewer repeated review rounds and named follow-ups for ordinary findings that remain open.
 
 ## Why
 
-Shorten reviews and carry plan requirements through to close
-
-
+Forge can hold a plan on a scored advisory, run repeated full code reviews, and tell a reviewer that a read note was accepted even when the builder was expected to act on it.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **Each read-note decision records either “accepted risk” or “builder must prove”; the latter names the affected part and an observable check, appears in the builder brief and both review templates, and is verified at close.**
+2. **Pinned Autoreview runs one pass per code review round, with one full review for a fix and at most two rounds for a story part. Round two checks earlier findings and admits only new P0 defects that affect normal use.**
+3. **At the round limit, ordinary leftovers become named follow-ups. An open P0 or unmet owner-approved requirement stops for the owner.**
+4. **Reads and code use the same Gain, Work and Harm scores. Advisory notes never hold a read, Gain 3 and Harm 3 alone cannot hold it, and from round two only Harm 4 or 5 or a still-open earlier blocker can hold it. The code review threshold stays as it is.**
+5. **Each code reviewer comes from a different model family than the builder. Terra Max reviews Claude and Antigravity work, and Claude must pass the recorded cases before reviewing Codex work. The first cold reader comes from a different family than the plan author and stays for repairs.**
+6. **New repos get these rules at setup, and existing repos get them on upgrade with their recorded owner decisions and open stops preserved.**
 
 ## Risks
 
