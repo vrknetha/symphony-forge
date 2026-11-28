@@ -163,7 +163,7 @@ def read(args: Any) -> int:
     top, doc, notes, is_story = _paths(args.target)
     repo._work_branch(top)  # pyright: ignore[reportPrivateUsage]
     config = repo.config(top)
-    if not (args.resolve or args.reason) and "reviews" not in config.get("local", {}):
+    if not (args.resolve or args.reason):
         routing.refresh_reviews(top, args.target)
     config = routing.routed_reviews(top, config)
     if config.get("reviews") != "antigravity":

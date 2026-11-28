@@ -90,7 +90,8 @@ Narrow stays a choice at a stuck-worker stop. Review-loop stops use more, split 
 
 When `reviews` names a family in `forge.toml`, Forge uses that family for cold reads and code reviews.
 Set `reviews` in the main checkout's `forge.local.toml` to choose a different family for this clone.
-If that family built the change, close asks the owner to choose another reviewer in `forge.local.toml`.
+If that family built any round of the change, close asks the owner to choose another reviewer in
+`forge.local.toml`. If Forge needs the selected cold reader's SDK, run `forge doctor --fix`.
 Antigravity code reviews use `[models.review.antigravity]`, or `[models.light_review.antigravity]`
 for light reviews. If you leave either model or effort unset, Antigravity uses its own default.
 Client sign-off reviews use Codex or Claude.

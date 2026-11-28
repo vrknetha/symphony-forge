@@ -76,6 +76,23 @@ def model_family(model: str) -> str:
     return "claude" if re.match(r"claude|opus|sonnet|haiku|fable", model) else "codex"
 
 
+def _earlier_builder(item: str, family: str) -> bool:
+    """Find past worker choices in Git, since each round replaces the worker in the state."""
+    from forge.story import json_of
+
+    top, path = repo.root(), repo.state_path(item)
+    branches = [f"task/{item.replace('/', '-')}"] if "/" in item else [f"fix/{item}", f"forge/{item}"]
+    refs = [f"refs/heads/{branch}" for branch in branches]
+    tips = repo.blob_texts(top, [f"{ref}:{path}" for ref in refs])
+    for ref in refs:
+        if json_of(tips.get(f"{ref}:{path}")).get("branch") != ref.removeprefix("refs/heads/"):
+            continue
+        commits = repo.git("log", "--full-history", "--format=%H", ref, "--", path, cwd=top)
+        snapshots = repo.blob_texts(top, [f"{sha}:{path}" for sha in commits.splitlines()])
+        return any(json_of(text).get("worker") == family for text in snapshots.values())
+    return False
+
+
 def review_family(cfg: dict[str, Any], built_by: str | None, item: str) -> str:
     """Select this repo's reviewer and keep a family from reviewing its own build."""
     selected = cfg.get("reviews")
@@ -84,7 +101,7 @@ def review_family(cfg: dict[str, Any], built_by: str | None, item: str) -> str:
         return "codex" if shutil.which(codex_bin) else "claude"
     family = selected or cfg["tools"]
     name = {"claude": "Claude Code", "codex": "Codex", "antigravity": "Antigravity"}[family]
-    if selected and family == built_by:
+    if selected and built_by and (family == built_by or _earlier_builder(item, family)):
         repo.refuse((f"{name} built {item}, so Forge will not let {name} review it.",
                      "ask the owner, then set reviews in forge.local.toml to another family"))
     if family == "antigravity":
