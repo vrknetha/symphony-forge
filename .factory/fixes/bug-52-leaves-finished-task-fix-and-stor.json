@@ -6,8 +6,8 @@
   "fix_kind": "backend",
   "fix_kind_explicit": true,
   "kind": "fix",
-  "round": 1,
-  "status": "started",
+  "round": 2,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-28T01:02:17.159204+00:00",
@@ -16,6 +16,11 @@
     {
       "at": "2026-11-28T01:03:49.621692+00:00",
       "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T07:19:30.699864+00:00",
+      "round": 2,
       "step": "resume"
     }
   ],
@@ -26,5 +31,5 @@
     "round": null
   },
   "why": "Bug #52 leaves finished task, fix, and story worktrees behind without listing them.",
-  "worker": "antigravity"
+  "worker": "codex"
 }
