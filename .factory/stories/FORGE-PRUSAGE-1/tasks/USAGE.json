@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-PRUSAGE-1-USAGE",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-28T02:02:16.264459+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-28T02:02:34.623571+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "12a8d970c464c6bd2c304b2302f885829502c4df",
+    "keys": {},
+    "round": null
+  },
+  "worker": "antigravity"
 }
