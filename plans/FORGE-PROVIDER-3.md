@@ -4,41 +4,20 @@
 
 ## What changes for you
 
-<What the people who use this will notice, in plain English. No IDs, codes or jargon. End each
-item with its source in plain words, such as (Source: the client's note on late orders, 12 Oct),
-or with the sourced item that needs it, such as (Needed by: the Customers screen). A source is a
-client note, a brief answer, a decision, a screen marked Build now at sign-off, a fixed rule of
-the app, or the owner's own request with its date. Name each screen, field, endpoint, tool and
-setting that the plan adds in one of these items.>
-
-<!-- For user-facing parts: run impeccable init if PRODUCT.md is absent. Design the screens
-in a Claude Design artifact made with the client's design system (link in
-docs/design/design-system.md); on a Codex-only host without artifact tools, use HTML artboards.
-Save each screen and its images in docs/design/<KEY>/. Copy .forge/design/support.js beside
-the HTML screens and run it for a 1440 by 900 PNG per screen. Commit the folder. Use its git tree
-id (git rev-parse HEAD:docs/design/<KEY>) in the last line below. For small changes to existing
-screens that add no screen and change no flow, use Design: none (<why>) instead.
-Remove this comment and omit
-the Design line for a backend-only story. Cold read follows the design; one plan approval binds
-these exact files. A folder edit needs its new tree id. Before the first approval it needs a new read;
-after it, a design part's redraw that changes only that id keeps the approval; any other edit needs a new one.
-The rule starts with the next plan read and approval. Plans approved without a Design line
-before this rule keep their existing approval. -->
-Design: docs/design/<KEY>/ (<tree id>)
+- Plan now, with implementation starting after FORGE-PROVIDER-2.
+- Run Claude and Codex builds in AWS sandbox boxes and resume review on the laptop when it wakes.
 
 ## Why
 
-Keep builds running in AWS while the laptop sleeps
-
-
+The current remote Codex route relies on the laptop to bring back commits and push them to GitHub, and Claude builds still run on the laptop.
 
 ## Done when
 
-<!-- One bold plain sentence per result, which the owner approves: no code names, file paths or
-test names. Its evidence, edge cases and proving tests go under the same number in Done-when
-details. -->
-
-1. **Something anyone can observe once this is done.**
+1. **Claude build rounds run on every AWS box using the developer’s one-year Claude setup token from their AWS secret store.**
+2. **Codex uses the developer’s sign-in on one box at a time and writes the updated sign-in file back after each run.**
+3. **One larger box runs three to four Codex rounds concurrently through one app server, and a test shows the OpenAI API key fallback works during busy periods.**
+4. **With the laptop asleep, the box finishes the round, pushes the branch using the developer’s GitHub sign-in from the AWS secret store, and saves the result in S3. Forge retrieves the result and runs review when the laptop wakes.**
+5. **Neon stays on the laptop unless a one-time sign-in from the box terminal works with the developer’s Neon plan.**
 
 ## Risks
 
