@@ -2141,7 +2141,9 @@ their instructions, and their records and round lines label it requested because
 Forge cannot check that the host applied it. A continued native Codex helper can
 retain its first effort. Each run records its round number and effort. The board
 and story history show `built at <effort>` in the round line, and omit it for old
-records without effort.
+records without effort. The pull request's "How it went" block also has a build line with the
+builder model and effort, token lines for build, review and plan read, the change size when
+ready, and `Cost: unavailable`.
 Claude planner and architect roles use the plan-read entry; debugger, security
 and performance roles use Sonnet 5.5 at high effort. Reviews, including prototype sign-off,
 use the selected tool's `models.review` entry, or Autoreview's defaults when unset.

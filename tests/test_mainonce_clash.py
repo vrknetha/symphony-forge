@@ -312,7 +312,9 @@ def test_2_close_merges_main_once_when_a_local_or_github_clash_requires_it(env, 
         pushed_head = env.repo.git("ls-remote", "origin", "refs/heads/fix/tidy-readme").split()[0]
         assert any(f"/commits/{pushed_head}/check-runs" in call[-1] for call in env.gh_calls("api"))
         published = json.loads(re.search(r"<!-- forge:time-record (\{.*?\}) -->", written[-1], re.S)[1])
-        assert published["ready"] == {"commit": pushed_head, "review": "clean"}
+        # The published ready record now also carries the product size for this head.
+        assert published["ready"] == {"commit": pushed_head, "review": "clean",
+                                      "size": {"lines": 1, "files": 1}}
         assert any(event.get("event") == "CI result" and event.get("commit") == pushed_head
                    and event.get("outcome") == "passed" for event in published["events"])
         for call in env.review_calls():

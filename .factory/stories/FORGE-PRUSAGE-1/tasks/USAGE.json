@@ -1,0 +1,172 @@
+{
+  "branch": "task/FORGE-PRUSAGE-1-USAGE",
+  "chat": {
+    "approval": "7a18e9220b039e3370972555f76f0b7853d1f648f670c166dee2babb0e7b8efb",
+    "claude": null,
+    "conversation": "01a22025-204a-7621-998b-c77bfcc35ae2",
+    "head": null,
+    "start": "0d86ab6e64b523ab574d67c09f208cca1b640ceb"
+  },
+  "known": [
+    {
+      "area": "_usage_lines() in src/forge/time_records.py",
+      "file": "src/forge/time_records.py",
+      "gain": 5,
+      "harm": 3,
+      "line": 623,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: The block shows input, cached input and output tokens for build, review and plan read, each apart.",
+      "work": 3
+    },
+    {
+      "area": "_usage_lines() in src/forge/time_records.py",
+      "file": "src/forge/time_records.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 606,
+      "outcome": "follow-up",
+      "reason": "Not done names no owner-approved Done-when item; builder details are guidance.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: A task or fix pull request's \"How it went\" block has a build line with the builder model and effort",
+      "work": 2
+    },
+    {
+      "area": "test_1_pr_how_it_went_shows_build_model_and_effort() in tests/test_pr_usage_summary.py",
+      "file": "tests/test_pr_usage_summary.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 52,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: A task or fix pull request's \"How it went\" block has a build line and unchanged round lines",
+      "work": 1
+    },
+    {
+      "area": "test_2_pr_how_it_went_shows_token_totals_coverage_and_shortened_history() in tests/test_pr_usage_summary.py",
+      "file": "tests/test_pr_usage_summary.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 87,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: The block shows input, cached input and output tokens for build, review and plan read, each apart",
+      "work": 2
+    },
+    {
+      "area": "test_3_pr_how_it_went_shows_change_size_for_fix_and_task() in tests/test_pr_usage_summary.py",
+      "file": "tests/test_pr_usage_summary.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 123,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: When the work is ready, the block shows S, M or L with the lines and the number of product files",
+      "work": 2
+    },
+    {
+      "area": "_append_events() in tests/test_pr_usage_summary.py",
+      "file": "tests/test_pr_usage_summary.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 18,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: the model and token proofs fabricate Forge's internal event records",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "2a33355b9cff076095bd3cbe484db86e9869300ace34a344731d5f1ba37a20ad",
+    "changed": "e2777bce8c89c41262fd07d7154708776ffaf8509cddbb7ceda0ebcb7ffab9bd",
+    "commit": "49a44cd7f1e56f549c5bb0a6ac02a34b7100d068",
+    "dismissals": [],
+    "findings": [],
+    "id": "e0ca35d5-899d-4c2f-9327-de51313507c9",
+    "status": "clean"
+  },
+  "round": 4,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-28T02:02:16.264459+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-28T02:02:34.623571+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T02:18:18.592309+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T02:18:38.691697+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T02:31:43.184903+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T02:31:43.185066+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-28T02:32:41.342372+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-28T03:13:51.706395+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T03:24:26.782582+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T04:04:56.693842+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T04:16:22.688793+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-28T02:31:43.185066+00:00",
+    "by": "owner",
+    "choice": "more",
+    "file": "tests/test_pr_usage_summary.py",
+    "reason": "Owner chose one more round: tighten the round-line test and test a real story plan read",
+    "wait_id": "e29c1725-3241-4ef5-9aee-92515f968b29",
+    "worker_round": 2
+  },
+  "stuck": {
+    "close": "0e124f22-ec23-4c45-a0f6-55f2ba55eda5",
+    "head": "5bb22fac7549c1fa26a7b19972a79a083872fce9",
+    "keys": {},
+    "round": 3
+  },
+  "worker": "codex"
+}

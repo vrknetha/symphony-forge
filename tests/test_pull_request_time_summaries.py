@@ -121,7 +121,9 @@ def test_1_long_item_keeps_recent_round_times_and_older_totals_within_a_fixed_bo
     assert closed.returncode == 0, closed.stdout + closed.stderr
     published = body(env.gh_calls("pr", "edit")[-1])
     assert len(published.encode("utf-8")) < BUDGET
-    assert "shortened" not in published
+    # Model and token history can be folded while the body still fits without truncation.
+    assert "shortened" not in published.replace(
+        "Earlier history was shortened; its models and tokens are not shown.", "", 1)
 
     # Another machine with no local logs accounts for every round from the pull request alone.
     publish_snapshot(env, item, published)

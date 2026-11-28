@@ -82,8 +82,10 @@ def test_3_close_records_ready_and_next_names_merge(env, setting):
         assert closed.stdout.splitlines()[-1] == (
             f"Ready: {item} has a clean review and green checks. A human merges its pull request.")
     record = env.repo.path / ".git" / "forge" / "ready" / f"{item}.json"
+    # The ready record now carries the product size alongside the clean review and head.
     assert json.loads(record.read_text("utf-8")) == {
-        "commit": env.repo.git("rev-parse", "HEAD", cwd=where), "review": "clean"}
+        "commit": env.repo.git("rev-parse", "HEAD", cwd=where), "review": "clean",
+        "size": {"lines": 1, "files": 1}}
     assert env.repo.git("status", "--porcelain", cwd=where) == ""
     next_step = env.repo.forge("next")
     assert next_step.returncode == 0, next_step.stderr
