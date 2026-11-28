@@ -96,17 +96,21 @@ def _sweep_prs(gh, without_pr, *prs):
 
 
 @pytest.mark.parametrize("command", ["close", "land", "merge"])
-def test_3_named_commands_can_finish_an_already_merged_fix(env, command):
+def test_3_named_commands_can_finish_an_already_merged_fix(env, tmp_path, command):
     item, folder = _ready(env)
     repo = env.repo
     branch = f"fix/{item}"
     head = repo.git("rev-parse", branch)
     repo.git("merge", "--squash", branch)
     repo.git("commit", "-qm", "Squash the fix")
+    other_branch = "fix/other-finished"
+    other_folder, _ = _work(repo, tmp_path, other_branch)
+    repo.git("merge", "--squash", other_branch)
+    repo.git("commit", "-qm", "Squash the other fix")
     repo.git("push", "-q", "origin", "main", f":refs/heads/{branch}")
     if command == "land":
         repo.git("commit", "--allow-empty", "-qm", "Record local work", cwd=folder)
-    _prs(env.gh, (branch, head, "MERGED"))
+    _sweep_prs(env.gh, (other_branch,), (branch, head, "MERGED"))
     env.open_pr("", state="MERGED")
     env.gh.respond("pr", "view", branch, stdout=json.dumps({
         "number": 7, "state": "MERGED", "baseRefName": "main", "headRefName": branch,
@@ -120,3 +124,4 @@ def test_3_named_commands_can_finish_an_already_merged_fix(env, command):
         assert _gone(repo, folder, branch)
     else:
         assert f"The pull request for {item} is merged." in result.stdout
+    assert _gone(repo, other_folder, other_branch), result.stdout + result.stderr
