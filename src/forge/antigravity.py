@@ -223,7 +223,7 @@ def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
     ran = {"model_kind": "review"}
     try:
         result = turn(top, item, prompt, cwd=copy, mode="read", model=model, effort=effort,
-                      again=f"forge close {item}", ran=ran, group=False)
+                      again=f"forge close {item}", ran=ran, group=False, extract_json=extract_json)
     except repo.Refused as error:
         problem, _, next_step = str(error).partition("\n")
         if next_step:
@@ -246,16 +246,8 @@ def review_engine(top: Path, item: str, checkout: Path, copy: Path, prompt: str,
             }) + "\n", encoding="utf-8")
     if tool := result.get("refused_tool"):
         refusal = f'{REVIEW_TOOL_REFUSED} "{tool}"'
-        if result["stop"] in ("end_turn", "cancelled"):
-            # Tool calls can interrupt the text stream. Let Autoreview recognize the
-            # report and validate its completion and findings as it normally does.
-            for text in (*reversed(result["messages"]), result["text"]):
-                try:
-                    completion = extract_json(text).get("review_completion")
-                except (SystemExit, ValueError, RecursionError):
-                    continue
-                if completion in ("complete", "incomplete"):
-                    return text, refusal
+        if result.get("report"):
+            return result["report"], refusal
         raise SystemExit(f"{refusal}.")
     return result["text"], ""
 
@@ -365,7 +357,7 @@ def _permission(params: dict, cwd: Path, mode: str, questions: list[str]) -> dic
 
 def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
          effort: str, again: str, ran: dict, resume: str | None = None, group: bool = True,
-         probe: bool = False) -> dict:
+         probe: bool = False, extract_json: Callable[[str], dict] | None = None) -> dict:
     log = cwd / "agy.log" if probe else repo.work_log(top, item)
     questions, chunks = [], []
     kind = ran.pop("model_kind", "build")
@@ -514,15 +506,50 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
             level = options.get("thought_level", {}).get("currentValue")
             print(f"Antigravity runs {current} at {level or 'its own level'}.", flush=True)
             ran.update(model=current, effort=level)
-            result = call("session/prompt", {
-                "sessionId": chat, "prompt": [{"type": "text", "text": prompt}],
-            })
-            usage = result.get("usage") or {}
-            cached = (usage.get("cachedReadTokens") or 0) if usage else None
-            tokens = dict(input_tokens=(usage["inputTokens"] + cached) if "inputTokens" in usage else None,
-                          cached_input_tokens=cached, output_tokens=usage.get("outputTokens"),
-                          reasoning_output_tokens=usage.get("thoughtTokens"))
-            ran.update(tokens)
+            usage: dict[str, int] = {}
+            tokens: dict[str, int | None] = {}
+
+            def ask(text: str) -> dict:
+                result = call("session/prompt", {
+                    "sessionId": chat, "prompt": [{"type": "text", "text": text}],
+                })
+                for key, value in (result.get("usage") or {}).items():
+                    if isinstance(value, int):
+                        usage[key] = usage.get(key, 0) + value
+                cached = usage.get("cachedReadTokens", 0)
+                tokens.update(input_tokens=usage["inputTokens"] + cached if "inputTokens" in usage else None,
+                              cached_input_tokens=cached if usage else None, output_tokens=usage.get("outputTokens"),
+                              reasoning_output_tokens=usage.get("thoughtTokens"))
+                ran.update(tokens)
+                return result
+
+            def review_report(result: dict) -> str:
+                if not (extract_json and refused_tool and result.get("stopReason") in ("end_turn", "cancelled")):
+                    return ""
+                # Tool calls can interrupt the text stream. Autoreview validates the report.
+                messages = ["".join(chunks[start:end]) for start, end in
+                            zip(message_starts, message_starts[1:] + [len(chunks)]) if start < end]
+                for text in (*reversed(messages), "".join(chunks + questions)):
+                    try:
+                        completion = extract_json(text).get("review_completion")
+                    except (SystemExit, ValueError, RecursionError):
+                        continue
+                    if completion in ("complete", "incomplete"):
+                        return text
+                return ""
+
+            result = ask(prompt)
+            report = review_report(result)
+            # ACP permission requests can omit the tool kind.
+            if extract_json and refused_tool and result.get("stopReason") in ("end_turn", "cancelled") and not report:
+                chunks.clear()
+                questions.clear()
+                message_starts[:] = [0]
+                message_id = None
+                result = ask("Shell commands are disabled for this review. Continue the same review using "
+                             "the supplied diff and evidence and the read-only file tools in the review copy. "
+                             "Return the JSON review report specified in the original request.")
+                report = review_report(result)
             stop = result.get("stopReason")
             if stop != "end_turn" and not refused_tool:
                 repo.refuse(unfinished, detail=stop or "no answer", log=log, again=again)
@@ -531,8 +558,7 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                         "model": current, "tokens": tokens}
             if refused_tool:
                 response["refused_tool"] = " ".join(refused_tool.split()) or "unknown tool"
-                response["messages"] = ["".join(chunks[start:end]) for start, end in
-                                        zip(message_starts, message_starts[1:] + [len(chunks)]) if start < end]
+                response["report"] = report
             return response
     except (OSError, ValueError, KeyError, TypeError) as error:
         repo.refuse(unfinished, detail=str(error), log=log, again=again)

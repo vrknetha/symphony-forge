@@ -1,0 +1,100 @@
+{
+  "base": "4a47d4e4feebaaa003743821e9a6b0fff31f467d",
+  "branch": "fix/when-neon-tries-to-run-a-shell-command-a",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a22109-a5aa-73a1-a109-cf737ef29701",
+    "head": null,
+    "start": "1140e1afbd784aed6222feb238e8b6584f67b6e0"
+  },
+  "done_when": "In new repos and repos upgraded to v1.2.51, close gets a valid Neon review report using the supplied diff, evidence, and read-only file tools even after a shell command is denied.",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "turn.call() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 412,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Close cannot recover from an ID-only shell denial",
+      "work": 2
+    },
+    {
+      "area": "tests/test_neon_review_recovers_after_shell_denial.py",
+      "file": "tests/test_neon_review_recovers_after_shell_denial.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 13,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Close gets a valid Neon review after a denied shell command",
+      "work": 1
+    },
+    {
+      "area": "turn() in src/forge/antigravity.py",
+      "file": "src/forge/antigravity.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 544,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Preserve the first turn's usage when the follow-up fails",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "1438e527e61d2750a7a538b200f52d3f2cc561b37a9f4a04ff00e343b83a96ae",
+    "changed": "25507bf2b3d589e27e526b6c789694f170806c658bae1b5f03c1e6413a41ab42",
+    "commit": "c2044a5609dacf31028ff1b67445f42889b4a672",
+    "dismissals": [],
+    "findings": [],
+    "id": "11528c78-9702-4b3e-9146-7f3586b1a97e",
+    "status": "clean"
+  },
+  "round": 2,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-28T07:23:09.555906+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-28T07:23:27.929671+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T07:34:11.423515+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T07:34:31.537117+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T07:42:32.483151+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "c33fe476-d6f2-4019-984f-fcd36d3815f1",
+    "head": "f37ab3aea762df0d3ef8e04fd0c186a860083e00",
+    "keys": {},
+    "round": 1
+  },
+  "why": "When Neon tries to run a shell command and ends its turn without a report, Forge repeats the review with the same instructions and close stays blocked.",
+  "worker": "codex"
+}
