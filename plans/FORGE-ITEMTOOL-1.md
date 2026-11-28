@@ -1,67 +1,64 @@
 # Choose a builder for one item
 
-<n> parts · Risks: ... · New moving parts: ...
+1 part · Risks: none one-way · New moving parts: none
 
 ## What changes for you
 
-- Choose Claude, Codex, or Antigravity for a task or fix without changing the repository default.
+- You can pick who builds one task or fix: Claude, Codex or Antigravity (Gemini). Add `--tool claude`, `--tool codex` or `--tool antigravity` to `forge work <item>` or `forge land <item>`. The repo's other work keeps the builder that `forge.toml` names. (Source: the owner's request, 28 Nov 2026)
+- Forge remembers the choice for that item. Every later round on the item, including repair rounds and the rounds the background runner starts, uses the same builder until you pick another one. `forge next` and the "Building ..." line say that you chose it for this item. (Source: the owner's request, 28 Nov 2026)
+- The model and effort come from the settings you already have for that builder, for example `[models.build.antigravity]` and `[models.fix.antigravity]` in `forge.toml` or `forge.local.toml`. There is no new setting. Without such an entry, Forge uses its built-in default for that builder. (Source: the owner's request, 28 Nov 2026)
+- Forge refuses with one line, before it changes anything, when the builder is not installed or `tools` in `forge.toml` does not allow it. (Source: the owner's request, 28 Nov 2026)
+- When a worker is stuck and you choose "switch", you can then name any builder, Antigravity included, with `forge work <item> --tool <family>`. Today a switch can only go to the other of Claude and Codex, and never to Antigravity. (Source: the owner's request, 28 Nov 2026)
+- What each repo gets: a new repo has the option from its first `forge work` or `forge land`. An existing repo gets it when it upgrades to the release that has this story (v1.2.51). Nothing is migrated: an item with no saved choice builds as before. The coordinator guide that `forge sync` writes explains the option.
+
+Design: none (no screen changes)
 
 ## Why
 
-Forge uses repository-wide builder settings until a worker gets stuck, and the current switch cannot select Antigravity.
+Forge builds every item with the builder that `forge.toml` names for the whole repo. A team that wants prompt and memory changes built on Antigravity while plain code stays on Codex has no supported way to do this. The only workaround is to write a short-lived `forge.local.toml` before each `forge work` and delete it after, which is easy to get wrong. Forge already keeps a per-item builder choice (the stuck-worker switch saves it) and already reads it in every round. This story adds a direct way to set it.
 
 ## Done when
 
-1. **In v1.2.51, new and upgraded repos can use `forge work <item> --tool` or `forge land <item> --tool` to save any of the three builder choices in the item's existing state.**
-2. **Later rounds keep the saved builder, use that family's configured model, and report that the owner chose it for this item.**
-3. **When a worker gets stuck, the owner can name Antigravity as the replacement builder.**
-4. **The coordinator guide explains how to choose and switch builders for one item.**
+1. **`forge work <item> --tool <claude|codex|antigravity>` builds that round with the named builder, saves the choice for the item, and says the owner chose it for this item.**
+2. **Later rounds on the item, with no `--tool`, keep the saved builder and use that builder's own model and effort from the existing `[models]` settings.**
+3. **`forge land <item> --tool <family>` makes the item's build and repair rounds use that builder, and the background runner keeps it; `--tool` with several items or `--all` is refused.**
+4. **A builder that is not installed, or that `tools` does not allow, is refused in one line before anything changes, and the item's saved builder stays as it was.**
+5. **After a stuck worker and a recorded "switch", `forge work <item> --tool antigravity` moves the item to Antigravity.**
+6. **The coordinator guide, `docs/commands.md` and the command help describe `--tool` and the switch step.**
 
 ## Risks
 
-<!-- Each one-way step: deleting data, a destructive migration, a new vendor. -->
+Risks: none one-way. The part reverts with its pull request.
 
-Risks: none
+Accepted limits:
+- The background runner may start an approved item's first round before you name a builder. The choice then applies from the next round on, not to the round that is already running. To choose for the first round, run `forge land <item> --tool <family>` right after approval: whichever run takes the item first wins, and a second run is refused while the first holds the item.
+- Antigravity needs its program installed and signed in. When it is missing, the command refuses and says how to install it. Forge does not fall back to another builder.
+- Changing builders in the middle of an item starts a fresh session for the new builder. This already happens today after a stuck-worker switch.
 
 ## For the builders
 
-<!-- Everything from here down is for the agents. The owner doesn't see it when approving, and
-tightening it needs no new approval. -->
-
 ### Done-when details
 
-<!-- Under each Done-when item's number: its evidence, edge cases and the tests that prove it.
-Workers and reviewers get the entries of the items they cover. An item with nothing to add has
-no entry. -->
+1. The choice is stored where the stuck-worker switch already stores it: `state["tool"]` (set at `src/forge/close.py:131`; read by `repo.worker(cfg, kind, design, tool)` at `src/forge/repo.py:803`, which prints "the owner chose it for this item" whenever `tool` is set, by `src/forge/nextstep.py` lines 1150 and 1179 for the `# <Tool> builds it` note, by `src/forge/close.py:613` for the stuck question and by `src/forge/doctor.py:526`). Add `("--tool", {"choices": ["claude", "codex", "antigravity"], "metavar": "FAMILY", "help": "build this item with this tool, now and in later rounds"})` to the `args` of the `work` entry in `COMMANDS` at the end of `src/forge/worker.py`, and change its `listing` string. In `_work` (`src/forge/worker.py:198`) the line `tool = getattr(args, "fallback", None) or state.get("tool")` becomes `getattr(args, "fallback", None) or getattr(args, "tool", None) or state.get("tool")`. Save the choice by setting `state["tool"] = args.tool` next to `state["worker"] = family` (about line 327): that state is already written by the `repo.commit_state` call that follows, so the choice is saved in the same commit as the status change, and only after every readiness check has passed. The `stop_signals` retry text (about line 126) keeps `--tool` out: after the first round the item remembers it. Do not touch `repo.py`: it is at 1,190 lines and its `why` text already says "the owner chose it for this item" for any `tool`. Tests, in `tests/test_item_builder_choice.py`, through `forge work`: in a repo with `workers = "claude"` and `[models.build.antigravity]` (`gemini-4-neon`, `high`), use `install_claude` from `tests/test_worker.py` and `install_agy` from `tests/test_antigravity_build.py`; `forge work BOARD/HELP --tool antigravity` prints `Building BOARD/HELP with Antigravity (gemini-4-neon, high) because the owner chose it for this item`, `agy-calls.jsonl` has one call with that model and effort, the Claude call log has none, and the committed item state has `"tool": "antigravity"`. A second case on a fresh item: `--tool codex` or `--tool claude` is saved the same way (the family name is the whole check).
+2. Plain `forge work <item>` already reads `state["tool"]` (item 1), so no code is needed beyond item 1. Model and effort come from `repo.worker` → `repo.worker_models(cfg, kind, family)` → `repo.models(cfg, kind, family)`, the existing `[models.<kind>.<family>]` entries for the kinds build, fix and lite (and `[models.design.<family>]` for user-facing work); with no entry the family's `WORKER_DEFAULTS` apply (`default`, `low` for Antigravity). `repo.round_effort` still raises effort to the family's top (`high` for Antigravity) after a failed round. State this in the guide and add no setting. Tests: after the item 1 round, run `forge work BOARD/HELP` again with no `--tool` and a recorded failing review or test so that it is a repair round: the next `agy-calls.jsonl` call is on Antigravity with the `[models.fix.antigravity]` entry's model and effort, and the "Building" line again says the owner chose it. Also run `forge next BOARD/HELP` and assert `# Antigravity builds it`.
+3. In `src/forge/land.py`, add `("--tool", {"choices": ["claude", "codex", "antigravity"], "metavar": "FAMILY", "help": "build this change with this tool"})` to the `land` entry of `COMMANDS` (and its `listing`), put `tool=getattr(args, "tool", None)` into the `step` namespace built in `_land_one` (about line 98), which `worker.work(step)` receives in `_handed_out`, and refuse in `land` (next to the `note_all` check, about line 54) when `--tool` is given with `--all` or with more than one item, with a new `REFUSALS["tool_all"]` entry: `("Give one change with --tool.", "forge land <item> --tool <family>")`. `land` has no other place to carry the choice: close and merge do not read it, and `step` is a namespace that is rebuilt for every run, so `--tool` is passed on every `worker.work` call of that run and saved on the first. The runner needs no change: `_spawn_land` in `src/forge/runner.py` runs `forge land <item>`, and the saved `state["tool"]` is read from the item's own state in every later round. Tests: `forge land BOARD/HELP --tool antigravity` on a repo set up like `tests/test_land.py`'s `land` fixture (or `tests/test_land_builds_before_merge.py`) builds on the Antigravity stub, then closes; a later repair round that `land` starts uses Antigravity again with no flag; `forge land --all --tool codex` and `forge land A B --tool codex` exit 1 with the one-line refusal and the next step. A second case from the runner: a started fix whose saved state names `antigravity`, run by `tests/test_runner_builds_a_started_fix.py`'s setup, builds on the Antigravity stub.
+4. One check, before any readiness call and before the status commit, in `_work` right after the tool is read: for a `--tool` that is `claude` or `codex`, refuse when `config["tools"]` is not `both` and not that family. For `antigravity`, no `tools` check applies, because `workers = "antigravity"` works with any `tools` value today (`repo.worker_family`, `src/forge/repo.py:822`) and `tools` only allows `both`, `claude` and `codex` (`CHOICES`, line 580); the install check is Antigravity's own `antigravity.ready` (`src/forge/antigravity.py:333`), whose refusal already names the missing or signed-out program and how to fix it, and it runs before the status commit. Claude and Codex use `ready` in `src/forge/worker.py:477`, which refuses with the SDK's problem text and `forge doctor --fix` when `tools` is not `both`, and refuses before the status commit; it uses `repo.REFUSALS["tool_missing"]` (`src/forge/repo.py:37`) when `tools` names that family. Add one entry to `REFUSALS` in `worker.py`: `"tool_off": ("forge.toml's tools is {tools}, so {item} can't be built on {family}.", "forge work {item} --tool {tools}")`. Because the saved choice is written only with the round's commit, a refusal leaves the old choice. Tests: with `tools = "claude"`, `--tool codex` exits 1 with that line and no new commit; with `AGY_BIN` pointing at a missing file (as `tests/test_antigravity_setup.py` does), `--tool antigravity` exits 1 with `Forge cannot run the Antigravity CLI (agy).` and `state["tool"]` is unchanged (set to `claude` first, to prove it is not cleared).
+5. `forge close <item> --resolve switch` keeps its mapping (`SWITCH_WORKER`, `src/forge/close.py:26`: Claude to Codex, Codex to Claude, Antigravity to Claude) and records the choice; the next `forge work <item> --tool antigravity` then overwrites `state["tool"]` (item 1), because `check_stop` (`src/forge/close.py:567`) lets work run once a choice is recorded. This needs no change to `close.py` (1,165 lines) or to the pinned stuck question and its Next line. The guide paragraph at `src/forge/templates/skill.md` (about line 2894) gains one sentence: "Switch runs this item's next rounds on the other tool; to switch to another tool, such as Antigravity, run `forge work <item> --tool <claude|codex|antigravity>` after recording the choice." Test, next to `tests/test_stuck_worker_asks.py::test_3_switch_runs_the_next_round_on_the_other_tool` and its setup (`_rounds`): after `--resolve switch`, `forge work <item> --tool antigravity` builds on the Antigravity stub, and `forge next` says `# Antigravity builds it`.
+6. Command text and guide, for the review rule that a change to what a coordinator can use updates the guide: `src/forge/templates/skill.md` gets a row after "Build it" at line 191 ("Build this item with a chosen tool": `forge work <item> --tool <claude|codex|antigravity>`, `forge land <item> --tool <family>` for a whole run), one sentence at the "Change who builds just for me" row (about line 222: for one item, use `--tool`; `forge.local.toml` stays for a whole clone), the switch sentence from item 5, and one sentence that model and effort come from the existing `[models.<kind>.<family>]` entries. `src/forge/templates/brief.md` does not describe how a coordinator picks a builder and a worker never does, so it needs no change. `docs/commands.md` is generated from the `listing` strings by `forge sync` (`sync.command_page()`); the synced copies `.claude/skills/forge/SKILL.md` and `.codex/skills/forge/SKILL.md` come from `uv run --frozen forge sync`. Pinned help text that must change with the new option: the `work` usage block at `tests/test_split_commands.py:357` and the `land` usage line at `tests/test_commands_load_only_their_owner.py:19`. Test: the guide text in both synced copies names `forge work <item> --tool`, and `forge work --help` and `forge land --help` list `--tool`, in the same style as `tests/test_stuck_worker_asks.py` line 162.
 
-1. <Evidence, edge cases and the tests that prove item 1.>
+No record format changes: `state["tool"]` already exists and is read by every round, so the suite's one upgrade test (`tests/test_upgrade_to_installed_release.py`) is not extended. New cases run on a new repo only.
 
 ## Tasks
 
-<!-- One row per task. Covers: the Done-when numbers it delivers, at most three. Scope: the paths
-it may change. Before writing each Scope, search the code for the files the task needs. The plan
-check refuses two tasks whose Scope paths have the same prefix up to the first wildcard, unless
-one waits for the other through After, directly or through another task; it names both tasks.
-Paths with a segment named `tests`, `test`, `__tests__` or `spec` do not cause Scope overlaps
-and can be shared without an After link. Explicit After links still apply.
-When tasks need the same production file, put it in the first task's Scope with the shared names and stubs;
-tasks that need them wait for that task through After and then own only their files. Keep a file
-that a script can make at build time out of the repo and out of every Scope; when the repo keeps such
-a file on purpose, give its change to one part that the others wait for. Tests: the
-tests it adds or changes. After: the tasks it waits for. When two tasks share a function, field,
-file format or command, the first task pins it: it commits the shared names and stubs plus one
-test that crosses both sides, and the tasks that use it list it under After. Split tasks so each
-owns its files; shared lines (command table, guide list, registry) go to one task or a small last
-wiring task; After only when a task needs another task's code. The
-Developer column is optional: the lead fills or changes a GitHub username here, below For the
-builders, without another approval. Leave it blank for an unassigned part. Forge next uses
-the caller's GitHub login; another developer may start it with a warning. Existing tables
-without Developer still work. The moving-parts line stays last: "none", or each new dependency, service, datastore,
-queue, background job or abstraction layer, with the Done-when item that needs it. -->
-
 | ID | Name | What it delivers | Covers | Scope | Tests | After | User-facing | Developer |
 |---|---|---|---|---|---|---|---|---|
+| ITEMTOOL | Pick the builder for one item | `--tool` on `forge work` and `forge land` saves the item's builder in its existing state, later rounds and repairs keep it, a missing or disallowed builder is refused first, and a stuck item can move to Antigravity | 1, 2, 3, 4, 5, 6 | `src/forge/worker.py`, `src/forge/land.py`, `src/forge/templates/skill.md`, `docs/commands.md`, `.claude/skills/forge/SKILL.md`, `.codex/skills/forge/SKILL.md` | `tests/test_item_builder_choice.py` (new, starts with `STORY = "FORGE-ITEMTOOL-1"`, one `test_<n>_...` per Done-when item), `tests/test_split_commands.py` (changed: the `work` usage block), `tests/test_commands_load_only_their_owner.py` (changed: the `land` usage line) | | no | |
 
 New moving parts: none
 
 ## Notes
+
+- One part: the change is about 25 lines in two commands plus the guide text, and both commands share the one saved choice. Two parts would both edit the `--tool` names and the tests would cross the same state field.
+- Module sizes today: `worker.py` 960, `land.py` 1,036, `repo.py` 1,190, `close.py` 1,165, `nextstep.py` 1,198, `story.py` 1,200. The part edits only `worker.py` and `land.py`, and stays far below 1,200. Do not edit `repo.py`, `close.py`, `nextstep.py` or `story.py`. Run the two cheap repo checks in AGENTS.md before the round ends. No new top-level command: `tests/test_rules.py::test_5_forge_stays_small` keeps its limit of 26.
+- Reuse, not new code: the per-item field, its readers, the "owner chose it" line, the `# <Tool> builds it` note, the family's model and effort lookup and each family's install check all exist. The only new code is the option, one save, one allowed-by-`tools` check and one `land` refusal.
+- Guesses to confirm with the owner. (1) `tools` is `both`, `claude` or `codex`; `--tool claude` or `--tool codex` is refused when `tools` names the other one, but `--tool antigravity` is allowed under any `tools` value, as `workers = "antigravity"` is today. (2) The stuck-worker switch keeps its two-way mapping and Antigravity is reached by `forge work <item> --tool antigravity` after the choice is recorded, so the pinned stuck question and `close` options stay as they are; the alternative is a `--tool` on `forge close --resolve switch`, which changes the pinned help text and close's size. (3) A repo with a `forge.local.toml` keeps it: the saved item choice wins over its `tools` and `workers` for that item, and its `[models]` entries still pick the model. (4) A user-facing task built on Antigravity uses `[models.design.antigravity]` (default `default`, `high`), as `workers = "antigravity"` does today.
