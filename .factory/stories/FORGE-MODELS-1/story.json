@@ -1,6 +1,13 @@
 {
   "doc": "plans/FORGE-MODELS-1.md",
-  "status": "read",
+  "drop": {
+    "at": "2026-11-28T11:07:10.568642+00:00",
+    "because": "Owner cleanup of 27 Nov 2026: kept on the idea list",
+    "by": "vrknetha <vrknetha@gmail.com> 1795864030 +0530",
+    "pull_requests": [],
+    "status": "read"
+  },
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-17T18:34:32.675080+00:00",
