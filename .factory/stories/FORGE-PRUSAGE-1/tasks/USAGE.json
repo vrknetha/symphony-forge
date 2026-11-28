@@ -112,7 +112,7 @@
     "status": "blocked"
   },
   "round": 2,
-  "status": "hotspot",
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-28T02:02:16.264459+00:00",
@@ -140,12 +140,23 @@
       "at": "2026-11-28T02:31:43.185066+00:00",
       "round": 2,
       "step": "hold"
+    },
+    {
+      "at": "2026-11-28T02:32:41.342372+00:00",
+      "by": "owner",
+      "choice": "more",
+      "round": 2,
+      "step": "owner decision"
     }
   ],
   "stop": {
     "at": "2026-11-28T02:31:43.185066+00:00",
+    "by": "owner",
+    "choice": "more",
     "file": "tests/test_pr_usage_summary.py",
-    "wait_id": "e29c1725-3241-4ef5-9aee-92515f968b29"
+    "reason": "Owner chose one more round: tighten the round-line test and test a real story plan read",
+    "wait_id": "e29c1725-3241-4ef5-9aee-92515f968b29",
+    "worker_round": 2
   },
   "stuck": {
     "close": "0810cbf8-dc6c-41e5-8706-fb08025d4d66",
