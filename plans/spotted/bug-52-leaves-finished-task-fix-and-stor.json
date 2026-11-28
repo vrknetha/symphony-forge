@@ -19,8 +19,8 @@
       "text": "Not done: List finished worktrees retained outside the removable set",
       "from": "blocking",
       "item": "bug-52-leaves-finished-task-fix-and-stor",
-      "status": "open",
-      "closed_by": null
+      "status": "done",
+      "closed_by": "dismissed"
     },
     {
       "key": "bug\tsrc/forge/doctor.py\tNot done: Remove clean finished worktrees in repositories with submodules\tbug-52-leaves-finished-task-fix-and-stor",
