@@ -1,13 +1,13 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-28T01:33:57.249013+00:00
-seconds: 495.537
-read_hash: 68c0449c94215f2c60baa940018e819379ed95ed
-round: 1
+read_at: 2026-11-28T02:09:22.012955+00:00
+seconds: 631.7
+read_hash: c6f225ec8785d28f2b023782149010f97b57d6fc
+round: 2
 passed: no
-doc_seen: 68c0449c94215f2c60baa940018e819379ed95ed
+doc_seen: c6f225ec8785d28f2b023782149010f97b57d6fc
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
+notes_seen: 98f1e7c9db447af93987e7d1b4ea3d0493901463
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a21fc2-1aee-7260-9b38-3dc722fffc9e
 session:
@@ -103,3 +103,54 @@ Only a genuine trade-off goes to the human, as a question with options.
    Disposition: cut - the test runs `forge next` with no argument in the item's folder (details 1).
 
 Skipped `forge next`: it can change repository files.
+
+## Round 2
+
+13. **Blocking: Saving the choice makes land skip an unbuilt task.**  
+    Raise: Functional - The new state commit changes `HEAD` before [land.py](/src/forge/land.py:125) checks whether it equals the task's start commit. The task then goes straight to close without a worker. [Close](/src/forge/close.py:366) can treat a records-only change as a clean review, so a green run can close or merge the task without its product work.  
+    Case: normal use - Run `forge land <task> --tool <family>` on a newly started task.  
+    Gain 5, Work 2, Harm 3
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
+
+14. **Blocking: The SDK check still skips a required Codex install.**  
+    Raise: Not done - The new check skips the SDK when Codex is the coordinator. But [worker.py](/src/forge/worker.py:204) uses the SDK when `codex_fast` is off, which is the [default](/src/forge/repo.py:572). Work can therefore merge before the later SDK refusal; start can save an item the runner cannot build. The runner also [forces the SDK route](/src/forge/repo.py:858), regardless of the starting session.  
+    Case: normal use - Choose Codex from a Codex session with default settings and a missing SDK.  
+    Gain 4, Work 2, Harm 3
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
+
+15. **Blocking: Picking up an item can merge its branch before the new check.**  
+    Raise: Not done - The plan places validation after `checkout(item)`. If the item has a local branch but no worktree, [task.pick_up](/src/forge/task.py:240) creates the worktree and fast-forwards that branch from its remote before returning. This is a separate item-branch merge from the default-branch merge addressed in round 1.  
+    Case: normal use - Resume a teammate's published item from an existing local branch and choose a disallowed builder.  
+    Gain 4, Work 2, Harm 3
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
+
+16. **Advisory: A rejected land command can resume stopped work.**  
+    Raise: Functional - The planned land check comes after [stops.lift](/src/forge/land.py:95), which [saves removal of the stop](/src/forge/stops.py:76). If the chosen builder is then refused, a live background runner can resume the item with its previous builder.  
+    Gain 3, Work 2, Harm 3
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
+
+17. **Advisory: Close can publish history before refusing the builder.**  
+    Raise: Functional - The switch check is planned at [close.py](/src/forge/close.py:130), after a pending history repair runs. That repair can [save its batch and update pull-request records](/src/forge/backfill.py:257), contrary to the promise to refuse before saving.  
+    Gain 3, Work 2, Harm 2
+   Disposition: keep - below the bar (follow-up)
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
+
+18. **Advisory: The new Codex repair-model description is inaccurate for fixes.**  
+    Raise: Not done - The plan says Codex repair rounds use `[models.fix.codex]`, but [worker.py](/src/forge/worker.py:213) resets a fix's kind to `lite`, or `build` for a backend fix, even on a repair. The guide would direct users to a setting that those rounds do not use.  
+    Gain 3, Work 1, Harm 2
+   Disposition: keep - below the bar (follow-up)
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
+
+19. **Advisory: A refusal can name the wrong settings file.**  
+    Raise: Functional - The check reads the effective configuration, including [forge.local.toml](/src/forge/repo.py:675), but its refusal always says `forge.toml` set `tools`. A local `tools = "claude"` with shared `tools = "both"` is reported as a shared restriction.  
+    Gain 2, Work 1, Harm 2
+   Disposition: keep - below the bar (live with)
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
+
+20. **Advisory: Model-source output can name the wrong source for the chosen builder.**  
+    Raise: Functional - With a local settings file, [setting_sources](/src/forge/repo.py:828) identifies the model source using the repo's default worker, not the item's chosen worker. For example, an Antigravity model from `forge.toml` can be reported as a built-in default when the local worker is Claude.  
+    Gain 3, Work 2, Harm 2
+   Disposition: cut - moved into the covered Done-when details as a must-fix line, so the builder brief and the review carry it
+
+Skipped `forge next`: it can change repository files.
+   Disposition: keep - below the bar (follow-up)
