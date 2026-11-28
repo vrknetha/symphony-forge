@@ -224,27 +224,6 @@
       "order": 77
     },
     {
-      "key": "FORGE-SANDBOX-1",
-      "title": "Close runs in a Mainline sandbox when the laptop's test lane is full",
-      "spec": "docs/specs/sandbox-runs.md",
-      "status": "pending",
-      "order": 78
-    },
-    {
-      "key": "FORGE-SANDBOX-2",
-      "title": "Build rounds run in a Mainline sandbox when the laptop's agent line is full",
-      "spec": "docs/specs/sandbox-runs.md",
-      "status": "pending",
-      "order": 79
-    },
-    {
-      "key": "FORGE-SANDBOX-3",
-      "title": "A team shares sandbox places, one live team board and its credits",
-      "spec": "docs/specs/sandbox-runs.md",
-      "status": "pending",
-      "order": 80
-    },
-    {
       "key": "FORGE-COST-1",
       "title": "Every run keeps its token count, and the board shows cost and time per item",
       "spec": "docs/specs/item-cost.md",
@@ -638,6 +617,39 @@
       "order": 120
     },
     {
+      "key": "FORGE-PROVIDER-1",
+      "title": "A private repo's test jobs run on throwaway AWS machines",
+      "status": "pending",
+      "order": 121
+    },
+    {
+      "key": "FORGE-PROVIDER-2",
+      "title": "The laptop's builder test runs go to AWS boxes when the laptop is busy",
+      "story": "Laptop first, while its load is under half of today's limit and it has no swap. A box works like a second laptop: Forge runs inside it and packs several build rounds and test runs into it by its processors and memory, with the same lane rules as the laptop; a box takes new work only in its first 2 hours and ends by 3 hours; the default size is 4 processors and 16 GiB.",
+      "status": "pending",
+      "order": 122
+    },
+    {
+      "key": "FORGE-PROVIDER-3",
+      "title": "Claude, Codex and Neon build rounds run in AWS boxes",
+      "story": "Claude rounds use every box from day one, with the developer's own setup-token in Secrets Manager. The story tests one Codex sign-in serving 3 to 4 rounds through one app server in one box, with an OpenAI API key as the fallback in busy times, and Neon's plan sign-in made once through the box terminal (Neon stays on the laptop if that fails). The box pushes with the developer's GitHub sign-in; if the laptop is away, the round finishes and waits. A box works like a second laptop: Forge runs inside it and packs several build rounds and test runs into it by its processors and memory, with the same lane rules as the laptop; a box takes new work only in its first 2 hours and ends by 3 hours; the default size is 4 processors and 16 GiB.",
+      "status": "pending",
+      "order": 123
+    },
+    {
+      "key": "FORGE-PROVIDER-4",
+      "title": "agent37 as a second box provider",
+      "story": "An adapter behind the same admission path and machine limit as the AWS boxes. No Kubernetes: one small adapter per cloud.",
+      "status": "pending",
+      "order": 124
+    },
+    {
+      "key": "FORGE-SLOWTEST-1",
+      "title": "Faster tests for repos with one combined test command",
+      "status": "pending",
+      "order": 120
+    },
+    {
       "key": "FORGE-NIGHTLY-1",
       "title": "Show a failed full test run under Needs you",
       "status": "pending",
@@ -692,6 +704,12 @@
       "order": 127
     },
     {
+      "key": "FORGE-ANTIGRAVITY-1",
+      "title": "Google Antigravity as a third coding agent",
+      "status": "pending",
+      "order": 128
+    },
+    {
       "key": "FORGE-RELNOTES-1",
       "title": "Tell clients what each Forge release changed",
       "status": "pending",
@@ -704,34 +722,28 @@
       "order": 128
     },
     {
+      "key": "FORGE-TIDYUP-1",
+      "title": "Finished work is cleaned up every time, and leftover work is listed with one next step",
+      "status": "pending",
+      "order": 129
+    },
+    {
       "key": "FORGE-TOKENS-1",
       "title": "Builder rounds send fewer input tokens",
       "status": "pending",
       "order": 129
     },
     {
-      "key": "FORGE-ANTIGRAVITY-1",
-      "title": "Google Antigravity as a third coding agent",
+      "key": "FORGE-RUNNER-1",
+      "title": "Approved work keeps moving to merge without reminders",
       "status": "pending",
-      "order": 128
+      "order": 130
     },
     {
       "key": "FORGE-CHATHANDOVER-1",
       "title": "Hand a long coordinator chat over to a fresh chat",
       "status": "pending",
       "order": 130
-    },
-    {
-      "key": "FORGE-SLOWTEST-1",
-      "title": "Faster tests for repos with one combined test command",
-      "status": "pending",
-      "order": 120
-    },
-    {
-      "key": "FORGE-TIDYUP-1",
-      "title": "Finished work is cleaned up every time, and leftover work is listed with one next step",
-      "status": "pending",
-      "order": 129
     },
     {
       "key": "FORGE-REVIEWPROOF-1",
@@ -752,20 +764,35 @@
       "order": 130
     },
     {
-      "key": "FORGE-PRUSAGE-1",
-      "title": "Show model use and change size in pull requests",
+      "key": "FORGE-ASKFAMILY-1",
+      "title": "Ask another model family for a second opinion",
       "status": "pending",
       "order": 132
     },
     {
-      "key": "FORGE-RUNNER-1",
-      "title": "Approved work keeps moving to merge without reminders",
+      "key": "FORGE-SANDBOX-1",
+      "title": "Close runs in a Mainline sandbox when the laptop's test lane is full",
+      "spec": "docs/specs/sandbox-runs.md",
       "status": "pending",
-      "order": 130
+      "order": 78
     },
     {
-      "key": "FORGE-ASKFAMILY-1",
-      "title": "Ask another model family for a second opinion",
+      "key": "FORGE-SANDBOX-2",
+      "title": "Build rounds run in a Mainline sandbox when the laptop's agent line is full",
+      "spec": "docs/specs/sandbox-runs.md",
+      "status": "pending",
+      "order": 79
+    },
+    {
+      "key": "FORGE-SANDBOX-3",
+      "title": "A team shares sandbox places, one live team board and its credits",
+      "spec": "docs/specs/sandbox-runs.md",
+      "status": "pending",
+      "order": 80
+    },
+    {
+      "key": "FORGE-PRUSAGE-1",
+      "title": "Show model use and change size in pull requests",
       "status": "pending",
       "order": 132
     }

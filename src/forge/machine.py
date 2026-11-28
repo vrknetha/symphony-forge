@@ -27,8 +27,13 @@ COMMANDS = [{"words": "lanes", "run": "lanes", "changes_state": False,
     "help": "Show this release's machine-wide runs", "position": 60,
     "args": [(("--json",), {"action": "store_true"}),
              (("--box",), {"choices": ["setup", "off"], "help": "Set up or turn off your own Linux machine"}),
-             (("--host",), {"metavar": "NAME"}), (("--yes",), {"action": "store_true"})],
-    "listing": "| `forge lanes --json` | Runs on this machine from every repo, and the items that wait for the person; `--box setup --host <name>` sets up your own Linux machine for Codex rounds, `--box off` turns it off |"},
+             (("--host",), {"metavar": "NAME"}), (("--yes",), {"action": "store_true"}),
+             (("--aws",), {"choices": ["setup", "off", "status"], "help": "Set up, check or turn off AWS Actions runners"}),
+             (("--max-machines",), {"type": int, "metavar": "N"}),
+             (("--budget",), {"type": int, "metavar": "USD"}),
+             (("--email",), {"metavar": "ADDRESS"}),
+             (("--region",), {"metavar": "NAME"})],
+    "listing": "| `forge lanes --json` | Runs on this machine from every repo, and the items that wait for the person; `--box setup --host <name>` sets up your own Linux machine for Codex rounds, `--box off` turns it off; `--aws setup|off|status` manages private-repo AWS Actions runners |"},
     {"words": "stop", "run": "stop", "changes_state": False,
     "help": "Stop a running or waiting run (only a person)", "position": 61,
     "args": [(("item",), {"nargs": "?"}), (("--repo",), {"metavar": "ROOT"}),
@@ -548,6 +553,11 @@ def _pressed(agents: list[dict[str, Any]]) -> bool:
 
 def lanes(args: Any) -> int:
     """Show every release's runs, while all of them count towards queue admission."""
+    if args.box and args.aws:
+        raise repo.Refused("Use --box or --aws, not both.", "forge lanes --aws setup")
+    if (args.max_machines is not None or args.budget is not None or args.email or args.region) and args.aws != "setup":
+        raise repo.Refused("Use --max-machines, --budget, --email and --region only with --aws setup.",
+                           "forge lanes --aws setup")
     if args.host and args.box != "setup":
         raise repo.Refused("Use --host only with --box setup.", "forge lanes --box setup --host <name>")
     if args.yes and args.box != "off":
@@ -555,6 +565,9 @@ def lanes(args: Any) -> int:
     if args.box:
         from forge import box
         return box.command(repo.root(), args)
+    if args.aws:
+        from forge import aws
+        return aws.main(args)
     result = view()
     now = datetime.fromisoformat(repo.now())
     live = _live_steps([run for lane in result.values() for run in lane["entries"]])

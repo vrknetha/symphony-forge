@@ -1,0 +1,145 @@
+{
+  "branch": "task/FORGE-PROVIDER-1-SWITCH",
+  "chat": {
+    "approval": "2d09e11a60670f315b09acae6e72876afdc563fdb10b3e2b90e704800d1c24fe",
+    "claude": null,
+    "conversation": "01a22103-c28e-7c22-9827-c367d8a89a30",
+    "head": null,
+    "start": "8956e140095723fb8da85e0223e2cfa826391cff"
+  },
+  "known": [
+    {
+      "area": "setup() in src/forge/aws.py",
+      "file": "src/forge/aws.py",
+      "gain": 5,
+      "harm": 4,
+      "line": 98,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": true,
+      "title": "Not done: `forge lanes --aws setup` refuses a public repo",
+      "work": 2
+    },
+    {
+      "area": "setup() in src/forge/aws.py",
+      "file": "src/forge/aws.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 95,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: AWS setup rejects documented self-hosted Linux runners",
+      "work": 2
+    },
+    {
+      "area": "src/forge/machine.py",
+      "file": "src/forge/machine.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 32,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Gate: the new AWS controls are absent from the Forge guide",
+      "work": 2
+    },
+    {
+      "area": "test_1_aws_runners_are_off_by_default() in tests/test_aws_switch.py",
+      "file": "tests/test_aws_switch.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 184,
+      "outcome": "fixed in round 3",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: default workflow compatibility and AWS test-group routing",
+      "work": 2
+    },
+    {
+      "area": "src/forge/aws.py",
+      "file": "src/forge/aws.py",
+      "gain": 2,
+      "harm": 2,
+      "line": 14,
+      "outcome": "lived with",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Follow-up: accept the AWS European Sovereign Cloud region",
+      "work": 1
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "00da3b876ab6fd4522462fb32dbdbdff8ccdbb8afc6597ff3487de2e177bbca5",
+    "changed": "be9c7a8cf357eaf1bcc68ffaac793413c24fb318c53a6faa6e52c77961d726b1",
+    "commit": "02d1bbeac625ccb61ba31b02fb7fe76087087b72",
+    "dismissals": [],
+    "findings": [],
+    "id": "cc98fa6a-309f-402c-a00d-a8ac92f20ad7",
+    "status": "clean"
+  },
+  "round": 3,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-28T00:56:19.123209+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-28T00:56:30.856931+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T01:14:24.964985+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T01:14:49.841618+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T01:25:18.841529+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T01:35:34.983333+00:00",
+      "round": 2,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-28T06:29:47.319704+00:00",
+      "by": "owner",
+      "choice": "same",
+      "round": 2,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-28T06:32:25.170603+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T07:17:01.695179+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T07:24:11.343323+00:00",
+      "step": "review"
+    }
+  ],
+  "stuck": {
+    "close": "27194ca3-e670-47ea-bc3c-38bd0cb850a7",
+    "head": "8c1a1a114815b45ff713fa38d146e2182a863127",
+    "keys": {},
+    "round": 2
+  },
+  "worker": "codex"
+}
