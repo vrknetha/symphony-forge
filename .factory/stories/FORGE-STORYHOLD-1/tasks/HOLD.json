@@ -53,7 +53,7 @@
       "gain": 3,
       "harm": 3,
       "line": 65,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 1,
       "security": false,
@@ -89,27 +89,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "291fda93bbd8c517ac8587afba6d1f37be6d5c2a390d8c96c4c08765d0e2c334",
-    "changed": "17f3923cb8618bf443d9e8eca50dc9b8db159041c3d4e0b16487dc76353c0bfd",
-    "commit": "7825578af8049da0c5cae99a6cbc05f38ec3f2f2",
+    "branch_diff": "07fee386629be95875f8909920e81adeb1c274ab4709d620453355e0d6998159",
+    "changed": "0decf92436d5126eaee6d4be4bee4a2fb3b4c73ac8a24dad6f90c6f9124a1337",
+    "commit": "cbcfba8411777031733a128901a8deb0e6230220",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - A teammate runs `forge next` after another machine holds a story. This test fetches the hold into the peer before invoking `forge next`, so it still passes when the command offers a held part because its history snapshot races its own fetch (`src/forge/nextstep.py:175-176`). Exercise the peer's first `forge next` from a stale clone with that ordering.",
-        "file": "tests/test_story_hold.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 87,
-        "priority": "P1",
-        "title": "Test: `forge next` never offers held story parts",
-        "work": 1
-      }
-    ],
-    "id": "b2cc9c66-f376-475c-98a1-e90e284266e4",
-    "status": "blocked"
+    "findings": [],
+    "id": "3c79a111-7878-4563-8740-f66a441227f5",
+    "status": "clean"
   },
   "round": 3,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-28T04:39:22.944866+00:00",
@@ -149,6 +138,10 @@
       "at": "2026-11-28T07:19:38.358685+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-28T07:28:24.684709+00:00",
+      "step": "review"
     }
   ],
   "stop": {
