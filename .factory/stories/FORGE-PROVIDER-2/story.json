@@ -1,6 +1,15 @@
 {
+  "approval": {
+    "at": "2026-11-28T06:35:21.229619+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01LdXZsJC4KALjfyfC8phBjh",
+    "hash": "0e00b732f3c69c86f0f7327dbb565ee07dcfc3d3856a026255b11913215201af",
+    "round": 2,
+    "runtime": "claude",
+    "session": "26518c53-7541-418c-a81e-9f4aa1925767"
+  },
   "doc": "plans/FORGE-PROVIDER-2.md",
-  "status": "read",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-28T01:21:42.098141+00:00",
@@ -9,8 +18,16 @@
     {
       "at": "2026-11-28T02:39:24.501721+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-28T04:29:11.507295+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-28T06:35:21.229861+00:00",
+      "step": "approved"
     }
   ],
   "title": "Run builder tests on AWS when the laptop is busy",
-  "touches": 0
+  "touches": 1
 }
