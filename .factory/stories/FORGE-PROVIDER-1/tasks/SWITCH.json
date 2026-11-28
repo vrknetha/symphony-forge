@@ -1,5 +1,12 @@
 {
   "branch": "task/FORGE-PROVIDER-1-SWITCH",
+  "chat": {
+    "approval": "2d09e11a60670f315b09acae6e72876afdc563fdb10b3e2b90e704800d1c24fe",
+    "claude": null,
+    "conversation": "01a22103-c28e-7c22-9827-c367d8a89a30",
+    "head": null,
+    "start": "8956e140095723fb8da85e0223e2cfa826391cff"
+  },
   "known": [
     {
       "area": "setup() in src/forge/aws.py",
