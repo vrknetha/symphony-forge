@@ -9,7 +9,12 @@
     "session": "d657efa8-39f4-4695-91d7-c193e1a5ba69"
   },
   "doc": "plans/FORGE-READCHURN-1.md",
-  "status": "approved",
+  "drop": {
+    "at": "2026-11-28T02:50:05.626679+00:00",
+    "because": "Replaced by FORGE-THINREVIEW-1's reads part (owner, 28 Nov 2026)",
+    "by": "vrknetha <vrknetha@gmail.com> 1795834205 +0530"
+  },
+  "status": "dropped",
   "steps": [
     {
       "at": "2026-11-25T06:12:50.595629+00:00",
