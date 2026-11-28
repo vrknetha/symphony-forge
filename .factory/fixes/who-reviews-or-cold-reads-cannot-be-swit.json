@@ -1,6 +1,13 @@
 {
   "base": "4a47d4e4feebaaa003743821e9a6b0fff31f467d",
   "branch": "fix/who-reviews-or-cold-reads-cannot-be-swit",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a2208c-1388-7a62-a62e-c3f70f302824",
+    "head": null,
+    "start": "72ee2a7204cea5557abb6983a354c7b8498b3b03"
+  },
   "done_when": "A reviews line in forge.local.toml picks this clone reviewer with the same values as forge.toml, and naming the family that built the item is refused with a message that points to forge.local.toml.",
   "fix_kind": "backend",
   "fix_kind_explicit": true,
