@@ -1,6 +1,15 @@
 {
+  "approval": {
+    "at": "2026-11-28T02:23:48.972676+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01DKGEwvhNxCWa521DpfB2Ai",
+    "hash": "9c190902c735128b77f13c1bee9f3ca8cd553a93553a749b23cfbe4f4168bbdf",
+    "round": 2,
+    "runtime": "claude",
+    "session": "26518c53-7541-418c-a81e-9f4aa1925767"
+  },
   "doc": "plans/FORGE-ITEMTOOL-1.md",
-  "status": "read",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-28T01:17:28.183715+00:00",
@@ -13,8 +22,12 @@
     {
       "at": "2026-11-28T02:09:22.029065+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-28T02:23:48.972857+00:00",
+      "step": "approved"
     }
   ],
   "title": "Choose a builder for one item",
-  "touches": 0
+  "touches": 1
 }
