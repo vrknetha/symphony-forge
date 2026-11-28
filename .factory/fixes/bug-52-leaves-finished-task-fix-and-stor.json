@@ -1,0 +1,16 @@
+{
+  "base": "8cb98e82154cee06e4c96ba0078a304c9539e119",
+  "branch": "fix/bug-52-leaves-finished-task-fix-and-stor",
+  "done_when": "In v1.2.51, any Forge command and land\u2019s sweep remove clean, unused task, fix, and story worktrees when merging their branch would leave main\u2019s tree unchanged, including after a squash merge, and list the worktrees they keep.",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "status": "started",
+  "steps": [
+    {
+      "at": "2026-11-28T01:02:17.159204+00:00",
+      "step": "start"
+    }
+  ],
+  "why": "Bug #52 leaves finished task, fix, and story worktrees behind without listing them."
+}
