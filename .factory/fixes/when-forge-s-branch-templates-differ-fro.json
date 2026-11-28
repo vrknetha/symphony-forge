@@ -88,7 +88,7 @@
     "id": "f4e1a593-6a0a-4681-91f6-2808f5afdba8",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -103,13 +103,18 @@
     {
       "at": "2026-11-28T01:17:43.621807+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-28T01:18:01.723468+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "d0c4156371710b7b4b0fdb661b8260433301b7ce",
+    "close": "2080bb64-6149-4a25-a923-63696c5402be",
+    "head": "7e18b87d512f2bab8697fc31a332b7fb45133b8b",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "When Forge\u2019s branch templates differ from the installed release, the suggested sync can regenerate guides from the installed templates and leave close blocked.",
   "worker": "antigravity"
