@@ -77,8 +77,8 @@
     "id": "b614e2da-411c-4da8-85c0-0f13e03bd936",
     "status": "clean"
   },
-  "round": 2,
-  "status": "waiting for checks",
+  "round": 3,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-28T00:56:19.123209+00:00",
@@ -117,25 +117,18 @@
     {
       "at": "2026-11-28T06:32:25.170603+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-28T07:17:01.695179+00:00",
+      "round": 3,
+      "step": "resume"
     }
   ],
-  "stop": {
-    "at": "2026-11-28T01:35:34.983333+00:00",
-    "by": "owner",
-    "choice": "same",
-    "question": "A private repo's test jobs run on throwaway AWS machines: AWS runners are off, and setup refuses what it must is stuck. It should deliver: The `aws_runners` setting; the `forge lanes` options beside `--box`; `aws.setup`'s refusals; the old Mainline spec removed\nTwo rounds in a row left the open P0 not done: `forge lanes --aws setup` refuses a public repo in src/forge/aws.py.\nThe worker tried: Fix round 2 review findings: origin-bound repo check, self-hosted Linux runners, guide sync, and split workflow proof.\nChoose one: switch this item to Claude; keep Antigravity for one more round; or narrow or split it.",
-    "reason": "Owner chose one more Antigravity round. The open P1 is small: in src/forge/aws.py keep the origin's hostname in _origin_repo (do not discard it at line 76) and pass '--hostname <that host>' to the 'gh api repos/<owner>/<repo>' call, so GH_HOST cannot point the check at another host. Add one test where GH_HOST names another host and setup still refuses the public origin. Change nothing else.",
-    "tool": "antigravity",
-    "wait_id": "17f255cb-721b-4072-a623-b2b42785b579",
-    "worker_round": 2
-  },
   "stuck": {
-    "close": "71d9ab17-e1bd-4a41-ad64-253276ede78b",
-    "head": "2c93f8515d3fc31c98b98ac121498441b5dc5d20",
-    "keys": {
-      "the open P0 not done: `forge lanes --aws setup` refuses a public repo in src/forge/aws.py": 1
-    },
-    "round": 1
+    "close": "27194ca3-e670-47ea-bc3c-38bd0cb850a7",
+    "head": "8c1a1a114815b45ff713fa38d146e2182a863127",
+    "keys": {},
+    "round": 2
   },
-  "worker": "antigravity"
+  "worker": "codex"
 }
