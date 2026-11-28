@@ -12,7 +12,7 @@
       "gain": 4,
       "harm": 3,
       "line": 631,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -25,7 +25,7 @@
       "gain": 4,
       "harm": 3,
       "line": 49,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -38,7 +38,7 @@
       "gain": 3,
       "harm": 3,
       "line": 40,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -48,48 +48,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "abe176b2610230e7ca20a592eb525ecde845c9bb823a25da0764285bf7482ece",
-    "changed": "d821d4972e134ac34c9bd0beddd79db45ac6ed5b3a6abf569cd744f9a40f2d2e",
-    "commit": "690207ac3fe697c53a2fc7fb3c5f617bcd2e2454",
+    "branch_diff": "1866ce94d9d074c50d825cf9edb3c52cfaea8cab16e5358284130d69a0ad0b0b",
+    "changed": "84c41e60691721a113acaf6418345b8b03a9553bcdf301cb7ffae6c11a99769a",
+    "commit": "6b7b3fbc8328e36cb634c2f6dca4f17e8386f49c",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Not done\nCase: normal use - A Forge release fix changes its version pin while a guide is stale. The Done-when item is: \u201cIn v1.2.51, when close finds stale guides in Forge\u2019s own checkout, its Next line tells the user to run uv run --frozen forge sync in the affected checkout, and that command regenerates the guides from the branch\u2019s templates.\u201d\nThe new command is selected only in `check_guides`. When the branch pin differs from the default branch, `src/forge/close.py:825-828` bypasses that function; `close.py:837-847` checks with the running package and still emits the plain `forge sync` instruction from `close.py:62-63`. If that package\u2019s templates differ from the branch, following the instruction writes the installed templates, and close can accept guides that remain stale for the branch.",
-        "file": "src/forge/sync.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 631,
-        "priority": "P1",
-        "required_done_when": true,
-        "title": "Not done: Version-changing source fixes still suggest plain forge sync",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 1, Harm 3\nRaise: Gate - Standard: \u201cIsolate host-side configuration so tests never use or change the developer's settings.\u201d\nCase: normal use - A developer runs the suite with `UV_PROJECT_ENVIRONMENT` set to an absolute path for their Forge environment. This test removes `VIRTUAL_ENV` but inherits that setting, so `uv run` syncs the temporary fixture project into the developer\u2019s environment. It can replace the editable Forge installation with one pointing at the temporary worktree, interfering with concurrent tests and breaking the environment after cleanup. [uv documents that an absolute project environment is reused across projects](https://docs.astral.sh/uv/concepts/projects/config/#project-environment-path); the existing clone test selects a test-owned environment at `tests/test_fix_clone_gets_test_tools.py:36-38`.",
-        "file": "tests/test_source_stale_guides_next_step.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 49,
-        "priority": "P1",
-        "title": "Standard: Isolate host-side configuration from tests",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - A Forge release fix changes its version pin and has a stale guide. The named proof creates the source configuration before branching and changes only the template here, so the branch and default pins remain equal. It never reaches the version-changing path in `src/forge/close.py:825-847`, which still suggests plain `forge sync` and checks against the running package\u2019s templates. The test therefore passes while that part of the Done-when behavior is false; extend the command-level proof to cover a source version change.",
-        "file": "tests/test_source_stale_guides_next_step.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 40,
-        "priority": "P1",
-        "title": "Test: Stale source guides in a version-changing fix",
-        "work": 1
-      }
-    ],
-    "id": "f4e1a593-6a0a-4681-91f6-2808f5afdba8",
-    "status": "blocked"
+    "findings": [],
+    "id": "132cd9aa-ea42-4e41-9da4-160486edd64f",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-28T01:02:59.221238+00:00",
@@ -108,6 +76,10 @@
       "at": "2026-11-28T01:18:01.723468+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-28T01:28:27.055031+00:00",
+      "step": "review"
     }
   ],
   "stuck": {
