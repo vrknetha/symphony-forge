@@ -77,8 +77,8 @@
     "id": "4ef76a5b-b26d-404f-9240-c6365ea2ed3b",
     "status": "clean"
   },
-  "round": 5,
-  "status": "waiting for checks",
+  "round": 6,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-28T01:02:17.159204+00:00",
@@ -132,6 +132,11 @@
     {
       "at": "2026-11-28T10:17:44.153797+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-28T10:44:27.105187+00:00",
+      "round": 6,
+      "step": "resume"
     }
   ],
   "stop": {
@@ -144,10 +149,10 @@
     "worker_round": 4
   },
   "stuck": {
-    "close": "91d4b035-3751-4b36-98da-6815362ac547",
-    "head": "ef781172e9a48ed7c8a556d0eb7fc7ec185de545",
+    "close": "8dae7965-2b09-4223-9505-5380813e93e9",
+    "head": "7451814164e65821606bceb963819bcc5eb2713b",
     "keys": {},
-    "round": 4
+    "round": 5
   },
   "why": "Bug #52 leaves finished task, fix, and story worktrees behind without listing them.",
   "worker": "codex"
