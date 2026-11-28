@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/time_records.py\tNot done: The block shows input, cached input and output tokens for build, review and plan read, each apart.\tFORGE-PRUSAGE-1/USAGE",
+      "kind": "bug",
+      "path": "src/forge/time_records.py",
+      "line": 623,
+      "text": "Not done: The block shows input, cached input and output tokens for build, review and plan read, each apart.",
+      "from": "blocking",
+      "item": "FORGE-PRUSAGE-1/USAGE",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_pr_usage_summary.py\tGate: the model and token proofs fabricate Forge's internal event records\tFORGE-PRUSAGE-1/USAGE",
+      "kind": "bug",
+      "path": "tests/test_pr_usage_summary.py",
+      "line": 18,
+      "text": "Gate: the model and token proofs fabricate Forge's internal event records",
+      "from": "blocking",
+      "item": "FORGE-PRUSAGE-1/USAGE",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_pr_usage_summary.py\tTest: A task or fix pull request's \"How it went\" block has a build line and unchanged round lines\tFORGE-PRUSAGE-1/USAGE",
+      "kind": "bug",
+      "path": "tests/test_pr_usage_summary.py",
+      "line": 52,
+      "text": "Test: A task or fix pull request's \"How it went\" block has a build line and unchanged round lines",
+      "from": "blocking",
+      "item": "FORGE-PRUSAGE-1/USAGE",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_pr_usage_summary.py\tTest: The block shows input, cached input and output tokens for build, review and plan read, each apart\tFORGE-PRUSAGE-1/USAGE",
+      "kind": "bug",
+      "path": "tests/test_pr_usage_summary.py",
+      "line": 87,
+      "text": "Test: The block shows input, cached input and output tokens for build, review and plan read, each apart",
+      "from": "blocking",
+      "item": "FORGE-PRUSAGE-1/USAGE",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_pr_usage_summary.py\tTest: When the work is ready, the block shows S, M or L with the lines and the number of product files\tFORGE-PRUSAGE-1/USAGE",
+      "kind": "bug",
+      "path": "tests/test_pr_usage_summary.py",
+      "line": 123,
+      "text": "Test: When the work is ready, the block shows S, M or L with the lines and the number of product files",
+      "from": "blocking",
+      "item": "FORGE-PRUSAGE-1/USAGE",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/time_records.py\tNot done: A task or fix pull request's \"How it went\" block has a build line with the builder model and effort",
+      "kind": "edge",
+      "path": "src/forge/time_records.py",
+      "line": 606,
+      "text": "Not done: A task or fix pull request's \"How it went\" block has a build line with the builder model and effort",
+      "from": "review",
+      "item": "FORGE-PRUSAGE-1/USAGE",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

@@ -768,6 +768,33 @@
       "title": "Ask another model family for a second opinion",
       "status": "pending",
       "order": 132
+    },
+    {
+      "key": "FORGE-SANDBOX-1",
+      "title": "Close runs in a Mainline sandbox when the laptop's test lane is full",
+      "spec": "docs/specs/sandbox-runs.md",
+      "status": "pending",
+      "order": 78
+    },
+    {
+      "key": "FORGE-SANDBOX-2",
+      "title": "Build rounds run in a Mainline sandbox when the laptop's agent line is full",
+      "spec": "docs/specs/sandbox-runs.md",
+      "status": "pending",
+      "order": 79
+    },
+    {
+      "key": "FORGE-SANDBOX-3",
+      "title": "A team shares sandbox places, one live team board and its credits",
+      "spec": "docs/specs/sandbox-runs.md",
+      "status": "pending",
+      "order": 80
+    },
+    {
+      "key": "FORGE-PRUSAGE-1",
+      "title": "Show model use and change size in pull requests",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [
