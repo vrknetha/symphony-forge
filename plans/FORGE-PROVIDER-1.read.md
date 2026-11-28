@@ -1,18 +1,18 @@
 ---
 reader: codex (gpt-6.1-terra)
-read_at: 2026-11-27T18:04:36.071839+00:00
-seconds: 935.376
-read_hash: a82c64bc7230d767374d7f122ff51e6e49a8c9be
-round: 6
+read_at: 2026-11-27T18:19:43.594234+00:00
+seconds: 576.781
+read_hash: 689d629caf702f2c542c9bad39ea7cfe8178319d
+round: 7
 passed: no
-doc_seen: a82c64bc7230d767374d7f122ff51e6e49a8c9be
+doc_seen: 689d629caf702f2c542c9bad39ea7cfe8178319d
 spec_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
-notes_seen: 881d6bd336f78b2d326a6ed085f12487e7524d1e
+notes_seen: 27ffa6257c237fcd59b395d976748dab8bf59230
 answers_seen: e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 conversation: 01a1d08a-3b0f-7ba3-8056-a21706cc3701
 session:
-loop_choice: more
-loop_reason: Owner chose one more round: fix all 12 notes (security, AWS permissions, Docker Compose, failed start, plan gaps)
+loop_choice: accept
+loop_reason: Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
 ---
 # Cold read notes
 
@@ -396,3 +396,53 @@ Only a genuine trade-off goes to the human, as a question with options.
     Case: normal use - A person creates the GitHub App during setup. The earlier keep relied on there being no screen or page, but [the rewritten plan](/plans/FORGE-PROVIDER-1.md:89) adds a locally served manifest page and a browser-based registration flow. Its [Design line](/plans/FORGE-PROVIDER-1.md:24) still says there is no page, so the stated reason no longer applies.  
     Gain 4, Work 2, Harm 2
    Disposition: cut - the Design line now names the local one-page App setup flow.
+
+## Round 7
+
+60. **Blocking: Security: the runner configuration is readable through DynamoDB.**  
+    Raise: Security  
+    Case: normal use - A person has AWS’s DynamoDB read-only policy but cannot read Secrets Manager. [The plan](/plans/FORGE-PROVIDER-1.md:62) stores the one-use runner configuration in the table while the machine starts. The restriction to one machine item applies to the machine role, not to that person’s role. They can scan the table, start the runner elsewhere first, and receive a job and its credentials. AWS’s [DynamoDB read-only policy](https://docs.aws.amazon.com/aws-managed-policy/latest/reference/AmazonDynamoDBReadOnlyAccess.html) permits `Scan`.  
+    Gain 5, Work 2, Harm 4
+   Disposition: keep - Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
+
+61. **Blocking: Not done: setup cannot obtain the token needed to look up the private repo.**  
+    Raise: Not done  
+    Case: normal use - After the owner installs the App, [setup](/plans/FORGE-PROVIDER-1.md:89) looks up the private repo’s name before it looks up the App installation. The function has the App key and repo ID, but no installation ID or installation token. GitHub requires an installation token to read private repository metadata, and [requires the installation ID to create that token](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app). Setup therefore cannot reach its verified state through the specified calls.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
+
+62. **Blocking: Not done: the timer cannot find waiting jobs.**  
+    Raise: Not done  
+    Case: normal use - Two machines are busy and a third job waits. [The table](/plans/FORGE-PROVIDER-1.md:60) has only `pk` as its key, and each waiting job has a different `wait#<id>` key. The timer’s role has `Query` but no `Scan`; [DynamoDB Query requires equality on one partition key](https://docs.aws.amazon.com/amazondynamodb/latest/APIReference/API_Query.html). The timer cannot enumerate the waiting jobs when a place becomes free.  
+    Gain 5, Work 1, Harm 3
+   Disposition: keep - Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
+
+63. **Blocking: Disputed keep 57: a runner taking another job can strand the original job.**  
+    Raise: Not done  
+    Case: normal use - With one place, job A’s event starts a runner, but GitHub assigns an older queued job B to it because both use the same label. After B finishes, A is still queued. If A’s wait record remains, [the retry](/plans/FORGE-PROVIDER-1.md:95) uses the same `job-<id>` EC2 client token as the first successful launch. AWS returns the original, now-terminated instance instead of starting another. If the wait record was removed on admission, the timer has no record to retry. This is a stuck job, beyond finding 57’s wrong-branch cost. [AWS idempotency rules](https://docs.aws.amazon.com/ec2/latest/devguide/ec2-api-idempotency.html)  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
+
+64. **Blocking: Not done: the turn-off instructions can strand their own settings fix.**  
+    Raise: Not done  
+    Case: normal use - The owner follows [the guide](/plans/FORGE-PROVIDER-1.md:105): delete the AWS runners first, then make a settings fix to remove `test_runner`. The settings-fix worker edits only `forge.toml`; [the existing guide](/src/forge/templates/skill.md:432) runs sync after that fix. Its pull request therefore still uses the committed workflow’s `forge-aws` label, but the runners have been deleted, so required tests cannot run and the fix cannot merge.  
+    Gain 5, Work 2, Harm 3
+   Disposition: keep - Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
+
+65. **Blocking: Security: turn-off can miss the stack after the setting is cleared.**  
+    Raise: Security  
+    Case: normal use - A person clears `aws_runners`, then runs turn-off from a second clone whose AWS CLI is set to a different region. [Turn-off](/plans/FORGE-PROVIDER-1.md:103) promises to work with the setting unset, but no longer has the sponsor region and has no saved teardown list in that clone. It can report no stack while the original stack and its Administration-write App key remain in the other region. The planned `--region` option is refused for turn-off.  
+    Gain 5, Work 2, Harm 4
+   Disposition: keep - Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
+
+66. **Advisory: Not done: setup also moves Windows tests to Linux.**  
+    Raise: Functional  
+    Case: normal use - A private repo has `runner = "windows-latest"` and Windows-specific test commands. Setup accepts it because `test_runner` is unset; the second settings fix then sets `test_runner = "forge-aws"`. [The existing renderer](/src/forge/prcheck.py:310) sends those tests to the Ubuntu machine too, where their Windows commands can fail. The plan describes moving Linux tests and has no refusal for this case.  
+    Gain 4, Work 2, Harm 3
+   Disposition: keep - Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
+
+67. **Advisory: Plan gap: the test SDK is installed outside the handlers’ module search path.**  
+    Raise: Test  
+    Case: normal use - On a clean checkout, `npm ci` installs the SDK under `tests/aws_handlers/node_modules`, while [the handlers](/plans/FORGE-PROVIDER-1.md:89) live under `src/forge/templates/aws`. Node resolves an ES module’s package imports from the importing module’s location. The plan specifies no staging or loader to connect those paths, so directly starting a handler cannot find the installed SDK. [Node’s module resolution](https://nodejs.org/api/esm.html)  
+    Gain 4, Work 1, Harm 2
+   Disposition: keep - Owner chose accept: the 8 notes of the last read become must-fix items in For the builders, checked by each part's review
