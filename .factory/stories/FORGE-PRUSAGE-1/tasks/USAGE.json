@@ -40,7 +40,7 @@
       "gain": 3,
       "harm": 3,
       "line": 52,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 1,
       "security": false,
@@ -53,7 +53,7 @@
       "gain": 3,
       "harm": 3,
       "line": 87,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 1,
       "security": false,
@@ -89,37 +89,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "c22ff68ac8ae7235641bf443a821d4538cbdda73b4807b09b7cb9ded08f060cb",
-    "changed": "a8ce1d349ca1c67a2dcaf535d10e068382f1f7e25416cff0fccf5c9036fc04fc",
-    "commit": "fb07b66b72283113eed99d940d45cebab13ef8f0",
+    "branch_diff": "0489bd4bea64ccdeed8bc460d8b5659c1acd0d971b62630ce671f78cfca1a60b",
+    "changed": "f55ebbaf69c20a237374cd5ebc77b9c1dbe8e62ca48b532baf71d0810c2e2fee",
+    "commit": "011aef0119d91d171baab2fc9a8afad266c2b1b0",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - a story is read before its tasks are built. The new proof reads a spec whose slug matches a fix and then closes that fix; it does not exercise a story plan read. A story read records its run under the story key (src/forge/story.py:349), while close selects task or fix branches (src/forge/close.py:652) and story completion opens no separate pull request (src/forge/story.py:1190). The test can therefore pass while actual story plan-read tokens appear in no Forge-created pull request.",
-        "file": "tests/test_pr_usage_summary.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 193,
-        "priority": "P1",
-        "title": "Test: The block shows input, cached input and output tokens for build, review and plan read, each apart",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - a completed review shows its round's time and finding counts. The repair checks only the round line's prefix and the absence of one model name. It would still pass if the existing new/repeated finding counts disappeared from the line, or if the time summary moved below the build line. The existing round renderer includes those counts at src/forge/time_records.py:525, so the assertion still does not prove the required unchanged round line and ordering.",
-        "file": "tests/test_pr_usage_summary.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 112,
-        "priority": "P1",
-        "title": "Test: A task or fix pull request's \"How it went\" block has a build line and unchanged round lines",
-        "work": 1
-      }
-    ],
-    "id": "20ab00ee-d7c9-492a-af87-df595175952f",
-    "status": "blocked"
+    "findings": [],
+    "id": "92eb7d2c-bd3e-48e6-9807-80dd3a0b72b2",
+    "status": "clean"
   },
   "round": 3,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-28T02:02:16.264459+00:00",
@@ -159,6 +138,10 @@
       "at": "2026-11-28T03:13:51.706395+00:00",
       "round": 3,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-28T03:24:26.782582+00:00",
+      "step": "review"
     }
   ],
   "stop": {
