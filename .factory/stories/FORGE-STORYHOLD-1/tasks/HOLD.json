@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-STORYHOLD-1-HOLD",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-28T04:39:22.944866+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-28T04:39:37.713278+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "5218407e5efe2d2efe8afada90785dca83104d40",
+    "keys": {},
+    "round": null
+  },
+  "worker": "codex"
 }
