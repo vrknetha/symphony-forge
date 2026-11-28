@@ -1,0 +1,12 @@
+{
+  "doc": "plans/FORGE-PROVIDER-2.md",
+  "status": "planning",
+  "steps": [
+    {
+      "at": "2026-11-28T01:21:42.098141+00:00",
+      "step": "start"
+    }
+  ],
+  "title": "Run builder tests on AWS when the laptop is busy",
+  "touches": 0
+}
