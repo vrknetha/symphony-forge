@@ -29,8 +29,9 @@ def test_1_close_stops_stale_branch_guides(env, history):
     closed = env.close(item)  # The coordinator stays in the main checkout.
 
     assert closed.returncode == 1, closed.stdout + closed.stderr
+    sync_cmd = "uv run --frozen forge sync" if history == "source" else "forge sync"
     assert closed.stderr.endswith(
-        f"Next: in {where.as_posix()}, run forge sync, then commit the generated guides and run close again.\n")
+        f"Next: in {where.as_posix()}, run {sync_cmd}, then commit the generated guides and run close again.\n")
     assert not env.review_calls()
     assert not env.gh_calls("pr", "checks")
     synced = repo.forge("sync", cwd=where)
