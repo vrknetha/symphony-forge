@@ -16,8 +16,8 @@
     "id": "e2508248-369e-40a1-93d9-2f7be3b3a1b4",
     "status": "clean"
   },
-  "round": 3,
-  "status": "waiting for checks",
+  "round": 4,
+  "status": "fixing",
   "steps": [
     {
       "at": "2026-11-27T16:30:34.564512+00:00",
@@ -49,13 +49,18 @@
     {
       "at": "2026-11-28T01:00:33.947035+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-28T01:29:20.238578+00:00",
+      "round": 4,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": "0d7c5859-db48-4bc4-8eff-b4b25065b4a6",
-    "head": "2cd9f234336ae51969be15b98c268e3520f29beb",
+    "close": "17a9c938-1dde-4944-8e4e-2fe74f66e143",
+    "head": "2ba38d3cef738fdb1136a69ee6e8f607526125ed",
     "keys": {},
-    "round": 2
+    "round": 3
   },
   "why": "Builders keep writing tests with fixed sleeps, tests that leave processes behind, and tests that reach the machine's real settings (on 27 Nov a runner test read the real repos list and acted on the real repo for two hours). The standards file already has the first two rules, but since briefs only name the standards file, builders miss them.",
   "worker": "antigravity"
