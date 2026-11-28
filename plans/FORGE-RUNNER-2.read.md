@@ -38,7 +38,7 @@ Only a genuine trade-off goes to the human, as a question with options.
    Case: normal use - a current stopped or parked item remains open while the runner is active
    Done-when detail 2 says a stopped or parked item counts as unfinished while it is current so the runner stays on until the owner answers, while Done-when detail 4 says `tests/test_runner_stops_one_item_and_tells_the_owner.py` keeps passing and `STAY`'s Tests cell omits it. In `tests/test_runner_stops_one_item_and_tells_the_owner.py:88`, `:137`, and `:164`, the test waits for `_runner_exited(tmp_path)` while current stopped/parked items (`review-fix`, `ask-fix`, `size-fix`) are still open, and lines `:100-103` and `:150-158` assert that `stops.summary` sends a `"Forge runner done"` notice listing those waiting items. Pin whether `STAY` updates that test and drops the waiting-items summary while the runner stays on, or changes the exit rule.
    Gain 4, Work 2, Harm 2
-   Disposition: fix - a stop that waits on the owner no longer keeps the runner on; the end summary and its test stay unchanged (For the builders, detail 2).
+   Disposition: keep - fixed in the plan: a stop that waits on the owner no longer keeps the runner on; the end summary and its test stay unchanged (For the builders, detail 2).
 
 2. Advisory: `WAIT` asks `wait_for_stop` to print `_notice_body` and `Next:`, but `runner.json` does not store `code` or `lines`.
    Raise: Plan gap
