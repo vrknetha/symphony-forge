@@ -14,7 +14,7 @@
       "gain": 4,
       "harm": 3,
       "line": 193,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -40,7 +40,7 @@
       "gain": 3,
       "harm": 3,
       "line": 91,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -66,7 +66,7 @@
       "gain": 3,
       "harm": 3,
       "line": 85,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -79,7 +79,7 @@
       "gain": 3,
       "harm": 3,
       "line": 46,
-      "outcome": "open",
+      "outcome": "fixed in round 2",
       "reason": "",
       "round": 1,
       "security": false,
@@ -89,78 +89,27 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "deec5ab03287bb08d3c155fb1e47d44f21a43b95d909708d1beb8dd105b84495",
-    "changed": "812297714f62d908c45e47290b7bb69e21d98d1e9161c8072b2c0ecd528a56d2",
-    "commit": "905671e687f96cb2ea5b5694f73eaf8c66ae988e",
+    "branch_diff": "291fda93bbd8c517ac8587afba6d1f37be6d5c2a390d8c96c4c08765d0e2c334",
+    "changed": "17f3923cb8618bf443d9e8eca50dc9b8db159041c3d4e0b16487dc76353c0bfd",
+    "commit": "7825578af8049da0c5cae99a6cbc05f38ec3f2f2",
     "dismissals": [],
     "findings": [
       {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Functional\nCase: normal use - An owner holds a plan while its approval question is open, and another waiting story has identical approved sections. The Claude and Codex question hooks identify plans by that sections digest. This code puts the held match in `dropped` but proceeds when there is one active match, so answering the held plan's question approves the other story and can start its work. Identical plan sections are already exercised in `tests/test_approval.py:56`.\nAdds work: refuse an approval that matches both held and waiting stories; F 2 x H 2 = 4; 2 x C = 2",
-        "file": "src/forge/approval.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 193,
-        "priority": "P1",
-        "title": "Functional: Approval of a held plan can approve a different story",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Not done\nCase: normal use - A teammate runs `forge next` after another machine holds the story. `nextstep.py:175` starts the fetch in `migration_warnings.warnings` concurrently with building its history snapshot; if the snapshot finishes first, it retains the pre-hold story state even though the fetch subsequently succeeds. `_stories` then uses that snapshot and can offer a part of the held story. Item 1 promises that `forge next` never offers its parts after the hold.",
-        "file": "src/forge/intake.py",
-        "follow_up": "Not done names no owner-approved Done-when item; builder details are guidance.",
-        "gain": 3,
-        "harm": 3,
-        "line": 307,
-        "priority": "P1",
-        "title": "Not done: `forge next` never offers its parts, however long the story stays held",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Functional\nCase: normal use - After holding a plan with an approval question open, the owner answers `Request changes` or `Stop`. `_codex_digest` refuses that answer before it identifies the held plan, so this condition calls `_touch`, which modifies the tracked story record (`approval.py:341`). A subsequent `forge story drop <KEY> --because ...` then refuses the uncommitted checkout at `intake.py:289`.\nAdds work: keep refused replies on a held story from dirtying its checkout; F 2 x H 2 = 4; 2 x C = 2",
-        "file": "src/forge/approval.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 91,
-        "priority": "P1",
-        "title": "Functional: A declined held-plan prompt leaves the story checkout dirty",
-        "work": 1
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - The named proof checks only for a `forge task start` line in the same clone. Its started part could still be offered as `forge work` or `forge close`, and its other part depends on the first part, so it is not independently startable. The test also passes with the stale teammate snapshot described above. Check the offered commands for the started part and a startable part, including a teammate observing the hold.",
+        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - A teammate runs `forge next` after another machine holds a story. This test fetches the hold into the peer before invoking `forge next`, so it still passes when the command offers a held part because its history snapshot races its own fetch (`src/forge/nextstep.py:175-176`). Exercise the peer's first `forge next` from a stale clone with that ordering.",
         "file": "tests/test_story_hold.py",
         "gain": 3,
         "harm": 3,
-        "line": 65,
+        "line": 87,
         "priority": "P1",
         "title": "Test: `forge next` never offers held story parts",
         "work": 1
-      },
-      {
-        "body": "Gain 3, Work 2, Harm 3\nRaise: Test\nCase: normal use - A story has two independently started parts with open pull requests. This proof creates and checks only one part and one request, so an implementation that closes the first part's request but leaves the second open would pass. Exercise multiple started parts and verify each request closes and each branch remains.",
-        "file": "tests/test_story_hold.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 85,
-        "priority": "P1",
-        "title": "Test: Open pull requests of all held story parts close",
-        "work": 2
-      },
-      {
-        "body": "Gain 3, Work 1, Harm 3\nRaise: Test\nCase: normal use - The read-plan case checks only the success message; it would pass if the command printed that message while leaving the published plan active. The approved-plan assertions separately search for the approval and `--undo` text, so they also pass if those appear on different lines. Verify the read plan is no longer offered and that one output line contains both parts of the notice.",
-        "file": "tests/test_approved_story_drop.py",
-        "gain": 3,
-        "harm": 3,
-        "line": 46,
-        "priority": "P1",
-        "title": "Test: A read plan drops and an approved drop's notice is one line",
-        "work": 1
       }
     ],
-    "id": "766b2d18-bb30-4f51-a962-24a732959996",
+    "id": "b2cc9c66-f376-475c-98a1-e90e284266e4",
     "status": "blocked"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "hotspot",
   "steps": [
     {
       "at": "2026-11-28T04:39:22.944866+00:00",
@@ -179,8 +128,22 @@
       "at": "2026-11-28T05:06:53.633066+00:00",
       "round": 2,
       "step": "resume"
+    },
+    {
+      "at": "2026-11-28T05:20:39.018626+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T05:20:39.018761+00:00",
+      "round": 2,
+      "step": "hold"
     }
   ],
+  "stop": {
+    "at": "2026-11-28T05:20:39.018761+00:00",
+    "file": "tests/test_story_hold.py",
+    "wait_id": "aecec1d9-dadb-4134-9af9-81dd7ae79684"
+  },
   "stuck": {
     "close": "cec2938d-c643-42ac-879d-5a73d49f3d1e",
     "head": "f8a8e2f0f4f40a519144382008cb77bba7538c96",
