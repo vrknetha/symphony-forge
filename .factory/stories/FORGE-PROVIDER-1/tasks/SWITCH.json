@@ -1,10 +1,23 @@
 {
   "branch": "task/FORGE-PROVIDER-1-SWITCH",
-  "status": "started",
+  "round": 1,
+  "status": "working",
   "steps": [
     {
       "at": "2026-11-28T00:56:19.123209+00:00",
       "step": "start"
+    },
+    {
+      "at": "2026-11-28T00:56:30.856931+00:00",
+      "round": 1,
+      "step": "resume"
     }
-  ]
+  ],
+  "stuck": {
+    "close": null,
+    "head": "3cf1a2c9cb757a4cbdf7a918a9bed3d94cf90105",
+    "keys": {},
+    "round": null
+  },
+  "worker": "antigravity"
 }
