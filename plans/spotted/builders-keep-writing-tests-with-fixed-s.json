@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "key": "bug\ttests/test_pane_speed.py\ttest_4_forge_answers_the_pane_fast_small_and_cheap failed in CI test group 3 of 6 at 0.32 seconds against the 0.3 second limit while passing alone locally.",
+      "kind": "bug",
+      "path": "tests/test_pane_speed.py",
+      "line": 91,
+      "text": "test_4_forge_answers_the_pane_fast_small_and_cheap failed in CI test group 3 of 6 at 0.32 seconds against the 0.3 second limit while passing alone locally.",
+      "from": "worker",
+      "item": "builders-keep-writing-tests-with-fixed-s",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

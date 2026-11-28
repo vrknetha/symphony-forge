@@ -38,8 +38,8 @@ def test_1_adoption_review_keeps_shared_input_checks(repo, gh, tmp_path, previou
                 "checks: changed-only selection can miss them.") in guide
         assert ("checks: changed-only selection can miss them. Include their pytest files or "
                 "node IDs in Python `always_test`, or their commands "
-                "beside changed-test selection in TypeScript `fast_test`, through the normal "
-                "settings fix after the human agrees.") in guide
+                "beside changed-test selection in TypeScript `fast_test`, through a settings fix "
+                "whose `--done` names `forge.toml` after the human agrees.") in guide
 
     if not previous:
         repo.git("switch", "-q", "-c", "fix/adoption-guidance")
@@ -65,4 +65,6 @@ def test_1_adoption_review_keeps_shared_input_checks(repo, gh, tmp_path, previou
             "for Python `always_test`, or their commands "
             "for TypeScript `fast_test` beside changed-test selection, through the normal "
             "settings fix with the owner's agreement.") in brief
-    assert "Workers never edit `forge.toml`; give the coordinator the list." in brief
+    # FORGE-RUNNER-1 allows a settings fix whose Done-when names forge.toml to edit forge.toml.
+    assert ("A worker edits `forge.toml` only when its fix's Done-when names `forge.toml`; "
+            "otherwise give the coordinator the list.") in brief

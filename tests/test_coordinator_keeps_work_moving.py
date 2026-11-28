@@ -41,14 +41,15 @@ def test_1_synced_skill_explains_keeping_work_moving_and_close_names_it(env, tmp
         skill = client / host / "skills/forge/SKILL.md"
         section = skill.read_text(encoding="utf-8").split("## Keeping work moving\n", 1)[1]
         flat = " ".join(section.split("\n## ", 1)[0].split())
-        # Land now accepts guidance itself, replacing the work --note then land chain.
+        # FORGE-RUNNER-1 replaces manual background land loops and post-merge forge next polling
+        # with the background runner; hand-run commands remain for notices and stopped items.
         for instruction in (
             "`forge land <item>`", "build, close, fix rounds and merge",
-            '`forge land <item> --note "<text>"`', "for each in the background",
+            '`--note "<text>"`', "background runner",
             "Forge admits each worker round by machine capacity.", "`forge task start <KEY>/<TASK>`",
-            "`forge fix start", "team-owned", "`forge.toml`", "pinned Forge",
+            "only when a notice says the runner cannot", "team-owned", "`forge.toml`", "pinned Forge",
             "`forge sync`", "approval", "cold-read", "stage only resolved paths",
-            "overlapping work", "other ready work", "`forge next` after each merge",
+            "overlapping work", "other ready work", "starts unblocked parts automatically after each merge",
             "`forge doctor --fix`",
         ):
             assert instruction in flat, instruction

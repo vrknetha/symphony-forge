@@ -595,7 +595,7 @@ def forge_merged(main: str, item: str, top: Path | None = None) -> str:
 def stack_base(item: str, blockers: list[str], main: str, top: Path | None = None) -> str | None:
     """The single reviewed remote base for a new part; refuse before any start mutation."""
     top = top or repo.root()
-    if not blockers or repo.config(top)["stack"] == "off":
+    if not blockers or repo.config(top)["stack"] == "off" or os.environ.get("FORGE_RUNNER"):
         return None
     if any(base.split("/", 1)[0] != item.split("/", 1)[0] for base in blockers):
         return None
@@ -930,7 +930,7 @@ def amend(args: argparse.Namespace) -> None:
 
 def require_active(item: str, top: Path | None = None, *, allow_size: bool = False) -> None:
     """A retained checkout cannot resume a dropped fix without an explicit restore."""
-    from forge import nextstep, owner_choices, story
+    from forge import nextstep, owner_choices, stops, story
 
     if "/" in item:
         key = item.split("/", 1)[0]
@@ -938,6 +938,8 @@ def require_active(item: str, top: Path | None = None, *, allow_size: bool = Fal
         if _dropped(key, top, None):
             refuse(REFUSALS["dropped"], key=key)
     location = top or repo.root()
+    if stops.stopped(location, item):
+        raise repo.Refused(f"{item} was stopped; forge land {item} continues it.", f"forge land {item}")
     location = next((path for branch, path in story.worktrees(location).items()
                      if branch == f"fix/{item}"), location)
     state = repo.read_state(item, location) or {}

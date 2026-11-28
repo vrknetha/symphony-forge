@@ -116,7 +116,8 @@ $delegation
 - Edit files only inside this checkout.
 - $file_ownership
 - $settings
-- Close refuses settings changes in forge.toml unless this item's Done-when names forge.toml.
+- A worker edits `forge.toml` only when its fix's Done-when names `forge.toml` (never on a story part).
+  Close refuses settings changes in forge.toml unless this item's Done-when names forge.toml.
   It leaves the settings change intact. A fix gets the forge fix amend step; a task part needs
   forge.toml in its covered Done-when details in the task checkout. A version-pin-only difference
   passes. The worker's settings restore uses the incoming side while a merge is open. Workers can commit those incoming settings
@@ -295,6 +296,10 @@ such test and why it changed in your handoff, and never weaken a test to hide a 
 
 One command-level test per rule is enough.
 
+- Wait on a condition with a bounded timeout; never use a fixed sleep.
+- Start no process the test does not stop, and check none is left behind.
+- Point every machine-wide path (`HOME`, `XDG_CONFIG_HOME`, the repos list) at the test's temp folder.
+
 Windows checklist:
 - A path written into a file or compared as text goes through `json.dumps` or `as_posix`.
 - Tests never assume a drive letter or a '/' separator.
@@ -335,7 +340,7 @@ During adoption review, name cheap whole-repo checks that read shared files with
 such as rule checks, file inventories and configuration checks. Changed-only selection can miss
 them. Report their pytest files or node IDs for Python `always_test`, or their commands for
 TypeScript `fast_test` beside changed-test selection, through the normal settings fix with the
-owner's agreement. Workers never edit `forge.toml`; give the coordinator the list. New repos get
+owner's agreement. A worker edits `forge.toml` only when its fix's Done-when names `forge.toml`; otherwise give the coordinator the list. New repos get
 this review at setup; earlier-adopted repos get this guidance on upgrade and sync, which keep
 their settings until that fix changes them. Keep `test` as the full suite.
 

@@ -395,6 +395,7 @@ def isolated_forge_registry(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     # Every Forge subprocess must write its per-machine repo list inside this test's temp folder.
     monkeypatch.setenv("APPDATA" if os.name == "nt" else "XDG_CONFIG_HOME",
                        str(tmp_path / "config"))
+    monkeypatch.setenv("FORGE_TEST_ROOT", str(tmp_path.resolve()))
 
 
 def _left(tmp_path: Path) -> list[str]:
@@ -502,12 +503,13 @@ def isolated_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     # The checkout launcher exposes src through PYTHONPATH; clients and released tools must not.
     monkeypatch.delenv("PYTHONPATH", raising=False)
     for name in list(os.environ):
-        if name.startswith(("GIT_", "FORGE_")) and name != "FORGE_LIVE_CODEX" or name in (
+        if name.startswith(("GIT_", "FORGE_")) and name not in ("FORGE_LIVE_CODEX", "FORGE_TEST_ROOT") or name in (
                 "CLAUDECODE", "CODEX_BIN", "CLAUDE_BIN", "AUTOREVIEW"):
             monkeypatch.delenv(name)
     # Set this after isolation, which would remove a session-level FORGE_ default.
     # Autouse covers commands in tests that do not use the repo fixture too.
     monkeypatch.setenv("FORGE_CHECKS_POLL", "0.01")
+    monkeypatch.setenv("FORGE_NO_RUNNER", "1")
     # cmd.exe expands %CI% in a .cmd stub's arguments, case-insensitively: git's
     # --format=%x00%cI%x00 would reach git as %x00truex00 on CI runners.
     monkeypatch.delenv("CI", raising=False)
@@ -564,7 +566,7 @@ def fake_clock(repo, tmp_path, monkeypatch, request):
     folder.mkdir()
     offset = folder / "elapsed"
     offset.write_text("0", encoding="utf-8")
-    (folder / "sitecustomize.py").write_text(f'''import os, subprocess, time
+    (folder / "sitecustomize.py").write_text(f'''import os, subprocess, threading, time
 from pathlib import Path
 from types import SimpleNamespace
 subprocess.time = SimpleNamespace(sleep=time.sleep)
@@ -574,11 +576,36 @@ poll_seconds = {getattr(request, "param", None)!r}
 poll_interval = float(os.environ.get("FORGE_CHECKS_POLL", "60"))
 
 def monotonic():
-    return real() + float(offset.read_text("utf-8"))
+    for _ in range(20):
+        try:
+            text = offset.read_text("utf-8").strip()
+            if text:
+                return real() + float(text)
+        except (OSError, ValueError):
+            pass
+    return real()
 
 def sleep(seconds):
     seconds = poll_seconds if poll_seconds is not None and seconds == poll_interval else seconds
-    offset.write_text(str(float(offset.read_text("utf-8")) + seconds), encoding="utf-8")
+    current = 0.0
+    for _ in range(20):
+        try:
+            text = offset.read_text("utf-8").strip()
+            if text:
+                current = float(text)
+                break
+        except (OSError, ValueError):
+            pass
+    tmp = offset.with_name(f"elapsed.{{os.getpid()}}.{{threading.get_ident()}}.tmp")
+    tmp.write_text(str(current + seconds), encoding="utf-8")
+    for _ in range(20):
+        try:
+            os.replace(tmp, offset)
+            break
+        except PermissionError:
+            pass
+    else:
+        tmp.unlink(missing_ok=True)
 
 time.sleep = sleep
 time.monotonic = monotonic

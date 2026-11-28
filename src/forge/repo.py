@@ -857,6 +857,8 @@ def coordinator() -> str | None:
 
 def route(cfg: dict[str, Any], tool: str, *, command: str, item: str) -> str:
     """A round runs natively in its coordinating app, otherwise through the tool's kit."""
+    if os.environ.get("FORGE_RUNNER") == "1":
+        return "kit"
     here = coordinator()
     if cfg["tools"] != "both" and here is None:
         refuse(REFUSALS["no_session"], command=command, item=item)
@@ -1015,6 +1017,9 @@ def resume_pin(top: Path, previous: str, rounds: int | None = None, *, accepted:
         os.environ["FORGE_LAND_ROUNDS"] = str(rounds)
     if accepted:
         os.environ["FORGE_CLOSE_ACCEPTED"] = "1"
+    # Release any held per-item land lock before the replacement release acquires it.
+    from forge import land
+    land._release_lock()
     # The selected release can remove this checkout. A waiting parent must not
     # hold its current directory open on Windows; children still start in top.
     os.chdir(forge_dir(top).parent.parent)

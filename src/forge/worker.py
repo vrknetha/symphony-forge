@@ -43,6 +43,9 @@ SETTINGS = ("Workers never edit `forge.toml`. Never edit it even temporarily. It
             "coordinator, through a settings fix the owner asked for. Report a needed settings "
             "change in your last message instead. To run an extra suite, run its command directly "
             "alongside `forge test`.")
+SETTINGS_ALLOWED = ("This fix's Done-when names `forge.toml`. Edit only the named settings in "
+                    "`forge.toml` and nothing else there. To run an extra suite, run its command "
+                    "directly alongside `forge test`.")
 TEST_STEPS = {
     "sample": ("commit your work on this branch first, then walk each demo step in a browser and "
                "record its result in the `Proof list:`; "
@@ -599,8 +602,10 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
     on: set[str] = set()
     design_text = ""
     untyped_fix = False
+    settings_text = (SETTINGS_ALLOWED if not match["task"] and task.settings_allowed(match[0], top, state)
+                     else SETTINGS)
     values: dict[str, str] = {
-        "settings": SETTINGS,
+        "settings": settings_text,
         "test_step": TEST_STEPS[repo.config(top)["test_place"]],
         "checkout": top.resolve().as_posix(),
         "start_here": START_HERE,
@@ -705,7 +710,7 @@ def _brief(match: re.Match[str], top: Path, state: dict[str, Any],
         brief += "\n" + values["delegation"] + "\n"
         brief += "\n" + FILE_OWNERSHIP + "\n"
         brief += "\n" + STORY_FILES + "\n"
-        brief += "\n" + SETTINGS + "\n"
+        brief += "\n" + settings_text + "\n"
         brief += "\nNever run `forge stop`: only a person can stop a run, after confirmation in the host.\n"
         brief += "\n" + REVIEW_LOOP + "\n"
         if user_facing:
