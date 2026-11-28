@@ -91,6 +91,8 @@ def record_install(cwd: Path) -> None:
 
 def _story_eligible(top: Path, key: str, cutoff: datetime) -> bool:
     record = story.state_of(top, key, story.plan_ref(top, key))
+    if record.get("status") == "dropped":
+        return False
     approved_at = _parse_time((record.get("approval") or {}).get("at"))
     return approved_at is not None and approved_at >= cutoff
 

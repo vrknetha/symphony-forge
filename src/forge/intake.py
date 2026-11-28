@@ -15,8 +15,8 @@ COMMANDS = [{"words": "start", "run": "start", "changes_state": True, "position"
              "args": [(("idea",), {})],
              "listing": '| `forge start "<idea>"` | Choose a fix, a plan, discovery or the idea list |'},
             {"words": "story drop", "run": "story_drop", "changes_state": True, "position": 75,
-             "help": "Drop a plan and keep its remote branch",
-             "args": [(("key",), {}), (("--because",), {"required": True})],
+             "help": "Drop or hold a story and keep its branches",
+             "args": [(("key",), {}), (("--because",), {}), (("--later",), {"action": "store_true"})],
              "listing": '| `forge story drop <KEY> --because "<reason>"` | Drops a plan and keeps its remote branch |'}]
 
 REFUSALS = {
@@ -251,24 +251,32 @@ def story_drop(args: Any) -> None:
     top, key = repo.root(), args.key
     if not story.KEY.fullmatch(key):
         raise repo.Refused("Give a story key to drop.", "forge next")
-    if not task._one_line(args.because):
+    reason = args.because
+    if reason is None and args.later:
+        reason = "The owner wants it later"
+    if reason is None or not task._one_line(reason):
         raise repo.Refused("Give one reason to drop the plan.", "forge next")
+    reason = reason.strip()
     branch, rel = f"story/{key}", repo.state_path(key)
     repo.git("fetch", "-q", "origin", cwd=top)  # a teammate's new or merged part counts
     ref = story.plan_ref(top, key)
     state = story.json_of(story.show(top, ref, rel))
     if not state:
         raise repo.Refused(f"{key} has not started.", "forge next")
+    previous = state.get("status")
+    if args.later and previous == "dropped":
+        print(f"{key} is already held.")
+        return
     parts = repo.git("for-each-ref", "--format=%(refname)", f"refs/heads/task/{key}-*",
                      f"refs/remotes/origin/task/{key}-*", cwd=top)
     records = sorted({path for part in (ref, f"origin/{repo.default_branch(top)}", *parts.splitlines())
                       for path in repo.git("ls-tree", "-r", "--name-only", part, "--",
                                            f".factory/stories/{key}/tasks/", cwd=top).splitlines()})
     merged = [path for path in records if repo.read_blob(top, f"origin/{repo.default_branch(top)}:{path}") is not None]
-    if merged:
+    if merged and not args.later:
         raise repo.Refused(f"{key} has started parts, so it cannot be dropped.",
                            f"forge close {key}/{Path(merged[0]).stem}")
-    if state.get("status") not in ("planning", "approved", "dropped"):
+    if previous not in ("planning", "read", "approved", "dropped"):
         raise repo.Refused(f"{key} is no longer an unstarted plan, so it cannot be dropped.", "forge next")
     root = machine.main_checkout(top)
     path = story.worktrees(top).get(branch)
@@ -281,20 +289,36 @@ def story_drop(args: Any) -> None:
     if repo.git("status", "--porcelain", "--untracked-files=all", cwd=path):
         raise repo.Refused(f"{key} has uncommitted changes. Commit or set them aside first.", "forge next")
     repo.git("merge", "--ff-only", "--no-overwrite-ignore", ref, cwd=path)
+    drop = dict(state.get("drop") or {}) if previous == "dropped" else {"status": previous}
+    pull_requests = list(drop.get("pull_requests", []))
     # Close the pull requests first: the published drop frees the parts' files.
     for head in [branch, *(f"task/{key}-{Path(record).stem}" for record in records)]:
         for pr in json.loads(close._gh(path, "pr", "list", "--head", head, "--state", "open", "--json", "number")):
-            close._gh(path, "pr", "close", str(pr["number"]), "--comment", args.because.strip())
+            number = pr["number"]
+            close._gh(path, "pr", "close", str(number), "--comment", reason)
+            if number not in pull_requests:
+                pull_requests.append(number)
     state = repo.read_state(key, path) or {}
-    state.update(status="dropped", drop={"because": args.because.strip(),
-                 "by": repo.git("var", "GIT_AUTHOR_IDENT", cwd=path), "at": repo.now()})
-    repo.commit_state("Drop the plan", repo.write_state(key, state, path), top=path)
+    drop.update(because=reason, by=repo.git("var", "GIT_AUTHOR_IDENT", cwd=path), at=repo.now())
+    if previous != "dropped" or "pull_requests" in drop:
+        drop["pull_requests"] = pull_requests
+    if args.later:
+        drop["later"] = True
+    state.update(status="dropped", drop=drop)
+    repo.commit_state("Hold the story" if args.later else "Drop the plan",
+                      repo.write_state(key, state, path), top=path)
     repo.git("push", "-q", "--set-upstream", "origin", branch, cwd=path)
-    print(f"Dropped plan {key}. Its remote branch keeps the work.")
-    ignored = repo.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z", cwd=path)
-    if ignored:
-        print("Kept the worktree for ignored files.")
-    elif path.resolve() != root:
-        repo.git("worktree", "remove", str(path), cwd=root)
-        repo.git("branch", "-d", branch, cwd=root)
+    if args.later:
+        print(f"Held story {key}. Its branches keep the work.")
+    else:
+        print(f"Dropped plan {key}. Its remote branch keeps the work.")
+        if previous == "approved":
+            print(f"The approval is dropped too. Use forge story drop {key} --undo to bring it back, "
+                  "or use --later to put a story aside.")
+        ignored = repo.git("ls-files", "--others", "--ignored", "--exclude-standard", "-z", cwd=path)
+        if ignored:
+            print("Kept the worktree for ignored files.")
+        elif path.resolve() != root:
+            repo.git("worktree", "remove", str(path), cwd=root)
+            repo.git("branch", "-d", branch, cwd=root)
     (repo.forge_dir(root) / "prs-cache.json").unlink(missing_ok=True)

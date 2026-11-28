@@ -18,6 +18,7 @@ from typing import Any
 from forge import __version__, design, machine, repo, story
 
 REFUSALS = {
+    "dropped": ("{key} is dropped. Bring it back before approving it.", "forge story drop {key} --undo"),
     "bad_payload": ("The hook input is not a JSON object.", "forge doctor"),
     "bad_line": ("The approval line must read approve <KEY> <6-character code>.", "forge next"),
     "not_owner": ("Only the owner can type the approval line, so nothing was recorded.", "forge next"),
@@ -87,7 +88,7 @@ def hook(args: Any) -> int:
         try:
             _approve(top, payload, tool)
         except repo.Refused as refusal:
-            if answered:
+            if answered and refusal.entry is not REFUSALS["dropped"]:
                 _touch(top)
             last_refusal(top).write_text(str(refusal).partition("\nNext: ")[0], encoding="utf-8")
             raise
@@ -97,13 +98,15 @@ def hook(args: Any) -> int:
     return 0
 
 
-def waiting_digest(key: str, top: Path) -> str | None:
+def waiting_digest(key: str, top: Path, *, include_dropped: bool = False) -> str | None:
     """The story doc's section hash when the story waits for a first or renewed approval."""
     state, doc = repo.read_state(key, top), top / "plans" / f"{key}.md"
     if state is None or not doc.is_file():
         return None
     text = doc.read_text(encoding="utf-8")
     digest = story.approval_hash(text)
+    if state.get("status") == "dropped":
+        return digest if include_dropped else None
     if (state.get("approval") or {}).get("hash") == digest:
         try:
             design.check(top, text, required=False)
@@ -144,7 +147,7 @@ def _typed(payload: dict[str, Any]) -> int:
     except repo.Refused as refusal:
         reason = str(refusal).partition("\nNext: ")[0]
         last_refusal(top).write_text(reason, encoding="utf-8")
-        print(reason)
+        print(str(refusal) if refusal.entry is REFUSALS["dropped"] else reason)
     else:
         last_refusal(top).unlink(missing_ok=True)
     return 0
@@ -173,16 +176,27 @@ def _record_approval(top: Path, payload: dict[str, Any], runtime: str, code: str
     chat_used = repo.forge_dir(top) / "approvals" / marker
     if chat_used.exists():
         repo.refuse(REFUSALS["replay"])
-    matches = [(key, path, digest) for checkout in _checkouts(top)
-               for key, path in story.stories_here(checkout).items()
-               if (named_key is None or key == named_key)
-               and (digest := waiting_digest(key, path)) is not None
-               and digest[:len(code)] == code]
+    matches = []
+    dropped = []
+    for checkout in _checkouts(top):
+        for key, path in story.stories_here(checkout).items():
+            if named_key is not None and key != named_key:
+                continue
+            digest = waiting_digest(key, path, include_dropped=True)
+            if digest is None or digest[:len(code)] != code:
+                continue
+            state = repo.read_state(key, path) or {}
+            if state.get("status") == "dropped":
+                dropped.append(key)
+            else:
+                matches.append((key, path, digest, state))
     if not matches:
+        if len(dropped) == 1:
+            repo.refuse(REFUSALS["dropped"], key=dropped[0])
         repo.refuse(REFUSALS["no_match"])
     if len(matches) > 1:
         repo.refuse(REFUSALS["several"], count=len(matches))
-    key, path, digest = matches[0]
+    key, path, digest, state = matches[0]
     pinned = repo.config(path)["version"]
     story_used = repo.forge_dir(path) / "approvals" / marker
     if story_used.exists():
@@ -192,7 +206,6 @@ def _record_approval(top: Path, payload: dict[str, Any], runtime: str, code: str
     story.check_read(key, path)
     if repo.is_prototype(path):
         repo.refuse(REFUSALS["no_signoff"])
-    state = repo.read_state(key, path) or {}
     notes = story._record(story._text(path / "plans" / f"{key}.read.md"))[0]  # pyright: ignore[reportPrivateUsage]
     # The round it passed, so the story keeps needing a passing round even if its notes go.
     approval = {"by": f"human-via-{runtime.capitalize()}", "at": repo.now(), "hash": digest,
