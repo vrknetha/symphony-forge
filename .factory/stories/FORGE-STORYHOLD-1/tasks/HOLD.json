@@ -97,7 +97,7 @@
     "id": "aa9ce0db-157a-4ad1-adbf-6cf3b0be7a98",
     "status": "clean"
   },
-  "round": 5,
+  "round": 6,
   "status": "fixing",
   "steps": [
     {
@@ -155,6 +155,11 @@
     {
       "at": "2026-11-28T08:59:53.398463+00:00",
       "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T09:29:51.290484+00:00",
+      "round": 6,
       "step": "resume"
     }
   ],
