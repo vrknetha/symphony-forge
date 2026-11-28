@@ -1,0 +1,57 @@
+{
+  "approval": {
+    "at": "2026-11-28T00:53:09.503526+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01SLF3rqMbXJGMNRfMtofqq3",
+    "hash": "2d09e11a60670f315b09acae6e72876afdc563fdb10b3e2b90e704800d1c24fe",
+    "round": 7,
+    "runtime": "claude",
+    "session": "26518c53-7541-418c-a81e-9f4aa1925767"
+  },
+  "doc": "plans/FORGE-PROVIDER-1.md",
+  "status": "approved",
+  "steps": [
+    {
+      "at": "2026-11-12T15:50:13.481414+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-12T16:27:15.010449+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-12T16:54:20.252061+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-12T17:16:32.063684+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-12T17:31:42.483311+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-13T02:19:30.252100+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-13T03:30:14.858129+00:00",
+      "step": "approved"
+    },
+    {
+      "at": "2026-11-27T18:04:36.087979+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-27T18:19:43.612170+00:00",
+      "step": "read"
+    },
+    {
+      "at": "2026-11-28T00:53:09.504005+00:00",
+      "step": "approved"
+    }
+  ],
+  "title": "Builds and tests run on separate cloud machines when the laptop is full",
+  "touches": 2
+}
