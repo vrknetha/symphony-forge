@@ -1,0 +1,59 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/aws.py\tFunctional: AWS setup rejects documented self-hosted Linux runners\tFORGE-PROVIDER-1/SWITCH",
+      "kind": "bug",
+      "path": "src/forge/aws.py",
+      "line": 95,
+      "text": "Functional: AWS setup rejects documented self-hosted Linux runners",
+      "from": "blocking",
+      "item": "FORGE-PROVIDER-1/SWITCH",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/aws.py\tNot done: `forge lanes --aws setup` refuses a public repo\tFORGE-PROVIDER-1/SWITCH",
+      "kind": "bug",
+      "path": "src/forge/aws.py",
+      "line": 98,
+      "text": "Not done: `forge lanes --aws setup` refuses a public repo",
+      "from": "blocking",
+      "item": "FORGE-PROVIDER-1/SWITCH",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\tsrc/forge/machine.py\tGate: the new AWS controls are absent from the Forge guide\tFORGE-PROVIDER-1/SWITCH",
+      "kind": "bug",
+      "path": "src/forge/machine.py",
+      "line": 32,
+      "text": "Gate: the new AWS controls are absent from the Forge guide",
+      "from": "blocking",
+      "item": "FORGE-PROVIDER-1/SWITCH",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_aws_switch.py\tTest: default workflow compatibility and AWS test-group routing\tFORGE-PROVIDER-1/SWITCH",
+      "kind": "bug",
+      "path": "tests/test_aws_switch.py",
+      "line": 184,
+      "text": "Test: default workflow compatibility and AWS test-group routing",
+      "from": "blocking",
+      "item": "FORGE-PROVIDER-1/SWITCH",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "edge\tsrc/forge/aws.py\tFollow-up: accept the AWS European Sovereign Cloud region",
+      "kind": "edge",
+      "path": "src/forge/aws.py",
+      "line": 14,
+      "text": "Follow-up: accept the AWS European Sovereign Cloud region",
+      "from": "review",
+      "item": "FORGE-PROVIDER-1/SWITCH",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}
