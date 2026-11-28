@@ -95,7 +95,7 @@
     "id": "504844ed-578b-4158-a3f5-5f26b9f6a59d",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -110,13 +110,18 @@
     {
       "at": "2026-11-28T07:34:11.423515+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-28T07:34:31.537117+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "80922d8b4fad524ae7a0c450ae4904e96813952f",
+    "close": "c33fe476-d6f2-4019-984f-fcd36d3815f1",
+    "head": "f37ab3aea762df0d3ef8e04fd0c186a860083e00",
     "keys": {},
-    "round": null
+    "round": 1
   },
   "why": "When Neon tries to run a shell command and ends its turn without a report, Forge repeats the review with the same instructions and close stays blocked.",
   "worker": "codex"
