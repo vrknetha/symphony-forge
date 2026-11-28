@@ -364,8 +364,6 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
     refused_tool, message_id = "", None
     message_starts = [0]
     tool_names: dict[str, str] = {}
-    shell_tools = set()
-    shell_refused = False
     unfinished = (("{detail}", "") if probe else
                   ("Antigravity ended its turn without finishing ({detail}); see {log}.", "{again}"))
     try:
@@ -390,7 +388,7 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                 process.stdin.flush()
 
             def call(method: str, params: dict) -> dict:
-                nonlocal serial, refused_tool, shell_refused, message_id
+                nonlocal serial, refused_tool, message_id
                 serial += 1
                 send({"id": serial, "method": method, "params": params})
                 for line in process.stdout:
@@ -409,8 +407,6 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                                 tool_id = tool.get("toolCallId")
                                 refused_tool = (tool.get("title") or tool_names.get(tool_id) or tool_id
                                                 or tool.get("name") or tool.get("kind") or "unknown tool")
-                                shell_refused |= (tool_id in shell_tools or tool.get("kind") == "execute"
-                                                  or tool.get("name") == "run_command")
                                 message_starts.append(len(chunks))
                             answer = {"result": {"outcome": outcome}}
                         else:
@@ -426,8 +422,6 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                             chunks.append(update.get("content", {}).get("text", ""))
                         if kind == "review" and event in ("tool_call", "tool_call_update"):
                             tool_id = update.get("toolCallId")
-                            if tool_id and (update.get("kind") == "execute" or update.get("name") == "run_command"):
-                                shell_tools.add(tool_id)
                             if event == "tool_call":
                                 message_starts.append(len(chunks))
                                 if tool_id and (title := update.get("title") or update.get("name")):
@@ -437,7 +431,6 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                                     and "permission check failed" in raw_output.lower()):
                                 refused_tool = (update.get("title") or tool_names.get(tool_id)
                                                 or update.get("name") or update.get("kind") or "unknown tool")
-                                shell_refused |= tool_id in shell_tools
                                 message_starts.append(len(chunks))
                         if event == "tool_call":
                             raw = update.get("rawInput") or {}
@@ -513,10 +506,22 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
             level = options.get("thought_level", {}).get("currentValue")
             print(f"Antigravity runs {current} at {level or 'its own level'}.", flush=True)
             ran.update(model=current, effort=level)
+            usage: dict[str, int] = {}
+            tokens: dict[str, int | None] = {}
+
             def ask(text: str) -> dict:
-                return call("session/prompt", {
+                result = call("session/prompt", {
                     "sessionId": chat, "prompt": [{"type": "text", "text": text}],
                 })
+                for key, value in (result.get("usage") or {}).items():
+                    if isinstance(value, int):
+                        usage[key] = usage.get(key, 0) + value
+                cached = usage.get("cachedReadTokens", 0)
+                tokens.update(input_tokens=usage["inputTokens"] + cached if "inputTokens" in usage else None,
+                              cached_input_tokens=cached if usage else None, output_tokens=usage.get("outputTokens"),
+                              reasoning_output_tokens=usage.get("thoughtTokens"))
+                ran.update(tokens)
+                return result
 
             def review_report(result: dict) -> str:
                 if not (extract_json and refused_tool and result.get("stopReason") in ("end_turn", "cancelled")):
@@ -535,8 +540,8 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
 
             result = ask(prompt)
             report = review_report(result)
-            usage = dict(result.get("usage") or {})
-            if shell_refused and result.get("stopReason") in ("end_turn", "cancelled") and not report:
+            # ACP permission requests can omit the tool kind.
+            if extract_json and refused_tool and result.get("stopReason") in ("end_turn", "cancelled") and not report:
                 chunks.clear()
                 questions.clear()
                 message_starts[:] = [0]
@@ -545,14 +550,6 @@ def turn(top: Path, item: str, prompt: str, *, cwd: Path, mode: str, model: str,
                              "the supplied diff and evidence and the read-only file tools in the review copy. "
                              "Return the JSON review report specified in the original request.")
                 report = review_report(result)
-                for key, value in (result.get("usage") or {}).items():
-                    if isinstance(value, int):
-                        usage[key] = (usage.get(key) or 0) + value
-            cached = (usage.get("cachedReadTokens") or 0) if usage else None
-            tokens = dict(input_tokens=(usage["inputTokens"] + cached) if "inputTokens" in usage else None,
-                          cached_input_tokens=cached, output_tokens=usage.get("outputTokens"),
-                          reasoning_output_tokens=usage.get("thoughtTokens"))
-            ran.update(tokens)
             stop = result.get("stopReason")
             if stop != "end_turn" and not refused_tool:
                 repo.refuse(unfinished, detail=stop or "no answer", log=log, again=again)

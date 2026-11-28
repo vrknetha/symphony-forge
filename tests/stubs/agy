@@ -88,6 +88,9 @@ for line in sys.stdin:
             continue
         recovery = os.environ.get("STUB_AGY_REVIEW_RECOVERY")
         if recovery and review_session == session:
+            if recovery == "connection-error":
+                send(id=identifier, error={"code": -32000, "message": "Review connection lost"})
+                continue
             send(id="review-read", method="session/request_permission", params={
                 "toolCall": {"kind": "read", "locations": [{"path": "app.py"}]},
                 "options": [{"kind": "allow_once", "optionId": "yes"}],
@@ -128,7 +131,11 @@ for line in sys.stdin:
                 update(sessionUpdate="tool_call_update", toolCallId=tool["toolCallId"],
                        status="failed", rawOutput="permission check failed")
         if recovery:
-            send(id=identifier, result={"stopReason": recovery})
+            result = {"stopReason": recovery}
+            if recovery == "connection-error":
+                result = {"stopReason": "end_turn",
+                          "usage": {"inputTokens": 200, "cachedReadTokens": 1000, "outputTokens": 300}}
+            send(id=identifier, result=result)
             continue
         if names := os.environ.get("STUB_AGY_SHOW"):
             settings = json.loads((profile / "antigravity-cli/settings.json").read_text("utf-8"))
