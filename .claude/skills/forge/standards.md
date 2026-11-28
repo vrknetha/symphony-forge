@@ -264,8 +264,8 @@ Windows checklist:
 - Unit tests are only for pure logic with many cases, never an item's only proof. Review reports
   an item proven only by unit tests as a P1 `Not done` and never asks for unit tests of helpers.
 - Tests own and clean up every process they start, even after a crash; detect and fail on leftover
-  processes when a test worker crashes. Isolate host-side configuration so tests never use or
-  change the developer's settings.
+  processes when a test worker crashes. Isolate host-side configuration: point every machine-wide
+  path (`HOME`, `XDG_CONFIG_HOME`, the repos list) at the test's temp folder, never real settings.
 - Only setup and cleanup file operations retry briefly on Windows file locks, with bounded retries;
   persistent failures still fail; never retry assertions or whole tests.
 - Tests build their own data with factories, own that data, don't depend on order, and never sleep.
