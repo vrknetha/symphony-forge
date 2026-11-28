@@ -1,6 +1,15 @@
 {
+  "approval": {
+    "at": "2026-11-28T10:19:24.327777+00:00",
+    "by": "human-via-Claude",
+    "event": "toolu_01T7rjfdyaJymUG4S1who98P",
+    "hash": "85f5f2390eab12256a7249a0e1681c847de2f3f7be1086cb60180457d7db2046",
+    "round": 2,
+    "runtime": "claude",
+    "session": "26518c53-7541-418c-a81e-9f4aa1925767"
+  },
   "doc": "plans/FORGE-RUNNER-2.md",
-  "status": "read",
+  "status": "approved",
   "steps": [
     {
       "at": "2026-11-28T10:05:09.200899+00:00",
@@ -13,8 +22,12 @@
     {
       "at": "2026-11-28T10:15:43.657766+00:00",
       "step": "read"
+    },
+    {
+      "at": "2026-11-28T10:19:24.327983+00:00",
+      "step": "approved"
     }
   ],
   "title": "Keep approved work moving without reminders",
-  "touches": 0
+  "touches": 1
 }
