@@ -1,0 +1,37 @@
+{
+  "items": [
+    {
+      "key": "bug\tsrc/forge/sync.py\tNot done: Version-changing source fixes still suggest plain forge sync\twhen-forge-s-branch-templates-differ-fro",
+      "kind": "bug",
+      "path": "src/forge/sync.py",
+      "line": 631,
+      "text": "Not done: Version-changing source fixes still suggest plain forge sync",
+      "from": "blocking",
+      "item": "when-forge-s-branch-templates-differ-fro",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_source_stale_guides_next_step.py\tStandard: Isolate host-side configuration from tests\twhen-forge-s-branch-templates-differ-fro",
+      "kind": "bug",
+      "path": "tests/test_source_stale_guides_next_step.py",
+      "line": 49,
+      "text": "Standard: Isolate host-side configuration from tests",
+      "from": "blocking",
+      "item": "when-forge-s-branch-templates-differ-fro",
+      "status": "open",
+      "closed_by": null
+    },
+    {
+      "key": "bug\ttests/test_source_stale_guides_next_step.py\tTest: Stale source guides in a version-changing fix\twhen-forge-s-branch-templates-differ-fro",
+      "kind": "bug",
+      "path": "tests/test_source_stale_guides_next_step.py",
+      "line": 40,
+      "text": "Test: Stale source guides in a version-changing fix",
+      "from": "blocking",
+      "item": "when-forge-s-branch-templates-differ-fro",
+      "status": "open",
+      "closed_by": null
+    }
+  ]
+}

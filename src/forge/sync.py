@@ -615,7 +615,8 @@ def check_guides(top: Path, changed_files: list[str]) -> None:
     if not any(path.startswith(("src/forge/templates/", "src/forge/standards.md",
                                 "src/forge/release-notes/", ".claude/skills/", ".codex/skills/")) for path in changed_files):
         return
-    package = top / "src" if repo.config(top)["repo"] == "forge-source" else Path(__file__).resolve().parent.parent
+    is_source = repo.config(top)["repo"] == "forge-source"
+    package = top / "src" if is_source else Path(__file__).resolve().parent.parent
     script = f"""import sys, json
 sys.path.insert(0, {json.dumps(package.as_posix())})
 from forge import repo, sync
@@ -627,9 +628,10 @@ print(json.dumps(sync.differing(top, wanted)))
     result = repo.run(sys.executable, "-B", "-c", script, cwd=top)
     result.check_returncode()
     if changed := json.loads(result.stdout):
+        sync_cmd = "uv run --frozen forge sync" if is_source else "forge sync"
         repo.refuse(("Generated guides need updating: {paths}.",
-                     "in {folder}, run forge sync, then commit the generated guides and run close again."),
-                    paths=", ".join(changed), folder=top.as_posix())
+                     "in {folder}, run {sync_cmd}, then commit the generated guides and run close again."),
+                    paths=", ".join(changed), folder=top.as_posix(), sync_cmd=sync_cmd)
 
 
 def refresh_merged_guides(top: Path, before: str) -> None:

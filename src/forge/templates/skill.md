@@ -2141,7 +2141,9 @@ their instructions, and their records and round lines label it requested because
 Forge cannot check that the host applied it. A continued native Codex helper can
 retain its first effort. Each run records its round number and effort. The board
 and story history show `built at <effort>` in the round line, and omit it for old
-records without effort.
+records without effort. The pull request's "How it went" block also has a build line with the
+builder model and effort, token lines for build, review and plan read, the change size when
+ready, and `Cost: unavailable`.
 Claude planner and architect roles use the plan-read entry; debugger, security
 and performance roles use Sonnet 5.5 at high effort. Reviews, including prototype sign-off,
 use the selected tool's `models.review` entry, or Autoreview's defaults when unset.
@@ -2384,9 +2386,9 @@ number under a `migrations` folder. The warning names both items and the number.
 stop work or need a setting. Forge refreshes origin once and reads its branch snapshot without
 a checkout. Completed items do not cause warnings, even when their branches remain on origin.
 Close checks the tracked guide copies before review or CI waits when this branch changes
-guides or their templates. If they differ from sync's output, run `forge sync` in the folder
-close names, then commit the generated guides and run close again. New and
-earlier-adopted repos get this check after upgrading Forge; other generated files stay as they are.
+guides or their templates. If they differ from sync's output, run `forge sync` (`uv run --frozen forge sync`
+in Forge's own checkout) in the folder close names, then commit the generated guides and run close again.
+New and earlier-adopted repos get this check after upgrading Forge; other generated files stay as they are.
 Close brings in the current default branch before it tests or reviews. If only files `forge sync` writes
 conflict, close takes the default branch's copies, runs sync and commits the merge. A conflict in
 any other file stops close for the worker to resolve. While waiting for checks, close stops at once
