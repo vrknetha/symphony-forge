@@ -89,14 +89,15 @@ For a fix, follow the printed `forge fix amend` step to update its Done when bef
 Narrow stays a choice at a stuck-worker stop. Review-loop stops use more, split or accept.
 
 When `reviews` names a family in `forge.toml`, Forge uses that family for cold reads and code reviews.
-If that family built the change, close asks the owner to choose another reviewer.
+Set `reviews` in the main checkout's `forge.local.toml` to choose a different family for this clone.
+If that family built the change, close asks the owner to choose another reviewer in `forge.local.toml`.
 Antigravity code reviews use `[models.review.antigravity]`, or `[models.light_review.antigravity]`
 for light reviews. If you leave either model or effort unset, Antigravity uses its own default.
 Client sign-off reviews use Codex or Claude.
 Open work folders follow that change after Forge sees it on the default branch, unless they set their own review family.
 Antigravity cold reads need plans and notes that Git can store without a filter.
 Over SSH, `forge task start` checks the new Antigravity work folder and gives its sign-in step if needed.
-New and existing repos keep their current review and read choices until they set `reviews`.
+New and existing repos can set a local `reviews` after they install this release.
 
 $story_files
 

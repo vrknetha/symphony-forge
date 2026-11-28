@@ -86,7 +86,7 @@ def review_family(cfg: dict[str, Any], built_by: str | None, item: str) -> str:
     name = {"claude": "Claude Code", "codex": "Codex", "antigravity": "Antigravity"}[family]
     if selected and family == built_by:
         repo.refuse((f"{name} built {item}, so Forge will not let {name} review it.",
-                     "ask the owner, then set reviews in forge.toml to another family"))
+                     "ask the owner, then set reviews in forge.local.toml to another family"))
     if family == "antigravity":
         from forge import antigravity
         if message := antigravity.problem():

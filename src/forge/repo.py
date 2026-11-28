@@ -47,7 +47,7 @@ REFUSALS = {
     "models": ("forge.toml's [models] table is not usable: {problem}.",
                "ask your agent to fix forge.toml's [models] table"),
     "bad_local": ("forge.local.toml is not usable: {problem}.", "ask your agent to fix forge.local.toml"),
-    "local_key": ("forge.local.toml can't set {key}: it holds only tools, workers and [models] tables, "
+    "local_key": ("forge.local.toml can't set {key}: it holds only tools, workers, reviews and [models] tables, "
                   "so settings the team shares stay in forge.toml.",
                   "move {key} to forge.toml in a fix, or take it out of forge.local.toml"),
     "pin": (
@@ -674,7 +674,7 @@ LOCAL = "forge.local.toml"
 
 def _with_local(cfg: dict[str, Any], top: Path) -> dict[str, Any]:
     """forge.toml's settings with this clone's forge.local.toml laid over them. The file sits in the
-    main checkout, so every worktree of the clone shares it, and sets only tools, workers and
+    main checkout, so every worktree of the clone shares it, and sets only tools, workers, reviews and
     [models] kinds. "local" holds what it set; "shared" is forge.toml alone, for committed files."""
     path = _common_path(top).parent / LOCAL
     if not path.is_file():
@@ -684,7 +684,7 @@ def _with_local(cfg: dict[str, Any], top: Path) -> dict[str, Any]:
     except (tomllib.TOMLDecodeError, UnicodeDecodeError) as exc:
         refuse(REFUSALS["bad_local"], problem=exc)
     for key in data:
-        if key not in ("tools", "workers", "models"):
+        if key not in ("tools", "workers", "reviews", "models"):
             refuse(REFUSALS["local_key"], key=key)
     problem = (_config_problem({"version": cfg["version"], **{k: v for k, v in data.items() if k != "models"}})
                or _models_problem(data.get("models", {})))
