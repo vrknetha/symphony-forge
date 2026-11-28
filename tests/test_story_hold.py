@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
+import sys
 from pathlib import Path
 
 import pytest
@@ -69,6 +71,21 @@ def test_1_dropped_story_does_not_run_its_started_part(land, tmp_path, monkeypat
     part_ids = (f"{STORY}/ONE", f"{STORY}/TWO")
     assert not any(part in line for part in part_ids for line in owner_suggestions), owner_next.stdout
 
+    story_ref = f"refs/heads/story/{STORY}"
+    peer_ref = f"refs/remotes/origin/story/{STORY}"
+    held_tip = land.repo.git("ls-remote", "origin", story_ref).split()[0]
+    assert land.repo.git("rev-parse", peer_ref, cwd=peer) != held_tip
+    # Slow the real fetch so the peer can read stale refs before it completes.
+    upload_pack = shlex.join([
+        Path(sys.executable).as_posix(), "-c",
+        'import subprocess, sys, time; time.sleep(2); '
+        'sys.exit(subprocess.call(["git", "upload-pack", *sys.argv[1:]]))',
+    ])
+    land.repo.git("config", "remote.origin.uploadpack", upload_pack, cwd=peer)
+    next_result = land.repo.forge("next", cwd=peer)
+    assert next_result.returncode == 0, next_result.stdout + next_result.stderr
+    assert land.repo.git("rev-parse", peer_ref, cwd=peer) == held_tip
+
     monkeypatch.delenv("FORGE_NO_RUNNER")
     monkeypatch.setenv("FORGE_RUNNER_TICK", "0.05")
     monkeypatch.setenv("FORGE_NETWORK_RETRY_WAIT", "0")
@@ -84,9 +101,7 @@ def test_1_dropped_story_does_not_run_its_started_part(land, tmp_path, monkeypat
     assert not list(part.glob("work-*.txt"))
     assert not (land.repo.bin / f"merged-task-{STORY}-ONE").exists()
     assert not (land.repo.bin / f"merged-task-{STORY}-TWO").exists()
-    land.repo.git("fetch", "-q", "origin", cwd=peer)
-    next_result = land.repo.forge("next", cwd=peer)
-    assert next_result.returncode == 0, next_result.stdout + next_result.stderr
+
     peer_suggestions = [line for line in next_result.stdout.splitlines()
                         if line.startswith("Next: forge ")]
     assert not any(part in line for part in part_ids for line in peer_suggestions), next_result.stdout
