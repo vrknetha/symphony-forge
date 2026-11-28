@@ -14,7 +14,7 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 from itertools import islice
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterable
 
 from forge import __version__, antigravity, checks, claude_sdk, close, codex, init, machine, quicktest, repo, review, story, sync, task
 
@@ -72,7 +72,7 @@ def _files_fix_finished(top: Path, branch: str) -> bool:
     return isinstance(prs, list) and any(isinstance(pr, dict) and pr.get("state") in ("MERGED", "CLOSED") for pr in prs)
 def _open_files_fix(top: Path) -> str: return next((branch for branch in repo.git("for-each-ref", "--format=%(refname:short)",
                  "refs/heads/fix/forge-files-*", cwd=top).splitlines() if not _files_fix_finished(top, branch)), "")
-def _cleanup_prs(gh: str, top: Path, branches: dict[str, Path]) -> list[tuple[str, str, str]]:
+def _cleanup_prs(gh: str, top: Path, branches: Iterable[str]) -> list[tuple[str, str, str]]:
     pending: dict[str, str | None] = dict.fromkeys(branches)
     prs = []
     while pending:
@@ -112,46 +112,75 @@ def _cleanup_prs(gh: str, top: Path, branches: dict[str, Path]) -> list[tuple[st
     return prs
 
 
-def _finished(top: Path, main: Path) -> list[tuple[Path, str, str, str, bool]]:
-    gh = shutil.which("gh")
-    trees = {branch: path for branch, path in story.worktrees(top).items()
-             if branch.startswith(("story/", "task/", "fix/", "forge/"))
-             and path.resolve() != main and path.is_dir()}
+def _in_main(top: Path, heads: Iterable[str]) -> set[str]:
+    heads = list(dict.fromkeys(heads))
+    if not heads: return set()
+    landed = story.landed_ref(top)
+    trial = repo.run("git", "merge-tree", "--write-tree", "--no-messages", "--stdin", "-z", cwd=top,
+                     input=f"{landed} {landed}\n" + "".join(f"{landed} {head}\n" for head in heads))
+    if trial.returncode or not trial.stdout: return set()
+    base, *results, _ = trial.stdout.split("\0\0")
+    if len(results) != len(heads) or not base.startswith("1\0"): return set()
+    return {head for head, result in zip(heads, results) if result == base}
+
+
+def _finished(top: Path, common: Path, requested: Iterable[str], all_prs: bool
+              ) -> list[tuple[Path, str, str, str, bool]]:
+    names = {item.replace("/", "-") for item in requested}
+    trees = {}
+    for entry in repo.git("worktree", "list", "--porcelain", cwd=top).split("\n\n"):
+        lines = entry.splitlines()
+        if len(lines) < 3 or not lines[2].startswith("branch refs/heads/"): continue
+        branch = lines[2].removeprefix("branch refs/heads/")
+        kind, _, name = branch.partition("/")
+        path = Path(lines[0].removeprefix("worktree ")).resolve()
+        if kind in ("story", "task", "fix", "forge") and name not in names and path.is_dir():
+            trees[branch] = (path, lines[1].removeprefix("HEAD "))
     if not trees: return []
 
-    current = top.resolve()
-    pr_branches = {branch: path for branch, path in trees.items() if path.resolve() != current}
+    # A newly created branch inherits a commit without finishing any work.
+    candidates = {}
+    for branch, (_, head) in trees.items():
+        with suppress(OSError):
+            with (common / "logs" / "refs" / "heads" / branch).open("rb") as log:
+                if log.readline().split(maxsplit=2)[:2] == [b"0" * len(head), head.encode("ascii")]:
+                    continue
+        candidates[branch] = head
+
+    in_main = set() if all_prs else _in_main(top, candidates.values())
+    branches = trees if all_prs else [branch for branch, head in candidates.items() if head in in_main]
     by_head: set[tuple[str, str, str]] = set()
-    if gh and pr_branches:
+    if branches and (gh := shutil.which("gh")):
         with suppress(AttributeError, KeyError, TypeError, OSError, ValueError, subprocess.SubprocessError):
-            by_head = set(_cleanup_prs(gh, top, pr_branches))
+            by_head = set(_cleanup_prs(gh, top, branches))
     open_branches = {branch for branch, _, state in by_head if state == "OPEN"}
-    # Old lane entries recorded the checkout as "repo", including while they waited for a place.
-    live = {Path(folder).resolve() for run in machine.entries()
-            if (folder := run.get("checkout_root") or run.get("repo"))}
-    landed = repo.git("rev-parse", story.landed_ref(top), cwd=top)
-    main_tree = repo.git("rev-parse", f"{landed}^{{tree}}", cwd=top)
-    closed = {}
+    merged = {branch for branch, (_, head) in trees.items() if (branch, head, "MERGED") in by_head}
+    closed = {branch for branch, _, state in by_head if state == "CLOSED"}
+    matching_closed = [f"refs/heads/{branch}" for branch in closed - merged - open_branches
+                       if (branch, trees[branch][1], "CLOSED") in by_head]
+    remote_heads = {}
+    if matching_closed:
+        heads = repo.run("git", "ls-remote", "--heads", "origin", *matching_closed, cwd=top, timeout=10)
+        if heads.returncode == 0:
+            remote_heads = dict(line.split("\t", 1)[::-1] for line in heads.stdout.splitlines() if "\t" in line)
+
+    if all_prs:
+        in_main = _in_main(top, (head for branch, head in candidates.items() if branch not in merged | closed))
+    held_paths = {common.parent, top.resolve()}
     found = []
-    for branch, path in trees.items():
-        head = repo.git("rev-parse", f"refs/heads/{branch}", cwd=top)
-        held = path.resolve() in live or path.resolve() == current or branch in open_branches
-        if (branch, head, "MERGED") in by_head:
-            found.append((path, branch, head, "merged", held))
+    for branch, (path, head) in trees.items():
+        if branch in merged:
+            state = "merged"
+        elif branch in closed:
+            state = "closed"
+        elif branch in candidates and head in in_main:
+            state = "in main"
+        else:
             continue
-        trial = repo.run("git", "merge-tree", "--write-tree", "--no-messages", landed, head, cwd=top)
-        if trial.returncode == 0 and trial.stdout.strip() == main_tree:
-            found.append((path, branch, head, "in main", held))
-        elif not held and (branch, head, "CLOSED") in by_head:
-            closed[f"refs/heads/{branch}"] = (head, path, branch)
-    if closed:
-        heads = repo.run("git", "ls-remote", "--heads", "origin", *closed, cwd=top, timeout=10)
-        if not heads.returncode:
-            for line in heads.stdout.splitlines():
-                head, _, ref = line.partition("\t")
-                if ref in closed and head == closed[ref][0]:
-                    _, path, branch = closed[ref]
-                    found.append((path, branch, head, "closed", False))
+        held = path in held_paths or branch in open_branches
+        if state == "closed":
+            held |= remote_heads.get(f"refs/heads/{branch}") != head
+        found.append((path, branch, head, state, held))
     return found
 
 
@@ -160,6 +189,20 @@ def _removable(path: Path, ref: str, head: str) -> bool:
             and repo.git("symbolic-ref", "--quiet", "HEAD", cwd=path) == ref
             and repo.git("show-ref", "--hash", "--verify", "HEAD", cwd=path) == head
             and not task.worktree_files(path))
+
+
+def _story_done(top: Path, name: str) -> bool:
+    landed = story.landed_ref(top)
+    state = story.json_of(story.show(top, landed, repo.state_path(name)))
+    if state.get("status") == "done": return True
+    try:
+        tasks = story.parse(story.show(top, landed, f"plans/{name}.md") or "")["tasks"]
+    except ValueError:
+        return False
+    paths = [repo.state_path(name + "/" + row["id"]) for row in tasks]
+    # Incomplete plans need no history lookup for tasks that have yet to merge.
+    return (len(repo.blob_texts(top, [f"{landed}:{path}" for path in paths])) == len(paths)
+            and story.completed(top, name, landed).get("status") == "done")
 
 
 def _checkout_in_use(path: Path) -> bool:
@@ -219,16 +262,21 @@ def _remove_finished(main: Path, path: Path, ref: str, head: str, report, *,
             scratch.rmdir()  # Never delete files if Git could not move the worktree back.
 
 
-@repo.command_cache()
-def tidy_finished(top: Path, *, inspect_lock: bool = False, restore_lock: bool = False, report=None) -> int:
+def tidy_finished(top: Path, *, inspect_lock: bool = False, restore_lock: bool = False, report=None,
+                  requested: Iterable[str] = (), all_prs: bool = True) -> int:
     """Remove finished worktrees whose committed changes are already saved."""
     from forge import board
 
     try:
         if repo._pin(sync.read(top / "forge.toml")) != __version__: return 0
-        main = machine.main_checkout(top)
-        finished = _finished(top, main)
-        events = board._event_history(top)[1] if finished else {}
+        common = repo._common_path(top)
+        finished = _finished(top, common, requested, all_prs)
+        if not finished: return 0
+        # Old lane entries recorded the checkout as "repo", including while they waited for a place.
+        live = {Path(folder).resolve() for run in machine.entries()
+                if (folder := run.get("checkout_root") or run.get("repo"))}
+        main = common.parent
+        events = None
     except (AttributeError, KeyError, TypeError, OSError, ValueError, subprocess.SubprocessError, repo.Refused):
         return 0
 
@@ -238,8 +286,20 @@ def tidy_finished(top: Path, *, inspect_lock: bool = False, restore_lock: bool =
     for path, branch, head, state, held in finished:
         ref = f"refs/heads/{branch}"
         try:
+            if held or path in live: continue
             item = task.branch_item(branch, path)
-            if held or item and board.active_runs(path, item[0], events.get(item[0], [])): continue
+            if item:
+                name, state_record = item
+                if (branch.startswith("story/") and state_record.get("status") not in ("done", "dropped")
+                        and not _story_done(top, name)):
+                    del kept[path]
+                    continue
+                receipt = story.json_of(sync.read(common / "forge" / "ready" / f"{name}.json"))
+                if receipt.get("review") == "clean" and not receipt.get("tidied") and repo.merge_setting(top) == "agent":
+                    continue
+                if events is None:
+                    events = board._event_history(top)[1]
+                if board.active_runs(path, name, events.get(name, [])): continue
             if not _removable(path, ref, head): continue
             if inspect_lock and repo.git("status", "--porcelain", "--", "uv.lock", cwd=path):
                 clean.append(str(path))

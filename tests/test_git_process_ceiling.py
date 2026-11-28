@@ -35,6 +35,9 @@ def test_1_commands_start_fewer_git_processes(env, monkeypatch, previous, histor
     if command == "close" and not previous and not history:
         # New clients start as unsigned prototypes; close needs the owner's accepted build request.
         _accept_build_decision(env.repo)
+        # Finish the setup's own cleanup before measuring close on the next fix.
+        swept = env.repo.forge("lanes", "--json")
+        assert swept.returncode == 0, swept.stderr
     # A cold-read plan makes next read both current snapshots and the earlier document
     # from its read record. Those reads must share the same batch process.
     if history:
@@ -102,4 +105,7 @@ sys.exit(subprocess.run([{json.dumps(real_git)}, *sys.argv[1:]]).returncode)
     # Other command ceilings stay unchanged.
     ceiling = (91 if command == "close" else 36) if history else (
         100 if command == "close" else 24 if previous else 30)
-    assert len(calls) <= ceiling, calls
+    # Finished-worktree detection can try every branch in one Git process.
+    trials = sum(args[:1] == ["merge-tree"] for args in calls)
+    assert trials <= 1, calls
+    assert len(calls) - trials <= ceiling, calls
