@@ -756,6 +756,12 @@
       "title": "Fewer costly rounds: keep the saved prompt and shorten long builder chats",
       "status": "pending",
       "order": 130
+    },
+    {
+      "key": "FORGE-THINREVIEW-1",
+      "title": "Shorten reviews and carry plan requirements through to close",
+      "status": "pending",
+      "order": 132
     }
   ],
   "epics": [
