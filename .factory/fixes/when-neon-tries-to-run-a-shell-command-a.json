@@ -1,6 +1,13 @@
 {
   "base": "4a47d4e4feebaaa003743821e9a6b0fff31f467d",
   "branch": "fix/when-neon-tries-to-run-a-shell-command-a",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a22109-a5aa-73a1-a109-cf737ef29701",
+    "head": null,
+    "start": "1140e1afbd784aed6222feb238e8b6584f67b6e0"
+  },
   "done_when": "In new repos and repos upgraded to v1.2.51, close gets a valid Neon review report using the supplied diff, evidence, and read-only file tools even after a shell command is denied.",
   "fix_kind": "backend",
   "fix_kind_explicit": true,
