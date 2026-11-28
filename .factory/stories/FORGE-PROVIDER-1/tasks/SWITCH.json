@@ -7,7 +7,7 @@
       "gain": 5,
       "harm": 4,
       "line": 98,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 1,
       "security": true,
@@ -46,7 +46,7 @@
       "gain": 4,
       "harm": 3,
       "line": 184,
-      "outcome": "open",
+      "outcome": "fixed in round 3",
       "reason": "",
       "round": 1,
       "security": false,
@@ -69,37 +69,16 @@
   ],
   "review": {
     "blocking_level": "P1",
-    "branch_diff": "5f50d66fcdd3fcc54c6b5402c8aff0451de7210706d4fa76901907c72015cd61",
+    "branch_diff": "a52f9c9547f53660a36d4518eddf40b16bcd09a7a11c699d427b9d72cb2d5d36",
     "changed": "8cd6dee00101c9b1eb42b31ad4dd378128787ea5f0d088c14ef90d787e9a5f2a",
-    "commit": "077b0237b0e14af6b2e37a29961ac70e5952ac29",
+    "commit": "498aa8fd4a182ce13769571751acede8d30754af",
     "dismissals": [],
-    "findings": [
-      {
-        "body": "Gain 5, Work 2, Harm 4\nRaise: Security\nCase: normal use - A developer works on a public github.com checkout while `GH_HOST` points to an authenticated GitHub Enterprise host containing a private repo with the same owner and name. The repair removes `GH_REPO`, but `_origin_repo` discards the origin hostname at `src/forge/aws.py:76`, and this call supplies no `--hostname`. [GitHub CLI selects its default host](https://github.com/cli/cli/blob/trunk/pkg/cmd/api/api.go), so it reads the Enterprise repo. The `full_name` comparison then passes, and setup accepts the public checkout instead of refusing it.",
-        "file": "src/forge/aws.py",
-        "gain": 5,
-        "harm": 4,
-        "line": 114,
-        "priority": "P1",
-        "title": "Not done: `forge lanes --aws setup` refuses a public repo",
-        "work": 2
-      },
-      {
-        "body": "Gain 4, Work 2, Harm 3\nRaise: Test\nCase: normal use - A repo upgrades with AWS runners off or configures two pull-request test groups on AWS. The proof still has no pre-change workflow baseline: its byte comparison at line 111 compares two outputs from the same renderer, so a changed default workflow can pass. Also, this two-group assertion is satisfied by the nightly `full-suite` matrix; the pull-request matrix uses a different expression at `src/forge/prcheck.py:93`. The test would still pass if the AWS pull-request workflow ran only one group.",
-        "file": "tests/test_aws_switch.py",
-        "gain": 4,
-        "harm": 3,
-        "line": 242,
-        "priority": "P1",
-        "title": "Test: default workflow compatibility and AWS test-group routing",
-        "work": 2
-      }
-    ],
-    "id": "71738344-a337-4192-9cdd-99b432d402a6",
-    "status": "blocked"
+    "findings": [],
+    "id": "b614e2da-411c-4da8-85c0-0f13e03bd936",
+    "status": "clean"
   },
   "round": 2,
-  "status": "fixing",
+  "status": "waiting for checks",
   "steps": [
     {
       "at": "2026-11-28T00:56:19.123209+00:00",
@@ -134,6 +113,10 @@
       "choice": "same",
       "round": 2,
       "step": "owner decision"
+    },
+    {
+      "at": "2026-11-28T06:32:25.170603+00:00",
+      "step": "review"
     }
   ],
   "stop": {
