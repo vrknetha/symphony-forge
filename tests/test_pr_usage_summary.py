@@ -15,6 +15,8 @@ import os
 import re
 import sys
 
+import pytest
+
 from conftest import ROOT, _install
 from test_close import (CLEAN, FAILED, GREEN, STORY_DOC, approve_story, blocked, body, env,  # noqa: F401
                         finding, report, run)
@@ -22,6 +24,7 @@ from test_item_time_history import row
 from test_story import worktree
 
 STORY = "FORGE-PRUSAGE-1"
+pytestmark = pytest.mark.platform
 
 CODEX_EDGE_STUB = '''#!{python}
 import json, os, pathlib, runpy, sys
