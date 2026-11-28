@@ -104,6 +104,10 @@ def test_1_story_without_a_spec_adds_its_roadmap_and_needs_only_its_read_loop_an
         {"key": "LATER", "title": "Later work", "order": 7, "status": "pending"}]}
     _land(repo, {"plans/roadmap.json": json.dumps(roadmap) if roadmap_exists else None})
     default = repo.git("rev-parse", "main")
+    # Clear the merged fixture fix so the branch snapshot detects only branches
+    # that story creation might add.
+    swept = repo.forge("board", "--json")
+    assert swept.returncode == 0, swept.stdout + swept.stderr
     branches = repo.git("branch", "--list", "fix/*")
     title = "Shoppers lose their baskets when they leave"
     story = new_story(repo, "BASKET", title)

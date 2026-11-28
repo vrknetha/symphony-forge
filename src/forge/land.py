@@ -59,7 +59,7 @@ def land(args: argparse.Namespace) -> int:
     if os.environ.get(QUEUED) != "1":
         from forge import doctor
 
-        if removed := doctor.tidy_finished(repo.root()):
+        if removed := doctor.tidy_finished(repo.root(), requested=args.item):
             say(f"Removed {removed} finished folders.")
     if len(args.item) != 1:  # --all, or several named items: the same queue, the named ones only
         if getattr(args, "note", None) is not None:

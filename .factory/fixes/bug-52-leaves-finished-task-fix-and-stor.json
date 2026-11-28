@@ -1,0 +1,163 @@
+{
+  "allow_large": "Run finished worktree sweep from cli.py for all Forge commands",
+  "base": "8cb98e82154cee06e4c96ba0078a304c9539e119",
+  "branch": "fix/bug-52-leaves-finished-task-fix-and-stor",
+  "chat": {
+    "approval": null,
+    "claude": null,
+    "conversation": "01a22106-0484-7ba1-9119-41b93ecfdfb9",
+    "head": null,
+    "start": "dcf1014d86105f060a817cff3f7826bb5ef956cf"
+  },
+  "done_when": "In v1.2.51, any Forge command and land\u2019s sweep remove clean, unused task, fix, and story worktrees when merging their branch would leave main\u2019s tree unchanged, including after a squash merge, and list the worktrees they keep.",
+  "fix_kind": "backend",
+  "fix_kind_explicit": true,
+  "kind": "fix",
+  "known": [
+    {
+      "area": "_run() in src/forge/cli.py",
+      "file": "src/forge/cli.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 145,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Functional: Keep the requested checkout until merge finalization completes",
+      "work": 2
+    },
+    {
+      "area": "_finished() in src/forge/doctor.py",
+      "file": "src/forge/doctor.py",
+      "gain": 4,
+      "harm": 3,
+      "line": 144,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Not done: Remove clean finished worktrees in repositories with submodules",
+      "work": 2
+    },
+    {
+      "area": "_finished() in src/forge/doctor.py",
+      "file": "src/forge/doctor.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 145,
+      "outcome": "follow-up",
+      "reason": "Human accepted the remaining finding: Owner accepts: a teammate's merged fix branch checked out in the main folder with no local commit is not listed as finished. Rare, and nothing is lost. Follow-up later.",
+      "round": 1,
+      "security": false,
+      "title": "Not done: List finished worktrees retained outside the removable set",
+      "work": 2
+    },
+    {
+      "area": "test_1_commands_sweep_squashed_worktrees_and_list_retained_folders() in tests/test_squashed_worktree_cleanup.py",
+      "file": "tests/test_squashed_worktree_cleanup.py",
+      "gain": 3,
+      "harm": 3,
+      "line": 39,
+      "outcome": "fixed in round 2",
+      "reason": "",
+      "round": 1,
+      "security": false,
+      "title": "Test: Prove cleanup and reporting for the retained-worktree cases",
+      "work": 2
+    }
+  ],
+  "review": {
+    "blocking_level": "P1",
+    "branch_diff": "4cf1d31641e7a400e5d9e419b535b98c29c3aa23bb413d154526414022ca5360",
+    "changed": "b919ae623f629d7e28642f8da70fec326384d5079cf3a29ba4f0193f7d024d4c",
+    "commit": "e940a304cda19823e6c31dccfc98cb8c132959eb",
+    "dismissals": [],
+    "findings": [],
+    "id": "7e167465-7f97-43d4-80a3-1ab7f7aaa9ca",
+    "status": "clean"
+  },
+  "round": 6,
+  "status": "waiting for checks",
+  "steps": [
+    {
+      "at": "2026-11-28T01:02:17.159204+00:00",
+      "step": "start"
+    },
+    {
+      "at": "2026-11-28T01:03:49.621692+00:00",
+      "round": 1,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T07:19:30.699864+00:00",
+      "round": 2,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T07:36:17.272530+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T07:36:37.411689+00:00",
+      "round": 3,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T08:26:50.096939+00:00",
+      "round": 4,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T09:01:17.180131+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T09:01:17.200474+00:00",
+      "round": 4,
+      "step": "hold"
+    },
+    {
+      "at": "2026-11-28T09:30:18.910934+00:00",
+      "by": "owner",
+      "choice": "accept",
+      "round": 4,
+      "step": "owner decision"
+    },
+    {
+      "at": "2026-11-28T10:04:21.337090+00:00",
+      "round": 5,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T10:17:44.153797+00:00",
+      "step": "review"
+    },
+    {
+      "at": "2026-11-28T10:44:27.105187+00:00",
+      "round": 6,
+      "step": "resume"
+    },
+    {
+      "at": "2026-11-28T10:50:17.384906+00:00",
+      "step": "review"
+    }
+  ],
+  "stop": {
+    "at": "2026-11-28T09:01:17.200474+00:00",
+    "by": "owner",
+    "choice": "accept",
+    "file": "src/forge/doctor.py",
+    "reason": "Owner accepts: a teammate's merged fix branch checked out in the main folder with no local commit is not listed as finished. Rare, and nothing is lost. Follow-up later.",
+    "wait_id": "6d269ce1-e2ee-4c01-b0d1-c1409359d772",
+    "worker_round": 4
+  },
+  "stuck": {
+    "close": "8dae7965-2b09-4223-9505-5380813e93e9",
+    "head": "7451814164e65821606bceb963819bcc5eb2713b",
+    "keys": {},
+    "round": 5
+  },
+  "why": "Bug #52 leaves finished task, fix, and story worktrees behind without listing them.",
+  "worker": "codex"
+}

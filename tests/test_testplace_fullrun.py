@@ -27,6 +27,7 @@ from conftest import Repo
 from test_githooks import hooked
 from test_proto_signoff import SOL_HIGH, _client, _decision
 from test_setup import _fresh_client
+from test_story import worktree
 from test_testplace_upgrade import prepare_adopted_client
 from test_testplace_workflow import _jobs
 
@@ -251,25 +252,26 @@ def test_3_full_run_is_nightly_and_daily(repo, gh, tmp_path, monkeypatch):
     assert (adopted_repo.path / "test-count").read_text("utf-8") == "run\n"
     assert _status_post_endpoint(adopted_sha) in _status_posts(gh)[-1]
     assert "state=success" in _status_posts(gh)[-1]
-    worktrees = adopted_repo.git("worktree", "list", "--porcelain").splitlines()
-    upgrade_tree = Path(next(worktrees[index - 2].removeprefix("worktree ")
-                             for index, line in enumerate(worktrees)
-                             if line == "branch refs/heads/fix/upgrade-the-test-place"))
-    adopted_config = (upgrade_tree / "forge.toml").read_text("utf-8")
-    (upgrade_tree / "forge.toml").write_text(adopted_config.replace(
+    started = adopted_repo.forge("fix", "start", "Enable nightly CI",
+                                 "--done", "forge.toml enables CI checks")
+    assert started.returncode == 0, started.stdout + started.stderr
+    ci_branch = "fix/enable-nightly-ci"
+    ci_tree = worktree(adopted_repo, ci_branch)
+    adopted_config = (ci_tree / "forge.toml").read_text("utf-8")
+    (ci_tree / "forge.toml").write_text(adopted_config.replace(
         "checks = []", 'checks = ["tests", "forge-pr-check"]'))
-    synced = adopted_repo.forge("sync", cwd=upgrade_tree)
+    synced = adopted_repo.forge("sync", cwd=ci_tree)
     assert synced.returncode == 0, synced.stdout + synced.stderr
-    adopted_workflow = (upgrade_tree / ".github/workflows/forge.yml").read_text("utf-8")
+    adopted_workflow = (ci_tree / ".github/workflows/forge.yml").read_text("utf-8")
     assert "full-suite:" in adopted_workflow and "forge test --full" in adopted_workflow
 
     # Actions fetches explicit refspecs, which leave origin/HEAD unset. An upgraded client
     # whose default branch is master must run the generated preparation before the full run.
-    adopted_repo.git("add", "-A", cwd=upgrade_tree)
-    adopted_repo.git("commit", "-q", "-m", "Use the upgraded CI workflow", cwd=upgrade_tree)
-    adopted_repo.git("push", "-q", "origin", "HEAD", cwd=upgrade_tree)
+    adopted_repo.git("add", "-A", cwd=ci_tree)
+    adopted_repo.git("commit", "-q", "-m", "Use the upgraded CI workflow", cwd=ci_tree)
+    adopted_repo.git("push", "-q", "origin", "HEAD", cwd=ci_tree)
     remote = Path(adopted_repo.git("remote", "get-url", "origin"))
-    adopted_repo.git("update-ref", "refs/heads/main", "refs/heads/fix/upgrade-the-test-place", cwd=remote)
+    adopted_repo.git("update-ref", "refs/heads/main", f"refs/heads/{ci_branch}", cwd=remote)
     adopted_repo.git("branch", "-m", "main", "master", cwd=remote)
     adopted_repo.git("symbolic-ref", "HEAD", "refs/heads/master", cwd=remote)
     actions = tmp_path / "actions-checkout"
