@@ -41,10 +41,16 @@ def test_5_read_and_approved_plans_can_drop(intake, claude_payload, monkeypatch,
                                "--subagent", "plan-reader", "--text", "No findings.", cwd=where)
             assert read.returncode == 0, read.stdout + read.stderr
         if key == "WAITING":
+            next_before = repo.forge("next", cwd=top)
+            assert next_before.returncode == 0, next_before.stdout + next_before.stderr
+            assert "WAITING" in next_before.stdout, next_before.stdout
             dropped = repo.forge("story", "drop", key, "--because", "Park the plan", cwd=top)
             assert dropped.returncode == 0, dropped.stdout + dropped.stderr
             assert "Dropped plan WAITING." in dropped.stdout
             assert "The approval is dropped too." not in dropped.stdout
+            next_step = repo.forge("next", cwd=top)
+            assert next_step.returncode == 0, next_step.stdout + next_step.stderr
+            assert "WAITING" not in next_step.stdout, next_step.stdout
     approval = repo.forge("hook", "approval", input=json.dumps(claude_plan(
         claude_payload, approved_doc, cwd=where)), cwd=where)
     assert approval.returncode == 0, approval.stdout + approval.stderr
@@ -54,9 +60,10 @@ def test_5_read_and_approved_plans_can_drop(intake, claude_payload, monkeypatch,
     dropped = repo.forge("story", "drop", "APPROVED", "--because", "Keep it for later", cwd=top)
     assert dropped.returncode == 0, dropped.stdout + dropped.stderr
     assert "Its remote branch keeps the work." in dropped.stdout
-    assert "The approval is dropped too." in dropped.stdout
-    assert "forge story drop APPROVED --undo" in dropped.stdout
-    assert "--later" in dropped.stdout
+    notice = next(line for line in dropped.stdout.splitlines()
+                  if "The approval is dropped too." in line)
+    assert "forge story drop APPROVED --undo" in notice
+    assert "--later" in notice
     assert repo.git("ls-remote", "origin", "refs/heads/story/APPROVED", cwd=top)
     assert repo.git("show", "origin/story/APPROVED:plans/APPROVED.md", cwd=top) == approved_doc.rstrip()
     assert "APPROVED" not in repo.forge("next", cwd=top).stdout

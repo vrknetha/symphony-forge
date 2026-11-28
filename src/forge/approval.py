@@ -190,12 +190,13 @@ def _record_approval(top: Path, payload: dict[str, Any], runtime: str, code: str
                 dropped.append(key)
             else:
                 matches.append((key, path, digest, state))
+    count = len(matches) + len(dropped)
+    if count > 1:
+        repo.refuse(REFUSALS["several"], count=count)
+    if dropped:
+        repo.refuse(REFUSALS["dropped"], key=dropped[0])
     if not matches:
-        if len(dropped) == 1:
-            repo.refuse(REFUSALS["dropped"], key=dropped[0])
         repo.refuse(REFUSALS["no_match"])
-    if len(matches) > 1:
-        repo.refuse(REFUSALS["several"], count=len(matches))
     key, path, digest, state = matches[0]
     pinned = repo.config(path)["version"]
     story_used = repo.forge_dir(path) / "approvals" / marker
@@ -342,9 +343,10 @@ def _touch(top: Path) -> None:
     """Add a human touch to the story, task or fix this checkout works on; elsewhere, nothing."""
     item = _item_here(top)
     state = repo.read_state(item, top) if item else None
-    if state is not None:
-        state["touches"] = state.get("touches", 0) + 1
-        repo.write_state(item, state, top)
+    if state is None or (story.KEY.fullmatch(item) and state.get("status") == "dropped"):
+        return
+    state["touches"] = state.get("touches", 0) + 1
+    repo.write_state(item, state, top)
 
 
 def _item_here(top: Path) -> str:
