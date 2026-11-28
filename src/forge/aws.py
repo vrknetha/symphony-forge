@@ -13,7 +13,9 @@ from forge import repo
 AWS_LABEL = "forge-aws"
 ACCOUNT_REGION = re.compile(r"^(\d{12})/([a-z]{2}(?:-[a-z]+)+-\d)$")
 ORIGIN_REPO = re.compile(
-    r"^(?:(?:https?|ssh)://[^/]+/|[^@/:]+@[^/:]+:)([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?/?$"
+    r"^(?:(?:https?|ssh)://(?:[^/@]+@)?(?P<url_host>[^/:@]+)(?::[0-9]+)?/"
+    r"|[^@/:]+@(?P<ssh_host>[^/:@]+):)"
+    r"(?P<slug>[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+?)(?:\.git)?/?$"
 )
 NON_LINUX_RUNNER = re.compile(r"^(?:windows|macos)(?:$|-)", re.I)
 NON_LINUX_CMD = re.compile(
@@ -68,13 +70,13 @@ def main(args: Any) -> int:
     return 0
 
 
-def _origin_repo(top: Path) -> str | None:
-    """The checkout's GitHub owner/repo from its origin remote, or None if origin is not a remote repo."""
+def _origin_repo(top: Path) -> tuple[str, str] | None:
+    """Return the GitHub hostname and owner/repo from the checkout's origin remote."""
     done = repo.run("git", "remote", "get-url", "origin", cwd=top)
     if done.returncode != 0:
         return None
     match = ORIGIN_REPO.fullmatch(done.stdout.strip())
-    return match[1] if match else None
+    return (match["url_host"] or match["ssh_host"], match["slug"]) if match else None
 
 
 def _last_line(text: str) -> str:
@@ -106,12 +108,13 @@ def setup(top: Path, args: Any) -> int:
         if cfg[key] and NON_LINUX_CMD.search(cfg[key]):
             repo.refuse(REFUSALS["not_linux"], detail=f"a non-Linux {key} command")
 
-    origin_slug = _origin_repo(top)
-    if not origin_slug:
+    origin = _origin_repo(top)
+    if origin is None:
         repo.refuse(REFUSALS["gh_failed"], owner_repo=top.name,
                     detail="origin remote does not point to a GitHub repository")
+    origin_host, origin_slug = origin
     gh_env = {key: value for key, value in os.environ.items() if key != "GH_REPO"}
-    gh_done = repo.run("gh", "api", f"repos/{origin_slug}", cwd=top, env=gh_env)
+    gh_done = repo.run("gh", "api", f"repos/{origin_slug}", "--hostname", origin_host, cwd=top, env=gh_env)
     if gh_done.returncode != 0:
         repo.refuse(REFUSALS["gh_failed"], owner_repo=origin_slug,
                     detail=_last_line(gh_done.stderr or gh_done.stdout))

@@ -35,6 +35,7 @@ def _job_runs_on(workflow: str) -> dict[str, str]:
     return jobs
 
 
+@pytest.mark.platform
 def test_1_aws_runners_are_off_by_default(repo, gh, tmp_path, monkeypatch):
     # Old Mainline-only spec and its read file are removed.
     assert not (ROOT / "docs/specs/sandbox-runs.md").exists()
@@ -133,17 +134,22 @@ def test_1_aws_runners_are_off_by_default(repo, gh, tmp_path, monkeypatch):
     assert no_gh_origin.returncode != 0
     assert "origin remote does not point to a GitHub repository" in no_gh_origin.stderr
 
-    # Point origin at a public GitHub repo; GH_REPO pointing to a private repo must not bypass check.
-    repo.git("remote", "set-url", "origin", "https://github.com/acme/public-demo.git", cwd=client)
+    # A private repo on the host selected by GH_HOST must not hide a public origin.
+    repo.git("remote", "set-url", "origin", "https://github.example.test/acme/public-demo.git", cwd=client)
     monkeypatch.setenv("GH_REPO", "acme/private-other")
     gh.respond("api", "repos/acme/private-other",
                stdout=json.dumps({"id": 99, "full_name": "acme/private-other", "private": True}))
     gh.respond("api", "repos/acme/public-demo",
+               stdout=json.dumps({"id": 51, "full_name": "acme/public-demo", "private": True}))
+    gh.respond("api", "repos/acme/public-demo", "--hostname", "github.example.test",
                stdout=json.dumps({"id": 42, "full_name": "acme/public-demo", "private": False}))
-    pub = repo.forge("lanes", "--aws", "setup", cwd=client)
+    with monkeypatch.context() as env:
+        env.setenv("GH_HOST", "other.example.test")
+        pub = repo.forge("lanes", "--aws", "setup", cwd=client)
     assert pub.returncode != 0
     assert "acme/public-demo is public." in pub.stderr
     assert "public repositories" in pub.stderr
+    assert aws_calls(repo.bin) == []
     assert gh.calls("api", "repos/acme/public-demo")
     assert not gh.calls("api", "repos/acme/private-other")
     assert not gh.calls("api", "repos/{owner}/{repo}")
