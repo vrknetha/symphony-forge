@@ -128,7 +128,7 @@
     "id": "686e82b6-1e01-47f4-ad06-d8090efc49c3",
     "status": "blocked"
   },
-  "round": 1,
+  "round": 2,
   "status": "fixing",
   "steps": [
     {
@@ -143,13 +143,20 @@
     {
       "at": "2026-11-28T01:14:24.964985+00:00",
       "step": "review"
+    },
+    {
+      "at": "2026-11-28T01:14:49.841618+00:00",
+      "round": 2,
+      "step": "resume"
     }
   ],
   "stuck": {
-    "close": null,
-    "head": "3cf1a2c9cb757a4cbdf7a918a9bed3d94cf90105",
-    "keys": {},
-    "round": null
+    "close": "71d9ab17-e1bd-4a41-ad64-253276ede78b",
+    "head": "2c93f8515d3fc31c98b98ac121498441b5dc5d20",
+    "keys": {
+      "the open P0 not done: `forge lanes --aws setup` refuses a public repo in src/forge/aws.py": 1
+    },
+    "round": 1
   },
   "worker": "antigravity"
 }
