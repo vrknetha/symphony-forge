@@ -240,19 +240,12 @@ def _close(args: argparse.Namespace, top: Path) -> int:
     if pending := time_records.pending_merge_wait(top, item, (pr or {}).get("body") or "", reason="merge conflict"):
         repo.record_event(top, item, "owner wait end", wait_id=pending["id"])
         _refresh_record(top, item, state, pr)
+    size_lines, size_files = time_records.change_size(top, review_ref)
     if "/" in item:
         key = item.split("/")[0]
         design.check(top, design.kept_plan(top, key), "HEAD", required=False)
-        excluded = list(review.DOC_EXCLUDES)
-        excluded += [path.replace(":(glob)", ":(exclude,glob)") for path in repo.TEST_PATHS]
-        stats = repo.git("diff", "--numstat", "-z", "--no-renames", f"{review_ref}...HEAD",
-                         "--", ".", *excluded, cwd=top)
-        counts = [row for record in stats.split("\0") if len(row := record.split("\t", 2)) == 3]
-        generated = repo.generated_files(top, [row[2] for row in counts], "HEAD")
-        lines = sum(int(number) for added, deleted, path in counts if path not in generated
-                    for number in (added, deleted) if number.isdigit())
-        if lines > 400:
-            print(f"Warning: This part changes {lines} lines outside tests and docs; aim for about 400.")
+        if size_lines > 400:
+            print(f"Warning: This part changes {size_lines} lines outside tests and docs; aim for about 400.")
     task.check_settings_change(item, top, state, default)
     repo.resume_pin(top, cfg["version"], getattr(args, "land_rounds", None), accepted=choice == "accept",
                     before=getattr(args, "pin_before", None))
@@ -518,7 +511,8 @@ def _close(args: argparse.Namespace, top: Path) -> int:
         if not pending:
             repo.record_event(top, item, "owner wait start", reason="merge", commit=head)
     tmp = path.with_suffix(".tmp")
-    ready = {"commit": head, "review": "clean", **({"skipped": result["skipped"]} if result.get("skipped") else {})}
+    ready = {"commit": head, "review": "clean", "size": {"lines": size_lines, "files": size_files},
+             **({"skipped": result["skipped"]} if result.get("skipped") else {})}
     if "/" in item and state.get("stacked_on"):
         ready["base"] = base
     tmp.write_text(json.dumps(ready) + "\n", encoding="utf-8")
